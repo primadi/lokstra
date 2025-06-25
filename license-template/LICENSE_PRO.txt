@@ -1,0 +1,33 @@
+Lokstra Premium Plugin - Pro License
+Copyright © 2025 Primadi
+
+This license grants a non-transferable, non-exclusive right to use this plugin under the following terms:
+
+1. Usage
+   - This license is for a single developer using the plugin in commercial or client-based projects.
+   - You may use this plugin to build SaaS products operated by you, provided that:
+     - Only one developer is actively using this license.
+     - The plugin is not redistributed as a library or standalone product.
+   - Team use or shared access is not permitted under this license.
+
+2. Redistribution
+   - You may include this plugin in deliverables to a client under the same terms as the Solo License.
+   - The client may not extract, reuse, or redistribute the plugin separately.
+
+3. Updates & Support
+   - Includes continuous updates, bugfixes, and limited email support.
+
+4. Open Source Project Notice
+   - This plugin may be used in open-source projects for development purposes,
+     but may not be included in public repositories, Docker images, binary releases,
+     or distributed in any way — regardless of the open-source license (e.g., Apache 2.0, MIT, GPL).
+   - All users must obtain their own license individually to use this plugin.
+
+—
+Note:
+
+- All license types receive the same plugin and full source code.
+- Differences lie only in usage rights, number of developers, and support level.
+- We do not use DRM or feature locking. This system relies on mutual trust and respect.
+
+Thank you for supporting sustainable open-source development.

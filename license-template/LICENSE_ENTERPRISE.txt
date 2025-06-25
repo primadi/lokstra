@@ -1,0 +1,43 @@
+Lokstra Premium Plugin - Enterprise License
+Copyright © 2025 Primadi
+
+This license grants a perpetual, non-transferable, non-exclusive right to use this plugin for commercial, internal, or SaaS purposes under enterprise terms.
+
+1. Usage
+   - This license allows unlimited usage by your organization, including:
+     - Internal systems, commercial products, and SaaS platforms.
+     - Unlimited developers within your legal entity.
+     - Multiple projects and multi-region deployments.
+
+2. SaaS & Distribution
+   - You may use this plugin in SaaS products of any scale.
+   - Redistributing the plugin as part of a product is allowed **only if** it is:
+     - Bundled into a closed-source binary or compiled system.
+     - Not exposing Lokstra plugin code or APIs for external reuse.
+
+3. Support & SLA
+   - Priority support via email with response time SLA (e.g., 1 business day).
+   - Option for private patching, roadmap influence, and technical reviews.
+   - Support scope defined in separate service agreement if applicable.
+
+4. Compliance
+   - This license is issued to a single legal entity and cannot be shared externally.
+   - Source code access may be limited to authorized developer accounts.
+
+5. Pricing & Validity
+   - Pricing is determined based on company size, funding stage, and usage scale.
+   - License is valid perpetually for the version purchased. Optional annual maintenance may be included.
+
+6. Open Source Project Notice
+   - This plugin may be used in internal open-source-based projects,
+     but cannot be included in public repositories or redistributed under any OSI license (Apache, MIT, etc.)
+     unless explicitly permitted in writing.
+
+—
+Note:
+
+- All license types receive the same plugin and full source code.
+- Enterprise license offers unlimited use, advanced support, and legal protection.
+- No DRM or code locking is used. We rely on fair use and long-term partnerships.
+
+Thank you for supporting sustainable open-source development and helping Lokstra grow.

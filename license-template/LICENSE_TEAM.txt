@@ -1,0 +1,36 @@
+Lokstra Premium Plugin - Team License
+Copyright © 2025 Primadi
+
+This license grants a non-transferable, non-exclusive right to use this plugin within a team or organization under the following terms:
+
+1. Usage
+   - This license covers use by up to 5 developers. Additional seats require extra licensing.
+   - You may use this plugin in internal systems, commercial projects, and SaaS applications developed by your team.
+
+2. SaaS Usage
+   - This license allows use in SaaS platforms regardless of scale.
+   - If your SaaS serves 1,000+ paying customers or your company has raised $1M+ in funding,
+     we recommend contacting us for an Enterprise License.
+
+3. Redistribution
+   - You may include the plugin in deliverables to a client, provided that:
+     - The plugin is not repackaged or reused outside that specific project.
+     - The client is informed that the plugin is licensed and cannot redistribute it further.
+
+4. Updates & Support
+   - Includes full updates, bugfixes, and priority support for your team.
+
+5. Open Source Project Notice
+   - This plugin may be used in open-source projects for development purposes,
+     but may not be included in public repositories, Docker images, binary releases,
+     or distributed in any way — regardless of the open-source license (e.g., Apache 2.0, MIT, GPL).
+   - All users must obtain their own license individually to use this plugin.
+
+—
+Note:
+
+- All license types receive the same plugin and full source code.
+- Differences lie only in usage rights, number of developers, and support level.
+- We do not use DRM or feature locking. This system relies on mutual trust and respect.
+
+Thank you for supporting sustainable open-source development.

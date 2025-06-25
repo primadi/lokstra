@@ -1,7 +1,13 @@
 # Lokstra ⚡
 
-> **Simple. Scalable. Structured.**  
+<p align="center">
+	<img src="docs/asset/logo.png" alt="Logo" style="max-width: 100%; width: 300px;">
+</p>
+
 > Lightweight Go backend framework for monoliths and microservices.
+
+📘 [Positioning Statement](./POSITIONING.md) — What Lokstra *is* and *is not*  
+📈 [Milestone & Roadmap](./MILESTONE.md) — Development plan and upcoming features
 
 ---
 
@@ -13,19 +19,57 @@ Whether you're building a SaaS platform, internal tools, or event-driven systems
 
 ---
 
+## 🧭 Philosophy
+
+> **Opinionated, Not Restrictive**
+
+Lokstra offers a clear project structure and batteries-included features, but never locks you in. You are free to override core behavior, plug in your own services, or deploy with your preferred stack — from Docker to Kubernetes, from monolith to distributed services.
+
+---
+
 ## 🚀 Features
 
-- ✅ Simple `Server → App → Router` structure with clean lifecycle
-- ✅ Supports **multi-binary** and **multi-config** deployment
-- ✅ Lightweight & fast routing (uses `httprouter`)
-- ✅ **Built-in services**: Logger, DB pool, Redis, Metrics, JWT Auth, etc.
-- ✅ Battery-included middleware: recovery, CORS, request logging, etc.
-- ✅ Middleware at global, group, and handler levels
-- ✅ **Service registry and lifecycle hooks**
-- ✅ Extensible: add your own service or middleware easily
-- ✅ **Multi-tenant ready**
-- ✅ Configurable via **YAML** or **pure code**
+### ⚙️ Core Architecture
+
+- ✅ Clean hierarchy: **Server → App → Router**
+- ✅ Each App runs independently on its own port
+- ✅ Grouped routing with prefixing & method chaining
+- ✅ Custom `RequestContext` with embedded response control
+
+### 📦 Deployment Modes
+
+- ✅ Monolith, multi-binary, or multi-config deployment
+- ✅ Flexible CLI entrypoints
+- ✅ Easy Docker and K8s integration
 - ✅ Graceful shutdown built-in
+
+### 🧠 Services & Extensibility
+
+- ✅ **Service Registry** with lifecycle hooks
+- ✅ Built-in services: Logger, DB, Redis, JWT, Metrics
+- ✅ Easy service creation via `RegisterService` or YAML
+- ✅ Override, disable, or extend services as needed
+
+### 🛡️ Middleware Engine
+
+- ✅ Middleware levels: global, group, handler
+- ✅ Built-in middleware: CORS, recovery, request logging
+- ✅ Custom middleware factories (YAML/Go)
+- ✅ Group isolation and override support
+
+### 🧰 Developer Experience
+
+- ✅ Fast binding with minimal reflection
+- ✅ Error response helpers and status shortcuts
+- ✅ Config via **YAML**, **code**, or hybrid
+- ✅ Modular, clean file structure
+- ✅ Optional `ContextHelper` injection for DX
+
+### 🌍 Multi-Tenant Ready
+
+- ✅ Tenant-aware DB and Redis connection factories
+- ✅ Supports isolated schema or shared table per tenant
+- ✅ Easy access via `getDbConnection(tenantId, name)`
 
 ---
 
@@ -81,43 +125,53 @@ func main() {
 
 ---
 
-## 🧩 Planned Services
+## 🧩 Built-in & Planned Services
 
-Lokstra includes pluggable services with minimal setup:
+Lokstra includes plug-and-play services with minimal config:
 
 - [x] Logger (zero-dependency `zerolog`)
 - [x] Redis connection pool
 - [x] PostgreSQL connection pool (via `pgx`)
-- [x] Prometheus metrics (built-in + custom)
+- [x] Prometheus metrics (custom + built-in)
 - [x] JWT Authenticator
 - [ ] Email sender
 - [ ] WebSocket pub/sub engine
-- [ ] Background worker engine
-- [ ] RBAC + Permission manager
+- [ ] Background task queue / worker
+- [ ] RBAC + permission manager
 
 ---
 
 ## 🧪 Examples
 
-Explore runnable examples in:
-```
-cmd/examples/
-├── simple/
-├── multiapp/
-└── yaml-config/
-```
+Lokstra includes categorized and progressive examples to help developers explore step-by-step.
+
+📂 See full details in [`cmd/examples/README.md`](cmd/examples/README.md)
+
+### Chapters:
+
+1. **Basic Overview** – From minimal router to YAML-configured server  
+2. **Router Features** – Group, mount, and middleware examples  
+3. **Best Practices** – Custom context, naming, config splitting  
+4. **Customization** – Override JSON, response, router engine  
+5. **Service Lifecycle** – Register, access, hook, shutdown  
+6. **Business Services** – Domain-driven services like ledger, loan, etc.  
+7. **Default Services** – Logger, DBPool, Redis, JWT, Metrics, etc.  
+8. **Default Middleware** – Recovery, CORS, logging, JWT, etc.
+
+> 💡 Each example is self-contained and runnable, with inline documentation.
 
 ---
 
-## 🧭 Roadmap
+## 🔭 Roadmap
 
 - [ ] Full middleware stack with YAML loader
+- [ ] WebSocket + async command/response
 - [ ] Service lifecycle & dependency injection
-- [ ] Web UI helper (React + Mantine)
-- [ ] Plugin architecture for modules
-- [ ] CLI code generators
-- [ ] Multi-tenant dashboard
-- [ ] RBAC UI + User management
+- [ ] Web UI (React + Mantine) scaffold
+- [ ] Plugin architecture for domain modules
+- [ ] Multi-tenant admin dashboard
+- [ ] RBAC UI + user management
+- [ ] CLI tool: `lok gen service`, `lok gen app`, etc.
 
 ---
 
@@ -129,5 +183,8 @@ Lokstra is licensed under the [Apache License 2.0](LICENSE).
 
 ## 🙌 Contributing
 
-Lokstra is currently in active development and will be opened to contributors soon.  
-Stay tuned for public release announcements and contribution guides.
+Lokstra is currently in active development and will open for contributions soon.  
+Stay tuned for the public release and contributor onboarding!
+
+For contributions or roadmap discussions, please open an issue or submit a pull request on GitHub.  
+Thank you for supporting Lokstra!
