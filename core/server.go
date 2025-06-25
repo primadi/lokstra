@@ -9,9 +9,9 @@ import (
 
 // Server is the main struct that holds multiple Apps and shared configuration.
 type Server struct {
-	name   string
-	apps   map[string]*App
-	config map[string]any
+	name     string
+	apps     map[string]*App
+	settings map[string]any
 }
 
 var _ iface.Server = (*Server)(nil)
@@ -19,9 +19,9 @@ var _ iface.Server = (*Server)(nil)
 // NewServer creates a new server instance with a unique name.
 func NewServer(name string) *Server {
 	return &Server{
-		name:   name,
-		apps:   make(map[string]*App),
-		config: make(map[string]any),
+		name:     name,
+		apps:     make(map[string]*App),
+		settings: make(map[string]any),
 	}
 }
 
@@ -30,14 +30,15 @@ func (s *Server) Name() string {
 	return s.name
 }
 
-// GetConfig retrieves a global configuration value by key.
-func (s *Server) GetConfig(key string) any {
-	return s.config[key]
+// GetSetting retrieves a global configuration value by key.
+func (s *Server) GetSetting(key string) any {
+	return s.settings[key]
 }
 
-// SetConfig stores a key-value pair accessible by all apps and handlers.
-func (s *Server) SetConfig(key string, value any) {
-	s.config[key] = value
+// SetSetting stores a key-value pair accessible by all apps and handlers.
+func (s *Server) SetSetting(key string, value any) *Server {
+	s.settings[key] = value
+	return s
 }
 
 // NewApp creates and mounts a new App with a given name and port.

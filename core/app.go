@@ -8,15 +8,15 @@ import (
 
 type App struct {
 	Router
-	name   string
-	port   int
-	config map[string]any
-	server *Server
+	name     string
+	port     int
+	settings map[string]any
+	server   *Server
 }
 
-// GetConfig implements iface.App.
-func (a *App) GetConfig(key string) any {
-	return a.config[key]
+// GetSetting implements iface.App.
+func (a *App) GetSetting(key string) any {
+	return a.settings[key]
 }
 
 // GetServer implements iface.App.
@@ -34,10 +34,10 @@ var _ iface.App = (*App)(nil)
 
 func NewApp(name string, port int) *App {
 	return &App{
-		Router: NewRouter(),
-		name:   name,
-		port:   port,
-		config: make(map[string]any),
+		Router:   NewRouter(),
+		name:     name,
+		port:     port,
+		settings: make(map[string]any),
 	}
 }
 
@@ -50,7 +50,7 @@ func (a *App) Addr() string {
 }
 
 func (a *App) SetConfig(key string, value any) {
-	a.config[key] = value
+	a.settings[key] = value
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
