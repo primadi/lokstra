@@ -1,30 +1,37 @@
-// Lokstra Example 01: Minimal Router Only
-// ----------------------------------------
-// This example demonstrates the simplest usage of Lokstra: using only the Router.
-// No App, Server, or Service is required. Suitable for lightweight routing scenarios.
-//
-// Run this file using:
-//   go run main.go
-// Then access:
-//   http://localhost:8080/hello
-
 package main
 
 import (
-	"lokstra/core"
+	"fmt"
+	"lokstra"
 	"net/http"
 )
 
 func main() {
-	// Step 1: Create a new router instance using default engine (e.g., HttpRouter).
-	router := core.NewRouter()
+	// This example demonstrates how to create a basic server with a router
+	// and register handlers both anonymously and by name.
 
-	// Step 2: Register a basic GET route using Lokstra RequestContext.
-	router.GET("/hello", func(ctx *core.RequestContext) error {
-		return ctx.WithMessage("Hello, World from Lokstra Router!").Ok(nil)
+	// NewRouter creates a new RouterInfo instance.
+	router := lokstra.NewRouter()
+
+	// Register an anonymous handler for the "/ping" route.
+	router.GET("/ping", func(ctx *lokstra.Context) error {
+		return ctx.Ok("Pong from anonymous handler")
 	})
 
-	// Step 3: Start the HTTP server with the router's handler.
-	println("Server is running at http://localhost:8080")
-	http.ListenAndServe(":8080", router)
+	// Register a named handler for the "/namedping" route.
+	router.GET("/namedping", "pingHandler")
+
+	// Register a named handler that can be used in the router.
+	lokstra.RegisterHandler("pingHandler", func(ctx *lokstra.Context) error {
+		return ctx.Ok("Pong from named handler")
+	})
+
+	fmt.Println("Starting server on port 8080...")
+	http.ListenAndServe(":8080", router.CreateNetHttpRouter()) // Start the server on port 8080 with net/http
+
+	// Alternatively, you can use fasthttp for better performance.
+
+	// Uncomment the following line to use fasthttp instead of net/http
+	// fmt.Println("Starting server with fasthttp on port 8081...")
+	// fasthttp.ListenAndServe(":8081", router.CreateFastHttpHandler()) // Start the server on port 8081 with fasthttp
 }

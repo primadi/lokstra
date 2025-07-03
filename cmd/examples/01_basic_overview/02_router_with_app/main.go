@@ -1,31 +1,35 @@
-// Lokstra Example 02: Router With App
-// ------------------------------------
-// This example demonstrates the use of `App` in Lokstra.
-// The `App` wraps a router and defines port and optional middleware.
-// This is the recommended structure for building actual services.
-//
-// Run this file using:
-//   go run main.go
-// Then access:
-//   http://localhost:8080/ping
-
 package main
 
 import (
-	"lokstra/core"
+	"lokstra"
 )
 
-func main() {
-	// Step 1: Create a new App named "default" on port 8080
-	app := core.NewApp("default", 8080)
+// This example demonstrates how to create a Lokstra application with a router,
+// and register handlers both anonymously and by name.
 
-	// Step 2: Register a simple GET route to respond with JSON
-	app.GET("/ping", func(ctx *core.RequestContext) error {
-		return ctx.WithMessage("pong").Ok(nil)
+// App is a high-level structure that combines a router and an HTTP listener.
+// It allows you to define routes and handlers, and then start the application.
+
+func main() {
+	// Create a new AppInfo instance with a name and port, and mount the router.
+	app := lokstra.NewApp("app1", 8080) // use default NetHttpListenerType
+
+	// uncomment the following line to use FastHttpListenerType instead of NetHttpListenerType.
+	// app.WithFastHttpListener()
+
+	// Register an anonymous handler for the "/ping" route.
+	app.GET("/ping", func(ctx *lokstra.Context) error {
+		return ctx.Ok("Pong from anonymous handler")
 	})
 
-	// Step 3: Start the App
-	// Internally, it wraps the router and starts the HTTP server
-	println("Server is running at http://localhost:8080")
+	// Register a named handler for the "/namedping" route.
+	app.GET("/namedping", "pingHandler")
+
+	// Register a named handler that can be used in the router.
+	lokstra.RegisterHandler("pingHandler", func(ctx *lokstra.Context) error {
+		return ctx.Ok("Pong from named handler")
+	})
+
+	// Start the app, which will resolve the router and handlers into live runtime components.
 	app.Start()
 }

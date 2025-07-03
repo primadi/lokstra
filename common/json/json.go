@@ -17,7 +17,7 @@ import jsoniter "github.com/json-iterator/go"
 //		"github.com/primadi/lokstra/core/json"
 //	)
 //
-//	func init() {
+//	func SwitchToStandarJSON() {
 //		json.Marshal = stdjson.Marshal
 //		json.Unmarshal = stdjson.Unmarshal
 //		json.NewEncoder = stdjson.NewEncoder

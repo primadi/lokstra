@@ -52,14 +52,8 @@ type Response struct {
 	FieldErrors map[string]string `json:"errors,omitempty"` // For Refine form field errors
 }
 
-// DefaultTemplateFunc formats the response object before write
-var DefaultTemplateFunc = func(resp *Response) any {
-	return resp
-}
-
-// UpdateDefaultTemplate allows custom formatting for all responses
-func UpdateDefaultTemplate(fn func(*Response) any) {
-	DefaultTemplateFunc = fn
+func NewResponse() *Response {
+	return &Response{}
 }
 
 // WithX helpers
@@ -84,4 +78,18 @@ func (r *Response) WithHeader(key, value string) *Response {
 	}
 	r.Headers.Set(key, value)
 	return r
+}
+
+func (r *Response) GetHeaders() http.Header {
+	if r.Headers == nil {
+		r.Headers = make(http.Header)
+	}
+	return r.Headers
+}
+
+func (r *Response) GetStatusCode() int {
+	if r.StatusCode == 0 {
+		r.StatusCode = http.StatusOK // Default to 200 OK if not set
+	}
+	return r.StatusCode
 }

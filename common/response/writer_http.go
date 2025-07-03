@@ -2,6 +2,7 @@ package response
 
 import (
 	"lokstra/common/json"
+	"lokstra/common/response/response_iface"
 	"net/http"
 )
 
@@ -13,5 +14,5 @@ func (r *Response) WriteHttp(w http.ResponseWriter) error {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(r.StatusCode)
-	return json.NewEncoder(w).Encode(DefaultTemplateFunc(r))
+	return json.NewEncoder(w).Encode(response_iface.DefaultTemplateFunc(r))
 }

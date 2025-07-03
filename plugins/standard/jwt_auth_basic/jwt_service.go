@@ -1,6 +1,6 @@
 package jwt_auth_basic
 
-import "lokstra/iface"
+import "lokstra/common/iface"
 
 type JWTAuthService struct {
 	name      string

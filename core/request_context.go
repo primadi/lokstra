@@ -2,30 +2,21 @@ package core
 
 import (
 	"context"
+	"lokstra/common/response"
+	"lokstra/core/request"
 	"net/http"
 )
 
-// NewRequestContext creates a new RequestContext instance by wrapping the original
-// HTTP request with a cancellable context. It returns the created RequestContext
-// and a cancel function that should be called when the request handling is complete.
-//
-// Usage:
-//
-//	ctx, cancel := NewRequestContext(w, r)
-//	defer cancel()
-//
-// The cancel function is important to avoid context leaks and should be deferred
-// or explicitly called when the request is done being processed.
-func NewRequestContext(w http.ResponseWriter, r *http.Request) (*RequestContext, context.CancelFunc) {
+func NewRequestContext(w http.ResponseWriter, r *http.Request) (*request.Context, func()) {
 	ctx, cancel := context.WithCancel(r.Context())
 	req := r.WithContext(ctx)
+	resp := response.NewResponse()
 
-	rc := &RequestContext{
-		Context: ctx,
-		Writer:  w,
-		Request: req,
-		values:  make(map[string]any),
-	}
-
-	return contextHelperBuilder(rc), cancel
+	return globalRuntime.requestContextHelper(
+		&request.Context{
+			Context:  ctx,
+			Response: resp,
+			W:        w,
+			R:        req,
+		}), cancel
 }

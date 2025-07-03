@@ -1,88 +1,73 @@
 package core
 
-import (
-	"fmt"
-	"lokstra/iface"
-	"net/http"
-	"sync"
-)
+const CERT_FILE = "cert_file"
+const KEY_FILE = "key_file"
 
-// Server is the main struct that holds multiple Apps and shared configuration.
 type Server struct {
-	name     string
-	apps     map[string]*App
+	name string
+
+	apps     []*App
 	settings map[string]any
 }
 
-var _ iface.Server = (*Server)(nil)
-
-// NewServer creates a new server instance with a unique name.
-func NewServer(name string) *Server {
-	return &Server{
-		name:     name,
-		apps:     make(map[string]*App),
-		settings: make(map[string]any),
-	}
+var server = &Server{
+	apps:     []*App{},
+	settings: make(map[string]any),
 }
 
-// Name returns the name of the server.
-func (s *Server) Name() string {
+// Server is a singleton instance of the server.
+func GetServer() *Server {
+	return server
+}
+
+func (s *Server) GetName() string {
 	return s.name
 }
 
-// GetSetting retrieves a global configuration value by key.
-func (s *Server) GetSetting(key string) any {
-	return s.settings[key]
+func (s *Server) SetName(name string) {
+	s.name = name
 }
 
-// SetSetting stores a key-value pair accessible by all apps and handlers.
-func (s *Server) SetSetting(key string, value any) *Server {
+func (s *Server) AddApp(app *App) {
+	s.apps = append(s.apps, app)
+}
+
+// SetSetting sets a configuration setting for the server.
+func (s *Server) SetSetting(key string, value any) {
+	if s.settings == nil {
+		s.settings = make(map[string]any)
+	}
 	s.settings[key] = value
-	return s
 }
 
-// NewApp creates and mounts a new App with a given name and port.
-func (s *Server) NewApp(name string, port int) *App {
-	app := NewApp(name, port)
-	app.server = s
-	s.apps[app.name] = app
-	return app
+// GetSetting retrieves a configuration setting by key.
+func (s *Server) GetSetting(key string) (any, bool) {
+	if s.settings == nil {
+		return nil, false
+	}
+	value, exists := s.settings[key]
+	return value, exists
 }
 
-// MountApp mounts an existing App to the server.
-func (s *Server) MountApp(app *App) *Server {
-	s.apps[app.name] = app
-	app.server = s
-	return s
-}
-
-// Start runs all mounted Apps concurrently.
-// Each App will listen on its configured port.
-// Returns error if any app fails to start.
 func (s *Server) Start() error {
-	var wg sync.WaitGroup
-	errCh := make(chan error, len(s.apps))
+	// var wg sync.WaitGroup
+	// errCh := make(chan error, len(s.apps))
 
-	for _, app := range s.apps {
-		wg.Add(1)
-		go func(app *App) {
-			defer wg.Done()
-			if rtr, ok := app.Router.(*RouterImpl); ok {
-				rtr.DumpRoutes() // Optional: Print registered routes
-			}
-			fmt.Printf("[INFO] Starting app '%s' on port %d\n", app.name, app.port)
-			err := http.ListenAndServe(app.Addr(), app)
-			if err != nil && err != http.ErrServerClosed {
-				errCh <- fmt.Errorf("app '%s' failed: %w", app.name, err)
-			}
-		}(app)
-	}
+	// for _, app := range s.apps {
+	// 	wg.Add(1)
+	// 	go func(a *App) {
+	// 		defer wg.Done()
+	// 		if err := a.Start(); err != nil {
+	// 			errCh <- fmt.Errorf("app '%s' failed: %w", app.GetName(), err)
+	// 		}
+	// 	}(app)
+	// }
 
-	wg.Wait()
-	close(errCh)
+	// wg.Wait()
+	// close(errCh)
 
-	if len(errCh) > 0 {
-		return <-errCh
-	}
+	// if len(errCh) > 0 {
+	// 	return <-errCh
+	// }
 	return nil
 }
