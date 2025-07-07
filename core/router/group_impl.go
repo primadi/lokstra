@@ -3,8 +3,6 @@ package router
 import (
 	"lokstra/common/iface"
 	"lokstra/common/meta"
-	"lokstra/common/utils"
-	"lokstra/core/request"
 	"net/http"
 	"slices"
 	"strings"
@@ -24,8 +22,7 @@ func (g *GroupImpl) DumpRoutes() {
 }
 
 // DELETE implements Router.
-func (g *GroupImpl) DELETE(path string, handler request.HandlerFunc,
-	mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) DELETE(path string, handler any, mw ...any) Router {
 	return g.Handle("DELETE", path, handler, mw...)
 }
 
@@ -35,17 +32,14 @@ func (g *GroupImpl) FastHttpHandler() fasthttp.RequestHandler {
 }
 
 // GET implements Router.
-func (g *GroupImpl) GET(path string, handler request.HandlerFunc,
-	mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) GET(path string, handler any, mw ...any) Router {
 	return g.Handle("GET", path, handler, mw...)
 }
 
 // GetMiddleware implements Router.
-func (g *GroupImpl) GetMiddleware() []iface.MiddlewareFunc {
-	mw := make([]iface.MiddlewareFunc, len(g.meta.Middleware))
-	for i, m := range g.meta.Middleware {
-		mw[i] = m.MiddlewareFunc
-	}
+func (g *GroupImpl) GetMiddleware() []*meta.MiddlewareMeta {
+	mw := make([]*meta.MiddlewareMeta, len(g.meta.Middleware))
+	copy(mw, g.meta.Middleware)
 
 	if g.meta.OverrideMiddleware {
 		return mw
@@ -55,7 +49,7 @@ func (g *GroupImpl) GetMiddleware() []iface.MiddlewareFunc {
 }
 
 // Group implements Router.
-func (g *GroupImpl) Group(prefix string, mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) Group(prefix string, mw ...any) Router {
 	g.mwLocked = true
 
 	rm := meta.NewRouter()
@@ -79,24 +73,16 @@ func (g *GroupImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 }
 
 // Handle implements Router.
-func (g *GroupImpl) Handle(method iface.HTTPMethod, path string, handler request.HandlerFunc,
-	mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) Handle(method iface.HTTPMethod, path string, handler any, mw ...any) Router {
 	g.mwLocked = true
-
-	gmw := slices.Concat(g.GetMiddleware(), mw)
-
-	g.meta.Handle(method, g.cleanPrefix(path), handler, utils.ToAnySlice(gmw)...)
-	g.parent.handle(method, g.cleanPrefix(path), handler, true, false, gmw...)
+	g.meta.Handle(method, g.cleanPrefix(path), handler, mw...)
 	return g
 }
 
 // HandleOverrideMiddleware implements Router.
-func (g *GroupImpl) HandleOverrideMiddleware(method iface.HTTPMethod, path string,
-	handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) HandleOverrideMiddleware(method iface.HTTPMethod, path string, handler any, mw ...any) Router {
 	g.mwLocked = true
-
-	g.meta.Handle(method, g.cleanPrefix(path), handler, utils.ToAnySlice(mw)...)
-	g.parent.handle(method, g.cleanPrefix(path), handler, true, false, mw...)
+	g.meta.HandleWithOverrideMiddleware(method, g.cleanPrefix(path), handler, mw...)
 	return g
 }
 
@@ -130,20 +116,17 @@ func (g *GroupImpl) OverrideMiddleware() Router {
 }
 
 // PATCH implements Router.
-func (g *GroupImpl) PATCH(path string, handler request.HandlerFunc,
-	mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) PATCH(path string, handler any, mw ...any) Router {
 	return g.Handle("PATCH", path, handler, mw...)
 }
 
 // POST implements Router.
-func (g *GroupImpl) POST(path string, handler request.HandlerFunc,
-	mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) POST(path string, handler any, mw ...any) Router {
 	return g.Handle("POST", path, handler, mw...)
 }
 
 // PUT implements Router.
-func (g *GroupImpl) PUT(path string, handler request.HandlerFunc,
-	mw ...iface.MiddlewareFunc) Router {
+func (g *GroupImpl) PUT(path string, handler any, mw ...any) Router {
 	return g.Handle("PUT", path, handler, mw...)
 }
 
@@ -163,7 +146,7 @@ func (g *GroupImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Use implements Router.
-func (g *GroupImpl) Use(mw iface.MiddlewareFunc) Router {
+func (g *GroupImpl) Use(mw any) Router {
 	g.meta.UseMiddleware(mw)
 	return g
 }

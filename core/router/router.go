@@ -3,7 +3,6 @@ package router
 import (
 	"lokstra/common/iface"
 	"lokstra/common/meta"
-	"lokstra/core/request"
 	"net/http"
 
 	"github.com/valyala/fasthttp"
@@ -12,14 +11,14 @@ import (
 type Router interface {
 	Prefix() string
 
-	Use(iface.MiddlewareFunc) Router
-	Handle(method iface.HTTPMethod, path string, handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router
-	HandleOverrideMiddleware(method iface.HTTPMethod, path string, handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router
-	GET(path string, handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router
-	POST(path string, handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router
-	PUT(path string, handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router
-	PATCH(path string, handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router
-	DELETE(path string, handler request.HandlerFunc, mw ...iface.MiddlewareFunc) Router
+	Use(any) Router
+	Handle(method iface.HTTPMethod, path string, handler any, mw ...any) Router
+	HandleOverrideMiddleware(method iface.HTTPMethod, path string, handler any, mw ...any) Router
+	GET(path string, handler any, mw ...any) Router
+	POST(path string, handler any, mw ...any) Router
+	PUT(path string, handler any, mw ...any) Router
+	PATCH(path string, handler any, mw ...any) Router
+	DELETE(path string, handler any, mw ...any) Router
 
 	WithOverrideMiddleware(enable bool) Router
 	WithPrefix(prefix string) Router
@@ -28,7 +27,7 @@ type Router interface {
 	MountSPA(prefix string, fallbackFile string) Router
 	MountReverseProxy(prefix string, target string) Router
 
-	Group(prefix string, mw ...iface.MiddlewareFunc) Router
+	Group(prefix string, mw ...any) Router
 	GroupBlock(prefix string, fn func(gr Router)) Router
 
 	RecurseAllHandler(callback func(rt *meta.RouteMeta))
@@ -37,8 +36,7 @@ type Router interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 	FastHttpHandler() fasthttp.RequestHandler
 	OverrideMiddleware() Router
-	GetMiddleware() []iface.MiddlewareFunc
-
+	GetMiddleware() []*meta.MiddlewareMeta
 	LockMiddleware()
 }
 

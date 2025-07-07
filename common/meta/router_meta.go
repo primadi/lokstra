@@ -34,37 +34,37 @@ type ReverseProxyMeta struct {
 
 type RouterMeta struct {
 	Prefix             string
-	routerEngineType   string
+	RouterEngineType   string
 	OverrideMiddleware bool
 
 	Routes         []*RouteMeta
 	Middleware     []*MiddlewareMeta
-	staticMounts   []*StaticDirMeta
-	spaMounts      []*SPADirMeta
-	reverseProxies []*ReverseProxyMeta
-	groups         []*RouterMeta
+	StaticMounts   []*StaticDirMeta
+	SPAMounts      []*SPADirMeta
+	ReverseProxies []*ReverseProxyMeta
+	Groups         []*RouterMeta
 }
 
 func NewRouter() *RouterMeta {
 	return &RouterMeta{
 		Prefix:             "",
 		OverrideMiddleware: false,
-		routerEngineType:   core_service.DEFAULT_ROUTER_ENGINE_NAME,
+		RouterEngineType:   core_service.DEFAULT_ROUTER_ENGINE_NAME,
 		Routes:             []*RouteMeta{},
 		Middleware:         []*MiddlewareMeta{},
-		staticMounts:       []*StaticDirMeta{},
-		spaMounts:          []*SPADirMeta{},
-		reverseProxies:     []*ReverseProxyMeta{},
-		groups:             []*RouterMeta{},
+		StaticMounts:       []*StaticDirMeta{},
+		SPAMounts:          []*SPADirMeta{},
+		ReverseProxies:     []*ReverseProxyMeta{},
+		Groups:             []*RouterMeta{},
 	}
 }
 
 func (r *RouterMeta) GetRouterEngineType() string {
-	return r.routerEngineType
+	return r.RouterEngineType
 }
 
 func (r *RouterMeta) WithRouterEngineType(engineType string) *RouterMeta {
-	r.routerEngineType = engineType
+	r.RouterEngineType = engineType
 	return r
 }
 
@@ -149,7 +149,7 @@ func (r *RouterMeta) UseMiddleware(middleware any) *RouterMeta {
 }
 
 func (r *RouterMeta) MountStatic(prefix string, folder http.Dir) *RouterMeta {
-	r.staticMounts = append(r.staticMounts, &StaticDirMeta{
+	r.StaticMounts = append(r.StaticMounts, &StaticDirMeta{
 		Prefix: prefix,
 		Folder: folder,
 	})
@@ -157,7 +157,7 @@ func (r *RouterMeta) MountStatic(prefix string, folder http.Dir) *RouterMeta {
 }
 
 func (r *RouterMeta) MountSPA(prefix string, fallbackFile string) *RouterMeta {
-	r.spaMounts = append(r.spaMounts, &SPADirMeta{
+	r.SPAMounts = append(r.SPAMounts, &SPADirMeta{
 		Prefix:       prefix,
 		FallbackFile: fallbackFile,
 	})
@@ -165,7 +165,7 @@ func (r *RouterMeta) MountSPA(prefix string, fallbackFile string) *RouterMeta {
 }
 
 func (r *RouterMeta) MountReverseProxy(prefix string, target string) *RouterMeta {
-	r.reverseProxies = append(r.reverseProxies, &ReverseProxyMeta{
+	r.ReverseProxies = append(r.ReverseProxies, &ReverseProxyMeta{
 		Prefix: prefix,
 		Target: target,
 	})
@@ -178,13 +178,13 @@ func (r *RouterMeta) Group(prefix string, middleware ...any) *RouterMeta {
 		group.UseMiddleware(mw)
 	}
 
-	r.groups = append(r.groups, group)
+	r.Groups = append(r.Groups, group)
 	return group
 }
 
 func (r *RouterMeta) GroupBlock(prefix string, fn func(gr *RouterMeta)) *RouterMeta {
 	group := NewRouter().WithPrefix(prefix)
-	r.groups = append(r.groups, group)
+	r.Groups = append(r.Groups, group)
 
 	if fn != nil {
 		fn(group)
@@ -235,7 +235,7 @@ func ResolveAllNamed(ctx component.ComponentContext, r *RouterMeta) {
 		}
 	}
 
-	for _, gr := range r.groups {
+	for _, gr := range r.Groups {
 		ResolveAllNamed(ctx, gr)
 	}
 }

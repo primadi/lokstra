@@ -7,9 +7,7 @@ import (
 func createApp1(ctx lokstra.ComponentContext, port int) *lokstra.App {
 	app1 := lokstra.NewApp(ctx, "app1", port)
 
-	app1.GET("/ping", func(ctx *lokstra.Context) error {
-		return ctx.Ok("App1 Pong from anonymous handler")
-	})
+	app1.GET("/ping", "ping1Handler")
 
 	return app1
 }
@@ -31,11 +29,8 @@ func main() {
 	server.AddApp(createApp1(ctx, 8080))
 	server.AddApp(createApp2(ctx, 8081))
 
-	ctx.RegisterHandler("pingHandler", func(ctx *lokstra.Context) error {
-		return ctx.Ok("Pong from named handler")
-	})
-	ctx.RegisterHandler("ping2Handler", func(ctx *lokstra.Context) error {
-		return ctx.Ok("App2 Pong from named handler")
+	ctx.RegisterHandler("ping1Handler", func(ctx *lokstra.Context) error {
+		return ctx.Ok("App1 Pong from named handler")
 	})
 
 	server.Start()
