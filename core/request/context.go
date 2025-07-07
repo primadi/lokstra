@@ -2,7 +2,7 @@ package request
 
 import (
 	"context"
-	"lokstra/common/response"
+	"lokstra/core/response"
 	"net/http"
 )
 

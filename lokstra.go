@@ -1,86 +1,42 @@
 package lokstra
 
 import (
+	"lokstra/common/component"
 	"lokstra/common/iface"
 	"lokstra/common/meta"
-	"lokstra/common/registry"
+	"lokstra/core/app"
 	"lokstra/core/request"
-	"lokstra/core/router/listener"
+	"lokstra/core/server"
+	"lokstra/serviceapi/core_service"
 )
 
-type ServerMeta = meta.ServerMeta
-type AppMeta = meta.AppMeta
-type RouterMeta = meta.RouterMeta
-type HandlerMeta = meta.HandlerMeta
-type MiddlewareMeta = meta.MiddlewareMeta
-
 type Context = request.Context
+type ComponentContext = component.ComponentContext
 
-type MiddlewareFunc = iface.MiddlewareFunc
-type HandlerFunc = request.HandlerFunc
+type HandlerFunc = iface.HandlerFunc
+type App = app.App
 
-type HttpListener = listener.HttpListener
-
-func NewServer(serverName string) *ServerMeta {
-	return meta.NewServer(serverName)
+func NewGlobalContext() *component.GlobalContext {
+	return component.NewGlobalContext()
 }
 
-func NewRouter() *meta.RouterMeta {
-	return meta.NewRouterInfo()
+func NewServer(ctx component.ComponentContext, name string) *server.Server {
+	return server.NewServer(ctx, name)
 }
 
-func NewApp(name string, port int) *meta.AppMeta {
-	return meta.NewApp(name, port)
+func NewApp(ctx component.ComponentContext, name string, port int) *app.App {
+	return app.NewApp(ctx, name, port)
 }
 
-func RegisterHandler(name string, handler func(ctx *Context) error) {
-	registry.RegisterHandler(name, handler)
-}
+const LISTENER_NETHTTP = core_service.NETHTTP_LISTENER_NAME
+const LISTENER_FASTHTTP = core_service.FASTHTTP_LISTENER_NAME
+const LISTENER_SECURE_NETHTTP = core_service.SECURE_NETHTTP_LISTENER_NAME
 
-func RegisterMiddlewareFactory(name string, middlewareFactory func(config any) MiddlewareFunc) {
-	registry.RegisterMiddlewareFactory(name, middlewareFactory)
-}
+const ROUTER_ENGINE_HTTPROUTER = core_service.HTTPROUTER_ROUTER_ENGINE_NAME
+const ROUTER_ENGINE_SERVEMUX = core_service.SERVEMUX_ROUTER_ENGINE_NAME
 
-func RegisterMiddlewareFunc(name string,
-	middlewareFunc func(next HandlerFunc) HandlerFunc) {
-	registry.RegisterMiddlewareFunc(name, middlewareFunc)
-}
-
-func RegisterServiceFactory(name string, serviceFactory func(config any) (iface.Service, error)) {
-	registry.RegisterServiceFactory(name, serviceFactory)
-}
-
-// NamedMiddleware creates a middleware info with the given name and config.
-// This is useful for registering middlewares with the registry.
-func NamedMiddleware(name string, config ...any) *meta.MiddlewareMeta {
-	return meta.NamedMiddleware(name, config...)
-}
-
-// NamedService creates a service info with the given name and instance.
-func NewService[T iface.Service](serviceType, name string, config ...any) (T, error) {
-	svc, err := registry.NewService(serviceType, name, config...)
-	if err != nil {
-		var zero T
-		return zero, err
-	}
-	if service, ok := svc.(T); ok {
-		return service, nil
-	}
-	var zero T
-	return zero, iface.ErrServiceTypeMismatch
-}
-
-func GetService[T iface.Service](name string) T {
-	if s := registry.GetService(name); s != nil {
-		if service, ok := s.(T); ok {
-			return service
-		}
-	}
-
-	var zero T
-	return zero
-}
-
-func Version() string {
-	return "1.0.0"
+func NewAppCustom(ctx component.ComponentContext, name string, port int,
+	listenerType string, routerEngine string) *app.App {
+	appMeta := meta.NewApp(name, port).WithListenerType(listenerType).WithRouterEngineType(routerEngine)
+	return app.NewAppFromMeta(ctx, appMeta)
 }

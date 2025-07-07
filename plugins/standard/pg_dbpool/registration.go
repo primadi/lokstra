@@ -2,9 +2,8 @@ package pg_dbpool
 
 import (
 	"fmt"
+	"lokstra/common/component"
 	"lokstra/common/iface"
-	"lokstra/common/permission"
-	"lokstra/common/registry"
 )
 
 const DSN_KEY = "dsn"
@@ -12,8 +11,8 @@ const DSN_KEY = "dsn"
 type Registration struct{}
 
 // Register implements iface.Plugin.
-func (r *Registration) Register(lic *permission.PermissionLicense) {
-	registry.RegisterServiceFactory("pg_dbpool", func(config any) (iface.Service, error) {
+func (r *Registration) Register(ctx component.ComponentContext) error {
+	ctx.RegisterServiceFactory("pg_dbpool", func(config any) (iface.Service, error) {
 		var dsn string
 
 		switch t := config.(type) {
@@ -31,6 +30,5 @@ func (r *Registration) Register(lic *permission.PermissionLicense) {
 
 		return newPgxPostgresPool(dsn)
 	})
+	return nil
 }
-
-var _ iface.Plugin = (*Registration)(nil)

@@ -2,7 +2,9 @@ package iface
 
 import "lokstra/core/request"
 
-type MiddlewareFunc func(next request.HandlerFunc) request.HandlerFunc
+type HandlerFunc func(ctx *request.Context) error
+type MiddlewareFunc func(next HandlerFunc) HandlerFunc
+type MiddlewareFactory = func(config any) MiddlewareFunc
 
 type MiddlewareHandler interface {
 	GetName() string

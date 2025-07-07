@@ -2,23 +2,19 @@ package meta
 
 import (
 	"fmt"
+	"lokstra/common/component"
 	"lokstra/common/iface"
-	"lokstra/common/permission"
-	"lokstra/common/registry"
-	"lokstra/core"
 	"lokstra/core/request"
-	"lokstra/core/router"
+	"lokstra/serviceapi/core_service"
 	"net/http"
-
-	"github.com/valyala/fasthttp"
 )
 
 type RouteMeta struct {
-	path               string
-	method             iface.HTTPMethod
-	handler            *HandlerMeta
-	overrideMiddleware bool
-	middleware         []*MiddlewareMeta
+	Path               string
+	Method             iface.HTTPMethod
+	Handler            *HandlerMeta
+	OverrideMiddleware bool
+	Middleware         []*MiddlewareMeta
 }
 
 type StaticDirMeta struct {
@@ -38,26 +34,38 @@ type ReverseProxyMeta struct {
 
 type RouterMeta struct {
 	Prefix             string
+	routerEngineType   string
 	OverrideMiddleware bool
-	Routes             []*RouteMeta
-	Middleware         []*MiddlewareMeta
-	StaticMounts       []*StaticDirMeta
-	SPAMounts          []*SPADirMeta
-	ReverseProxies     []*ReverseProxyMeta
-	Groups             []*RouterMeta
+
+	Routes         []*RouteMeta
+	Middleware     []*MiddlewareMeta
+	staticMounts   []*StaticDirMeta
+	spaMounts      []*SPADirMeta
+	reverseProxies []*ReverseProxyMeta
+	groups         []*RouterMeta
 }
 
-func NewRouterInfo() *RouterMeta {
+func NewRouter() *RouterMeta {
 	return &RouterMeta{
 		Prefix:             "",
 		OverrideMiddleware: false,
+		routerEngineType:   core_service.DEFAULT_ROUTER_ENGINE_NAME,
 		Routes:             []*RouteMeta{},
 		Middleware:         []*MiddlewareMeta{},
-		StaticMounts:       []*StaticDirMeta{},
-		SPAMounts:          []*SPADirMeta{},
-		ReverseProxies:     []*ReverseProxyMeta{},
-		Groups:             []*RouterMeta{},
+		staticMounts:       []*StaticDirMeta{},
+		spaMounts:          []*SPADirMeta{},
+		reverseProxies:     []*ReverseProxyMeta{},
+		groups:             []*RouterMeta{},
 	}
+}
+
+func (r *RouterMeta) GetRouterEngineType() string {
+	return r.routerEngineType
+}
+
+func (r *RouterMeta) WithRouterEngineType(engineType string) *RouterMeta {
+	r.routerEngineType = engineType
+	return r
 }
 
 func (r *RouterMeta) WithPrefix(prefix string) *RouterMeta {
@@ -113,11 +121,11 @@ func (r *RouterMeta) handle(method iface.HTTPMethod, path string, handler any,
 	}
 
 	r.Routes = append(r.Routes, &RouteMeta{
-		path:               path,
-		method:             method,
-		handler:            handlerInfo,
-		overrideMiddleware: overrideMiddleware,
-		middleware:         mwp,
+		Path:               path,
+		Method:             method,
+		Handler:            handlerInfo,
+		OverrideMiddleware: overrideMiddleware,
+		Middleware:         mwp,
 	})
 	return r
 }
@@ -141,7 +149,7 @@ func (r *RouterMeta) UseMiddleware(middleware any) *RouterMeta {
 }
 
 func (r *RouterMeta) MountStatic(prefix string, folder http.Dir) *RouterMeta {
-	r.StaticMounts = append(r.StaticMounts, &StaticDirMeta{
+	r.staticMounts = append(r.staticMounts, &StaticDirMeta{
 		Prefix: prefix,
 		Folder: folder,
 	})
@@ -149,7 +157,7 @@ func (r *RouterMeta) MountStatic(prefix string, folder http.Dir) *RouterMeta {
 }
 
 func (r *RouterMeta) MountSPA(prefix string, fallbackFile string) *RouterMeta {
-	r.SPAMounts = append(r.SPAMounts, &SPADirMeta{
+	r.spaMounts = append(r.spaMounts, &SPADirMeta{
 		Prefix:       prefix,
 		FallbackFile: fallbackFile,
 	})
@@ -157,7 +165,7 @@ func (r *RouterMeta) MountSPA(prefix string, fallbackFile string) *RouterMeta {
 }
 
 func (r *RouterMeta) MountReverseProxy(prefix string, target string) *RouterMeta {
-	r.ReverseProxies = append(r.ReverseProxies, &ReverseProxyMeta{
+	r.reverseProxies = append(r.reverseProxies, &ReverseProxyMeta{
 		Prefix: prefix,
 		Target: target,
 	})
@@ -165,18 +173,18 @@ func (r *RouterMeta) MountReverseProxy(prefix string, target string) *RouterMeta
 }
 
 func (r *RouterMeta) Group(prefix string, middleware ...any) *RouterMeta {
-	group := NewRouterInfo().WithPrefix(prefix)
+	group := NewRouter().WithPrefix(prefix)
 	for _, mw := range middleware {
 		group.UseMiddleware(mw)
 	}
 
-	r.Groups = append(r.Groups, group)
+	r.groups = append(r.groups, group)
 	return group
 }
 
 func (r *RouterMeta) GroupBlock(prefix string, fn func(gr *RouterMeta)) *RouterMeta {
-	group := NewRouterInfo().WithPrefix(prefix)
-	r.Groups = append(r.Groups, group)
+	group := NewRouter().WithPrefix(prefix)
+	r.groups = append(r.groups, group)
 
 	if fn != nil {
 		fn(group)
@@ -205,91 +213,29 @@ func (r *RouterMeta) DELETE(path string, handler any, middleware ...any) *Router
 	return r.Handle("DELETE", path, handler, middleware...)
 }
 
-func (r *RouterMeta) buildNetHttpRouter() router.Router {
-	allAccessLic := createAllAccessLicense()
-
-	// 1. Run All Registered Modules
-	// Skip this step for now, as it is not implemented.
-	// 2. Lock GlobalSettings
-
-	permission.LockGlobalAccess()
-
-	// 3. Run All Registered Plugins
-	// Skip this step for now, as it is not implemented.
-	// 4. Resolve all Named Handler, Middleware, Services
-	resolveAllNamed(r, allAccessLic)
-	// 5. Create Router based on RouterInfo
-	return createRouter(r)
-}
-
-func (r *RouterMeta) CreateNetHttpRouter() router.Router {
-	return r.buildNetHttpRouter()
-}
-
-func (r *RouterMeta) CreateFastHttpHandler() fasthttp.RequestHandler {
-	return r.buildNetHttpRouter().FastHttpHandler()
-}
-
-// resolveAllNamed resolves all named handlers and middleware in the RouterInfo.
-func resolveAllNamed(r *RouterMeta, lic *permission.PermissionLicense) {
+func ResolveAllNamed(ctx component.ComponentContext, r *RouterMeta) {
 	for _, route := range r.Routes {
-		if route.handler.HandlerFunc == nil {
-			handler, exists := registry.GetHandler(route.handler.Name, lic)
-			if !exists {
-				panic(fmt.Sprintf("Handler '%s' not found", route.handler.Name))
+		if route.Handler.HandlerFunc == nil {
+			handler := ctx.GetHandler(route.Handler.Name)
+			if handler == nil {
+				panic(fmt.Sprintf("Handler '%s' not found", route.Handler.Name))
 			}
-			route.handler.HandlerFunc = handler.HandlerFunc
+			route.Handler.HandlerFunc = handler.HandlerFunc
 		}
 	}
 
-	// for _, mw := range r.Middleware {
-	// 	if mw.MiddlewareFunc == nil {
-	// 		middleware, exists := registry.GetMiddleware(mw.Name)
-	// 		if !exists {
-	// 			panic(fmt.Sprintf("Middleware '%s' not found", mw.Name))
-	// 		}
-	// 		mw.MiddlewareFunc = middleware.MiddlewareFunc
-	// 	}
-	// }
-
-	for _, gr := range r.Groups {
-		resolveAllNamed(gr, lic)
-	}
-}
-
-func createAllAccessLicense() *permission.PermissionLicense {
-	return permission.NewPermissionLicense(&permission.PermissionRegistration{
-		ModuleName:              "lokstra",
-		AllowRegisterHandler:    true,
-		AllowRegisterMiddleware: true,
-		AllowRegisterService:    true,
-		WhitelistGetHandler:     []string{"*"}, // Allow all handlers to be accessed
-		WhitelistGetServices:    []string{"*"}, // Allow all services to be accessed
-	})
-}
-
-func createRouter(r *RouterMeta) router.Router {
-	routerInstance := core.NewRouter().WithPrefix(r.Prefix).
-		WithOverrideMiddleware(r.OverrideMiddleware)
-
-	for _, m := range r.Middleware {
-		routerInstance.Use(m.MiddlewareFunc)
-	}
-
-	for _, route := range r.Routes {
-		mw := make([]iface.MiddlewareFunc, len(route.middleware))
-		for i, m := range route.middleware {
-			mw[i] = m.MiddlewareFunc
-		}
-
-		if route.overrideMiddleware {
-			routerInstance.HandleOverrideMiddleware(route.method, route.path,
-				route.handler.HandlerFunc, mw...)
-		} else {
-			routerInstance.Handle(route.method, route.path,
-				route.handler.HandlerFunc, mw...)
+	for _, mwMeta := range r.Middleware {
+		if mwMeta.MiddlewareFunc == nil {
+			mwfactory, found := ctx.GetMiddlewareFactory(mwMeta.MiddlewareType)
+			if !found {
+				panic(fmt.Sprintf("Middleware factory '%s' not found", mwMeta.MiddlewareType))
+			}
+			mwf := mwfactory(mwMeta.Config)
+			mwMeta.MiddlewareFunc = mwf
 		}
 	}
-	routerInstance.DumpRoutes()
-	return routerInstance
+
+	for _, gr := range r.groups {
+		ResolveAllNamed(ctx, gr)
+	}
 }

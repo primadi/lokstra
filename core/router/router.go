@@ -2,6 +2,7 @@ package router
 
 import (
 	"lokstra/common/iface"
+	"lokstra/common/meta"
 	"lokstra/core/request"
 	"net/http"
 
@@ -30,7 +31,7 @@ type Router interface {
 	Group(prefix string, mw ...iface.MiddlewareFunc) Router
 	GroupBlock(prefix string, fn func(gr Router)) Router
 
-	RecurseAllHandler(callback func(rt *RouteHandlerData))
+	RecurseAllHandler(callback func(rt *meta.RouteMeta))
 	DumpRoutes()
 
 	ServeHTTP(w http.ResponseWriter, r *http.Request)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"lokstra/core"
+	"lokstra/common/iface"
 	"reflect"
 
 	"github.com/jackc/pgx/v5"
@@ -16,7 +16,6 @@ type pgxPostgresPool struct {
 	pool *pgxpool.Pool
 }
 
-// GetSetting implements core.Service.
 func (p *pgxPostgresPool) GetSetting(key string) any {
 	if key == "dsn" {
 		return p.dsn
@@ -25,7 +24,7 @@ func (p *pgxPostgresPool) GetSetting(key string) any {
 }
 
 var _ DBPool = (*pgxPostgresPool)(nil)
-var _ core.Service = (*pgxPostgresPool)(nil)
+var _ iface.Service = (*pgxPostgresPool)(nil)
 
 func newPgxPostgresPool(dsn string) (*pgxPostgresPool, error) {
 	pool, err := pgxpool.New(context.Background(), dsn)
