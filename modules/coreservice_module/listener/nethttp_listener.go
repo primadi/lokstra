@@ -72,9 +72,8 @@ func (n *NetHttpListener) ListenAndServe(addr string, handler http.Handler) erro
 	n.mu.Unlock()
 
 	fmt.Printf("[NETHTTP] Starting server at %s\n", addr)
-	if rt := handler.(router.Router); rt != nil {
-		rt.DumpRoutes()
-	}
+	dumpRoutes(handler.(router.Router))
+
 	err := n.server.ListenAndServe()
 
 	n.mu.Lock()

@@ -7,7 +7,7 @@ import (
 	"lokstra/serviceapi/core_service"
 )
 
-func Register(ctx component.ComponentContext) error {
+func ModuleFactory(ctx component.ComponentContext) error {
 	// Register Listener as Service Factories
 	ctx.RegisterServiceFactory(core_service.NETHTTP_LISTENER_NAME, listener.NewNetHttpListener)
 	ctx.RegisterServiceFactory(core_service.FASTHTTP_LISTENER_NAME, listener.NewFastHttpListener)

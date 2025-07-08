@@ -74,9 +74,7 @@ func (f *FastHttpListener) ListenAndServe(addr string, handler http.Handler) err
 
 	f.addr = addr
 	fmt.Printf("[FASTHTTP] Starting server at %s\n", addr)
-	if rt := handler.(router.Router); rt != nil {
-		rt.DumpRoutes()
-	}
+	dumpRoutes(handler.(router.Router))
 
 	err := f.server.ListenAndServe(addr)
 

@@ -5,11 +5,11 @@ import (
 	"lokstra/common/component"
 	"lokstra/common/iface"
 	"lokstra/common/meta"
-	"lokstra/common/utils"
 	"lokstra/core/request"
 	"lokstra/serviceapi/core_service"
 	"mime"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/valyala/fasthttp"
@@ -58,9 +58,14 @@ func NewRouterWithEngine(ctx component.ComponentContext, engineType string) Rout
 	}
 }
 
+// GetMeta implements Router.
+func (r *RouterImpl) GetMeta() *meta.RouterMeta {
+	return r.meta
+}
+
 // DELETE implements Router.
 func (r *RouterImpl) DELETE(path string, handler any, mw ...any) Router {
-	return r.handle("DELETE", path, handler, false, true, mw...)
+	return r.handle("DELETE", path, handler, false, mw...)
 }
 
 // DumpRoutes implements Router.
@@ -77,7 +82,7 @@ func (r *RouterImpl) FastHttpHandler() fasthttp.RequestHandler {
 
 // GET implements Router.
 func (r *RouterImpl) GET(path string, handler any, mw ...any) Router {
-	return r.handle("GET", path, handler, false, true, mw...)
+	return r.handle("GET", path, handler, false, mw...)
 }
 
 // GetMiddleware implements Router.
@@ -98,6 +103,7 @@ func (r *RouterImpl) Group(prefix string, mw ...any) Router {
 		rm.UseMiddleware(m)
 	}
 
+	r.meta.Groups = append(r.meta.Groups, rm)
 	return &GroupImpl{
 		parent: r,
 		meta:   rm,
@@ -114,11 +120,11 @@ func (r *RouterImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 // Handle implements Router.
 func (r *RouterImpl) Handle(method iface.HTTPMethod, path string, handler any,
 	mw ...any) Router {
-	return r.handle(method, path, handler, false, true, mw...)
+	return r.handle(method, path, handler, false, mw...)
 }
 
 func (r *RouterImpl) handle(method iface.HTTPMethod, path string, handler any,
-	overrideMiddleware bool, updateMeta bool, mw ...any) Router {
+	overrideMiddleware bool, mw ...any) Router {
 	r.mwLocked = true
 
 	cleanPath := r.cleanPrefix(path)
@@ -137,12 +143,10 @@ func (r *RouterImpl) handle(method iface.HTTPMethod, path string, handler any,
 		panic("Invalid handler type, must be a RequestHandler, string, or HandlerMeta")
 	}
 
-	if updateMeta {
-		if overrideMiddleware {
-			r.meta.HandleWithOverrideMiddleware(method, cleanPath, handlerMeta, utils.ToAnySlice(mw)...)
-		} else {
-			r.meta.Handle(method, cleanPath, handlerMeta, utils.ToAnySlice(mw)...)
-		}
+	if overrideMiddleware {
+		r.meta.HandleWithOverrideMiddleware(method, cleanPath, handlerMeta, mw...)
+	} else {
+		r.meta.Handle(method, cleanPath, handlerMeta, mw...)
 	}
 
 	return r
@@ -151,7 +155,7 @@ func (r *RouterImpl) handle(method iface.HTTPMethod, path string, handler any,
 // HandleOverrideMiddleware implements Router.
 func (r *RouterImpl) HandleOverrideMiddleware(method iface.HTTPMethod, path string,
 	handler any, mw ...any) Router {
-	return r.handle(method, path, handler, true, true, mw...)
+	return r.handle(method, path, handler, true, mw...)
 }
 
 // LockMiddleware implements Router.
@@ -185,17 +189,17 @@ func (r *RouterImpl) OverrideMiddleware() Router {
 
 // PATCH implements Router.
 func (r *RouterImpl) PATCH(path string, handler any, mw ...any) Router {
-	return r.handle("PATCH", path, handler, false, true, mw...)
+	return r.handle("PATCH", path, handler, false, mw...)
 }
 
 // POST implements Router.
 func (r *RouterImpl) POST(path string, handler any, mw ...any) Router {
-	return r.handle("POST", path, handler, false, true, mw...)
+	return r.handle("POST", path, handler, false, mw...)
 }
 
 // PUT implements Router.
 func (r *RouterImpl) PUT(path string, handler any, mw ...any) Router {
-	return r.handle("PUT", path, handler, false, true, mw...)
+	return r.handle("PUT", path, handler, false, mw...)
 }
 
 // Prefix implements Router.
@@ -263,49 +267,61 @@ func (r *RouterImpl) cleanPrefix(prefix string) string {
 	return r.meta.Prefix + "/" + strings.Trim(prefix, "/")
 }
 
-func (r *RouterImpl) Meta() *meta.RouterMeta {
-	return r.meta
+func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []iface.MiddlewareFunc) {
+	mwh := make([]iface.MiddlewareFunc, len(route.Middleware))
+	for i, m := range route.Middleware {
+		mwh[i] = m.MiddlewareFunc
+	}
+
+	if !route.OverrideMiddleware {
+		mwh = slices.Concat(mwParent, mwh)
+	}
+
+	handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
+	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ctx, ok := contextFromRequest(req)
+
+		var cancel func()
+		if !ok {
+			ctx, cancel = NewContext(w, req)
+			defer cancel()
+		}
+		if err := handler_with_mw(ctx); err != nil {
+			ctx.ErrorInternal(err.Error())
+		}
+		if err := ctx.Err(); err != nil {
+			ctx.ErrorInternal("Request aborted")
+		}
+		ctx.Response.WriteHttp(ctx.W)
+	})
+	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
+}
+
+func (r *RouterImpl) buildRouter(router *meta.RouterMeta, mwParent []iface.MiddlewareFunc) {
+	mwh := make([]iface.MiddlewareFunc, len(router.Middleware))
+	for i, m := range router.Middleware {
+		mwh[i] = m.MiddlewareFunc
+	}
+	if !router.OverrideMiddleware {
+		mwh = slices.Concat(mwParent, mwh)
+	}
+
+	for _, route := range router.Routes {
+		r.handleRouteMeta(route, mwh)
+	}
+
+	for _, gr := range router.Groups {
+		r.buildRouter(gr, mwh)
+	}
 }
 
 func (r *RouterImpl) BuildRouter() {
-	for _, route := range r.meta.Routes {
-		var mwh []iface.MiddlewareFunc
+	mw := make([]iface.MiddlewareFunc, len(r.meta.Middleware))
 
-		if route.OverrideMiddleware {
-			mwh = make([]iface.MiddlewareFunc, len(route.Middleware))
-			for i, m := range route.Middleware {
-				mwh[i] = m.MiddlewareFunc
-			}
-		} else {
-			pmw := r.GetMiddleware()
-			mwh = make([]iface.MiddlewareFunc, 0, len(pmw)+len(route.Middleware))
-			for _, m := range pmw {
-				mwh = append(mwh, m.MiddlewareFunc)
-			}
-			for _, m := range route.Middleware {
-				mwh = append(mwh, m.MiddlewareFunc)
-			}
-		}
-
-		handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
-		finalHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			ctx, ok := contextFromRequest(req)
-
-			var cancel func()
-			if !ok {
-				ctx, cancel = NewContext(w, req)
-				defer cancel()
-			}
-			if err := handler_with_mw(ctx); err != nil {
-				ctx.ErrorInternal(err.Error())
-			}
-			if err := ctx.Err(); err != nil {
-				ctx.ErrorInternal("Request aborted")
-			}
-			ctx.Response.WriteHttp(ctx.W)
-		})
-		r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
+	for i, m := range r.meta.Middleware {
+		mw[i] = m.MiddlewareFunc
 	}
+	r.buildRouter(r.meta, mw)
 }
 
 func composeMiddleware(mw []iface.MiddlewareFunc,

@@ -38,6 +38,8 @@ type Router interface {
 	OverrideMiddleware() Router
 	GetMiddleware() []*meta.MiddlewareMeta
 	LockMiddleware()
+
+	GetMeta() *meta.RouterMeta
 }
 
 // func WrapParamHandler(handler any) RequestHandler {

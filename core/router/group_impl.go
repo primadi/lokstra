@@ -16,6 +16,11 @@ type GroupImpl struct {
 	mwLocked bool
 }
 
+// GetMeta implements Router.
+func (g *GroupImpl) GetMeta() *meta.RouterMeta {
+	return g.meta
+}
+
 // DumpRoutes implements Router.
 func (g *GroupImpl) DumpRoutes() {
 	panic("unimplemented")
@@ -59,6 +64,7 @@ func (g *GroupImpl) Group(prefix string, mw ...any) Router {
 		rm.UseMiddleware(m)
 	}
 
+	g.meta.Groups = append(g.meta.Groups, rm)
 	return &GroupImpl{
 		parent: g.parent,
 		meta:   rm,

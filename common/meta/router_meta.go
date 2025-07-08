@@ -59,6 +59,21 @@ func NewRouter() *RouterMeta {
 	}
 }
 
+func (r *RouterMeta) DumpRoutes() {
+	r.RecurseAllHandler(func(rt *RouteMeta) {
+		fmt.Printf("[ROUTE] %s %s\n", rt.Method, rt.Path)
+	})
+}
+
+func (r *RouterMeta) RecurseAllHandler(callback func(rt *RouteMeta)) {
+	for _, route := range r.Routes {
+		callback(route)
+	}
+	for _, group := range r.Groups {
+		group.RecurseAllHandler(callback)
+	}
+}
+
 func (r *RouterMeta) GetRouterEngineType() string {
 	return r.RouterEngineType
 }

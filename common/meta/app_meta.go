@@ -65,6 +65,13 @@ func (a *AppMeta) GetSetting(key string) (any, bool) {
 	return value, exists
 }
 
+func (a *AppMeta) GetSettings() map[string]any {
+	if a.settings == nil {
+		return map[string]any{}
+	}
+	return a.settings
+}
+
 func (a *AppMeta) GetRouter() *RouterMeta {
 	return a.RouterMeta
 }

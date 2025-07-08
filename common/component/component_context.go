@@ -27,6 +27,6 @@ type ComponentContext interface {
 	RegisterMiddlewareFunc(middlewareType string, middlewareFunc iface.MiddlewareFunc)
 	GetMiddlewareFactory(middlewareType string) (iface.MiddlewareFactory, bool)
 
-	RegisterModule(moduleName string, fnReg func(ComponentContext) error) error
-	RegisterPlugin(pluginName string, fnReg func(ComponentContext) error) error
+	RegisterModuleFactory(moduleName string, moduleFactory func(ComponentContext) error) error
+	RegisterPluginFactory(pluginName string, pluginFactory func(ComponentContext) error) error
 }

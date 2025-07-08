@@ -17,7 +17,11 @@ type App struct {
 	ctx      component.ComponentContext
 	listener core_service.HttpListener
 
-	meta *meta.AppMeta // Meta information about the app
+	name              string
+	port              int
+	listenerType      string
+	routingEngineType string
+	settings          map[string]any
 }
 
 func NewApp(ctx component.ComponentContext, name string, port int) *App {
@@ -25,16 +29,21 @@ func NewApp(ctx component.ComponentContext, name string, port int) *App {
 }
 
 func NewAppFromMeta(ctx component.ComponentContext, meta *meta.AppMeta) *App {
-	ctx.RegisterModule("coreservice_module", coreservice_module.Register)
+	ctx.RegisterModuleFactory("coreservice_module", coreservice_module.ModuleFactory)
 	rtr := router.NewRouterWithEngine(ctx, meta.GetRouterEngineType())
 
 	copyRouterMeta(rtr, meta.RouterMeta)
 
 	return &App{
 		ctx:      ctx,
-		meta:     meta,
 		listener: getListenerFromMeta(ctx, meta),
 		Router:   rtr,
+
+		name:              meta.GetName(),
+		port:              meta.GetPort(),
+		listenerType:      meta.GetListenerType(),
+		routingEngineType: meta.GetRouterEngineType(),
+		settings:          meta.GetSettings(),
 	}
 }
 
@@ -65,24 +74,26 @@ func copyRouterMeta(rtr router.Router, meta *meta.RouterMeta) {
 		rtrGr := rtr.Group(gr.Prefix, utils.ToAnySlice(gr.Middleware)...).
 			WithOverrideMiddleware(gr.OverrideMiddleware)
 		copyRouterMeta(rtrGr, gr)
-
 	}
 }
 
 func (a *App) GetName() string {
-	return a.meta.GetName()
+	return a.name
 }
 
 func (a *App) GetPort() int {
-	return a.meta.GetPort()
+	return a.port
+}
+
+func (a *App) Addr() string {
+	return fmt.Sprintf(":%d", a.port)
 }
 
 func (a *App) Start() error {
-	rtrImpl := a.Router.(*router.RouterImpl)
-	meta.ResolveAllNamed(a.ctx, rtrImpl.Meta())
+	meta.ResolveAllNamed(a.ctx, a.Router.GetMeta())
 	rImp := a.Router.(*router.RouterImpl)
 	rImp.BuildRouter()
-	return a.listener.ListenAndServe(a.meta.Addr(), a.Router)
+	return a.listener.ListenAndServe(a.Addr(), a.Router)
 }
 
 func (a *App) Shutdown(shutdownTimeout time.Duration) error {
@@ -96,8 +107,21 @@ func (a *App) GetListener() core_service.HttpListener {
 	return a.listener
 }
 
+func (a *App) GetSettings() map[string]any {
+	return a.settings
+}
+
+func (a *App) GetSetting(key string) (any, bool) {
+	val, found := a.settings[key]
+	return val, found
+}
+
+func (a *App) SetSetting(key string, value any) {
+	a.settings[key] = value
+}
+
 func getListenerFromMeta(ctx component.ComponentContext, meta *meta.AppMeta) core_service.HttpListener {
-	lsAny, err := ctx.NewService(meta.GetListenerType(), meta.GetName()+".listener")
+	lsAny, err := ctx.NewService(meta.GetListenerType(), meta.GetName()+".listener", meta.GetSettings())
 	if err != nil {
 		panic(fmt.Sprintf("failed to create listener for app %s: %v", meta.GetName(), err))
 	}

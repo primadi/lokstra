@@ -13,7 +13,6 @@ type GlobalContext struct {
 	serviceFactories    map[string]iface.ServiceFactory
 	serviceInstances    map[string]iface.Service
 	modules             map[string]bool
-	plugin              map[string]bool
 }
 
 var globalContext = &GlobalContext{
@@ -22,7 +21,6 @@ var globalContext = &GlobalContext{
 	serviceFactories:    make(map[string]iface.ServiceFactory),
 	serviceInstances:    make(map[string]iface.Service),
 	modules:             make(map[string]bool),
-	plugin:              make(map[string]bool),
 }
 
 var globalContextCreated = false
@@ -35,28 +33,21 @@ func NewGlobalContext() *GlobalContext {
 	return globalContext
 }
 
-// RegisterModule implements ComponentContext.
-func (g *GlobalContext) RegisterModule(moduleName string, fnReg func(ComponentContext) error) error {
+// RegisterModuleFactory implements ComponentContext.
+func (g *GlobalContext) RegisterModuleFactory(moduleName string, moduleFactory func(ComponentContext) error) error {
 	if _, exists := g.modules[moduleName]; exists {
 		return errors.New("module with name '" + moduleName + "' already registered")
 	}
-	if err := fnReg(g); err != nil {
+	if err := moduleFactory(g); err != nil {
 		return err
 	}
 	g.modules[moduleName] = true
 	return nil
 }
 
-// RegisterPlugin implements ComponentContext.
-func (g *GlobalContext) RegisterPlugin(pluginName string, fnReg func(ComponentContext) error) error {
-	if _, exists := g.plugin[pluginName]; exists {
-		return errors.New("plugin with name '" + pluginName + "' already exists")
-	}
-	if err := fnReg(g); err != nil {
-		return err
-	}
-	g.plugin[pluginName] = true
-	return nil
+// RegisterPluginFactory implements ComponentContext.
+func (g *GlobalContext) RegisterPluginFactory(pluginName string, pluginFactory func(ComponentContext) error) error {
+	panic("Cannot register plugin factory in GlobalContext, use RegisterPluginFactory in PluginContext instead")
 }
 
 // GetHandler implements ComponentContext.

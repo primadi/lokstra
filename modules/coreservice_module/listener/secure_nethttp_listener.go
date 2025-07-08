@@ -113,9 +113,7 @@ func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler
 	s.mu.Unlock()
 
 	fmt.Printf("[SECURE-HTTP] Starting TLS server at %s\n", addr)
-	if rt := handler.(router.Router); rt != nil {
-		rt.DumpRoutes()
-	}
+	dumpRoutes(handler.(router.Router))
 
 	err := s.server.ListenAndServeTLS(s.certFile, s.keyFile)
 
