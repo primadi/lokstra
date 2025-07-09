@@ -31,10 +31,6 @@ func NewServer(ctx ComponentContext, name string) *Server {
 	return server.NewServer(ctx, name)
 }
 
-func NewApp(ctx ComponentContext, name string, port int) *App {
-	return app.NewApp(ctx, name, port)
-}
-
 const LISTENER_NETHTTP = core_service.NETHTTP_LISTENER_NAME
 const LISTENER_FASTHTTP = core_service.FASTHTTP_LISTENER_NAME
 const LISTENER_SECURE_NETHTTP = core_service.SECURE_NETHTTP_LISTENER_NAME
@@ -45,25 +41,26 @@ const ROUTER_ENGINE_SERVEMUX = core_service.SERVEMUX_ROUTER_ENGINE_NAME
 const CERT_FILE_KEY = listener.CERT_FILE
 const KEY_FILE_KEY = listener.KEY_FILE
 
-func NewAppCustom(ctx ComponentContext, name string, port int,
-	listenerType string, routerEngine string) *App {
-	appMeta := meta.NewApp(name, port).WithListenerType(listenerType).WithRouterEngineType(routerEngine)
-	return app.NewAppFromMeta(ctx, appMeta)
+func NewApp(ctx ComponentContext, name string, addr string) *App {
+	return app.NewApp(ctx, name, addr)
 }
 
-func NewAppSecure(ctx ComponentContext, name string, port int,
+func NewAppCustom(ctx ComponentContext, name string, addr string,
+	listenerType string, routerEngine string, settings map[string]any) *App {
+	return app.NewAppCustom(ctx, name, addr, listenerType, routerEngine, settings)
+}
+
+func NewAppSecure(ctx ComponentContext, name string, addr string,
 	certFile string, keyFile string) *App {
-	appMeta := meta.NewApp(name, port).
-		WithListenerType(LISTENER_SECURE_NETHTTP)
-	appMeta.SetSetting(CERT_FILE_KEY, certFile)
-	appMeta.SetSetting(KEY_FILE_KEY, keyFile)
-	return app.NewAppFromMeta(ctx, appMeta)
+	settings := map[string]any{
+		CERT_FILE_KEY: certFile,
+		KEY_FILE_KEY:  keyFile,
+	}
+	return app.NewAppCustom(ctx, name, addr, LISTENER_SECURE_NETHTTP, ROUTER_ENGINE_HTTPROUTER, settings)
 }
 
-func NewAppFastHTTP(ctx ComponentContext, name string, port int) *App {
-	appMeta := meta.NewApp(name, port).
-		WithListenerType(LISTENER_FASTHTTP)
-	return app.NewAppFromMeta(ctx, appMeta)
+func NewAppFastHTTP(ctx ComponentContext, name string, addr string) *App {
+	return app.NewAppCustom(ctx, name, addr, LISTENER_FASTHTTP, ROUTER_ENGINE_HTTPROUTER, nil)
 }
 
 func NamedMiddleware(middlewareType string, config ...any) *meta.MiddlewareMeta {

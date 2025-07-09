@@ -22,29 +22,31 @@ type RouterImpl struct {
 	r_engine core_service.RouterEngine
 }
 
-func NewRouter(ctx component.ComponentContext) Router {
-	rtmt := meta.NewRouter()
-	routerCtr++
-	rtAny, err := ctx.NewService(rtmt.GetRouterEngineType(), fmt.Sprintf("r%d.router_engine", routerCtr))
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create router engine %s: %v", rtmt.GetRouterEngineType(), err))
-	}
-	rt := rtAny.(core_service.RouterEngine)
-	if rt == nil {
-		panic(fmt.Sprintf("Router engine %s is not initialized", rtmt.GetRouterEngineType()))
-	}
-	return &RouterImpl{
-		meta:     rtmt,
-		r_engine: rt,
-	}
+func NewListener(ctx component.ComponentContext, name string, config map[string]any) core_service.HttpListener {
+	return NewListenerWithEngine(ctx, core_service.DEFAULT_LISTENER_NAME, name, config)
 }
 
-var routerCtr = 0
+func NewListenerWithEngine(ctx component.ComponentContext, listenerType string,
+	name string, config map[string]any) core_service.HttpListener {
+	lsAny, err := ctx.NewService(listenerType, name+".listener", config)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create listener for app %s: %v", name, err))
+	}
+	ls, ok := lsAny.(core_service.HttpListener)
+	if !ok {
+		panic(fmt.Sprintf("listener for app %s is not of type core_service.HttpListener", name))
+	}
+	return ls
+}
 
-func NewRouterWithEngine(ctx component.ComponentContext, engineType string) Router {
+func NewRouter(ctx component.ComponentContext, name string, config map[string]any) Router {
+	return NewRouterWithEngine(ctx, core_service.DEFAULT_ROUTER_ENGINE_NAME, name, config)
+}
+
+func NewRouterWithEngine(ctx component.ComponentContext, engineType string,
+	name string, config map[string]any) Router {
 	rtmt := meta.NewRouter().WithRouterEngineType(engineType)
-	routerCtr++
-	rtAny, err := ctx.NewService(rtmt.GetRouterEngineType(), fmt.Sprintf("r%d.router_engine", routerCtr))
+	rtAny, err := ctx.NewService(rtmt.GetRouterEngineType(), "router_engine:"+name, config)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create router engine %s: %v", rtmt.GetRouterEngineType(), err))
 	}

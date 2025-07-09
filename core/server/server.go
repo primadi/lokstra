@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"lokstra/common/component"
-	"lokstra/common/meta"
 	"lokstra/core/app"
 	"sync"
 	"time"
@@ -23,24 +22,6 @@ func NewServer(ctx component.ComponentContext, name string) *Server {
 		apps:     make([]*app.App, 0),
 		settings: make(map[string]any),
 	}
-}
-
-func NewServerFromMeta(ctx component.ComponentContext, meta *meta.ServerMeta) *Server {
-	svr := NewServer(ctx, meta.GetName())
-	for _, appMeta := range meta.GetApps() {
-		appInstance := app.NewAppFromMeta(ctx, appMeta)
-		if appInstance == nil {
-			panic(fmt.Sprintf("Failed to create app from meta: %s", appMeta.GetName()))
-		}
-		svr.AddApp(appInstance)
-	}
-
-	settings := meta.GetSettings()
-	for key, value := range settings {
-		svr.SetSetting(key, value)
-	}
-
-	return svr
 }
 
 func (s *Server) GetName() string {

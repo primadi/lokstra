@@ -9,7 +9,7 @@ func main() {
 	ctx := lokstra.NewGlobalContext()
 
 	// Create the root router
-	app1 := lokstra.NewApp(ctx, "my-app", 8080)
+	app1 := lokstra.NewApp(ctx, "my-app", ":8080")
 
 	// Create a route group with prefix /api and apply auth middleware
 	apiGroup := app1.Group("/api", "auth")
