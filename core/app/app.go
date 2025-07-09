@@ -29,7 +29,7 @@ func NewApp(ctx component.ComponentContext, name string, port int) *App {
 }
 
 func NewAppFromMeta(ctx component.ComponentContext, meta *meta.AppMeta) *App {
-	ctx.RegisterModuleFactory("coreservice_module", coreservice_module.ModuleFactory)
+	ctx.RegisterModule("coreservice_module", coreservice_module.ModuleRegister)
 	rtr := router.NewRouterWithEngine(ctx, meta.GetRouterEngineType())
 
 	copyRouterMeta(rtr, meta.RouterMeta)

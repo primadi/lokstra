@@ -12,7 +12,7 @@ var ErrServiceNotFound = errors.New("service not found")
 var ErrServiceTypeInvalid = errors.New("service type is invalid")
 
 type ComponentContext interface {
-	RegisterService(name string, service iface.Service, allowOverride bool) error
+	RegisterService(name string, service iface.Service) error
 	GetService(name string) iface.Service
 	NewService(serviceType, name string, config ...any) (iface.Service, error)
 
@@ -21,12 +21,10 @@ type ComponentContext interface {
 
 	GetHandler(name string) *HandlerRegister
 	RegisterHandler(name string, handler request.HandlerFunc)
-	RegisterHandlerWithReplace(name string, handler request.HandlerFunc)
 
 	RegisterMiddlewareFactory(middlewareType string, middlewareFactory iface.MiddlewareFactory)
 	RegisterMiddlewareFunc(middlewareType string, middlewareFunc iface.MiddlewareFunc)
 	GetMiddlewareFactory(middlewareType string) (iface.MiddlewareFactory, bool)
 
-	RegisterModuleFactory(moduleName string, moduleFactory func(ComponentContext) error) error
-	RegisterPluginFactory(pluginName string, pluginFactory func(ComponentContext) error) error
+	RegisterModule(moduleName string, registerFunc func(ctx ComponentContext) error) error
 }

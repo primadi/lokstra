@@ -15,7 +15,7 @@ import (
 
 type Context = request.Context
 type ComponentContext = component.ComponentContext
-type GlobalContext = component.GlobalContext
+type GlobalContext = component.ComponentContextImpl
 
 type HandlerFunc = iface.HandlerFunc
 type Server = server.Server

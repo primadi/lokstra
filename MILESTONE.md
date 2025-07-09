@@ -11,14 +11,13 @@ Lokstra is a backend framework for Go that is flexible, scalable, and structured
 ### Features:
 
 * Modular Server, App, and RouterEngine
-* RequestContext + binding + response helpers
+* Context + binding + response helpers
 * Middleware: global, group, and handler levels
-* Service registry + basic lifecycle hooks (`OnStart`, `OnStop`)
 * Service config via YAML + ENV override
 * Routing engine based on httpRouter
 * Examples in `/cmd/examples/*`
-* LoggerService, DBPoolService, RedisWorkerService *(required)*
-* SimpleWorkerService *(required)*
+* LoggerService, DBPoolService, RedisWorkerService 
+* SimpleWorkerService
 * Multi-port App (multiple apps in a single binary)
 * Graceful shutdown per service
 

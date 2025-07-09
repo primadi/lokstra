@@ -279,11 +279,11 @@ func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []iface.Mid
 
 	handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
 	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ctx, ok := contextFromRequest(req)
+		ctx, ok := request.ContextFromRequest(req)
 
 		var cancel func()
 		if !ok {
-			ctx, cancel = NewContext(w, req)
+			ctx, cancel = request.NewContext(w, req)
 			defer cancel()
 		}
 		if err := handler_with_mw(ctx); err != nil {
@@ -292,7 +292,7 @@ func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []iface.Mid
 		if err := ctx.Err(); err != nil {
 			ctx.ErrorInternal("Request aborted")
 		}
-		ctx.Response.WriteHttp(ctx.W)
+		ctx.Response.WriteHttp(ctx.Writer)
 	})
 	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
 }
@@ -331,11 +331,6 @@ func composeMiddleware(mw []iface.MiddlewareFunc,
 		handler = mw[i](handler)
 	}
 	return handler
-}
-
-func contextFromRequest(r *http.Request) (*request.Context, bool) {
-	rc, ok := r.Context().(*request.Context)
-	return rc, ok
 }
 
 func init() {
