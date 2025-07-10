@@ -1,4 +1,4 @@
-package component
+package module
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ type HandlerRegister = request.HandlerRegister
 var ErrServiceNotFound = errors.New("service not found")
 var ErrServiceTypeInvalid = errors.New("service type is invalid")
 
-type ComponentContext interface {
+type RegistrationContext interface {
 	RegisterService(name string, service iface.Service) error
 	GetService(name string) iface.Service
 	NewService(serviceType, name string, config ...any) (iface.Service, error)
@@ -26,5 +26,6 @@ type ComponentContext interface {
 	RegisterMiddlewareFunc(middlewareType string, middlewareFunc iface.MiddlewareFunc)
 	GetMiddlewareFactory(middlewareType string) (iface.MiddlewareFactory, bool)
 
-	RegisterModule(moduleName string, registerFunc func(ctx ComponentContext) error) error
+	RegisterModule(moduleName string, registerFunc func(ctx RegistrationContext) error) error
+	RegisterPluginModule(moduleName string, pluginPath string, registerFuncName string) error
 }

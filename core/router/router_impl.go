@@ -2,9 +2,9 @@ package router
 
 import (
 	"fmt"
-	"lokstra/common/component"
 	"lokstra/common/iface"
 	"lokstra/common/meta"
+	"lokstra/common/module"
 	"lokstra/core/request"
 	"lokstra/serviceapi/core_service"
 	"mime"
@@ -22,12 +22,17 @@ type RouterImpl struct {
 	r_engine core_service.RouterEngine
 }
 
-func NewListener(ctx component.ComponentContext, name string, config map[string]any) core_service.HttpListener {
+func NewListener(ctx module.RegistrationContext, name string, config map[string]any) core_service.HttpListener {
 	return NewListenerWithEngine(ctx, core_service.DEFAULT_LISTENER_NAME, name, config)
 }
 
-func NewListenerWithEngine(ctx component.ComponentContext, listenerType string,
+func NewListenerWithEngine(ctx module.RegistrationContext, listenerType string,
 	name string, config map[string]any) core_service.HttpListener {
+
+	if listenerType == "" || listenerType == "default" {
+		listenerType = core_service.DEFAULT_LISTENER_NAME
+	}
+
 	lsAny, err := ctx.NewService(listenerType, name+".listener", config)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create listener for app %s: %v", name, err))
@@ -39,12 +44,16 @@ func NewListenerWithEngine(ctx component.ComponentContext, listenerType string,
 	return ls
 }
 
-func NewRouter(ctx component.ComponentContext, name string, config map[string]any) Router {
+func NewRouter(ctx module.RegistrationContext, name string, config map[string]any) Router {
 	return NewRouterWithEngine(ctx, core_service.DEFAULT_ROUTER_ENGINE_NAME, name, config)
 }
 
-func NewRouterWithEngine(ctx component.ComponentContext, engineType string,
+func NewRouterWithEngine(ctx module.RegistrationContext, engineType string,
 	name string, config map[string]any) Router {
+
+	if engineType == "" || engineType == "default" {
+		engineType = core_service.DEFAULT_ROUTER_ENGINE_NAME
+	}
 	rtmt := meta.NewRouter().WithRouterEngineType(engineType)
 	rtAny, err := ctx.NewService(rtmt.GetRouterEngineType(), "router_engine:"+name, config)
 	if err != nil {

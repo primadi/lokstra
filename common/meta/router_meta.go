@@ -2,8 +2,8 @@ package meta
 
 import (
 	"fmt"
-	"lokstra/common/component"
 	"lokstra/common/iface"
+	"lokstra/common/module"
 	"lokstra/core/request"
 	"lokstra/serviceapi/core_service"
 	"net/http"
@@ -120,6 +120,10 @@ func (r *RouterMeta) handle(method iface.HTTPMethod, path string, handler any,
 
 	mwp := make([]*MiddlewareMeta, len(middleware))
 	for i := range middleware {
+		if middleware[i] == nil {
+			continue
+		}
+
 		var mw *MiddlewareMeta
 		switch m := middleware[i].(type) {
 		case iface.MiddlewareFunc:
@@ -228,7 +232,7 @@ func (r *RouterMeta) DELETE(path string, handler any, middleware ...any) *Router
 	return r.Handle("DELETE", path, handler, middleware...)
 }
 
-func ResolveAllNamed(ctx component.ComponentContext, r *RouterMeta) {
+func ResolveAllNamed(ctx module.RegistrationContext, r *RouterMeta) {
 	for _, route := range r.Routes {
 		if route.Handler.HandlerFunc == nil {
 			handler := ctx.GetHandler(route.Handler.Name)

@@ -46,7 +46,7 @@ func main() {
 }
 
 // registerMiddlewares registers the named middlewares used in this example.
-func registerMiddlewares(ctx lokstra.ComponentContext) {
+func registerMiddlewares(ctx lokstra.RegistrationContext) {
 	// Simulate an auth middleware
 	ctx.RegisterMiddlewareFunc("auth", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {

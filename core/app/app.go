@@ -2,8 +2,8 @@ package app
 
 import (
 	"fmt"
-	"lokstra/common/component"
 	"lokstra/common/meta"
+	"lokstra/common/module"
 	"lokstra/core/router"
 	"lokstra/modules/coreservice_module"
 	"lokstra/serviceapi/core_service"
@@ -14,7 +14,7 @@ import (
 type App struct {
 	router.Router
 
-	ctx      component.ComponentContext
+	ctx      module.RegistrationContext
 	listener core_service.HttpListener
 
 	name              string
@@ -24,15 +24,17 @@ type App struct {
 	settings          map[string]any
 }
 
-func NewApp(ctx component.ComponentContext, name string, addr string) *App {
+func NewApp(ctx module.RegistrationContext, name string, addr string) *App {
 	listenerType := core_service.DEFAULT_LISTENER_NAME
 	routerEngineType := core_service.DEFAULT_ROUTER_ENGINE_NAME
 	return NewAppCustom(ctx, name, addr, listenerType, routerEngineType, nil)
 }
 
-func NewAppCustom(ctx component.ComponentContext, name string, addr string,
+func NewAppCustom(ctx module.RegistrationContext, name string, addr string,
 	listenerType string, routerEngineType string, settings map[string]any) *App {
-	ctx.RegisterModule("coreservice_module", coreservice_module.ModuleRegister) // no problem if already registered
+
+	// note: this is a no-op if already registered
+	ctx.RegisterModule("coreservice_module", coreservice_module.ModuleRegister)
 
 	if settings == nil {
 		settings = make(map[string]any)

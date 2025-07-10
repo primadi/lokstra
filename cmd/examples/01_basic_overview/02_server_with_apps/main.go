@@ -4,7 +4,7 @@ import (
 	"lokstra"
 )
 
-func createApp1(ctx lokstra.ComponentContext, addr string) *lokstra.App {
+func createApp1(ctx lokstra.RegistrationContext, addr string) *lokstra.App {
 	app1 := lokstra.NewApp(ctx, "app1", addr)
 
 	// Register a handler using a named handler
@@ -13,7 +13,7 @@ func createApp1(ctx lokstra.ComponentContext, addr string) *lokstra.App {
 	return app1
 }
 
-func createApp2(ctx lokstra.ComponentContext, addr string) *lokstra.App {
+func createApp2(ctx lokstra.RegistrationContext, addr string) *lokstra.App {
 	app2 := lokstra.NewApp(ctx, "app2", addr)
 
 	// Register a handler using an Handler function

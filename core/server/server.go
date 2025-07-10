@@ -2,20 +2,20 @@ package server
 
 import (
 	"fmt"
-	"lokstra/common/component"
+	"lokstra/common/module"
 	"lokstra/core/app"
 	"sync"
 	"time"
 )
 
 type Server struct {
-	ctx      component.ComponentContext
+	ctx      module.RegistrationContext
 	name     string
 	apps     []*app.App
 	settings map[string]any
 }
 
-func NewServer(ctx component.ComponentContext, name string) *Server {
+func NewServer(ctx module.RegistrationContext, name string) *Server {
 	return &Server{
 		ctx:      ctx,
 		name:     name,

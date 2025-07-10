@@ -9,29 +9,23 @@ import (
 	"lokstra/common/utils"
 	"lokstra/core/router"
 	"lokstra/serviceapi/core_service"
-	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/quic-go/quic-go/http3"
 )
 
-const CERT_FILE_KEY = "cert_file"
-const KEY_FILE_KEY = "key_file"
-const CA_FILE_KEY = "ca_file"
-
-// SecureNetHttpListener implements the HttpListener interface with TLS support.
-type SecureNetHttpListener struct {
-	server   *http.Server
+// HTTP3Listner implements the HttpListener interface with HTTP/3 support.
+type Http3Listener struct {
+	server   *http3.Server
 	certFile string
 	keyFile  string
 	caFile   string
 
-	readTimeout  time.Duration
-	writeTimeout time.Duration
-	idleTimeout  time.Duration
+	idleTimeout time.Duration
 
 	mu             sync.RWMutex
 	running        bool
@@ -41,14 +35,14 @@ type SecureNetHttpListener struct {
 }
 
 // ListenerType implements listener_iface.HttpListener.
-func (s *SecureNetHttpListener) ListenerType() string {
-	return core_service.SECURE_NETHTTP_LISTENER_NAME
+func (s *Http3Listener) ListenerType() string {
+	return core_service.HTTP3_LISTENER_NAME
 }
 
-// NewSecureNetHttpListener returns a new SecureNetHttpListener instance.
-func NewSecureNetHttpListener(config any) (iface.Service, error) {
+// NewHttp3Listener returns a new Http3Listener instance.
+func NewHttp3Listener(config any) (iface.Service, error) {
 	var certFile, keyFile, caFile string
-	var readTimeout, writeTimeout, idleTimeout time.Duration
+	var idleTimeout time.Duration
 
 	if cfg, ok := config.(map[string]any); ok {
 		certFile = utils.GetValueFromMap(cfg, CERT_FILE_KEY, "")
@@ -61,8 +55,6 @@ func NewSecureNetHttpListener(config any) (iface.Service, error) {
 		}
 		caFile = utils.GetValueFromMap(cfg, CA_FILE_KEY, "")
 
-		readTimeout = utils.GetDurationFromMap(cfg, READ_TIMEOUT_KEY, DEFAULT_READ_TIMEOUT)
-		writeTimeout = utils.GetDurationFromMap(cfg, WRITE_TIMEOUT_KEY, DEFAULT_WRITE_TIMEOUT)
 		idleTimeout = utils.GetDurationFromMap(cfg, IDLE_TIMEOUT_LEY, DEFAULT_IDLE_TIMEOUT)
 	} else if arr, ok := config.([]any); ok {
 		if len(arr) != 2 {
@@ -88,28 +80,26 @@ func NewSecureNetHttpListener(config any) (iface.Service, error) {
 		return nil, fmt.Errorf("invalid configuration type: expected map[string]any")
 	}
 
-	return &SecureNetHttpListener{
+	return &Http3Listener{
 		certFile: certFile,
 		keyFile:  keyFile,
 		caFile:   caFile,
 
-		readTimeout:  readTimeout,
-		writeTimeout: writeTimeout,
-		idleTimeout:  idleTimeout,
+		idleTimeout: idleTimeout,
 	}, nil
 }
 
-func (s *SecureNetHttpListener) IsRunning() bool {
+func (s *Http3Listener) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
 }
 
-func (s *SecureNetHttpListener) ActiveRequest() int {
+func (s *Http3Listener) ActiveRequest() int {
 	return int(s.activeCount.Load())
 }
 
-func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler) error {
+func (s *Http3Listener) ListenAndServe(addr string, handler http.Handler) error {
 	wrappedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.isShuttingDown.Load() {
 			w.Header().Set("Retry-After", "5")
@@ -128,40 +118,19 @@ func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler
 	})
 
 	s.mu.Lock()
-	s.server = &http.Server{
-		Handler:      wrappedHandler,
-		ReadTimeout:  s.readTimeout,
-		WriteTimeout: s.writeTimeout,
-		IdleTimeout:  s.idleTimeout,
-	}
+
 	s.running = true
 	s.mu.Unlock()
 
-	var listener net.Listener
 	var err error
-	if socketPath, ok := strings.CutPrefix(addr, "unix:"); ok {
-		if _, err := os.Stat(socketPath); err == nil {
-			os.Remove(socketPath)
-		}
-		listener, err = net.Listen("unix", socketPath)
-		if err != nil {
-			return fmt.Errorf("failed to listen on unix socket: %w", err)
-		}
-		fmt.Printf("[SECURE-HTTP] Starting TLS server on Unix socket %s\n", socketPath)
-	} else {
-		listener, err = net.Listen("tcp", addr)
-		if err != nil {
-			return fmt.Errorf("failed to listen on TCP %s: %w", addr, err)
-		}
-		fmt.Printf("[SECURE-HTTP] Starting TLS server at %s\n", addr)
-	}
+
+	fmt.Printf("[HTTP3] Starting TLS server at %s\n", addr)
 
 	// Wrap with TLS
-	cert, err := tls.LoadX509KeyPair(s.certFile, s.keyFile)
-	if err != nil {
-		return fmt.Errorf("failed to load TLS cert/key: %w", err)
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS13,
+		NextProtos: []string{"h3"},
 	}
-	tlsConfig := &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}
 
 	if s.caFile != "" {
 		caCert, err := os.ReadFile(s.caFile)
@@ -176,13 +145,18 @@ func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	}
 
-	tlsListener := tls.NewListener(listener, tlsConfig)
-
 	if r, ok := handler.(router.Router); ok {
 		dumpRoutes(r)
 	}
 
-	err = s.server.Serve(tlsListener)
+	s.server = &http3.Server{
+		Addr:        addr,
+		Handler:     wrappedHandler,
+		IdleTimeout: s.idleTimeout,
+		TLSConfig:   tlsConfig,
+	}
+
+	err = s.server.ListenAndServeTLS(s.certFile, s.keyFile)
 
 	s.mu.Lock()
 	s.running = false
@@ -194,7 +168,7 @@ func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler
 	return err
 }
 
-func (s *SecureNetHttpListener) Shutdown(shutdownTimeout time.Duration) error {
+func (s *Http3Listener) Shutdown(shutdownTimeout time.Duration) error {
 	s.isShuttingDown.Store(true)
 
 	s.mu.RLock()
@@ -208,7 +182,7 @@ func (s *SecureNetHttpListener) Shutdown(shutdownTimeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
-	fmt.Printf("[SECURE-HTTP] Initiating graceful shutdown for TLS server at %s\n", server.Addr)
+	fmt.Printf("[HTTP3] Initiating graceful shutdown for TLS server at %s\n", server.Addr)
 	shutdownErr := server.Shutdown(ctx)
 
 	done := make(chan struct{})
@@ -228,4 +202,4 @@ func (s *SecureNetHttpListener) Shutdown(shutdownTimeout time.Duration) error {
 	return shutdownErr
 }
 
-var _ core_service.HttpListener = (*SecureNetHttpListener)(nil)
+var _ core_service.HttpListener = (*Http3Listener)(nil)

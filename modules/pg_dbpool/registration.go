@@ -2,8 +2,8 @@ package pg_dbpool
 
 import (
 	"fmt"
-	"lokstra/common/component"
 	"lokstra/common/iface"
+	"lokstra/common/module"
 )
 
 const DSN_KEY = "dsn"
@@ -11,7 +11,7 @@ const DSN_KEY = "dsn"
 type Registration struct{}
 
 // Register implements iface.Plugin.
-func (r *Registration) Register(ctx component.ComponentContext) error {
+func (r *Registration) Register(ctx module.RegistrationContext) error {
 	ctx.RegisterServiceFactory("pg_dbpool", func(config any) (iface.Service, error) {
 		var dsn string
 

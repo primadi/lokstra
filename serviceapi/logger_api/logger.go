@@ -1,6 +1,6 @@
 package logger_api
 
-import "lokstra/common/component"
+import "lokstra/common/module"
 
 type LogLevel int
 
@@ -72,25 +72,25 @@ type Field struct {
 	Value any
 }
 
-func GetLogger(ctx component.ComponentContext, serviceName string) (Logger, error) {
+func GetLogger(ctx module.RegistrationContext, serviceName string) (Logger, error) {
 	svc := ctx.GetService(serviceName)
 	if svc == nil {
-		return nil, component.ErrServiceNotFound
+		return nil, module.ErrServiceNotFound
 	}
 	if logger, ok := svc.(Logger); ok {
 		return logger, nil
 	}
-	return nil, component.ErrServiceTypeInvalid
+	return nil, module.ErrServiceTypeInvalid
 }
 
-func NewLogger(ctx component.ComponentContext, serviceType string, serviceName string, level LogLevel) (Logger, error) {
+func NewLogger(ctx module.RegistrationContext, serviceType string, serviceName string, level LogLevel) (Logger, error) {
 	svc, err := ctx.NewService(serviceType, serviceName)
 	if err != nil {
-		return nil, component.ErrServiceNotFound
+		return nil, module.ErrServiceNotFound
 	}
 	if logger, ok := svc.(Logger); ok {
 		logger.SetLogLevel(level)
 		return logger, nil
 	}
-	return nil, component.ErrServiceTypeInvalid
+	return nil, module.ErrServiceTypeInvalid
 }

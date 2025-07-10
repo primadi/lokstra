@@ -5,11 +5,11 @@ import (
 	"time"
 )
 
-const HTTP_LISTENER_NAME = "lokstra.http_listener"
+const NETHTTP_LISTENER_NAME = "nethttp"
+const FASTHTTP_LISTENER_NAME = "fasthttp"
+const SECURE_NETHTTP_LISTENER_NAME = "secure_nethttp"
+const HTTP3_LISTENER_NAME = "http3"
 
-const NETHTTP_LISTENER_NAME = HTTP_LISTENER_NAME + ".nethttp"
-const FASTHTTP_LISTENER_NAME = HTTP_LISTENER_NAME + ".fasthttp"
-const SECURE_NETHTTP_LISTENER_NAME = HTTP_LISTENER_NAME + ".secure_nethttp"
 const DEFAULT_LISTENER_NAME = NETHTTP_LISTENER_NAME
 
 type HttpListener interface {

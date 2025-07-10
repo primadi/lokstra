@@ -1,0 +1,5 @@
+# services:
+#   - type: lokstra.dbpool
+#     name: main-db
+#     config:
+#       dsn: ${ENV:DB_DSN:postgres://localhost/db}

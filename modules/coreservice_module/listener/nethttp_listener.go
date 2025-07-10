@@ -6,7 +6,10 @@ import (
 	"lokstra/common/iface"
 	"lokstra/core/router"
 	"lokstra/serviceapi/core_service"
+	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -65,16 +68,42 @@ func (n *NetHttpListener) ListenAndServe(addr string, handler http.Handler) erro
 
 	n.mu.Lock()
 	n.server = &http.Server{
-		Addr:    addr,
 		Handler: wrappedHandler,
 	}
 	n.running = true
 	n.mu.Unlock()
 
-	fmt.Printf("[NETHTTP] Starting server at %s\n", addr)
-	dumpRoutes(handler.(router.Router))
+	var listener net.Listener
+	var err error
 
-	err := n.server.ListenAndServe()
+	if after, ok := strings.CutPrefix(addr, "unix:"); ok {
+		socketPath := after
+
+		// Remove existing socket file if exists
+		if _, err := os.Stat(socketPath); err == nil {
+			if err := os.Remove(socketPath); err != nil {
+				return fmt.Errorf("failed to remove existing socket file: %w", err)
+			}
+		}
+
+		listener, err = net.Listen("unix", socketPath)
+		if err != nil {
+			return fmt.Errorf("failed to listen on unix socket: %w", err)
+		}
+		fmt.Printf("[NETHTTP] Starting server on Unix socket %s\n", socketPath)
+	} else {
+		listener, err = net.Listen("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("failed to listen on TCP address %s: %w", addr, err)
+		}
+		fmt.Printf("[NETHTTP] Starting server on TCP %s\n", addr)
+	}
+
+	if r, ok := handler.(router.Router); ok {
+		dumpRoutes(r)
+	}
+
+	err = n.server.Serve(listener)
 
 	n.mu.Lock()
 	n.running = false

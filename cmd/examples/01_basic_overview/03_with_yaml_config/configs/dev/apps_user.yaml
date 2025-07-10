@@ -1,0 +1,36 @@
+apps:
+  - name: user-app
+    address: :8080
+    listener_type: default
+    routing_engine_type: default
+    setting:
+      cors: true
+    routes:
+      - method: GET
+        path: /me
+        handler: user.profile
+    groups:
+      - prefix: /user
+        middleware:
+          - name: auth
+            config:
+              enabled: true
+              token_type: bearer
+        routes:
+          - method: GET
+            path: /me
+            handler: user.profile
+        groups:
+          - prefix: /test
+            middleware:
+              - name: admin_only
+            routes:
+              - method: GET
+                path: /list
+                handler: user.list
+    # middleware:
+    #   - type: logger
+    #     config:
+    #       level: info
+    #   - type: recovery
+    #     enabled: false
