@@ -1,21 +1,21 @@
 package jwt_auth_basic
 
-import "lokstra/common/iface"
+// import "lokstra/common/iface"
 
-type JWTAuthService struct {
-	name      string
-	secret    string
-	expires   int
-	validator AuthCredentialValidator
-}
+// type JWTAuthService struct {
+// 	name      string
+// 	secret    string
+// 	expires   int
+// 	validator AuthCredentialValidator
+// }
 
-func NewJWTAuthService(name string, cfg map[string]any) *JWTAuthService {
-	secret := cfg["secret"].(string)
-	expires := int(cfg["expires"].(int))
-	return &JWTAuthService{name: name, secret: secret, expires: expires}
-}
+// func NewJWTAuthService(name string, cfg map[string]any) *JWTAuthService {
+// 	secret := cfg["secret"].(string)
+// 	expires := int(cfg["expires"].(int))
+// 	return &JWTAuthService{name: name, secret: secret, expires: expires}
+// }
 
-var _ iface.Service = (*JWTAuthService)(nil)
+// var _ iface.Service = (*JWTAuthService)(nil)
 
 // func (j *JWTAuthService) Name() string    { return j.name }
 // func (j *JWTAuthService) Type() string    { return "jwt-auth-basic" }

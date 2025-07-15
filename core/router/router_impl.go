@@ -284,12 +284,12 @@ func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []*meta.Mid
 			defer cancel()
 		}
 		if err := handler_with_mw(ctx); err != nil {
-			ctx.ErrorInternal(err.Error())
+			_ = ctx.ErrorInternal(err.Error())
 		}
 		if err := ctx.Err(); err != nil {
-			ctx.ErrorInternal("Request aborted")
+			_ = ctx.ErrorInternal("Request aborted")
 		}
-		ctx.Response.WriteHttp(ctx.Writer)
+		_ = ctx.Response.WriteHttp(ctx.Writer)
 	})
 	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
 }
@@ -349,9 +349,9 @@ func composeMiddleware(mw []*meta.MiddlewareExecution,
 }
 
 func init() {
-	mime.AddExtensionType(".wasm", "application/wasm")
-	mime.AddExtensionType(".woff2", "font/woff2")
-	mime.AddExtensionType(".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-	mime.AddExtensionType(".gz", "application/gzip")
-	mime.AddExtensionType(".map", "application/json")
+	_ = mime.AddExtensionType(".wasm", "application/wasm")
+	_ = mime.AddExtensionType(".woff2", "font/woff2")
+	_ = mime.AddExtensionType(".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+	_ = mime.AddExtensionType(".gz", "application/gzip")
+	_ = mime.AddExtensionType(".map", "application/json")
 }

@@ -39,8 +39,8 @@ var Logger = logger.NewService(serviceapi.LogLevelInfo)
 func NewGlobalContext() *GlobalContext {
 	ctx := module.NewGlobalContext()
 
-	ctx.RegisterServiceModule(logger.GetModule())
-	ctx.RegisterModule("coreservice_module", coreservice.RegisterModule)
+	_ = ctx.RegisterServiceModule(logger.GetModule())
+	_ = ctx.RegisterModule("coreservice_module", coreservice.RegisterModule)
 
 	return ctx
 }

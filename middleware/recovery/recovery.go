@@ -29,7 +29,7 @@ func (r *RecoveryMiddleware) Factory(_ any) lokstra.MiddlewareFunc {
 		return func(ctx *lokstra.Context) error {
 			defer func() {
 				if err := recover(); err != nil {
-					ctx.ErrorInternal("Internal Server Error")
+					_ = ctx.ErrorInternal("Internal Server Error")
 					lokstra.Logger.WithField("error", err).
 						WithField("stack", string(debug.Stack())).
 						Errorf("Recovered from panic in middleware")

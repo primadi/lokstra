@@ -65,7 +65,7 @@ func (g *RegistrationContextImpl) RegisterPluginModuleWithEntry(moduleName strin
 	if err != nil {
 		return fmt.Errorf("load plugin %s: %w", pluginPath, err)
 	}
-	sym, err := p.Lookup(entryFn)
+	sym, _ := p.Lookup(entryFn)
 	entry, ok := sym.(func(ctx RegistrationContext) error)
 	if !ok {
 		return fmt.Errorf("plugin entry %s has wrong signature", entryFn)

@@ -24,10 +24,9 @@ import (
 type FastHttpListener struct {
 	server *fasthttp.Server
 
-	readTimeout       time.Duration
-	readHeaderTimeout time.Duration
-	writeTimeout      time.Duration
-	idleTimeout       time.Duration
+	readTimeout  time.Duration
+	writeTimeout time.Duration
+	idleTimeout  time.Duration
 
 	mu             sync.RWMutex
 	addr           string
