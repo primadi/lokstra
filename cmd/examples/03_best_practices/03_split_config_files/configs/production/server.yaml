@@ -1,0 +1,5 @@
+server:
+  name: production-server
+  global_setting:
+    log_level: info
+    environment: production
