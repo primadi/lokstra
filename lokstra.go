@@ -8,9 +8,9 @@ import (
 	"lokstra/core/app"
 	"lokstra/core/request"
 	"lokstra/core/server"
-	"lokstra/modules/coreservice_module/listener"
-	"lokstra/serviceapi/core_service"
-	"lokstra/serviceapi/logger_api"
+	"lokstra/modules/coreservice"
+	"lokstra/modules/coreservice/listener"
+	"lokstra/serviceapi"
 	"lokstra/services/logger"
 )
 
@@ -19,13 +19,30 @@ type RegistrationContext = module.RegistrationContext
 type GlobalContext = module.RegistrationContextImpl
 
 type HandlerFunc = iface.HandlerFunc
+
+type MiddlewareFunc = iface.MiddlewareFunc
+type MiddlewareFactory = iface.MiddlewareFactory
+type MiddlewareMeta = iface.MiddlewareMeta
+type MiddlewareModule = iface.MiddlewareModule
+
 type Server = server.Server
 type App = app.App
 
-var Logger = logger.NewService(logger_api.LogLevelInfo)
+type LogFields = serviceapi.LogFields
+
+type Service = iface.Service
+type ServiceModule = iface.ServiceModule
+type ServiceFactory = iface.ServiceFactory
+
+var Logger = logger.NewService(serviceapi.LogLevelInfo)
 
 func NewGlobalContext() *GlobalContext {
-	return module.NewGlobalContext()
+	ctx := module.NewGlobalContext()
+
+	ctx.RegisterServiceModule(logger.GetModule())
+	ctx.RegisterModule("coreservice_module", coreservice.RegisterModule)
+
+	return ctx
 }
 
 func NewServer(ctx *GlobalContext, name string) *Server {
@@ -36,13 +53,13 @@ func NewServerFromConfig(ctx *GlobalContext, cfg *config.LokstraConfig) (*Server
 	return config.NewServerFromConfig(ctx, cfg)
 }
 
-const LISTENER_NETHTTP = core_service.NETHTTP_LISTENER_NAME
-const LISTENER_FASTHTTP = core_service.FASTHTTP_LISTENER_NAME
-const LISTENER_SECURE_NETHTTP = core_service.SECURE_NETHTTP_LISTENER_NAME
-const LISTENER_HTTP3 = core_service.HTTP3_LISTENER_NAME
+const LISTENER_NETHTTP = serviceapi.NETHTTP_LISTENER_NAME
+const LISTENER_FASTHTTP = serviceapi.FASTHTTP_LISTENER_NAME
+const LISTENER_SECURE_NETHTTP = serviceapi.SECURE_NETHTTP_LISTENER_NAME
+const LISTENER_HTTP3 = serviceapi.HTTP3_LISTENER_NAME
 
-const ROUTER_ENGINE_HTTPROUTER = core_service.HTTPROUTER_ROUTER_ENGINE_NAME
-const ROUTER_ENGINE_SERVEMUX = core_service.SERVEMUX_ROUTER_ENGINE_NAME
+const ROUTER_ENGINE_HTTPROUTER = serviceapi.HTTPROUTER_ROUTER_ENGINE_NAME
+const ROUTER_ENGINE_SERVEMUX = serviceapi.SERVEMUX_ROUTER_ENGINE_NAME
 
 const CERT_FILE_KEY = listener.CERT_FILE_KEY
 const KEY_FILE_KEY = listener.KEY_FILE_KEY
@@ -81,11 +98,8 @@ func NewAppFastHTTP(ctx RegistrationContext, name string, addr string) *App {
 	return app.NewAppCustom(ctx, name, addr, LISTENER_FASTHTTP, ROUTER_ENGINE_HTTPROUTER, nil)
 }
 
-func NamedMiddleware(middlewareType string, config ...any) *meta.MiddlewareMeta {
-	return &meta.MiddlewareMeta{
-		MiddlewareType: middlewareType,
-		Config:         config,
-	}
+func NamedMiddleware(middlewareType string, config ...any) *meta.MiddlewareExecution {
+	return meta.NamedMiddleware(middlewareType, config...)
 }
 
 // LoadConfigDir loads the configuration from the specified directory.

@@ -86,3 +86,12 @@ func (r *Response) ErrorInternal(msg string) error {
 	r.Message = msg
 	return nil
 }
+
+func (r *Response) WriteRaw(contentType string, status int, data []byte) error {
+	r.Headers.Set("Content-Type", contentType)
+	r.StatusCode = status
+	r.Success = true
+	r.Data = data
+	r.RawData = data
+	return nil
+}

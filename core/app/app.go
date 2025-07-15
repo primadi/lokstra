@@ -5,8 +5,7 @@ import (
 	"lokstra/common/meta"
 	"lokstra/common/module"
 	"lokstra/core/router"
-	"lokstra/modules/coreservice_module"
-	"lokstra/serviceapi/core_service"
+	"lokstra/serviceapi"
 	"maps"
 	"time"
 )
@@ -15,7 +14,7 @@ type App struct {
 	router.Router
 
 	ctx      module.RegistrationContext
-	listener core_service.HttpListener
+	listener serviceapi.HttpListener
 
 	name              string
 	addr              string
@@ -25,16 +24,13 @@ type App struct {
 }
 
 func NewApp(ctx module.RegistrationContext, name string, addr string) *App {
-	listenerType := core_service.DEFAULT_LISTENER_NAME
-	routerEngineType := core_service.DEFAULT_ROUTER_ENGINE_NAME
+	listenerType := serviceapi.DEFAULT_LISTENER_NAME
+	routerEngineType := serviceapi.DEFAULT_ROUTER_ENGINE_NAME
 	return NewAppCustom(ctx, name, addr, listenerType, routerEngineType, nil)
 }
 
 func NewAppCustom(ctx module.RegistrationContext, name string, addr string,
 	listenerType string, routerEngineType string, settings map[string]any) *App {
-
-	// note: this is a no-op if already registered
-	ctx.RegisterModule("coreservice_module", coreservice_module.ModuleRegister)
 
 	if settings == nil {
 		settings = make(map[string]any)

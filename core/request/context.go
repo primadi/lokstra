@@ -5,6 +5,7 @@ import (
 	"io"
 	"lokstra/core/response"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -47,6 +48,17 @@ func (ctx *Context) GetQueryParam(name string) string {
 
 func (ctx *Context) GetHeader(name string) string {
 	return ctx.Request.Header.Get(name)
+}
+
+func (ctx *Context) IsHeaderContainValue(name, value string) bool {
+	if hdr, ok := ctx.Request.Header[name]; ok {
+		for _, v := range hdr {
+			if strings.Contains(v, value) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (ctx *Context) cacheBody() {

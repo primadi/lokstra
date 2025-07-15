@@ -38,11 +38,3 @@ func (f *JSONFormatter) WriteStdout(r response_iface.Response) error {
 }
 
 var _ response_iface.ResponseFormatter = (*JSONFormatter)(nil)
-
-// func init() {
-// 	RegisterFormatter("application/json", defaultJSONFormatter)
-// 	RegisterFormatter("application/vnd.api+json", defaultJSONFormatter)
-// 	RegisterFormatter("text/json", defaultJSONFormatter)
-// 	RegisterFormatter("text/x-json", defaultJSONFormatter)
-// 	RegisterFormatter("application/x-json", defaultJSONFormatter)
-// }

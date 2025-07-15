@@ -42,8 +42,8 @@ func (g *GroupImpl) GET(path string, handler any, mw ...any) Router {
 }
 
 // GetMiddleware implements Router.
-func (g *GroupImpl) GetMiddleware() []*meta.MiddlewareMeta {
-	mw := make([]*meta.MiddlewareMeta, len(g.meta.Middleware))
+func (g *GroupImpl) GetMiddleware() []*meta.MiddlewareExecution {
+	mw := make([]*meta.MiddlewareExecution, len(g.meta.Middleware))
 	copy(mw, g.meta.Middleware)
 
 	if g.meta.OverrideMiddleware {

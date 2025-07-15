@@ -6,7 +6,7 @@ import (
 	"lokstra/common/meta"
 	"lokstra/common/module"
 	"lokstra/core/request"
-	"lokstra/serviceapi/core_service"
+	"lokstra/serviceapi"
 	"mime"
 	"net/http"
 	"slices"
@@ -19,47 +19,47 @@ import (
 type RouterImpl struct {
 	mwLocked bool
 	meta     *meta.RouterMeta
-	r_engine core_service.RouterEngine
+	r_engine serviceapi.RouterEngine
 }
 
-func NewListener(ctx module.RegistrationContext, name string, config map[string]any) core_service.HttpListener {
-	return NewListenerWithEngine(ctx, core_service.DEFAULT_LISTENER_NAME, name, config)
+func NewListener(ctx module.RegistrationContext, name string, config map[string]any) serviceapi.HttpListener {
+	return NewListenerWithEngine(ctx, serviceapi.DEFAULT_LISTENER_NAME, name, config)
 }
 
 func NewListenerWithEngine(ctx module.RegistrationContext, listenerType string,
-	name string, config map[string]any) core_service.HttpListener {
+	name string, config map[string]any) serviceapi.HttpListener {
 
 	if listenerType == "" || listenerType == "default" {
-		listenerType = core_service.DEFAULT_LISTENER_NAME
+		listenerType = serviceapi.DEFAULT_LISTENER_NAME
 	}
 
-	lsAny, err := ctx.NewService(listenerType, name+".listener", config)
+	lsAny, err := ctx.CreateService(listenerType, name+".listener", config)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create listener for app %s: %v", name, err))
 	}
-	ls, ok := lsAny.(core_service.HttpListener)
+	ls, ok := lsAny.(serviceapi.HttpListener)
 	if !ok {
-		panic(fmt.Sprintf("listener for app %s is not of type core_service.HttpListener", name))
+		panic(fmt.Sprintf("listener for app %s is not of type serviceapi.HttpListener", name))
 	}
 	return ls
 }
 
 func NewRouter(ctx module.RegistrationContext, name string, config map[string]any) Router {
-	return NewRouterWithEngine(ctx, core_service.DEFAULT_ROUTER_ENGINE_NAME, name, config)
+	return NewRouterWithEngine(ctx, serviceapi.DEFAULT_ROUTER_ENGINE_NAME, name, config)
 }
 
 func NewRouterWithEngine(ctx module.RegistrationContext, engineType string,
 	name string, config map[string]any) Router {
 
 	if engineType == "" || engineType == "default" {
-		engineType = core_service.DEFAULT_ROUTER_ENGINE_NAME
+		engineType = serviceapi.DEFAULT_ROUTER_ENGINE_NAME
 	}
 	rtmt := meta.NewRouter().WithRouterEngineType(engineType)
-	rtAny, err := ctx.NewService(rtmt.GetRouterEngineType(), "router_engine:"+name, config)
+	rtAny, err := ctx.CreateService(rtmt.GetRouterEngineType(), "router_engine:"+name, config)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create router engine %s: %v", rtmt.GetRouterEngineType(), err))
 	}
-	rt := rtAny.(core_service.RouterEngine)
+	rt := rtAny.(serviceapi.RouterEngine)
 	if rt == nil {
 		panic(fmt.Sprintf("Router engine %s is not initialized", rtmt.GetRouterEngineType()))
 	}
@@ -97,8 +97,8 @@ func (r *RouterImpl) GET(path string, handler any, mw ...any) Router {
 }
 
 // GetMiddleware implements Router.
-func (r *RouterImpl) GetMiddleware() []*meta.MiddlewareMeta {
-	mwf := make([]*meta.MiddlewareMeta, len(r.meta.Middleware))
+func (r *RouterImpl) GetMiddleware() []*meta.MiddlewareExecution {
+	mwf := make([]*meta.MiddlewareExecution, len(r.meta.Middleware))
 	copy(mwf, r.meta.Middleware)
 	return mwf
 }
@@ -235,21 +235,7 @@ func (r *RouterImpl) Use(mw any) Router {
 	if r.mwLocked {
 		panic("Cannot add middleware after locking the router")
 	}
-
-	mwd := &meta.MiddlewareMeta{}
-
-	switch m := mw.(type) {
-	case iface.MiddlewareFunc:
-		mwd.MiddlewareFunc = m
-	case string:
-		mwd.MiddlewareType = m
-	case *meta.MiddlewareMeta:
-		mwd = m
-	default:
-		panic("Invalid middleware type, must be a MiddlewareFunc, string, or *MiddlewareMeta")
-	}
-
-	r.meta.Middleware = append(r.meta.Middleware, mwd)
+	r.meta.UseMiddleware(mw)
 	return r
 }
 
@@ -278,14 +264,14 @@ func (r *RouterImpl) cleanPrefix(prefix string) string {
 	return r.meta.Prefix + "/" + strings.Trim(prefix, "/")
 }
 
-func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []iface.MiddlewareFunc) {
-	mwh := make([]iface.MiddlewareFunc, len(route.Middleware))
-	for i, m := range route.Middleware {
-		mwh[i] = m.MiddlewareFunc
-	}
+func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []*meta.MiddlewareExecution) {
+	var mwh []*meta.MiddlewareExecution
 
-	if !route.OverrideMiddleware {
-		mwh = slices.Concat(mwParent, mwh)
+	if route.OverrideMiddleware {
+		mwh = make([]*meta.MiddlewareExecution, len(route.Middleware))
+		copy(mwh, route.Middleware)
+	} else {
+		mwh = slices.Concat(mwParent, route.Middleware)
 	}
 
 	handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
@@ -308,13 +294,14 @@ func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []iface.Mid
 	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
 }
 
-func (r *RouterImpl) buildRouter(router *meta.RouterMeta, mwParent []iface.MiddlewareFunc) {
-	mwh := make([]iface.MiddlewareFunc, len(router.Middleware))
-	for i, m := range router.Middleware {
-		mwh[i] = m.MiddlewareFunc
-	}
-	if !router.OverrideMiddleware {
-		mwh = slices.Concat(mwParent, mwh)
+func (r *RouterImpl) buildRouter(router *meta.RouterMeta, mwParent []*meta.MiddlewareExecution) {
+	var mwh []*meta.MiddlewareExecution
+
+	if router.OverrideMiddleware {
+		mwh = make([]*meta.MiddlewareExecution, len(router.Middleware))
+		copy(mwh, router.Middleware)
+	} else {
+		mwh = slices.Concat(mwParent, router.Middleware)
 	}
 
 	for _, route := range router.Routes {
@@ -327,19 +314,36 @@ func (r *RouterImpl) buildRouter(router *meta.RouterMeta, mwParent []iface.Middl
 }
 
 func (r *RouterImpl) BuildRouter() {
-	mw := make([]iface.MiddlewareFunc, len(r.meta.Middleware))
-
-	for i, m := range r.meta.Middleware {
-		mw[i] = m.MiddlewareFunc
-	}
-	r.buildRouter(r.meta, mw)
+	r.buildRouter(r.meta, nil)
 }
 
-func composeMiddleware(mw []iface.MiddlewareFunc,
+func composeMiddleware(mw []*meta.MiddlewareExecution,
 	finalHandler request.HandlerFunc) request.HandlerFunc {
+	// Update execution order based on order of addition
+	execOrder := 0
+	for _, m := range mw {
+		m.ExecutionOrder = execOrder
+		execOrder++
+	}
+
+	// Sort middleware by priority and execution order
+	slices.SortStableFunc(mw, func(a, b *meta.MiddlewareExecution) int {
+		aOrder := a.Priority + a.ExecutionOrder
+		bOrder := b.Priority + b.ExecutionOrder
+
+		if aOrder < bOrder {
+			return -1
+		} else if aOrder > bOrder {
+			return 1
+		}
+
+		return 0
+	})
+
+	// Compose middleware functions in reverse order
 	handler := finalHandler
 	for i := len(mw) - 1; i >= 0; i-- {
-		handler = mw[i](handler)
+		handler = mw[i].MiddlewareFn(handler)
 	}
 	return handler
 }

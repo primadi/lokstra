@@ -24,7 +24,7 @@ func main() {
 
 	// Uncomment the following line to create an application with a Unix socket listener using FastHTTP.
 	// To test this: curl --unix-socket /tmp/lokstra.sock http://localhost/ping
-	// app := lokstra.NewApp(ctx, "app1", "unix:///tmp/lokstra.sock")
+	// app := lokstra.NewAppFastHTTP(ctx, "app1", "unix:///tmp/lokstra.sock")
 
 	// Uncomment the following line to create a secure application with TLS.
 	// generate a self-signed certificate and key using:
@@ -36,8 +36,10 @@ func main() {
 	// Uncomment the following line to create a secure application with TLS using a Unix socket.
 	// To test this: curl -k --unix-socket /tmp/lokstra.sock https://localhost/ping
 	// app := lokstra.NewAppSecure(ctx, "app1", "unix:///tmp/lokstra.sock",
-	// 	"certs/cert.pem", "certs/key.pem")
+	// 	"certs/cert.pem", "certs/key.pem", "")
 
+	// Uncomment the following line to create an application with HTTP/3 support.
+	// Tot test this: curl --http3 -k https://localhost:8080/ping
 	// app := lokstra.NewAppHttp3(ctx, "app1", ":8080",
 	// 	"certs/cert.pem", "certs/key.pem", "")
 
@@ -49,7 +51,7 @@ func main() {
 		return ctx.Ok("Pong from anonymous handler")
 	})
 
-	lokstra.Logger.Info("Lokstra Application started")
+	lokstra.Logger.Infof("Lokstra Application started")
 
 	app.Start()
 }

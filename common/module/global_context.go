@@ -9,8 +9,9 @@ import (
 	"plugin"
 )
 
+const EntryFnRegisterModule = "RegisterModule"
+
 var handlers = make(map[string]*request.HandlerRegister)
-var middlewareFactories = make(map[string]iface.MiddlewareFactory)
 var serviceFactories = make(map[string]iface.ServiceFactory)
 var serviceInstances = make(map[string]iface.Service)
 var modules = make(map[string]bool)
@@ -55,8 +56,8 @@ func (g *RegistrationContextImpl) RegisterModule(moduleName string,
 }
 
 // RegisterPluginModule implements ComponentContext.
-func (g *RegistrationContextImpl) RegisterPluginModule(moduleName string,
-	pluginPath string, registerFuncName string) error {
+func (g *RegistrationContextImpl) RegisterPluginModuleWithEntry(moduleName string,
+	pluginPath string, entryFn string) error {
 	if _, exists := modules[moduleName]; exists {
 		return errors.New("module with name '" + moduleName + "' already registered")
 	}
@@ -64,10 +65,10 @@ func (g *RegistrationContextImpl) RegisterPluginModule(moduleName string,
 	if err != nil {
 		return fmt.Errorf("load plugin %s: %w", pluginPath, err)
 	}
-	sym, err := p.Lookup(registerFuncName)
+	sym, err := p.Lookup(entryFn)
 	entry, ok := sym.(func(ctx RegistrationContext) error)
 	if !ok {
-		return fmt.Errorf("plugin entry %s has wrong signature", registerFuncName)
+		return fmt.Errorf("plugin entry %s has wrong signature", entryFn)
 	}
 	if err := entry(g); err != nil {
 		return fmt.Errorf("plugin %s failed: %w", moduleName, err)
@@ -77,15 +78,15 @@ func (g *RegistrationContextImpl) RegisterPluginModule(moduleName string,
 	return nil
 }
 
+// RegisterPluginModule implements ComponentContext.
+func (g *RegistrationContextImpl) RegisterPluginModule(moduleName string,
+	pluginPath string) error {
+	return g.RegisterPluginModuleWithEntry(moduleName, pluginPath, EntryFnRegisterModule)
+}
+
 // GetHandler implements ComponentContext.
 func (g *RegistrationContextImpl) GetHandler(name string) *HandlerRegister {
 	return handlers[name]
-}
-
-// GetMiddlewareFactory implements ComponentContext.
-func (g *RegistrationContextImpl) GetMiddlewareFactory(middlewareType string) (iface.MiddlewareFactory, bool) {
-	middlewareFactory, exists := middlewareFactories[middlewareType]
-	return middlewareFactory, exists
 }
 
 // GetService implements ComponentContext.
@@ -106,8 +107,8 @@ func (g *RegistrationContextImpl) GetServiceFactory(serviceType string) (iface.S
 	return sf, exists
 }
 
-// NewService implements ComponentContext.
-func (g *RegistrationContextImpl) NewService(serviceType string, name string, config ...any) (iface.Service, error) {
+// CreateService implements ComponentContext.
+func (g *RegistrationContextImpl) CreateService(serviceType string, name string, config ...any) (iface.Service, error) {
 	factory, exists := serviceFactories[serviceType]
 	if !exists {
 		return nil, errors.New("service factory not found for type: " + serviceType)
@@ -157,36 +158,8 @@ func (g *RegistrationContextImpl) RegisterHandler(name string, handler request.H
 	handlers[name] = info
 }
 
-// RegisterMiddlewareFactory implements ComponentContext.
-func (g *RegistrationContextImpl) RegisterMiddlewareFactory(middlewareType string,
-	middlewareFactory iface.MiddlewareFactory) {
-	if !g.permission.IsAllowedRegisterMiddleware() {
-		panic("registering middleware '" + middlewareType + "' is not allowed")
-	}
-
-	if middlewareFactory == nil {
-		panic("middleware factory cannot be nil")
-	}
-	if middlewareType == "" {
-		panic("middlewareType cannot be empty")
-	}
-
-	if _, exists := middlewareFactories[middlewareType]; exists {
-		panic("middleware with middlewareType '" + middlewareType + "' already exists")
-	}
-
-	middlewareFactories[middlewareType] = middlewareFactory
-}
-
-// RegisterMiddlewareFunc implements ComponentContext.
-func (g *RegistrationContextImpl) RegisterMiddlewareFunc(middlewareType string, middlewareFunc iface.MiddlewareFunc) {
-	g.RegisterMiddlewareFactory(middlewareType, func(_ any) iface.MiddlewareFunc {
-		return middlewareFunc
-	})
-}
-
-// RegisterService implements ComponentContext.
-func (g *RegistrationContextImpl) RegisterService(name string, service iface.Service) error {
+// SetService implements ComponentContext.
+func (g *RegistrationContextImpl) SetService(name string, service iface.Service) error {
 	if !g.permission.IsAllowedRegisterService() {
 		return errors.New("registering service '" + name + "' is not allowed")
 	}
@@ -210,6 +183,16 @@ func (g *RegistrationContextImpl) RegisterServiceFactory(serviceType string,
 	}
 
 	serviceFactories[serviceType] = serviceFactory
+}
+
+// RegisterServiceModule implements ComponentContext.
+func (g *RegistrationContextImpl) RegisterServiceModule(module iface.ServiceModule) error {
+	if !g.permission.IsAllowedRegisterService() {
+		return fmt.Errorf("registering service factory for '%s' is not allowed", module.Name())
+	}
+
+	serviceFactories[module.Name()] = module.Factory
+	return nil
 }
 
 var _ RegistrationContext = (*RegistrationContextImpl)(nil)

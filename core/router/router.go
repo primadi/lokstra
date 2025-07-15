@@ -36,7 +36,7 @@ type Router interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 	FastHttpHandler() fasthttp.RequestHandler
 	OverrideMiddleware() Router
-	GetMiddleware() []*meta.MiddlewareMeta
+	GetMiddleware() []*meta.MiddlewareExecution
 	LockMiddleware()
 
 	GetMeta() *meta.RouterMeta

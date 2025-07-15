@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"lokstra/serviceapi/logger_api"
+	"lokstra/serviceapi"
 	"os"
 	"time"
 
@@ -13,7 +13,7 @@ type LoggerService struct {
 	logger *zerolog.Logger
 }
 
-func NewService(level logger_api.LogLevel) logger_api.Logger {
+func NewService(level serviceapi.LogLevel) serviceapi.Logger {
 	zerolog.TimeFieldFormat = time.RFC3339
 	zlogger := zerolog.New(os.Stdout).Level(toZerologLevel(level)).With().Timestamp().Logger()
 
@@ -22,93 +22,98 @@ func NewService(level logger_api.LogLevel) logger_api.Logger {
 	}
 }
 
-// GetLogLevel implements logger_api.Logger.
-func (l *LoggerService) GetLogLevel() logger_api.LogLevel {
+// GetLogLevel implements serviceapi.Logger.
+func (l *LoggerService) GetLogLevel() serviceapi.LogLevel {
 	return fromZerologLevel(l.logger.GetLevel())
 }
 
-// SetLogLevel implements logger_api.Logger.
-func (l *LoggerService) SetLogLevel(level logger_api.LogLevel) {
+// SetLogLevel implements serviceapi.Logger.
+func (l *LoggerService) SetLogLevel(level serviceapi.LogLevel) {
 	newLogger := l.logger.Level(toZerologLevel(level))
 	l.logger = &newLogger
 }
 
-// WithField implements logger_api.Logger.
-func (l *LoggerService) WithField(key string, value any) logger_api.Logger {
+// WithField implements serviceapi.Logger.
+func (l *LoggerService) WithField(key string, value any) serviceapi.Logger {
 	newLogger := l.logger.With().Interface(key, value).Logger()
 	return &LoggerService{
 		logger: &newLogger,
 	}
 }
 
-func toZerologLevel(lvl logger_api.LogLevel) zerolog.Level {
+// WithFields implements serviceapi.Logger.
+func (l *LoggerService) WithFields(LogFields serviceapi.LogFields) serviceapi.Logger {
+	lctx := l.logger.With()
+	for key, value := range LogFields {
+		lctx = lctx.Interface(key, value)
+	}
+	newLogger := lctx.Logger()
+	return &LoggerService{
+		logger: &newLogger,
+	}
+}
+
+func toZerologLevel(lvl serviceapi.LogLevel) zerolog.Level {
 	switch lvl {
-	case logger_api.LogLevelDebug:
+	case serviceapi.LogLevelDebug:
 		return zerolog.DebugLevel
-	case logger_api.LogLevelInfo:
+	case serviceapi.LogLevelInfo:
 		return zerolog.InfoLevel
-	case logger_api.LogLevelWarn:
+	case serviceapi.LogLevelWarn:
 		return zerolog.WarnLevel
-	case logger_api.LogLevelError:
+	case serviceapi.LogLevelError:
 		return zerolog.ErrorLevel
-	case logger_api.LogLevelFatal:
+	case serviceapi.LogLevelFatal:
 		return zerolog.FatalLevel
-	case logger_api.LogLevelDisabled:
+	case serviceapi.LogLevelDisabled:
 		return zerolog.Disabled
 	default:
 		return zerolog.InfoLevel
 	}
 }
 
-func fromZerologLevel(lvl zerolog.Level) logger_api.LogLevel {
+func fromZerologLevel(lvl zerolog.Level) serviceapi.LogLevel {
 	switch lvl {
 	case zerolog.DebugLevel:
-		return logger_api.LogLevelDebug
+		return serviceapi.LogLevelDebug
 	case zerolog.InfoLevel:
-		return logger_api.LogLevelInfo
+		return serviceapi.LogLevelInfo
 	case zerolog.WarnLevel:
-		return logger_api.LogLevelWarn
+		return serviceapi.LogLevelWarn
 	case zerolog.ErrorLevel:
-		return logger_api.LogLevelError
+		return serviceapi.LogLevelError
 	case zerolog.FatalLevel:
-		return logger_api.LogLevelFatal
+		return serviceapi.LogLevelFatal
 	case zerolog.Disabled:
-		return logger_api.LogLevelDisabled
+		return serviceapi.LogLevelDisabled
 	default:
-		return logger_api.LogLevelInfo
+		return serviceapi.LogLevelInfo
 	}
 }
 
-func logWithFields(ev *zerolog.Event, msg string, fields ...logger_api.Field) {
-	for _, f := range fields {
-		ev = ev.Interface(f.Key, f.Value)
-	}
-	ev.Msg(msg)
+// Debug implements serviceapi.Logger.
+func (l *LoggerService) Debugf(msg string, v ...any) {
+	l.logger.Debug().Msgf(msg, v...)
 }
 
-// Debug implements logger_api.Logger.
-func (l *LoggerService) Debug(msg string, fields ...logger_api.Field) {
-	logWithFields(l.logger.Debug(), msg, fields...)
+// Info implements serviceapi.Logger.
+func (l *LoggerService) Infof(msg string, v ...any) {
+	l.logger.Info().Msgf(msg, v...)
 }
 
-// Info implements logger_api.Logger.
-func (l *LoggerService) Info(msg string, fields ...logger_api.Field) {
-	logWithFields(l.logger.Info(), msg, fields...)
+// Warn implements serviceapi.Logger.
+func (l *LoggerService) Warnf(msg string, v ...any) {
+	l.logger.Warn().Msgf(msg, v...)
 }
 
-// Warn implements logger_api.Logger.
-func (l *LoggerService) Warn(msg string, fields ...logger_api.Field) {
-	logWithFields(l.logger.Warn(), msg, fields...)
+// Error implements serviceapi.Logger.
+func (l *LoggerService) Errorf(msg string, v ...any) {
+	l.logger.Error().Msgf(msg, v...)
 }
 
-// Error implements logger_api.Logger.
-func (l *LoggerService) Error(msg string, fields ...logger_api.Field) {
-	logWithFields(l.logger.Error(), msg, fields...)
+// Fatal implements serviceapi.Logger.
+func (l *LoggerService) Fatalf(msg string, v ...any) {
+	l.logger.Fatal().Msgf(msg, v...)
 }
 
-// Fatal implements logger_api.Logger.
-func (l *LoggerService) Fatal(msg string, fields ...logger_api.Field) {
-	logWithFields(l.logger.Fatal(), msg, fields...)
-}
-
-var _ logger_api.Logger = (*LoggerService)(nil)
+var _ serviceapi.Logger = (*LoggerService)(nil)

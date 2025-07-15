@@ -48,6 +48,7 @@ type Response struct {
 	Data    any         `json:"data,omitempty"`    // Payload
 	Meta    any         `json:"meta,omitempty"`    // List pagination info
 	Headers http.Header `json:"-"`                 // HTTP only
+	RawData []byte      `json:"-"`                 // Raw data for non-JSON responses
 
 	FieldErrors map[string]string `json:"errors,omitempty"` // For Refine form field errors
 }
@@ -92,4 +93,9 @@ func (r *Response) GetStatusCode() int {
 		r.StatusCode = http.StatusOK // Default to 200 OK if not set
 	}
 	return r.StatusCode
+}
+
+func (r *Response) SetStatusCode(code int) *Response {
+	r.StatusCode = code
+	return r
 }

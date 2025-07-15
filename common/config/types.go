@@ -28,14 +28,17 @@ type MountReverseProxyConfig struct {
 }
 
 type GroupConfig struct {
-	Prefix             string                    `yaml:"prefix"`
-	Groups             []GroupConfig             `yaml:"groups,omitempty"`
-	Routes             []RouteConfig             `yaml:"routes,omitempty"`
-	Middleware         []MiddlewareConfig        `yaml:"middleware,omitempty"`
-	OverrideMiddleware bool                      `yaml:"override_middleware,omitempty"`
-	MountStatic        []MountStaticConfig       `yaml:"mount_static,omitempty"`
-	MountSPA           []MountSPAConfig          `yaml:"mount_spa,omitempty"`
-	MountReverseProxy  []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
+	Prefix string        `yaml:"prefix"`
+	Groups []GroupConfig `yaml:"groups,omitempty"`
+	Routes []RouteConfig `yaml:"routes,omitempty"`
+
+	MiddlewareRaw      any                `yaml:"middleware"`
+	Middleware         []MiddlewareConfig `yaml:"-"`
+	OverrideMiddleware bool               `yaml:"override_middleware,omitempty"`
+
+	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
+	MountSPA          []MountSPAConfig          `yaml:"mount_spa,omitempty"`
+	MountReverseProxy []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
 }
 
 type AppConfig struct {
@@ -44,9 +47,11 @@ type AppConfig struct {
 	ListenerType     string `yaml:"listener_type"`
 	RouterEngineType string `yaml:"router_engine_type"`
 
-	Groups            []GroupConfig             `yaml:"groups,omitempty"`
-	Routes            []RouteConfig             `yaml:"routes,omitempty"`
-	Middleware        []MiddlewareConfig        `yaml:"middleware,omitempty"`
+	Groups        []GroupConfig      `yaml:"groups,omitempty"`
+	Routes        []RouteConfig      `yaml:"routes,omitempty"`
+	MiddlewareRaw any                `yaml:"middleware"`
+	Middleware    []MiddlewareConfig `yaml:"-"`
+
 	Settings          map[string]any            `yaml:"setting,omitempty"`
 	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
 	MountSPA          []MountSPAConfig          `yaml:"mount_spa,omitempty"`
@@ -55,7 +60,7 @@ type AppConfig struct {
 
 type MiddlewareConfig struct {
 	Name    string         `yaml:"name"`
-	Enabled *bool          `yaml:"enabled,omitempty"`
+	Enabled bool           `yaml:"enabled,omitempty"`
 	Config  map[string]any `yaml:"config,omitempty"`
 }
 
@@ -68,7 +73,7 @@ type ServiceConfig struct {
 type ModuleConfig struct {
 	Name        string         `yaml:"name"`
 	Path        string         `yaml:"path"`
-	Entry       string         `yaml:"entry"`
+	Entry       string         `yaml:"entry, omitempty"`
 	Settings    map[string]any `yaml:"settings,omitempty"`
 	Permissions map[string]any `yaml:"permissions,omitempty"`
 }
@@ -78,5 +83,6 @@ type RouteConfig struct {
 	Path               string             `yaml:"path"`
 	Handler            string             `yaml:"handler"`
 	OverrideMiddleware bool               `yaml:"override_middleware,omitempty"`
-	Middleware         []MiddlewareConfig `yaml:"middleware,omitempty"`
+	MiddlewareRaw      any                `yaml:"middleware"`
+	Middleware         []MiddlewareConfig `yaml:"-"`
 }

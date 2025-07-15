@@ -41,6 +41,75 @@ func LoadConfigDir(dir string) (*LokstraConfig, error) {
 		}
 	}
 
+	// Normalize middleware for apps, routes, and groups
+	for _, app := range cfg.Apps {
+		if app.MiddlewareRaw != nil {
+			mw, err := NormalizeMiddlewareConfig(app.MiddlewareRaw)
+			if err != nil {
+				return nil, fmt.Errorf("normalize middleware for app %s: %w", app.Name, err)
+			}
+			app.Middleware = mw
+		}
+
+		// Normalize middleware for routes
+		for _, route := range app.Routes {
+			if route.MiddlewareRaw != nil {
+				mw, err := NormalizeMiddlewareConfig(route.MiddlewareRaw)
+				if err != nil {
+					return nil, fmt.Errorf("normalize middleware for route %s in app %s: %w",
+						route.Path, app.Name, err)
+				}
+				route.Middleware = mw
+				_ = route.Middleware
+			}
+		}
+
+		// Normalize middleware for groups
+		for _, group := range app.Groups {
+			if group.MiddlewareRaw != nil {
+				mw, err := NormalizeMiddlewareConfig(group.MiddlewareRaw)
+				if err != nil {
+					return nil, fmt.Errorf("normalize middleware for group %s in app %s: %w",
+						group.Prefix, app.Name, err)
+				}
+				group.Middleware = mw
+				_ = group.Middleware
+			}
+			for _, route := range group.Routes {
+				if route.MiddlewareRaw != nil {
+					mw, err := NormalizeMiddlewareConfig(route.MiddlewareRaw)
+					if err != nil {
+						return nil, fmt.Errorf("normalize middleware for route %s in group %s of app %s: %w",
+							route.Path, group.Prefix, app.Name, err)
+					}
+					route.Middleware = mw
+					_ = route.Middleware
+				}
+			}
+		}
+	}
+	if cfg.Server == nil {
+		cfg.Server = &ServerConfig{
+			Name:     "default",
+			Settings: map[string]any{},
+		}
+	}
+	if cfg.Server.Name == "" {
+		cfg.Server.Name = "default"
+	}
+	if cfg.Server.Settings == nil {
+		cfg.Server.Settings = map[string]any{}
+	}
+	if cfg.Apps == nil {
+		cfg.Apps = []*AppConfig{}
+	}
+	if cfg.Services == nil {
+		cfg.Services = []*ServiceConfig{}
+	}
+	if cfg.Modules == nil {
+		cfg.Modules = []*ModuleConfig{}
+	}
+
 	return cfg, nil
 }
 

@@ -5,7 +5,7 @@ import (
 	"lokstra/common/iface"
 	"lokstra/common/module"
 	"lokstra/core/request"
-	"lokstra/serviceapi/core_service"
+	"lokstra/serviceapi"
 	"net/http"
 )
 
@@ -14,7 +14,7 @@ type RouteMeta struct {
 	Method             iface.HTTPMethod
 	Handler            *HandlerMeta
 	OverrideMiddleware bool
-	Middleware         []*MiddlewareMeta
+	Middleware         []*MiddlewareExecution
 }
 
 type StaticDirMeta struct {
@@ -38,7 +38,7 @@ type RouterMeta struct {
 	OverrideMiddleware bool
 
 	Routes         []*RouteMeta
-	Middleware     []*MiddlewareMeta
+	Middleware     []*MiddlewareExecution
 	StaticMounts   []*StaticDirMeta
 	SPAMounts      []*SPADirMeta
 	ReverseProxies []*ReverseProxyMeta
@@ -49,9 +49,9 @@ func NewRouter() *RouterMeta {
 	return &RouterMeta{
 		Prefix:             "",
 		OverrideMiddleware: false,
-		RouterEngineType:   core_service.DEFAULT_ROUTER_ENGINE_NAME,
+		RouterEngineType:   serviceapi.DEFAULT_ROUTER_ENGINE_NAME,
 		Routes:             []*RouteMeta{},
-		Middleware:         []*MiddlewareMeta{},
+		Middleware:         []*MiddlewareExecution{},
 		StaticMounts:       []*StaticDirMeta{},
 		SPAMounts:          []*SPADirMeta{},
 		ReverseProxies:     []*ReverseProxyMeta{},
@@ -83,16 +83,6 @@ func (r *RouterMeta) WithRouterEngineType(engineType string) *RouterMeta {
 	return r
 }
 
-func (r *RouterMeta) WithPrefix(prefix string) *RouterMeta {
-	r.Prefix = prefix
-	return r
-}
-
-func (r *RouterMeta) WithOverrideMiddleware(override bool) *RouterMeta {
-	r.OverrideMiddleware = override
-	return r
-}
-
 func (r *RouterMeta) Handle(method iface.HTTPMethod, path string, handler any, middleware ...any) *RouterMeta {
 	return r.handle(method, path, handler, false, middleware...)
 }
@@ -118,22 +108,22 @@ func (r *RouterMeta) handle(method iface.HTTPMethod, path string, handler any,
 		panic("Invalid handler type, must be a RequestHandler, string, or HandlerInfo")
 	}
 
-	mwp := make([]*MiddlewareMeta, len(middleware))
+	mwp := make([]*MiddlewareExecution, len(middleware))
 	for i := range middleware {
 		if middleware[i] == nil {
 			continue
 		}
 
-		var mw *MiddlewareMeta
+		var mw *MiddlewareExecution
 		switch m := middleware[i].(type) {
 		case iface.MiddlewareFunc:
-			mw = &MiddlewareMeta{MiddlewareFunc: m}
+			mw = MiddlewareFn(m)
 		case string:
-			mw = &MiddlewareMeta{MiddlewareType: m}
-		case *MiddlewareMeta:
+			mw = NamedMiddleware(m)
+		case *MiddlewareExecution:
 			mw = m
 		default:
-			panic("Invalid middleware type, must be a MiddlewareFunc, string, or *MiddlewareInfo")
+			panic("Invalid middleware type, must be a MiddlewareFunc, string, or *MiddlewareExecution")
 		}
 
 		mwp[i] = mw
@@ -150,86 +140,21 @@ func (r *RouterMeta) handle(method iface.HTTPMethod, path string, handler any,
 }
 
 func (r *RouterMeta) UseMiddleware(middleware any) *RouterMeta {
-	mw := &MiddlewareMeta{}
+	var mw *MiddlewareExecution
 
 	switch m := middleware.(type) {
 	case iface.MiddlewareFunc:
-		mw.MiddlewareFunc = m
+		mw = MiddlewareFn(m)
 	case string:
-		mw.MiddlewareType = m
-	case *MiddlewareMeta:
+		mw = NamedMiddleware(m)
+	case *MiddlewareExecution:
 		mw = m
 	default:
-		panic("Invalid middleware type, must be a MiddlewareFunc, string, or *MiddlewareMeta")
+		panic("Invalid middleware type, must be a MiddlewareFunc, string, or *MiddlewareExecution")
 	}
 
 	r.Middleware = append(r.Middleware, mw)
 	return r
-}
-
-func (r *RouterMeta) MountStatic(prefix string, folder http.Dir) *RouterMeta {
-	r.StaticMounts = append(r.StaticMounts, &StaticDirMeta{
-		Prefix: prefix,
-		Folder: folder,
-	})
-	return r
-}
-
-func (r *RouterMeta) MountSPA(prefix string, fallbackFile string) *RouterMeta {
-	r.SPAMounts = append(r.SPAMounts, &SPADirMeta{
-		Prefix:       prefix,
-		FallbackFile: fallbackFile,
-	})
-	return r
-}
-
-func (r *RouterMeta) MountReverseProxy(prefix string, target string) *RouterMeta {
-	r.ReverseProxies = append(r.ReverseProxies, &ReverseProxyMeta{
-		Prefix: prefix,
-		Target: target,
-	})
-	return r
-}
-
-func (r *RouterMeta) Group(prefix string, middleware ...any) *RouterMeta {
-	group := NewRouter().WithPrefix(prefix)
-	for _, mw := range middleware {
-		group.UseMiddleware(mw)
-	}
-
-	r.Groups = append(r.Groups, group)
-	return group
-}
-
-func (r *RouterMeta) GroupBlock(prefix string, fn func(gr *RouterMeta)) *RouterMeta {
-	group := NewRouter().WithPrefix(prefix)
-	r.Groups = append(r.Groups, group)
-
-	if fn != nil {
-		fn(group)
-	}
-
-	return r
-}
-
-func (r *RouterMeta) GET(path string, handler any, middleware ...any) *RouterMeta {
-	return r.Handle("GET", path, handler, middleware...)
-}
-
-func (r *RouterMeta) POST(path string, handler any, middleware ...any) *RouterMeta {
-	return r.Handle("POST", path, handler, middleware...)
-}
-
-func (r *RouterMeta) PUT(path string, handler any, middleware ...any) *RouterMeta {
-	return r.Handle("PUT", path, handler, middleware...)
-}
-
-func (r *RouterMeta) PATCH(path string, handler any, middleware ...any) *RouterMeta {
-	return r.Handle("PATCH", path, handler, middleware...)
-}
-
-func (r *RouterMeta) DELETE(path string, handler any, middleware ...any) *RouterMeta {
-	return r.Handle("DELETE", path, handler, middleware...)
 }
 
 func ResolveAllNamed(ctx module.RegistrationContext, r *RouterMeta) {
@@ -241,20 +166,27 @@ func ResolveAllNamed(ctx module.RegistrationContext, r *RouterMeta) {
 			}
 			route.Handler.HandlerFunc = handler.HandlerFunc
 		}
+		for _, mwExec := range route.Middleware {
+			resolveMiddleware(ctx, mwExec)
+		}
 	}
 
-	for _, mwMeta := range r.Middleware {
-		if mwMeta.MiddlewareFunc == nil {
-			mwfactory, found := ctx.GetMiddlewareFactory(mwMeta.MiddlewareType)
-			if !found {
-				panic(fmt.Sprintf("Middleware factory '%s' not found", mwMeta.MiddlewareType))
-			}
-			mwf := mwfactory(mwMeta.Config)
-			mwMeta.MiddlewareFunc = mwf
-		}
+	for _, mwExec := range r.Middleware {
+		resolveMiddleware(ctx, mwExec)
 	}
 
 	for _, gr := range r.Groups {
 		ResolveAllNamed(ctx, gr)
+	}
+}
+
+func resolveMiddleware(ctx module.RegistrationContext, mw *MiddlewareExecution) {
+	if mw.MiddlewareFn == nil {
+		mwModule, found := ctx.GetMiddlewareModule(mw.Name)
+		if !found {
+			panic(fmt.Sprintf("Middleware factory '%s' not found", mw.Name))
+		}
+		mw.MiddlewareFn = mwModule.Factory(mw.Config)
+		mw.Priority = mwModule.Meta().Priority
 	}
 }

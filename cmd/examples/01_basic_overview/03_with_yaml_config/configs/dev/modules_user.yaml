@@ -5,5 +5,4 @@
 #     settings:
 #       welcome_message: "Welcome, user!"
 #     permissions:
-#       allow_services:
-#         - main-db
+#       allow_services: [ main-db ]

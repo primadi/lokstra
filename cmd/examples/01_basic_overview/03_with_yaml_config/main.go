@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"lokstra/middleware/cors"
+	"lokstra/middleware/recovery"
 
 	"lokstra"
 )
@@ -32,6 +34,10 @@ func registerAllComponents(ctx *lokstra.GlobalContext) {
 		}
 	})
 
+	// tips: to know middlware name, hover over .GetModule() function below
+	ctx.RegisterMiddlewareModule(recovery.GetModule())
+	ctx.RegisterMiddlewareModule(cors.GetModule())
+
 	ctx.RegisterHandler("user.profile", func(c *lokstra.Context) error {
 		return c.Ok("User Profile Handler")
 	})
@@ -44,7 +50,12 @@ func registerAllComponents(ctx *lokstra.GlobalContext) {
 func newServerFormConfig(ctx *lokstra.GlobalContext, dir string) *lokstra.Server {
 	cfg, err := lokstra.LoadConfigDir(dir)
 	if err != nil {
-		lokstra.Logger.Fatal(fmt.Sprintf("failed to load config: %v", err))
+		panic(fmt.Sprintf("Failed to load config from %s: %v", dir, err))
+	}
+
+	server, err := lokstra.NewServerFromConfig(ctx, cfg)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create server from config: %v", err))
 	}
 
 	fmt.Println("Config loaded successfully:")
@@ -52,11 +63,6 @@ func newServerFormConfig(ctx *lokstra.GlobalContext, dir string) *lokstra.Server
 	fmt.Printf("- Apps: %d\n", len(cfg.Apps))
 	fmt.Printf("- Services: %d\n", len(cfg.Services))
 	fmt.Printf("- Modules: %d\n", len(cfg.Modules))
-
-	server, err := lokstra.NewServerFromConfig(ctx, cfg)
-	if err != nil {
-		lokstra.Logger.Fatal(fmt.Sprintf("failed to create server from config: %v", err))
-	}
 
 	return server
 }

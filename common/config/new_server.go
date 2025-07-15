@@ -34,7 +34,7 @@ func NewServerFromConfig(ctx *module.RegistrationContextImpl, cfg *LokstraConfig
 
 func startAllServices(ctx *module.RegistrationContextImpl, services []*ServiceConfig) error {
 	for _, svc := range services {
-		if _, err := ctx.NewService(svc.Type, svc.Name, svc.Config); err != nil {
+		if _, err := ctx.CreateService(svc.Type, svc.Name, svc.Config); err != nil {
 			return fmt.Errorf("register service %s: %w", svc.Name, err)
 		}
 	}
@@ -45,7 +45,7 @@ func startModulesFromConfig(ctx *module.RegistrationContextImpl, modules []*Modu
 	for _, mod := range modules {
 		if mod.Path != "" || mod.Entry != "" {
 			newCtx := ctx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
-			if err := newCtx.RegisterPluginModule(mod.Name, mod.Path, mod.Entry); err != nil {
+			if err := newCtx.RegisterPluginModuleWithEntry(mod.Name, mod.Path, mod.Entry); err != nil {
 				return fmt.Errorf("register module %s: %w", mod.Name, err)
 			}
 		}
@@ -59,20 +59,20 @@ func newAppsFromConfig(ctx *module.RegistrationContextImpl, server *server.Serve
 			ac.ListenerType, ac.RouterEngineType, ac.Settings)
 
 		for _, mw := range ac.Middleware {
-			if mw.Enabled == nil || *mw.Enabled {
+			if mw.Enabled {
 				app.Use(meta.NamedMiddleware(mw.Name, mw.Config))
 			}
 		}
 
 		for _, route := range ac.Routes {
-			mw := make([]*meta.MiddlewareMeta, 0, len(route.Middleware))
+			mw := make([]*meta.MiddlewareExecution, 0, len(route.Middleware))
 			for _, m := range route.Middleware {
-				if m.Enabled == nil || *m.Enabled {
+				if m.Enabled {
 					mw = append(mw, meta.NamedMiddleware(m.Name, m.Config))
 				}
 			}
 			if route.OverrideMiddleware {
-				app.HandleOverrideMiddleware(route.Method, route.Path, route.Handler, mw)
+				app.HandleOverrideMiddleware(route.Method, route.Path, route.Handler, utils.ToAnySlice(mw)...)
 			} else {
 				app.Handle(route.Method, route.Path, route.Handler, utils.ToAnySlice(mw)...)
 			}
@@ -104,15 +104,15 @@ func buildGroup(ctx *module.RegistrationContextImpl, parent router.Router, group
 	gr := parent.Group(group.Prefix)
 
 	for _, mw := range group.Middleware {
-		if mw.Enabled == nil || *mw.Enabled {
+		if mw.Enabled {
 			gr.Use(meta.NamedMiddleware(mw.Name, mw.Config))
 		}
 	}
 
 	for _, route := range group.Routes {
-		mw := make([]*meta.MiddlewareMeta, 0, len(route.Middleware))
+		mw := make([]*meta.MiddlewareExecution, 0, len(route.Middleware))
 		for _, m := range route.Middleware {
-			if m.Enabled == nil || *m.Enabled {
+			if m.Enabled {
 				mw = append(mw, meta.NamedMiddleware(m.Name, m.Config))
 			}
 		}

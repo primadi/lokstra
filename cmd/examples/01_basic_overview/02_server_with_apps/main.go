@@ -38,3 +38,27 @@ func main() {
 
 	server.Start()
 }
+
+// func main() {
+// 	ctx := lokstra.NewGlobalContext()
+
+// 	app1 := createApp1(ctx, "127.0.0.1:8080")
+// 	app2 := createApp2(ctx, "127.0.0.1:8081")
+
+// 	app3 := lokstra.NewApp(ctx, "app3", ":80")
+
+// 	app3.MountReverseProxy("/app1", "http://localhost:8080")
+// 	app3.MountReverseProxy("/app2", "http://localhost:8081")
+
+// 	server := lokstra.NewServer(ctx, "my-server")
+// 	server.AddApp(app1)
+// 	server.AddApp(app2)
+// 	server.AddApp(app3)
+
+// 	// 	// Register a named handler
+// 	ctx.RegisterHandler("ping1Handler", func(ctx *lokstra.Context) error {
+// 		return ctx.Ok("Pong from named handler")
+// 	})
+
+// 	server.Start()
+// }
