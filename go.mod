@@ -3,8 +3,11 @@ module lokstra
 go 1.24.4
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.18.0
+	github.com/prometheus/client_golang v1.17.0
+	github.com/redis/go-redis/v9 v9.3.0
 )
 
 require (

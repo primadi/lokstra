@@ -1,0 +1,26 @@
+apps:
+  - name: api-app
+    address: :8080
+    setting:
+      cors: true
+    routes:
+      - method: GET
+        path: /health
+        handler: api.health
+    groups:
+      - prefix: /api/v1
+        middleware:
+          - name: api_auth
+            enabled: true
+        routes:
+          - method: GET
+            path: /users
+            handler: api.users.list
+          - method: GET
+            path: /products
+            handler: api.products.list
+    middleware:
+      - name: recovery
+        enabled: true
+      - name: logger
+        enabled: true
