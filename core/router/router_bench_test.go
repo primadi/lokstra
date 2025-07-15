@@ -21,6 +21,8 @@ func BenchmarkCleanPrefix(b *testing.B) {
 		"users/profile",
 		"/users/profile/",
 		"very/long/path/with/many/segments",
+		"api/v1/users/profile/settings/notifications",
+		"extremely/long/path/with/many/segments/that/would/benefit/from/builder",
 	}
 
 	b.ResetTimer()
@@ -57,6 +59,8 @@ func BenchmarkCleanPrefixOld(b *testing.B) {
 		"users/profile",
 		"/users/profile/",
 		"very/long/path/with/many/segments",
+		"api/v1/users/profile/settings/notifications",
+		"extremely/long/path/with/many/segments/that/would/benefit/from/builder",
 	}
 
 	b.ResetTimer()

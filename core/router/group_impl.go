@@ -176,17 +176,8 @@ func (g *GroupImpl) cleanPrefix(prefix string) string {
 		return g.meta.Prefix
 	}
 
-	trimmedPrefix := strings.Trim(prefix, "/")
 	if g.meta.Prefix == "/" {
-		var builder strings.Builder
-		builder.WriteString("/")
-		builder.WriteString(trimmedPrefix)
-		return builder.String()
+		return "/" + strings.Trim(prefix, "/")
 	}
-	
-	var builder strings.Builder
-	builder.WriteString(g.meta.Prefix)
-	builder.WriteString("/")
-	builder.WriteString(trimmedPrefix)
-	return builder.String()
+	return g.meta.Prefix + "/" + strings.Trim(prefix, "/")
 }

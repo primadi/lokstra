@@ -258,19 +258,10 @@ func (r *RouterImpl) cleanPrefix(prefix string) string {
 		return r.meta.Prefix
 	}
 
-	trimmedPrefix := strings.Trim(prefix, "/")
 	if r.meta.Prefix == "/" {
-		var builder strings.Builder
-		builder.WriteString("/")
-		builder.WriteString(trimmedPrefix)
-		return builder.String()
+		return "/" + strings.Trim(prefix, "/")
 	}
-	
-	var builder strings.Builder
-	builder.WriteString(r.meta.Prefix)
-	builder.WriteString("/")
-	builder.WriteString(trimmedPrefix)
-	return builder.String()
+	return r.meta.Prefix + "/" + strings.Trim(prefix, "/")
 }
 
 func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []*meta.MiddlewareExecution) {
