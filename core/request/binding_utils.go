@@ -2,11 +2,12 @@ package request
 
 import (
 	"errors"
-	"lokstra/common/json"
 	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/primadi/lokstra/common/json"
 )
 
 // convertAndSetField converts raw values to the appropriate type and sets them on the field.

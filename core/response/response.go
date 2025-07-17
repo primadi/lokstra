@@ -14,7 +14,7 @@ import (
 //
 //	package user
 //
-//	import "lokstra/common/response"
+//	import "github.com/primadi/lokstra/common/response"
 //
 //	const (
 //	    CodeUserSuspended response.ResponseCode = "USER_SUSPENDED"

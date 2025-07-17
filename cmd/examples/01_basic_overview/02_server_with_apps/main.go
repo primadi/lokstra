@@ -1,7 +1,7 @@
 package main
 
 import (
-	"lokstra"
+	"github.com/primadi/lokstra"
 )
 
 func createApp1(ctx lokstra.RegistrationContext, addr string) *lokstra.App {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"lokstra"
+	"github.com/primadi/lokstra"
 )
 
 // This example demonstrates how to create a basic Lokstra application with a simple route.

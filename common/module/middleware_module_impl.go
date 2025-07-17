@@ -1,6 +1,6 @@
 package module
 
-import "lokstra/common/iface"
+import "github.com/primadi/lokstra/common/iface"
 
 type MiddlewareModuleImpl struct {
 	name    string

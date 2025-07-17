@@ -1,17 +1,17 @@
 package lokstra
 
 import (
-	"lokstra/common/config"
-	"lokstra/common/iface"
-	"lokstra/common/meta"
-	"lokstra/common/module"
-	"lokstra/core/app"
-	"lokstra/core/request"
-	"lokstra/core/server"
-	"lokstra/modules/coreservice"
-	"lokstra/modules/coreservice/listener"
-	"lokstra/serviceapi"
-	"lokstra/services/logger"
+	"github.com/primadi/lokstra/common/config"
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/common/meta"
+	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/core/app"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/server"
+	"github.com/primadi/lokstra/modules/coreservice"
+	"github.com/primadi/lokstra/modules/coreservice/listener"
+	"github.com/primadi/lokstra/serviceapi"
+	"github.com/primadi/lokstra/services/logger"
 )
 
 type Context = request.Context

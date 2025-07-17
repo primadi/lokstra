@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"lokstra/serviceapi"
+
+	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/jackc/pgx/v5"
 )

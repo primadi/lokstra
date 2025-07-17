@@ -2,9 +2,10 @@ package rpc_service
 
 import (
 	"fmt"
-	"lokstra/core/request"
 	"reflect"
 	"strings"
+
+	"github.com/primadi/lokstra/core/request"
 
 	"github.com/vmihailenco/msgpack/v5"
 )

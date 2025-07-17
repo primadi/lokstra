@@ -1,6 +1,6 @@
 package meta
 
-import "lokstra/common/iface"
+import "github.com/primadi/lokstra/common/iface"
 
 type MiddlewareExecution struct {
 	Name   string

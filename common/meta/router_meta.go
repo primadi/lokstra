@@ -2,11 +2,12 @@ package meta
 
 import (
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/common/module"
-	"lokstra/core/request"
-	"lokstra/serviceapi"
 	"net/http"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 type RouteMeta struct {

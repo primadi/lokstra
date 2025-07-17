@@ -3,9 +3,6 @@ package listener
 import (
 	"context"
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/core/router"
-	"lokstra/serviceapi"
 	"net"
 	"net/http"
 	"os"
@@ -13,6 +10,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 // NetHttpListener implements the HttpListener interface using the net/http package.

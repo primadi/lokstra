@@ -2,7 +2,8 @@ package pg_dbpool
 
 import (
 	"context"
-	"lokstra/serviceapi"
+
+	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

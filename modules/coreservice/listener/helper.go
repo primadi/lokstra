@@ -1,8 +1,9 @@
 package listener
 
 import (
-	"lokstra/core/router"
 	"time"
+
+	"github.com/primadi/lokstra/core/router"
 )
 
 const READ_TIMEOUT_KEY = "read_timeout"

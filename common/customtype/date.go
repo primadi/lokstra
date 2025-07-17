@@ -2,10 +2,11 @@ package customtype
 
 import (
 	"fmt"
-	"lokstra/common/json"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/primadi/lokstra/common/json"
 )
 
 type Date struct {

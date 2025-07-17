@@ -2,15 +2,16 @@ package router
 
 import (
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/common/meta"
-	"lokstra/common/module"
-	"lokstra/core/request"
-	"lokstra/serviceapi"
 	"mime"
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/common/meta"
+	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"

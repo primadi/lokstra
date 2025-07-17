@@ -1,9 +1,10 @@
 package cors
 
 import (
-	"lokstra"
 	"net/http"
 	"strings"
+
+	"github.com/primadi/lokstra"
 )
 
 const NAME = "lokstra.cors"

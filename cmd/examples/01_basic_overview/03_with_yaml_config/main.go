@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"lokstra/middleware/cors"
-	"lokstra/middleware/recovery"
 
-	"lokstra"
+	"github.com/primadi/lokstra/middleware/cors"
+	"github.com/primadi/lokstra/middleware/recovery"
+
+	"github.com/primadi/lokstra"
 )
 
 func main() {
