@@ -1,9 +1,10 @@
 package router_engine
 
 import (
-	"lokstra/common/iface"
-	"lokstra/serviceapi"
 	"net/http"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/julienschmidt/httprouter"
 )

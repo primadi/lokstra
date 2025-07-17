@@ -1,7 +1,7 @@
 package response
 
 import (
-	"lokstra/common/json"
+	"github.com/primadi/lokstra/common/json"
 
 	"net/http"
 )

@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/serviceapi"
 	"reflect"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

@@ -1,8 +1,8 @@
 package serviceapi
 
 import (
-	"lokstra/common/iface"
-	"lokstra/core/request"
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/core/request"
 )
 
 type RpcServer interface {

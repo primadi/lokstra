@@ -1,12 +1,14 @@
 package module
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/common/utils"
-	"lokstra/core/request"
 	"plugin"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/request"
 )
 
 const EntryFnRegisterModule = "RegisterModule"
@@ -17,6 +19,7 @@ var serviceInstances = make(map[string]iface.Service)
 var modules = make(map[string]bool)
 
 type RegistrationContextImpl struct {
+	context.Context
 	permission *PermissionGranted
 }
 
@@ -197,7 +200,7 @@ func (g *RegistrationContextImpl) RegisterServiceModule(module iface.ServiceModu
 
 var _ RegistrationContext = (*RegistrationContextImpl)(nil)
 
-func (g *RegistrationContextImpl) NewPermissionContext(permission *PermissionRequest) RegistrationContext {
+func NewPermissionContext(permission *PermissionRequest) RegistrationContext {
 	return &RegistrationContextImpl{
 		permission: newPermissionGranted(permission),
 	}

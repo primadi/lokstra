@@ -2,8 +2,9 @@ package logger
 
 import (
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/serviceapi"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 const NAME = "lokstra.logger"

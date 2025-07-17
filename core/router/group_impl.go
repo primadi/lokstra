@@ -1,11 +1,12 @@
 package router
 
 import (
-	"lokstra/common/iface"
-	"lokstra/common/meta"
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/common/meta"
 
 	"github.com/valyala/fasthttp"
 )

@@ -2,12 +2,13 @@ package app
 
 import (
 	"fmt"
-	"lokstra/common/meta"
-	"lokstra/common/module"
-	"lokstra/core/router"
-	"lokstra/serviceapi"
 	"maps"
 	"time"
+
+	"github.com/primadi/lokstra/common/meta"
+	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 type App struct {

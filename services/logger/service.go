@@ -1,9 +1,10 @@
 package logger
 
 import (
-	"lokstra/serviceapi"
 	"os"
 	"time"
+
+	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/rs/zerolog"
 )

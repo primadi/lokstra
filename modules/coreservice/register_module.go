@@ -1,10 +1,10 @@
 package coreservice
 
 import (
-	"lokstra/common/module"
-	"lokstra/modules/coreservice/listener"
-	"lokstra/modules/coreservice/router_engine"
-	"lokstra/serviceapi"
+	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/modules/coreservice/listener"
+	"github.com/primadi/lokstra/modules/coreservice/router_engine"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 func RegisterModule(ctx module.RegistrationContext) error {

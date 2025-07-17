@@ -2,10 +2,11 @@ package response
 
 import (
 	"io"
-	"lokstra/common/iface/response_iface"
-	"lokstra/common/json"
 	"net/http"
 	"os"
+
+	"github.com/primadi/lokstra/common/iface/response_iface"
+	"github.com/primadi/lokstra/common/json"
 )
 
 type JSONFormatter struct{}

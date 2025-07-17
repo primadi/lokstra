@@ -2,14 +2,15 @@ package router_engine
 
 import (
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/serviceapi"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 func NewServeMuxEngine(_ any) (iface.Service, error) {

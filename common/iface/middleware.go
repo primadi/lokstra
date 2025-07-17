@@ -1,6 +1,6 @@
 package iface
 
-import "lokstra/core/request"
+import "github.com/primadi/lokstra/core/request"
 
 type HandlerFunc = func(ctx *request.Context) error
 

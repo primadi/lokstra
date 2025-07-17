@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"lokstra"
+
+	"github.com/primadi/lokstra"
 )
 
 func main() {

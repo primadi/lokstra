@@ -2,13 +2,14 @@ package config
 
 import (
 	"fmt"
-	"lokstra/common/meta"
-	"lokstra/common/module"
-	"lokstra/common/utils"
-	"lokstra/core/app"
-	"lokstra/core/router"
-	"lokstra/core/server"
 	"net/http"
+
+	"github.com/primadi/lokstra/common/meta"
+	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/app"
+	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/server"
 )
 
 func NewServerFromConfig(ctx *module.RegistrationContextImpl, cfg *LokstraConfig) (*server.Server, error) {

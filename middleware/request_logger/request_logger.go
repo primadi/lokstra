@@ -1,8 +1,9 @@
 package request_logger
 
 import (
-	"lokstra"
 	"time"
+
+	"github.com/primadi/lokstra"
 )
 
 const NAME = "lokstra.request_logger"

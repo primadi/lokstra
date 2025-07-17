@@ -1,8 +1,9 @@
 package recovery
 
 import (
-	"lokstra"
 	"runtime/debug"
+
+	"github.com/primadi/lokstra"
 )
 
 const NAME = "lokstra.recovery"

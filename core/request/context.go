@@ -3,10 +3,11 @@ package request
 import (
 	"context"
 	"io"
-	"lokstra/core/response"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/primadi/lokstra/core/response"
 )
 
 type Context struct {

@@ -2,7 +2,8 @@ package module
 
 import (
 	"fmt"
-	"lokstra/common/iface"
+
+	"github.com/primadi/lokstra/common/iface"
 )
 
 var middlewareFactories = make(map[string]iface.MiddlewareModule)

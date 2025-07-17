@@ -1,7 +1,7 @@
 package gzipcompression
 
 import (
-	"lokstra"
+	"github.com/primadi/lokstra"
 )
 
 const NAME = "lokstra.gzipcompression"

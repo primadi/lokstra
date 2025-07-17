@@ -3,7 +3,8 @@ package customtype
 import (
 	"database/sql/driver"
 	"fmt"
-	"lokstra/common/json"
+
+	"github.com/primadi/lokstra/common/json"
 
 	"github.com/shopspring/decimal"
 )

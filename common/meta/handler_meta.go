@@ -1,7 +1,7 @@
 package meta
 
 import (
-	"lokstra/core/request"
+	"github.com/primadi/lokstra/core/request"
 )
 
 // HandlerMeta represents a named handler.

@@ -1,4 +1,4 @@
-module lokstra
+module github.com/primadi/lokstra
 
 go 1.24.4
 

@@ -2,8 +2,9 @@ package pg_dbpool
 
 import (
 	"fmt"
-	"lokstra/common/iface"
-	"lokstra/common/module"
+
+	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/common/module"
 )
 
 const DSN_KEY = "dsn"

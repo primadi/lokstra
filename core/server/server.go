@@ -2,10 +2,11 @@ package server
 
 import (
 	"fmt"
-	"lokstra/common/module"
-	"lokstra/core/app"
 	"sync"
 	"time"
+
+	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/core/app"
 )
 
 type Server struct {
