@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/jackc/pgx/v5"
@@ -14,9 +14,18 @@ import (
 )
 
 type pgxPostgresPool struct {
+	*service.BaseService
 	dsn  string
 	pool *pgxpool.Pool
 }
+
+// GetServiceUri implements service.Service.
+func (p *pgxPostgresPool) GetServiceUri() string {
+	return "lokstra://db_pool/" + p.GetServiceName()
+}
+
+var _ service.Service = (*pgxPostgresPool)(nil)
+var _ serviceapi.DbPool = (*pgxPostgresPool)(nil)
 
 func (p *pgxPostgresPool) GetSetting(key string) any {
 	if key == "dsn" {
@@ -25,10 +34,7 @@ func (p *pgxPostgresPool) GetSetting(key string) any {
 	return nil
 }
 
-var _ serviceapi.DBPool = (*pgxPostgresPool)(nil)
-var _ iface.Service = (*pgxPostgresPool)(nil)
-
-func newPgxPostgresPool(dsn string) (*pgxPostgresPool, error) {
+func NewPgxPostgresPool(name, dsn string) (*pgxPostgresPool, error) {
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		return nil, err
@@ -36,10 +42,14 @@ func newPgxPostgresPool(dsn string) (*pgxPostgresPool, error) {
 	if err := pool.Ping(context.Background()); err != nil {
 		return nil, err
 	}
-	return &pgxPostgresPool{dsn: dsn, pool: pool}, nil
+	return &pgxPostgresPool{
+		BaseService: service.NewBaseService(name),
+		dsn:         dsn,
+		pool:        pool,
+	}, nil
 }
 
-func (p *pgxPostgresPool) Acquire(schema string) (serviceapi.DBConn, error) {
+func (p *pgxPostgresPool) Acquire(schema string) (serviceapi.DbConn, error) {
 	conn, err := p.pool.Acquire(context.Background())
 	if err != nil {
 		return nil, err
@@ -198,7 +208,7 @@ func (c *pgxConnWrapper) Begin(ctx context.Context) (serviceapi.Tx, error) {
 	return &pgxTxWrapper{tx: tx}, nil
 }
 
-func (c *pgxConnWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.DBConn) error) error {
+func (c *pgxConnWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.DbConn) error) error {
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
 		return err

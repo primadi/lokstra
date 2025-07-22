@@ -5,6 +5,7 @@ import (
 
 	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/service"
 )
 
 type HandlerRegister = request.HandlerRegister
@@ -14,14 +15,15 @@ var ErrServiceTypeInvalid = errors.New("service type is invalid")
 
 type RegistrationContext interface {
 	// Service creation and retrieval
-	SetService(name string, service iface.Service) error
-	GetService(name string) iface.Service
-	CreateService(serviceType, name string, config ...any) (iface.Service, error)
+	RegisterService(service service.Service) error
+	GetService(serviceUri string) service.Service
+	CreateService(factoryName, serviceName string, config ...any) (service.Service, error)
 
 	// Service factory registration and retrieval
-	RegisterServiceFactory(serviceType string, serviceFactory func(config any) (iface.Service, error))
-	RegisterServiceModule(module iface.ServiceModule) error
-	GetServiceFactory(serviceType string) (iface.ServiceFactory, bool)
+	RegisterServiceFactory(factoryName string,
+		serviceFactory func(serviceName string, config any) (service.Service, error))
+	RegisterServiceModule(module service.ServiceModule) error
+	GetServiceFactory(factoryName string) (service.ServiceFactory, bool)
 
 	// Handler registration and retrieval
 	GetHandler(name string) *HandlerRegister

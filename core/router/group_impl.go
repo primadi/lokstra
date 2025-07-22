@@ -1,12 +1,15 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
 
 	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/common/meta"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/service"
 
 	"github.com/valyala/fasthttp"
 )
@@ -113,6 +116,42 @@ func (g *GroupImpl) MountSPA(prefix string, fallbackFile string) Router {
 // MountStatic implements Router.
 func (g *GroupImpl) MountStatic(prefix string, folder http.Dir) Router {
 	g.parent.r_engine.ServeStatic(g.cleanPrefix(prefix), folder)
+	return g
+}
+
+// MountRpcService implements Router.
+func (g *GroupImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
+	g.mwLocked = true
+	cleanPath := g.cleanPrefix(path)
+
+	rpcMeta := &meta.RpcServiceMeta{
+		MethodParam: ":method",
+	}
+	switch s := svc.(type) {
+	case string:
+		rpcMeta.ServiceURI = s
+	case service.Service:
+		rpcMeta.ServiceURI = s.GetServiceUri()
+		rpcMeta.ServiceInst = s
+	case *meta.RpcServiceMeta:
+		rpcMeta = s
+	default:
+		fmt.Printf("Service type: %T\n", svc)
+		panic("Invalid service type, must be a string, *RpcServiceMeta, or iface.Service")
+	}
+
+	handlerMeta := &meta.HandlerMeta{
+		HandlerFunc: func(ctx *request.Context) error {
+			return ctx.ErrorInternal("RpcService not yet resolved")
+		},
+		Extension: rpcMeta,
+	}
+
+	if overrideMiddleware {
+		g.meta.HandleWithOverrideMiddleware("POST", cleanPath, handlerMeta, mw...)
+	} else {
+		g.meta.Handle("POST", cleanPath, handlerMeta, mw...)
+	}
 	return g
 }
 

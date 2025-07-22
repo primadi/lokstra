@@ -11,6 +11,7 @@ import (
 	"github.com/primadi/lokstra/common/meta"
 	"github.com/primadi/lokstra/common/module"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/valyala/fasthttp"
@@ -24,17 +25,17 @@ type RouterImpl struct {
 }
 
 func NewListener(ctx module.RegistrationContext, name string, config map[string]any) serviceapi.HttpListener {
-	return NewListenerWithEngine(ctx, serviceapi.DEFAULT_LISTENER_NAME, name, config)
+	return NewListenerWithEngine(ctx, iface.DEFAULT_LISTENER_NAME, name, config)
 }
 
 func NewListenerWithEngine(ctx module.RegistrationContext, listenerType string,
 	name string, config map[string]any) serviceapi.HttpListener {
 
 	if listenerType == "" || listenerType == "default" {
-		listenerType = serviceapi.DEFAULT_LISTENER_NAME
+		listenerType = iface.DEFAULT_LISTENER_NAME
 	}
 
-	lsAny, err := ctx.CreateService(listenerType, name+".listener", config)
+	lsAny, err := ctx.CreateService(listenerType, name, config)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create listener for app %s: %v", name, err))
 	}
@@ -46,17 +47,17 @@ func NewListenerWithEngine(ctx module.RegistrationContext, listenerType string,
 }
 
 func NewRouter(ctx module.RegistrationContext, name string, config map[string]any) Router {
-	return NewRouterWithEngine(ctx, serviceapi.DEFAULT_ROUTER_ENGINE_NAME, name, config)
+	return NewRouterWithEngine(ctx, iface.DEFAULT_ROUTER_ENGINE_NAME, name, config)
 }
 
 func NewRouterWithEngine(ctx module.RegistrationContext, engineType string,
 	name string, config map[string]any) Router {
 
 	if engineType == "" || engineType == "default" {
-		engineType = serviceapi.DEFAULT_ROUTER_ENGINE_NAME
+		engineType = iface.DEFAULT_ROUTER_ENGINE_NAME
 	}
 	rtmt := meta.NewRouter().WithRouterEngineType(engineType)
-	rtAny, err := ctx.CreateService(rtmt.GetRouterEngineType(), "router_engine:"+name, config)
+	rtAny, err := ctx.CreateService(engineType, name, config)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create router engine %s: %v", rtmt.GetRouterEngineType(), err))
 	}
@@ -193,6 +194,43 @@ func (r *RouterImpl) MountStatic(prefix string, folder http.Dir) Router {
 	return r
 }
 
+// MountRpcService implements Router.
+func (r *RouterImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
+	r.mwLocked = true
+
+	cleanPath := r.cleanPrefix(path)
+
+	rpcMeta := &meta.RpcServiceMeta{
+		MethodParam: ":method",
+	}
+	switch s := svc.(type) {
+	case string:
+		rpcMeta.ServiceURI = s
+	case service.Service:
+		rpcMeta.ServiceURI = s.GetServiceUri()
+		rpcMeta.ServiceInst = s
+	case *meta.RpcServiceMeta:
+		rpcMeta = s
+	default:
+		fmt.Printf("Service type: %T\n", svc)
+		panic("Invalid service type, must be a string, *RpcServiceMeta, or iface.Service")
+	}
+
+	handlerMeta := &meta.HandlerMeta{
+		HandlerFunc: func(ctx *request.Context) error {
+			return ctx.ErrorInternal("RpcService not yet resolved")
+		},
+		Extension: rpcMeta,
+	}
+
+	if overrideMiddleware {
+		r.meta.HandleWithOverrideMiddleware("POST", cleanPath, handlerMeta, mw...)
+	} else {
+		r.meta.Handle("POST", cleanPath, handlerMeta, mw...)
+	}
+	return r
+}
+
 // OverrideMiddleware implements Router.
 func (r *RouterImpl) OverrideMiddleware() Router {
 	r.meta.OverrideMiddleware = true
@@ -276,22 +314,51 @@ func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []*meta.Mid
 	}
 
 	handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
-	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ctx, ok := request.ContextFromRequest(req)
+	var finalHandler http.HandlerFunc
+	if rpcService, ok := route.Handler.Extension.(*meta.RpcServiceMeta); ok {
+		svc := rpcService.ServiceInst
+		if svc == nil {
+			return
+		}
 
-		var cancel func()
-		if !ok {
-			ctx, cancel = request.NewContext(w, req)
-			defer cancel()
-		}
-		if err := handler_with_mw(ctx); err != nil {
-			_ = ctx.ErrorInternal(err.Error())
-		}
-		if err := ctx.Err(); err != nil {
-			_ = ctx.ErrorInternal("Request aborted")
-		}
-		_ = ctx.Response.WriteHttp(ctx.Writer)
-	})
+		finalHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx, ok := request.ContextFromRequest(req)
+
+			var cancel func()
+			if !ok {
+				ctx, cancel = request.NewContext(w, req)
+				defer cancel()
+			}
+
+			// Set the RPC service URI in the context
+			// ctx.SetServiceURI(rpcService.ServiceURI)
+
+			if err := handler_with_mw(ctx); err != nil {
+				_ = ctx.ErrorInternal(err.Error())
+			}
+			if err := ctx.Err(); err != nil {
+				_ = ctx.ErrorInternal("Request aborted")
+			}
+			_ = ctx.Response.WriteHttp(ctx.Writer)
+		})
+	} else {
+		finalHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx, ok := request.ContextFromRequest(req)
+
+			var cancel func()
+			if !ok {
+				ctx, cancel = request.NewContext(w, req)
+				defer cancel()
+			}
+			if err := handler_with_mw(ctx); err != nil {
+				_ = ctx.ErrorInternal(err.Error())
+			}
+			if err := ctx.Err(); err != nil {
+				_ = ctx.ErrorInternal("Request aborted")
+			}
+			_ = ctx.Response.WriteHttp(ctx.Writer)
+		})
+	}
 	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
 }
 

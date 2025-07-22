@@ -8,8 +8,10 @@ import (
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/server"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/modules/coreservice"
 	"github.com/primadi/lokstra/modules/coreservice/listener"
+	"github.com/primadi/lokstra/modules/coreservice/router_engine"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/logger"
 )
@@ -30,11 +32,11 @@ type App = app.App
 
 type LogFields = serviceapi.LogFields
 
-type Service = iface.Service
-type ServiceModule = iface.ServiceModule
-type ServiceFactory = iface.ServiceFactory
+type Service = service.Service
+type ServiceModule = service.ServiceModule
+type ServiceFactory = service.ServiceFactory
 
-var Logger = logger.NewService(serviceapi.LogLevelInfo)
+var Logger, _ = logger.NewService("default", serviceapi.LogLevelInfo)
 
 func NewGlobalContext() *GlobalContext {
 	ctx := module.NewGlobalContext()
@@ -53,13 +55,13 @@ func NewServerFromConfig(ctx *GlobalContext, cfg *config.LokstraConfig) (*Server
 	return config.NewServerFromConfig(ctx, cfg)
 }
 
-const LISTENER_NETHTTP = serviceapi.NETHTTP_LISTENER_NAME
-const LISTENER_FASTHTTP = serviceapi.FASTHTTP_LISTENER_NAME
-const LISTENER_SECURE_NETHTTP = serviceapi.SECURE_NETHTTP_LISTENER_NAME
-const LISTENER_HTTP3 = serviceapi.HTTP3_LISTENER_NAME
+const LISTENER_NETHTTP = listener.NETHTTP_LISTENER_NAME
+const LISTENER_FASTHTTP = listener.FASTHTTP_LISTENER_NAME
+const LISTENER_SECURE_NETHTTP = listener.SECURE_NETHTTP_LISTENER_NAME
+const LISTENER_HTTP3 = listener.HTTP3_LISTENER_NAME
 
-const ROUTER_ENGINE_HTTPROUTER = serviceapi.HTTPROUTER_ROUTER_ENGINE_NAME
-const ROUTER_ENGINE_SERVEMUX = serviceapi.SERVEMUX_ROUTER_ENGINE_NAME
+const ROUTER_ENGINE_HTTPROUTER = router_engine.HTTPROUTER_ROUTER_ENGINE_NAME
+const ROUTER_ENGINE_SERVEMUX = router_engine.SERVEMUX_ROUTER_ENGINE_NAME
 
 const CERT_FILE_KEY = listener.CERT_FILE_KEY
 const KEY_FILE_KEY = listener.KEY_FILE_KEY

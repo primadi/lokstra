@@ -13,9 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
@@ -25,6 +25,7 @@ const CA_FILE_KEY = "ca_file"
 
 // SecureNetHttpListener implements the HttpListener interface with TLS support.
 type SecureNetHttpListener struct {
+	*service.BaseService
 	server   *http.Server
 	certFile string
 	keyFile  string
@@ -41,13 +42,13 @@ type SecureNetHttpListener struct {
 	activeCount    atomic.Int32
 }
 
-// ListenerType implements listener_iface.HttpListener.
-func (s *SecureNetHttpListener) ListenerType() string {
-	return serviceapi.SECURE_NETHTTP_LISTENER_NAME
+// GetServiceUri implements service.Service.
+func (s *SecureNetHttpListener) GetServiceUri() string {
+	return "lokstra://http_listener/" + s.GetServiceName()
 }
 
 // NewSecureNetHttpListener returns a new SecureNetHttpListener instance.
-func NewSecureNetHttpListener(config any) (iface.Service, error) {
+func NewSecureNetHttpListener(serviceName string, config any) (service.Service, error) {
 	var certFile, keyFile, caFile string
 	var readTimeout, writeTimeout, idleTimeout time.Duration
 
@@ -90,9 +91,10 @@ func NewSecureNetHttpListener(config any) (iface.Service, error) {
 	}
 
 	return &SecureNetHttpListener{
-		certFile: certFile,
-		keyFile:  keyFile,
-		caFile:   caFile,
+		BaseService: service.NewBaseService(serviceName),
+		certFile:    certFile,
+		keyFile:     keyFile,
+		caFile:      caFile,
 
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
@@ -230,3 +232,4 @@ func (s *SecureNetHttpListener) Shutdown(shutdownTimeout time.Duration) error {
 }
 
 var _ serviceapi.HttpListener = (*SecureNetHttpListener)(nil)
+var _ service.Service = (*SecureNetHttpListener)(nil)

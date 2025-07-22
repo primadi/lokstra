@@ -22,7 +22,7 @@ apps:
             handler: user.profile
         groups:
           - prefix: /test
-            # middleware: [ admin_only ]
+            middleware: [ admin_only ]
             routes:
               - method: GET
                 path: /list

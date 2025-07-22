@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"plugin"
 
-	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/service"
 )
 
 const EntryFnRegisterModule = "RegisterModule"
 
 var handlers = make(map[string]*request.HandlerRegister)
-var serviceFactories = make(map[string]iface.ServiceFactory)
-var serviceInstances = make(map[string]iface.Service)
+var serviceFactories = make(map[string]service.ServiceFactory)
+var serviceInstances = make(map[string]service.Service)
 var modules = make(map[string]bool)
 
 type RegistrationContextImpl struct {
@@ -93,32 +93,28 @@ func (g *RegistrationContextImpl) GetHandler(name string) *HandlerRegister {
 }
 
 // GetService implements ComponentContext.
-func (g *RegistrationContextImpl) GetService(name string) iface.Service {
-	if !g.permission.IsAllowedGetService(name) {
-		panic("service '" + name + "' is not allowed to be accessed")
+func (g *RegistrationContextImpl) GetService(serviceUri string) service.Service {
+	if !g.permission.IsAllowedGetService(serviceUri) {
+		panic("service '" + serviceUri + "' is not allowed to be accessed")
 	}
 
-	if service, exists := serviceInstances[name]; exists {
+	if service, exists := serviceInstances[serviceUri]; exists {
 		return service
 	}
 	return nil
 }
 
 // GetServiceFactory implements ComponentContext.
-func (g *RegistrationContextImpl) GetServiceFactory(serviceType string) (iface.ServiceFactory, bool) {
-	sf, exists := serviceFactories[serviceType]
+func (g *RegistrationContextImpl) GetServiceFactory(factoryName string) (service.ServiceFactory, bool) {
+	sf, exists := serviceFactories[factoryName]
 	return sf, exists
 }
 
 // CreateService implements ComponentContext.
-func (g *RegistrationContextImpl) CreateService(serviceType string, name string, config ...any) (iface.Service, error) {
-	factory, exists := serviceFactories[serviceType]
+func (g *RegistrationContextImpl) CreateService(factoryName string, serviceName string, config ...any) (service.Service, error) {
+	factory, exists := serviceFactories[factoryName]
 	if !exists {
-		return nil, errors.New("service factory not found for type: " + serviceType)
-	}
-
-	if _, found := serviceInstances[name]; found {
-		return nil, errors.New("service with name '" + name + "' already exists")
+		return nil, errors.New("service factory not found for type: " + factoryName)
 	}
 
 	var cfg any
@@ -130,12 +126,17 @@ func (g *RegistrationContextImpl) CreateService(serviceType string, name string,
 		cfg = config
 	}
 
-	service, err := factory(cfg)
+	service, err := factory(serviceName, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceInstances[name] = service
+	serviceUri := service.GetServiceUri()
+	if _, found := serviceInstances[serviceUri]; found {
+		return nil, errors.New("service with name '" + serviceUri + "' already exists")
+	}
+
+	serviceInstances[serviceUri] = service
 
 	return service, nil
 }
@@ -161,40 +162,39 @@ func (g *RegistrationContextImpl) RegisterHandler(name string, handler request.H
 	handlers[name] = info
 }
 
-// SetService implements ComponentContext.
-func (g *RegistrationContextImpl) SetService(name string, service iface.Service) error {
+// RegisterService implements ComponentContext.
+func (g *RegistrationContextImpl) RegisterService(service service.Service) error {
 	if !g.permission.IsAllowedRegisterService() {
-		return errors.New("registering service '" + name + "' is not allowed")
+		return errors.New("registering service '" + service.GetServiceUri() + "' is not allowed")
 	}
-
-	serviceInstances[name] = service
+	serviceInstances[service.GetServiceUri()] = service
 	return nil
 }
 
 // RegisterServiceFactory implements ComponentContext.
-func (g *RegistrationContextImpl) RegisterServiceFactory(serviceType string,
-	serviceFactory func(config any) (iface.Service, error)) {
+func (g *RegistrationContextImpl) RegisterServiceFactory(factoryName string,
+	serviceFactory func(serviceName string, config any) (service.Service, error)) {
 	if !g.permission.IsAllowedRegisterService() {
-		panic("registering service factory for '" + serviceType + "' is not allowed")
+		panic("registering service factory for '" + factoryName + "' is not allowed")
 	}
 
 	if serviceFactory == nil {
 		panic("service factory cannot be nil")
 	}
-	if serviceType == "" {
-		panic("serviceType cannot be empty")
+	if factoryName == "" {
+		panic("factory name cannot be empty")
 	}
 
-	serviceFactories[serviceType] = serviceFactory
+	serviceFactories[factoryName] = serviceFactory
 }
 
 // RegisterServiceModule implements ComponentContext.
-func (g *RegistrationContextImpl) RegisterServiceModule(module iface.ServiceModule) error {
+func (g *RegistrationContextImpl) RegisterServiceModule(module service.ServiceModule) error {
 	if !g.permission.IsAllowedRegisterService() {
-		return fmt.Errorf("registering service factory for '%s' is not allowed", module.Name())
+		return fmt.Errorf("registering service factory for '%s' is not allowed", module.FactoryName())
 	}
 
-	serviceFactories[module.Name()] = module.Factory
+	serviceFactories[module.FactoryName()] = module.Factory
 	return nil
 }
 

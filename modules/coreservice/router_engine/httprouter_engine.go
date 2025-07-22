@@ -3,31 +3,35 @@ package router_engine
 import (
 	"net/http"
 
-	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/julienschmidt/httprouter"
 )
 
-func NewHttpRouterEngine(_ any) (iface.Service, error) {
-	return &HttpRouterEngine{hr: httprouter.New()}, nil
+func NewHttpRouterEngine(serviceName string, _ any) (service.Service, error) {
+	return &HttpRouterEngine{
+		BaseService: service.NewBaseService(serviceName),
+		hr:          httprouter.New(),
+	}, nil
 }
 
 type HttpRouterEngine struct {
+	*service.BaseService
 	hr *httprouter.Router
 	sm serviceapi.RouterEngine
 }
 
-// GetRouterEngineType implements RouterEngine.
-func (h *HttpRouterEngine) GetRouterEngineType() string {
-	return serviceapi.HTTPROUTER_ROUTER_ENGINE_NAME
+// GetServiceUri implements service.Service.
+func (h *HttpRouterEngine) GetServiceUri() string {
+	return "lokstra://router_engine/" + h.GetServiceName()
 }
 
 // ServeReverseProxy implements RouterEngine.
 func (h *HttpRouterEngine) ServeReverseProxy(prefix string, target string) {
 	if h.sm == nil {
-		smAny, _ := NewServeMuxEngine(nil)
-		h.sm = smAny.(serviceapi.RouterEngine)
+		sm, _ := NewServeMuxEngine("default", nil)
+		h.sm = sm.(serviceapi.RouterEngine)
 		h.hr.NotFound = h.sm
 	}
 	h.sm.ServeReverseProxy(prefix, target)
@@ -36,8 +40,9 @@ func (h *HttpRouterEngine) ServeReverseProxy(prefix string, target string) {
 // ServeSPA implements RouterEngine.
 func (h *HttpRouterEngine) ServeSPA(prefix string, indexFile string) {
 	if h.sm == nil {
-		smAny, _ := NewServeMuxEngine(nil)
-		h.sm = smAny.(serviceapi.RouterEngine)
+		sm, _ := NewServeMuxEngine("default", nil)
+		h.sm = sm.(serviceapi.RouterEngine)
+		h.hr.NotFound = h.sm
 	}
 	h.sm.ServeSPA(prefix, indexFile)
 }
@@ -45,8 +50,8 @@ func (h *HttpRouterEngine) ServeSPA(prefix string, indexFile string) {
 // ServeStatic implements RouterEngine.
 func (h *HttpRouterEngine) ServeStatic(prefix string, folder http.Dir) {
 	if h.sm == nil {
-		smAny, _ := NewServeMuxEngine(nil)
-		h.sm = smAny.(serviceapi.RouterEngine)
+		sm, _ := NewServeMuxEngine("default", nil)
+		h.sm = sm.(serviceapi.RouterEngine)
 		h.hr.NotFound = h.sm
 	}
 	h.sm.ServeStatic(prefix, folder)
@@ -68,3 +73,4 @@ func (h *HttpRouterEngine) HandleMethod(method string, path string, handler http
 }
 
 var _ serviceapi.RouterEngine = (*HttpRouterEngine)(nil)
+var _ service.Service = (*HttpRouterEngine)(nil)

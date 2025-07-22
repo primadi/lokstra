@@ -3,27 +3,29 @@ package logger
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-const NAME = "lokstra.logger"
+const FACTORY_NAME = "logger"
 
 type LoggerServiceModule struct{}
 
+// FactoryName implements service.ServiceModule.
+func (l *LoggerServiceModule) FactoryName() string {
+	return FACTORY_NAME
+}
+
 // Factory implements iface.ServiceModule.
-func (l *LoggerServiceModule) Factory(config any) (iface.Service, error) {
+func (l *LoggerServiceModule) Factory(serviceName string, config any) (service.Service, error) {
 	levelStr := "info"
+
 	switch v := config.(type) {
 	case map[string]any:
 		if val, ok := v[serviceapi.ConfigKeyLogLevel]; ok {
 			if str, ok := val.(string); ok {
 				levelStr = str
 			}
-		}
-	case map[string]string:
-		if v, ok := v[serviceapi.ConfigKeyLogLevel]; ok {
-			levelStr = v
 		}
 	case string:
 		levelStr = v
@@ -33,25 +35,20 @@ func (l *LoggerServiceModule) Factory(config any) (iface.Service, error) {
 	if !ok {
 		fmt.Printf("Invalid log level '%s', defaulting to 'info'", levelStr)
 	}
-	return NewService(level), nil
+	return NewService(serviceName, level)
 }
 
 // Meta implements iface.ServiceModule.
-func (l *LoggerServiceModule) Meta() *iface.ServiceMeta {
-	return &iface.ServiceMeta{
+func (l *LoggerServiceModule) Meta() *service.ServiceMeta {
+	return &service.ServiceMeta{
 		Description: "Logger service for Lokstra",
 		Tags:        []string{"logging", "service"},
 	}
 }
 
-// Name implements iface.ServiceModule.
-func (l *LoggerServiceModule) Name() string {
-	return NAME
-}
-
-var _ iface.ServiceModule = (*LoggerServiceModule)(nil)
-
 // GetModule returns the logger service with serviceType "lokstra.logger".
-func GetModule() iface.ServiceModule {
+func GetModule() service.ServiceModule {
 	return &LoggerServiceModule{}
 }
+
+var _ service.ServiceModule = (*LoggerServiceModule)(nil)

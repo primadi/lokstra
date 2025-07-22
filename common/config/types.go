@@ -27,6 +27,11 @@ type MountReverseProxyConfig struct {
 	Target string `yaml:"target"`
 }
 
+type MountRpcServiceConfig struct {
+	BasePath   string `yaml:"base_path"`
+	ServiceUri string `yaml:"service_uri"`
+}
+
 type GroupConfig struct {
 	Prefix string        `yaml:"prefix"`
 	Groups []GroupConfig `yaml:"groups,omitempty"`
@@ -39,6 +44,7 @@ type GroupConfig struct {
 	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
 	MountSPA          []MountSPAConfig          `yaml:"mount_spa,omitempty"`
 	MountReverseProxy []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
+	MountRpcService   []MountRpcServiceConfig   `yaml:"mount_rpc_service,omitempty"`
 }
 
 type AppConfig struct {

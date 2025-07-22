@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/rs/zerolog"
@@ -11,16 +12,23 @@ import (
 
 // LoggerService implements iface.Service and Logger
 type LoggerService struct {
+	*service.BaseService
 	logger *zerolog.Logger
 }
 
-func NewService(level serviceapi.LogLevel) serviceapi.Logger {
+// GetServiceUri implements service.Service.
+func (l *LoggerService) GetServiceUri() string {
+	return "lokstra://logger/" + l.GetServiceName()
+}
+
+func NewService(name string, level serviceapi.LogLevel) (*LoggerService, error) {
 	zerolog.TimeFieldFormat = time.RFC3339
 	zlogger := zerolog.New(os.Stdout).Level(toZerologLevel(level)).With().Timestamp().Logger()
 
 	return &LoggerService{
-		logger: &zlogger,
-	}
+		BaseService: service.NewBaseService(name),
+		logger:      &zlogger,
+	}, nil
 }
 
 // GetLogLevel implements serviceapi.Logger.
@@ -118,3 +126,4 @@ func (l *LoggerService) Fatalf(msg string, v ...any) {
 }
 
 var _ serviceapi.Logger = (*LoggerService)(nil)
+var _ service.Service = (*LoggerService)(nil)

@@ -27,6 +27,7 @@ type Router interface {
 	MountStatic(prefix string, folder http.Dir) Router
 	MountSPA(prefix string, fallbackFile string) Router
 	MountReverseProxy(prefix string, target string) Router
+	MountRpcService(path string, service any, overrideMiddleware bool, mw ...any) Router
 
 	Group(prefix string, mw ...any) Router
 	GroupBlock(prefix string, fn func(gr Router)) Router

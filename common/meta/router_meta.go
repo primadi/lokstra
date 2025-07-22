@@ -50,7 +50,7 @@ func NewRouter() *RouterMeta {
 	return &RouterMeta{
 		Prefix:             "",
 		OverrideMiddleware: false,
-		RouterEngineType:   serviceapi.DEFAULT_ROUTER_ENGINE_NAME,
+		RouterEngineType:   iface.DEFAULT_ROUTER_ENGINE_NAME,
 		Routes:             []*RouteMeta{},
 		Middleware:         []*MiddlewareExecution{},
 		StaticMounts:       []*StaticDirMeta{},
@@ -159,8 +159,24 @@ func (r *RouterMeta) UseMiddleware(middleware any) *RouterMeta {
 }
 
 func ResolveAllNamed(ctx module.RegistrationContext, r *RouterMeta) {
-	for _, route := range r.Routes {
-		if route.Handler.HandlerFunc == nil {
+	for i, route := range r.Routes {
+		if rpcServiceMeta, ok := route.Handler.Extension.(*RpcServiceMeta); ok {
+			svc := rpcServiceMeta.ServiceInst
+			if svc == nil {
+				svc = ctx.GetService(rpcServiceMeta.ServiceURI)
+				if svc == nil {
+					panic(fmt.Sprintf("Rpc Service '%s' not found", rpcServiceMeta.ServiceURI))
+				}
+				r.Routes[i].Handler.Extension.(*RpcServiceMeta).ServiceInst = svc
+			}
+			rpcService := ctx.GetService("lokstra://rpc_server/default").(serviceapi.RpcServer)
+			if rpcService != nil {
+				r.Routes[i].Handler.HandlerFunc = func(ctx *request.Context) error {
+					methodParam := ctx.GetPathParam(rpcServiceMeta.MethodParam)
+					return rpcService.HandleRequest(ctx, svc, methodParam)
+				}
+			}
+		} else if route.Handler.HandlerFunc == nil {
 			handler := ctx.GetHandler(route.Handler.Name)
 			if handler == nil {
 				panic(fmt.Sprintf("Handler '%s' not found", route.Handler.Name))

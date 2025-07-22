@@ -2,15 +2,15 @@ package serviceapi
 
 import "context"
 
-// DBPool defines a connection pool interface
+// DbPool defines a connection pool interface
 // supporting schema-aware connection acquisition
 // and future multi-backend support.
-type DBPool interface {
-	Acquire(schema string) (DBConn, error)
+type DbPool interface {
+	Acquire(schema string) (DbConn, error)
 }
 
-// DBConn represents a live DB connection (e.g. from pgxpool)
-type DBConn interface {
+// DbConn represents a live DB connection (e.g. from pgxpool)
+type DbConn interface {
 	Exec(ctx context.Context, query string, args ...any) (CommandResult, error)
 	Query(ctx context.Context, query string, args ...any) (RowIterator, error)
 	QueryRow(ctx context.Context, query string, args ...any) RowScanner
@@ -24,7 +24,7 @@ type DBConn interface {
 	IsExists(ctx context.Context, query string, args ...any) (bool, error)
 
 	Begin(ctx context.Context) (Tx, error)
-	Transaction(ctx context.Context, fn func(tx DBConn) error) error
+	Transaction(ctx context.Context, fn func(tx DbConn) error) error
 
 	Release() error
 }
@@ -33,7 +33,7 @@ type DBConn interface {
 type Tx interface {
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
-	DBConn
+	DbConn
 }
 
 // CommandResult abstracts result from Exec()

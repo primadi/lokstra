@@ -6,42 +6,38 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/service"
 
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type ServiceRegistry struct {
-	services map[string]*ServiceMeta
-}
-
-type ServiceMeta struct {
+type serviceMeta struct {
 	Name    string
-	Impl    any
-	Methods map[string]*MethodMeta
+	Impl    service.Service
+	Methods map[string]*methodMeta
 }
 
-type MethodMeta struct {
+type methodMeta struct {
 	Name     string
 	Func     reflect.Value
 	ArgTypes []reflect.Type
 	OutTypes []reflect.Type
 }
 
-var registry = &ServiceRegistry{
-	services: make(map[string]*ServiceMeta),
-}
+var serviceMetaRegistry = make(map[string]*serviceMeta)
 
-func RegisterService(name string, impl any) error {
-	if _, exists := registry.services[name]; exists {
-		return fmt.Errorf("rpc service %q already registered", name)
+func registerServiceMeta(svc service.Service) (*serviceMeta, error) {
+	serviceUri := svc.GetServiceUri()
+	if _, exists := serviceMetaRegistry[serviceUri]; exists {
+		return nil, fmt.Errorf("rpc service %q already registered", serviceUri)
 	}
 
-	t := reflect.TypeOf(impl)
+	t := reflect.TypeOf(svc)
 	if t.Kind() != reflect.Ptr {
-		return fmt.Errorf("rpc service %q must be a pointer", name)
+		return nil, fmt.Errorf("rpc service %q must be a pointer", serviceUri)
 	}
 
-	methods := map[string]*MethodMeta{}
+	methods := map[string]*methodMeta{}
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
 		if !m.IsExported() {
@@ -74,7 +70,7 @@ func RegisterService(name string, impl any) error {
 			outTypes = append(outTypes, mType.Out(j))
 		}
 
-		methods[strings.ToLower(m.Name)] = &MethodMeta{
+		methods[strings.ToLower(m.Name)] = &methodMeta{
 			Name:     m.Name,
 			Func:     m.Func,
 			ArgTypes: argTypes,
@@ -82,24 +78,31 @@ func RegisterService(name string, impl any) error {
 		}
 	}
 
-	registry.services[name] = &ServiceMeta{
-		Name:    name,
-		Impl:    impl,
+	svcMeta := &serviceMeta{
+		Name:    serviceUri,
+		Impl:    svc,
 		Methods: methods,
 	}
 
-	return nil
+	serviceMetaRegistry[serviceUri] = svcMeta
+
+	return svcMeta, nil
 }
 
-func GetService(name string) (*ServiceMeta, error) {
-	svc, ok := registry.services[name]
+func getServiceMeta(svc service.Service) (*serviceMeta, error) {
+	serviceUri := svc.GetServiceUri()
+	svcMeta, ok := serviceMetaRegistry[serviceUri]
 	if !ok {
-		return nil, fmt.Errorf("rpc service %q not found", name)
+		var err error
+		svcMeta, err = registerServiceMeta(svc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to register service %q: %w", serviceUri, err)
+		}
 	}
-	return svc, nil
+	return svcMeta, nil
 }
 
-func (mm *MethodMeta) HandleRequest(svc *ServiceMeta, ctx *request.Context) error {
+func (mm *methodMeta) HandleRequest(svc *serviceMeta, ctx *request.Context) error {
 	// Step 1: Decode body (msgpack)
 	body, err := ctx.GetRawBody()
 	if err != nil {
@@ -154,6 +157,20 @@ func (mm *MethodMeta) HandleRequest(svc *ServiceMeta, ctx *request.Context) erro
 	}
 }
 
-type RpcService interface {
-	HandleRequest(ctx *request.Context, serviceName, MethodName string) error
+func (sm *serviceMeta) HandleRpcRequest(ctx *request.Context, methodName string) error {
+	method := sm.Methods[strings.ToLower(methodName)]
+	if method == nil {
+		return ctx.ErrorBadRequest("method not found: " + methodName)
+	}
+
+	return method.HandleRequest(sm, ctx)
+}
+
+func HandleRpcRequest(ctx *request.Context, svc service.Service, methodName string) error {
+	svcMeta, err := getServiceMeta(svc)
+	if err != nil {
+		return ctx.ErrorInternal("failed to get serviceMeta: " + err.Error())
+	}
+
+	return svcMeta.HandleRpcRequest(ctx, methodName)
 }

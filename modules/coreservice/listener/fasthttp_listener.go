@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/valyala/fasthttp"
@@ -23,6 +23,7 @@ import (
 // FastHttpListener implements the HttpListener interface using the fasthttp package.
 // It provides a high-performance HTTP server with graceful shutdown capabilities.
 type FastHttpListener struct {
+	*service.BaseService
 	server *fasthttp.Server
 
 	readTimeout  time.Duration
@@ -37,11 +38,12 @@ type FastHttpListener struct {
 	activeCount    atomic.Int32
 }
 
-func (f *FastHttpListener) ListenerType() string {
-	return serviceapi.FASTHTTP_LISTENER_NAME
+// GetServiceUri implements service.Service.
+func (f *FastHttpListener) GetServiceUri() string {
+	return "lokstra://http_listener/" + f.GetServiceName()
 }
 
-func NewFastHttpListener(config any) (iface.Service, error) {
+func NewFastHttpListener(serviceName string, config any) (service.Service, error) {
 	var readTimeout, writeTimeout, idleTimeout time.Duration
 	if cfg, ok := config.(map[string]any); ok {
 
@@ -50,6 +52,7 @@ func NewFastHttpListener(config any) (iface.Service, error) {
 		idleTimeout = utils.GetDurationFromMap(cfg, IDLE_TIMEOUT_LEY, DEFAULT_IDLE_TIMEOUT)
 	}
 	return &FastHttpListener{
+		BaseService:  service.NewBaseService(serviceName),
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
 		idleTimeout:  idleTimeout,
@@ -172,3 +175,4 @@ func (f *FastHttpListener) Shutdown(shutdownTimeout time.Duration) error {
 }
 
 var _ serviceapi.HttpListener = (*FastHttpListener)(nil)
+var _ service.Service = (*FastHttpListener)(nil)

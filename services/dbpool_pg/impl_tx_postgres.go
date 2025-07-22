@@ -84,7 +84,7 @@ func (p *pgxTxWrapper) SelectOne(ctx context.Context, query string, args []any, 
 }
 
 // Transaction implements Tx.
-func (p *pgxTxWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.DBConn) error) error {
+func (p *pgxTxWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.DbConn) error) error {
 	return errors.New("nested transactions not supported")
 }
 

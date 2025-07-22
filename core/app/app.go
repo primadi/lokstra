@@ -5,6 +5,7 @@ import (
 	"maps"
 	"time"
 
+	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/common/meta"
 	"github.com/primadi/lokstra/common/module"
 	"github.com/primadi/lokstra/core/router"
@@ -25,8 +26,8 @@ type App struct {
 }
 
 func NewApp(ctx module.RegistrationContext, name string, addr string) *App {
-	listenerType := serviceapi.DEFAULT_LISTENER_NAME
-	routerEngineType := serviceapi.DEFAULT_ROUTER_ENGINE_NAME
+	listenerType := iface.DEFAULT_LISTENER_NAME
+	routerEngineType := iface.DEFAULT_ROUTER_ENGINE_NAME
 	return NewAppCustom(ctx, name, addr, listenerType, routerEngineType, nil)
 }
 

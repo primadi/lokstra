@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/quic-go/quic-go/http3"
@@ -21,6 +21,7 @@ import (
 
 // HTTP3Listner implements the HttpListener interface with HTTP/3 support.
 type Http3Listener struct {
+	*service.BaseService
 	server   *http3.Server
 	certFile string
 	keyFile  string
@@ -35,13 +36,13 @@ type Http3Listener struct {
 	activeCount    atomic.Int32
 }
 
-// ListenerType implements listener_iface.HttpListener.
-func (s *Http3Listener) ListenerType() string {
-	return serviceapi.HTTP3_LISTENER_NAME
+// GetServiceUri implements service.Service.
+func (s *Http3Listener) GetServiceUri() string {
+	return "lokstra://http_listener/" + s.GetServiceName()
 }
 
 // NewHttp3Listener returns a new Http3Listener instance.
-func NewHttp3Listener(config any) (iface.Service, error) {
+func NewHttp3Listener(serviceName string, config any) (service.Service, error) {
 	var certFile, keyFile, caFile string
 	var idleTimeout time.Duration
 
@@ -82,9 +83,10 @@ func NewHttp3Listener(config any) (iface.Service, error) {
 	}
 
 	return &Http3Listener{
-		certFile: certFile,
-		keyFile:  keyFile,
-		caFile:   caFile,
+		BaseService: service.NewBaseService(serviceName),
+		certFile:    certFile,
+		keyFile:     keyFile,
+		caFile:      caFile,
 
 		idleTimeout: idleTimeout,
 	}, nil
@@ -204,3 +206,4 @@ func (s *Http3Listener) Shutdown(shutdownTimeout time.Duration) error {
 }
 
 var _ serviceapi.HttpListener = (*Http3Listener)(nil)
+var _ service.Service = (*Http3Listener)(nil)

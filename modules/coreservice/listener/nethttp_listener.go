@@ -11,14 +11,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
 // NetHttpListener implements the HttpListener interface using the net/http package.
 // It provides a standard HTTP server with graceful shutdown capabilities.
 type NetHttpListener struct {
+	*service.BaseService
 	server *http.Server
 
 	mu             sync.RWMutex
@@ -28,15 +29,15 @@ type NetHttpListener struct {
 	activeCount    atomic.Int32
 }
 
-var _ iface.Service = (*NetHttpListener)(nil)
-
-func NewNetHttpListener(_ any) (iface.Service, error) {
-	return &NetHttpListener{}, nil
+// GetServiceUri implements service.Service.
+func (n *NetHttpListener) GetServiceUri() string {
+	return "lokstra://http_listener/" + n.GetServiceName()
 }
 
-// ListenerType implements listener_iface.HttpListener.
-func (n *NetHttpListener) ListenerType() string {
-	return serviceapi.NETHTTP_LISTENER_NAME
+func NewNetHttpListener(serviceName string, _ any) (service.Service, error) {
+	return &NetHttpListener{
+		BaseService: service.NewBaseService(serviceName),
+	}, nil
 }
 
 func (n *NetHttpListener) IsRunning() bool {
@@ -151,3 +152,4 @@ func (n *NetHttpListener) Shutdown(shutdownTimeout time.Duration) error {
 }
 
 var _ serviceapi.HttpListener = (*NetHttpListener)(nil)
+var _ service.Service = (*NetHttpListener)(nil)

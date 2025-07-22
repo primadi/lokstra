@@ -9,22 +9,27 @@ import (
 	"path"
 	"strings"
 
-	"github.com/primadi/lokstra/common/iface"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-func NewServeMuxEngine(_ any) (iface.Service, error) {
-	return &ServeMuxEngine{mux: http.NewServeMux(), handlers: map[string]*handlerMethod{}}, nil
+func NewServeMuxEngine(serviceName string, _ any) (service.Service, error) {
+	return &ServeMuxEngine{
+		BaseService: service.NewBaseService(serviceName),
+		mux:         http.NewServeMux(),
+		handlers:    map[string]*handlerMethod{},
+	}, nil
 }
 
 type ServeMuxEngine struct {
+	*service.BaseService
 	mux      *http.ServeMux
 	handlers map[string]*handlerMethod
 }
 
-// GetRouterEngineType implements RouterEngine.
-func (m *ServeMuxEngine) GetRouterEngineType() string {
-	return serviceapi.SERVEMUX_ROUTER_ENGINE_NAME
+// GetServiceUri implements service.Service.
+func (m *ServeMuxEngine) GetServiceUri() string {
+	return "lokstra://router_engine/" + m.GetServiceName()
 }
 
 type handlerMethod struct {
@@ -146,3 +151,4 @@ func (m *ServeMuxEngine) ServeStatic(prefix string, folder http.Dir) {
 }
 
 var _ serviceapi.RouterEngine = (*ServeMuxEngine)(nil)
+var _ service.Service = (*ServeMuxEngine)(nil)

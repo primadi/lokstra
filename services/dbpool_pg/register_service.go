@@ -3,8 +3,8 @@ package pg_dbpool
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra/common/iface"
 	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/core/service"
 )
 
 const DSN_KEY = "dsn"
@@ -16,21 +16,34 @@ func (r *Registration) RegisterService(ctx module.RegistrationContext) {
 	ctx.RegisterServiceFactory("dbpool_pg", ServiceFactory)
 }
 
-func ServiceFactory(config any) (iface.Service, error) {
+func ServiceFactory(serviceName string, config any) (service.Service, error) {
 	var dsn string
 
+	name := "default"
 	switch t := config.(type) {
 	case string:
 		dsn = t
 	case map[string]any:
+		if nm, ok := t["name"].(string); ok {
+			name = nm
+		}
 		if dk, ok := t[DSN_KEY].(string); ok {
 			dsn = dk
 		} else {
-			return nil, fmt.Errorf("pg_dbpool requires a valid DSN in the configuration map")
+			return nil, fmt.Errorf("dbpool_pg requires a valid DSN in the configuration map")
+		}
+	case []string:
+		if len(t) == 1 {
+			dsn = t[0]
+		} else if len(t) == 2 {
+			name = t[0]
+			dsn = t[1]
+		} else {
+			return nil, fmt.Errorf("dbpool_pg requires a valid DSN in the configuration slice")
 		}
 	default:
-		return nil, fmt.Errorf("pg_dbpool requires a valid DSN as a string or a map with key '%s'", DSN_KEY)
+		return nil, fmt.Errorf("dbpool_pg requires a valid DSN in the configuration")
 	}
 
-	return newPgxPostgresPool(dsn)
+	return NewPgxPostgresPool(name, dsn)
 }

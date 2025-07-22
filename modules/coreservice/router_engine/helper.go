@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+const HTTPROUTER_ROUTER_ENGINE_NAME = "httprouter"
+const SERVEMUX_ROUTER_ENGINE_NAME = "servemux"
+
 // paramPattern is a regular expression that matches path parameters in the format
 // :param or *param. It captures both types of parameters:
 var paramPattern = regexp.MustCompile(`:([a-zA-Z_][a-zA-Z0-9_]*)|\*([a-zA-Z_][a-zA-Z0-9_]*)`)

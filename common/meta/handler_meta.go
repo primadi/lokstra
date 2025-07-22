@@ -9,4 +9,5 @@ import (
 type HandlerMeta struct {
 	Name        string
 	HandlerFunc request.HandlerFunc
+	Extension   any // Optional extension for the handler, currently used for *RpcServiceMeta
 }
