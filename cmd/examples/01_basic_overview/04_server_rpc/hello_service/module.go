@@ -1,4 +1,4 @@
-package helloservice
+package hello_service
 
 import (
 	"github.com/primadi/lokstra"
@@ -34,3 +34,7 @@ func (h *HelloModule) Tags() []string {
 }
 
 var _ lokstra.Module = (*HelloModule)(nil)
+
+func GetModule() lokstra.Module {
+	return &HelloModule{}
+}

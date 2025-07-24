@@ -1,6 +1,8 @@
 package lokstra
 
 import (
+	"errors"
+
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/midware"
@@ -107,4 +109,17 @@ func NamedMiddleware(middlewareType string, config ...any) *midware.Execution {
 // It returns a pointer to the LokstraConfig and an error if any.
 func LoadConfigDir(dir string) (*config.LokstraConfig, error) {
 	return config.LoadConfigDir(dir)
+}
+
+func GetService[T service.Service](ctx RegistrationContext, serviceUri string) (T, error) {
+	svc := ctx.GetService(serviceUri)
+	if svc == nil {
+		var zero T
+		return zero, errors.New("service not found: " + serviceUri)
+	}
+	if typedSvc, ok := svc.(T); ok {
+		return typedSvc, nil
+	}
+	var zero T
+	return zero, errors.New("service type mismatch: " + serviceUri)
 }

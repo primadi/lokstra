@@ -1,6 +1,7 @@
 package router_engine
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/primadi/lokstra/core/service"
@@ -10,6 +11,10 @@ import (
 )
 
 func NewHttpRouterEngine(serviceName string, _ any) (service.Service, error) {
+	if serviceName == "" {
+		return nil, errors.New("service name cannot be empty")
+	}
+
 	return &HttpRouterEngine{
 		BaseService: service.NewBaseService(serviceName),
 		hr:          httprouter.New(),

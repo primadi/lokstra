@@ -1,6 +1,7 @@
 package router_engine
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -14,6 +15,10 @@ import (
 )
 
 func NewServeMuxEngine(serviceName string, _ any) (service.Service, error) {
+	if serviceName == "" {
+		return nil, errors.New("service name cannot be empty")
+	}
+
 	return &ServeMuxEngine{
 		BaseService: service.NewBaseService(serviceName),
 		mux:         http.NewServeMux(),
@@ -46,22 +51,24 @@ func (m *ServeMuxEngine) HandleMethod(method string, path string, handler http.H
 
 		convertedPath := ConvertToServeMuxParamPath(path)
 		m.mux.HandleFunc(convertedPath, func(w http.ResponseWriter, r *http.Request) {
-			if method == http.MethodOptions {
+			requestMethod := r.Method
+
+			if requestMethod == http.MethodOptions {
 				w.Header().Set("Allow", hm.allowHeader)
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
 
 			// HEAD fallback to GET
-			if method == http.MethodHead {
+			if requestMethod == http.MethodHead {
 				if _, ok := hm.hm[http.MethodGet]; ok {
-					method = http.MethodGet
+					requestMethod = http.MethodGet
 					// replace writer to discard body
 					w = headFallbackWriter{w}
 				}
 			}
 
-			h, ok := hm.hm[method]
+			h, ok := hm.hm[requestMethod]
 			if !ok {
 				w.Header().Set("Allow", hm.allowHeader)
 				http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -118,10 +125,8 @@ func (m *ServeMuxEngine) ServeReverseProxy(prefix string, target string) {
 // ServeSPA implements RouterEngine.
 func (m *ServeMuxEngine) ServeSPA(prefix string, indexFile string) {
 	rootDir := path.Dir(indexFile)
-	fs := http.FileServer(http.Dir(rootDir))
 
-	// Serve static files directly
-	m.mux.HandleFunc(cleanPrefix(prefix), func(w http.ResponseWriter, r *http.Request) {
+	spaHandler := func(w http.ResponseWriter, r *http.Request) {
 		requestPath := strings.TrimPrefix(r.URL.Path, prefix)
 		if requestPath == "" || requestPath == "/" {
 			http.ServeFile(w, r, indexFile)
@@ -130,7 +135,8 @@ func (m *ServeMuxEngine) ServeSPA(prefix string, indexFile string) {
 
 		fullPath := path.Join(rootDir, requestPath)
 		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
-			fs.ServeHTTP(w, r)
+			// Serve the static file directly
+			http.ServeFile(w, r, fullPath)
 			return
 		}
 
@@ -140,14 +146,27 @@ func (m *ServeMuxEngine) ServeSPA(prefix string, indexFile string) {
 		}
 
 		http.ServeFile(w, r, indexFile)
-	})
+	}
+
+	// Register both exact prefix and sub-paths for SPA routing
+	cleanPrefixStr := cleanPrefix(prefix)
+	m.mux.HandleFunc(cleanPrefixStr, spaHandler)
+	if cleanPrefixStr != "/" {
+		m.mux.HandleFunc(cleanPrefixStr+"/", spaHandler)
+	}
 }
 
 // ServeStatic implements RouterEngine.
 func (m *ServeMuxEngine) ServeStatic(prefix string, folder http.Dir) {
-	cleanPrefix := cleanPrefix(prefix)
-	fs := http.StripPrefix(cleanPrefix, http.FileServer(folder))
-	m.mux.Handle(cleanPrefix, fs)
+	cleanPrefixStr := cleanPrefix(prefix)
+	fs := http.StripPrefix(cleanPrefixStr, http.FileServer(folder))
+
+	// For static file serving, we need trailing slash pattern to match sub-paths
+	if cleanPrefixStr == "/" {
+		m.mux.Handle("/", fs)
+	} else {
+		m.mux.Handle(cleanPrefixStr+"/", fs)
+	}
 }
 
 var _ serviceapi.RouterEngine = (*ServeMuxEngine)(nil)

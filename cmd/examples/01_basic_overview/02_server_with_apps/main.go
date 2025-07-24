@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/primadi/lokstra"
 )
 
@@ -36,7 +38,8 @@ func main() {
 		return ctx.Ok("Pong from named handler")
 	})
 
-	server.Start()
+	// Wait for shutdown signal with a timeout
+	server.StartAndWait(5 * time.Second)
 }
 
 // func main() {

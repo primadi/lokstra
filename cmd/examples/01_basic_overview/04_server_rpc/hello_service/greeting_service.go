@@ -1,4 +1,4 @@
-package helloservice
+package hello_service
 
 import "github.com/primadi/lokstra/core/service"
 
@@ -12,7 +12,7 @@ type GreetingServiceImpl struct {
 
 // GetServiceUri implements service.Service.
 func (h *GreetingServiceImpl) GetServiceUri() string {
-	return "lokstra.greeting_service/" + h.GetServiceName()
+	return "lokstra://helloservice.greeting_service/" + h.GetServiceName()
 }
 
 // Hello implements GreetingServiceImpl.
