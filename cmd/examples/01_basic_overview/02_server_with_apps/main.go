@@ -25,7 +25,7 @@ func createApp2(ctx lokstra.RegistrationContext, addr string) *lokstra.App {
 }
 
 func main() {
-	ctx := lokstra.NewGlobalContext()
+	ctx := lokstra.NewGlobalRegistrationContext()
 	server := lokstra.NewServer(ctx, "my-server")
 
 	server.AddApp(createApp1(ctx, ":8080"))

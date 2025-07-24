@@ -4,28 +4,31 @@ import (
 	"runtime/debug"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/registration"
 )
 
-const NAME = "lokstra.recovery"
+const NAME = "recovery"
 
 type RecoveryMiddleware struct{}
 
-// Name implements iface.MiddlewareModule.
+// Description implements registration.Module.
+func (r *RecoveryMiddleware) Description() string {
+	return "Recover from panic and return 500 error response. Should be the outermost middleware."
+}
+
+// Register implements registration.Module.
+func (r *RecoveryMiddleware) Register(regCtx registration.Context) error {
+	regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 10)
+
+	return nil
+}
+
+// Name implements registration.Module.
 func (r *RecoveryMiddleware) Name() string {
 	return NAME
 }
 
-// Meta implements iface.MiddlewareModule.
-func (r *RecoveryMiddleware) Meta() *lokstra.MiddlewareMeta {
-	return &lokstra.MiddlewareMeta{
-		Priority:    10,
-		Description: "Recover from panic and return 500 error response. Should be the outermost middleware.",
-		Tags:        []string{"recovery", "safety"},
-	}
-}
-
-// Factory implements iface.MiddlewareModule.
-func (r *RecoveryMiddleware) Factory(_ any) lokstra.MiddlewareFunc {
+func factory(_ any) lokstra.MiddlewareFunc {
 	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
 			defer func() {
@@ -42,9 +45,9 @@ func (r *RecoveryMiddleware) Factory(_ any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.MiddlewareModule = (*RecoveryMiddleware)(nil)
+var _ lokstra.Module = (*RecoveryMiddleware)(nil)
 
 // return RecoveryMiddleware with name "lokstra.recovery"
-func GetModule() lokstra.MiddlewareModule {
+func GetModule() lokstra.Module {
 	return &RecoveryMiddleware{}
 }

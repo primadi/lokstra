@@ -4,28 +4,29 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/registration"
 )
 
-const NAME = "lokstra.request_logger"
+const NAME = "request_logger"
 
 type RequestLogger struct{}
 
-// Name implements iface.MiddlewareModule.
+// Description implements registration.Module.
+func (r *RequestLogger) Description() string {
+	return "Logs incoming requests and their metadata."
+}
+
+// Register implements registration.Module.
+func (r *RequestLogger) Register(regCtx registration.Context) error {
+	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
+}
+
+// Name implements registration.Module.
 func (r *RequestLogger) Name() string {
 	return NAME
 }
 
-// Meta implements iface.MiddlewareModule.
-func (r *RequestLogger) Meta() *lokstra.MiddlewareMeta {
-	return &lokstra.MiddlewareMeta{
-		Priority:    20,
-		Description: "Logs incoming requests and their metadata.",
-		Tags:        []string{"logging", "request"},
-	}
-}
-
-// Factory implements iface.MiddlewareModule.
-func (r *RequestLogger) Factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) lokstra.MiddlewareFunc {
 	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
 			// Log the request details
@@ -50,9 +51,8 @@ func (r *RequestLogger) Factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.MiddlewareModule = (*RequestLogger)(nil)
+var _ lokstra.Module = (*RequestLogger)(nil)
 
-// return RequestLogger with name "lokstra.request_logger"
-func GetModule() lokstra.MiddlewareModule {
+func GetModule() lokstra.Module {
 	return &RequestLogger{}
 }

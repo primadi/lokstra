@@ -2,32 +2,32 @@ package cors
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/registration"
 )
 
-const NAME = "lokstra.cors"
+const NAME = "cors"
 const WHITELIST_KEY = "whitelist"
 
 type CorsMiddleware struct{}
 
-// Name implements iface.MiddlewareModule.
+// Description implements registration.Module.
+func (c *CorsMiddleware) Description() string {
+	return "CORS middleware for handling cross-origin requests"
+}
+
+// Register implements registration.Module.
+func (c *CorsMiddleware) Register(regCtx registration.Context) error {
+	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 30)
+}
+
+// Name implements registration.Module.
 func (c *CorsMiddleware) Name() string {
 	return NAME
 }
 
-// Meta implements iface.MiddlewareModule.
-func (c *CorsMiddleware) Meta() *lokstra.MiddlewareMeta {
-	return &lokstra.MiddlewareMeta{
-		Priority:    30,
-		Description: "CORS middleware for handling cross-origin requests",
-		Tags:        []string{"cors", "middleware"},
-	}
-}
-
-// Factory implements iface.MiddlewareModule.
-func (c *CorsMiddleware) Factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) lokstra.MiddlewareFunc {
 	whitelist := []string{"*"}
 	var vParam any
 
@@ -79,33 +79,8 @@ func (c *CorsMiddleware) Factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.MiddlewareModule = (*CorsMiddleware)(nil)
+var _ lokstra.Module = (*CorsMiddleware)(nil)
 
-func matchOrigin(whitelist []string, origin string) bool {
-	for _, allowed := range whitelist {
-		allowed = strings.TrimSpace(allowed)
-		if allowed == "*" {
-			return true
-		}
-		if suffix, ok := strings.CutPrefix(allowed, "*"); ok {
-			if strings.HasSuffix(origin, suffix) {
-				return true
-			}
-		}
-		if prefix, ok := strings.CutSuffix(allowed, "*"); ok {
-			if strings.HasPrefix(origin, prefix) {
-				return true
-			}
-		}
-		if origin == allowed {
-			return true
-		}
-	}
-
-	return false
-}
-
-// return CorsMiddleware with name "lokstra.cors"
-func GetModule() lokstra.MiddlewareModule {
+func GetModule() lokstra.Module {
 	return &CorsMiddleware{}
 }

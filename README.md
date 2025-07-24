@@ -45,7 +45,6 @@ Lokstra offers a clear project structure and batteries-included features, but ne
 
 ### 🧠 Services & Extensibility
 
-- ✅ **Service Registry** with lifecycle hooks
 - ✅ Built-in services: Logger, DB, Redis, JWT, Metrics
 - ✅ Easy service creation via `RegisterService` or YAML
 - ✅ Override, disable, or extend services as needed
@@ -77,11 +76,13 @@ Lokstra offers a clear project structure and batteries-included features, but ne
 
 ```
 lokstra/
-├── core/           # Core: server, app, router, context
+├── common/         # Common: customtype, json, uri, utils
+├── core/           # Core: app, config, meta, midware, registration, 
+|                           request, response, router, server, service
 ├── middleware/     # Built-in middleware
+├── modules/        # Built-in modules
+├── serviceapi/     # Service interface declaration
 ├── services/       # Built-in services
-├── loader/         # YAML/config loader
-├── internal/       # Internal helpers (non-exported)
 ├── cmd/examples/   # Example apps using Lokstra
 ├── docs/           # Documentation & tutorials
 ├── go.mod
@@ -96,27 +97,17 @@ lokstra/
 ```go
 package main
 
-import (
-	"fmt"
-	"net/http"
-
-	"github.com/primadi/lokstra/core"
-)
+import "github.com/primadi/lokstra"
 
 func main() {
-	srv := core.NewServer("lokstra-dev")
+	regCtx := lokstra.NewGlobalRegistrationContext()
 
-	app := &core.App{
-		Name: "hello-app",
-		Port: 8080,
-		Router: func() *core.Router {
-			r := core.NewRouter()
-			r.Handle("/hello", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, "Hello from Lokstra!")
-			}))
-			return r
-		}(),
-	}
+	srv := lokstra.NewServer(regCtx, "my-server")
+	app := lokstra.NewApp(regCtx, "app1", ":8080")
+
+	app.GET("/hello", func(ctx *lokstra.Context) error {
+		return ctx.Ok("Hello From Lokstra")
+	})
 
 	srv.AddApp(app)
 	_ = srv.Start()
@@ -153,10 +144,9 @@ Lokstra includes categorized and progressive examples to help developers explore
 2. **Router Features** – Group, mount, and middleware examples  
 3. **Best Practices** – Custom context, naming, config splitting  
 4. **Customization** – Override JSON, response, router engine  
-5. **Service Lifecycle** – Register, access, hook, shutdown  
-6. **Business Services** – Domain-driven services like ledger, loan, etc.  
-7. **Default Services** – Logger, DBPool, Redis, JWT, Metrics, etc.  
-8. **Default Middleware** – Recovery, CORS, logging, JWT, etc.
+5. **Business Services** – Domain-driven services like ledger, loan, etc.  
+6. **Default Services** – Logger, DBPool, Redis, JWT, Metrics, etc.  
+7. **Default Middleware** – Recovery, CORS, logging, JWT, etc.
 
 > 💡 Each example is self-contained and runnable, with inline documentation.
 
@@ -171,7 +161,7 @@ Lokstra includes categorized and progressive examples to help developers explore
 - [ ] Plugin architecture for domain modules
 - [ ] Multi-tenant admin dashboard
 - [ ] RBAC UI + user management
-- [ ] CLI tool: `lok gen service`, `lok gen app`, etc.
+- [ ] CLI tool: `loktra init server`, `lokstra lint`, etc.
 
 ---
 

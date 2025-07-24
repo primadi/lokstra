@@ -3,11 +3,11 @@ package router
 import (
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 
-	"github.com/primadi/lokstra/common/iface"
-	"github.com/primadi/lokstra/common/meta"
+	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/meta"
+	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 
@@ -16,12 +16,12 @@ import (
 
 type GroupImpl struct {
 	parent   *RouterImpl
-	meta     *meta.RouterMeta
+	meta     *RouterMeta
 	mwLocked bool
 }
 
 // GetMeta implements Router.
-func (g *GroupImpl) GetMeta() *meta.RouterMeta {
+func (g *GroupImpl) GetMeta() *RouterMeta {
 	return g.meta
 }
 
@@ -46,22 +46,27 @@ func (g *GroupImpl) GET(path string, handler any, mw ...any) Router {
 }
 
 // GetMiddleware implements Router.
-func (g *GroupImpl) GetMiddleware() []*meta.MiddlewareExecution {
-	mw := make([]*meta.MiddlewareExecution, len(g.meta.Middleware))
+func (g *GroupImpl) GetMiddleware() []*midware.Execution {
+	mw := make([]*midware.Execution, len(g.meta.Middleware))
 	copy(mw, g.meta.Middleware)
 
 	if g.meta.OverrideMiddleware {
 		return mw
 	}
 
-	return slices.Concat(g.parent.GetMiddleware(), mw)
+	if len(g.parent.GetMiddleware())+len(mw) == 0 {
+		return []*midware.Execution{}
+	}
+
+	// Slices.Concat return 0 ?
+	return utils.SlicesConcat(g.parent.GetMiddleware(), mw)
 }
 
 // Group implements Router.
 func (g *GroupImpl) Group(prefix string, mw ...any) Router {
 	g.mwLocked = true
 
-	rm := meta.NewRouter()
+	rm := NewRouterMeta()
 	rm.Prefix = g.cleanPrefix(prefix)
 
 	for _, m := range mw {
@@ -83,16 +88,16 @@ func (g *GroupImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 }
 
 // Handle implements Router.
-func (g *GroupImpl) Handle(method iface.HTTPMethod, path string, handler any, mw ...any) Router {
+func (g *GroupImpl) Handle(method request.HTTPMethod, path string, handler any, mw ...any) Router {
 	g.mwLocked = true
-	g.meta.Handle(method, g.cleanPrefix(path), handler, mw...)
+	g.meta.Handle(method, path, handler, mw...)
 	return g
 }
 
 // HandleOverrideMiddleware implements Router.
-func (g *GroupImpl) HandleOverrideMiddleware(method iface.HTTPMethod, path string, handler any, mw ...any) Router {
+func (g *GroupImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string, handler any, mw ...any) Router {
 	g.mwLocked = true
-	g.meta.HandleWithOverrideMiddleware(method, g.cleanPrefix(path), handler, mw...)
+	g.meta.HandleWithOverrideMiddleware(method, path, handler, mw...)
 	return g
 }
 
@@ -182,7 +187,7 @@ func (g *GroupImpl) Prefix() string {
 }
 
 // RecurseAllHandler implements Router.
-func (g *GroupImpl) RecurseAllHandler(callback func(rt *meta.RouteMeta)) {
+func (g *GroupImpl) RecurseAllHandler(callback func(rt *RouteMeta)) {
 	panic("unimplemented")
 }
 
@@ -205,7 +210,15 @@ func (g *GroupImpl) WithOverrideMiddleware(enable bool) Router {
 
 // WithPrefix implements Router.
 func (g *GroupImpl) WithPrefix(prefix string) Router {
-	g.meta.Prefix = g.cleanPrefix(prefix)
+	if prefix == "/" || prefix == "" {
+		return g
+	}
+
+	if strings.HasPrefix(prefix, "/") {
+		g.meta.Prefix = "/" + strings.Trim(prefix, "/") // replace absolute prefix
+	} else {
+		g.meta.Prefix = g.cleanPrefix(prefix) // add relative prefix
+	}
 	return g
 }
 

@@ -4,30 +4,31 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/registration"
 )
 
-const NAME = "lokstra.slow_request_logger"
+const NAME = "slow_request_logger"
 const THRESHOLDKEY = "threshold"
 const DEFAULT_THRESHOLD = 500 * time.Millisecond // Default threshold for slow requests
 
 type SlowRequestLogger struct{}
 
-// Name implements iface.MiddlewareModule.
+// Description implements registration.Module.
+func (r *SlowRequestLogger) Description() string {
+	return "Logs slow requests and their metadata."
+}
+
+// Register implements registration.Module.
+func (r *SlowRequestLogger) Register(regCtx registration.Context) error {
+	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
+}
+
+// Name implements registration.Module.
 func (r *SlowRequestLogger) Name() string {
 	return NAME
 }
 
-// Meta implements iface.MiddlewareModule.
-func (r *SlowRequestLogger) Meta() *lokstra.MiddlewareMeta {
-	return &lokstra.MiddlewareMeta{
-		Priority:    20,
-		Description: "logs slow requests and their metadata.",
-		Tags:        []string{"logging", "request"},
-	}
-}
-
-// Factory implements iface.MiddlewareModule.
-func (r *SlowRequestLogger) Factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) lokstra.MiddlewareFunc {
 	dur_th := DEFAULT_THRESHOLD
 	switch cfg := config.(type) {
 	case map[string]any:
@@ -72,9 +73,9 @@ func (r *SlowRequestLogger) Factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.MiddlewareModule = (*SlowRequestLogger)(nil)
+var _ lokstra.Module = (*SlowRequestLogger)(nil)
 
 // return SlowRequestLogger with name "lokstra.slow_request_logger"
-func GetModule() lokstra.MiddlewareModule {
+func GetModule() lokstra.Module {
 	return &SlowRequestLogger{}
 }

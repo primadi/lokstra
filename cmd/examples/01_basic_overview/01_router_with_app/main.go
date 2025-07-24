@@ -9,7 +9,7 @@ import (
 func main() {
 	// Create a global context for the application.
 	// This context is used to manage components and services within the application.
-	ctx := lokstra.NewGlobalContext()
+	ctx := lokstra.NewGlobalRegistrationContext()
 
 	// Create a new Lokstra application with the specified context, name, and port.
 	// The application will use the default listener (net/http) and router engine (httprouter).

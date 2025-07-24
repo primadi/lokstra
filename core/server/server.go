@@ -5,18 +5,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/primadi/lokstra/common/module"
 	"github.com/primadi/lokstra/core/app"
+	"github.com/primadi/lokstra/core/registration"
 )
 
 type Server struct {
-	ctx      module.RegistrationContext
+	ctx      registration.Context
 	name     string
 	apps     []*app.App
 	settings map[string]any
 }
 
-func NewServer(ctx module.RegistrationContext, name string) *Server {
+func NewServer(ctx registration.Context, name string) *Server {
 	return &Server{
 		ctx:      ctx,
 		name:     name,

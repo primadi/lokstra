@@ -5,9 +5,7 @@ import (
 	"maps"
 	"time"
 
-	"github.com/primadi/lokstra/common/iface"
-	"github.com/primadi/lokstra/common/meta"
-	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -15,7 +13,7 @@ import (
 type App struct {
 	router.Router
 
-	ctx      module.RegistrationContext
+	ctx      registration.Context
 	listener serviceapi.HttpListener
 
 	name              string
@@ -25,13 +23,13 @@ type App struct {
 	settings          map[string]any
 }
 
-func NewApp(ctx module.RegistrationContext, name string, addr string) *App {
-	listenerType := iface.DEFAULT_LISTENER_NAME
-	routerEngineType := iface.DEFAULT_ROUTER_ENGINE_NAME
+func NewApp(ctx registration.Context, name string, addr string) *App {
+	listenerType := router.DEFAULT_LISTENER_NAME
+	routerEngineType := router.DEFAULT_ROUTER_ENGINE_NAME
 	return NewAppCustom(ctx, name, addr, listenerType, routerEngineType, nil)
 }
 
-func NewAppCustom(ctx module.RegistrationContext, name string, addr string,
+func NewAppCustom(ctx registration.Context, name string, addr string,
 	listenerType string, routerEngineType string, settings map[string]any) *App {
 
 	if settings == nil {
@@ -62,7 +60,7 @@ func (a *App) GetAddr() string {
 }
 
 func (a *App) Start() error {
-	meta.ResolveAllNamed(a.ctx, a.Router.GetMeta())
+	router.ResolveAllNamed(a.ctx, a.Router.GetMeta())
 	rImp := a.Router.(*router.RouterImpl)
 	rImp.BuildRouter()
 	return a.listener.ListenAndServe(a.addr, a.Router)

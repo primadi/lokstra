@@ -7,9 +7,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/primadi/lokstra/common/iface"
-	"github.com/primadi/lokstra/common/meta"
-	"github.com/primadi/lokstra/common/module"
+	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/meta"
+	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -20,19 +21,19 @@ import (
 
 type RouterImpl struct {
 	mwLocked bool
-	meta     *meta.RouterMeta
+	meta     *RouterMeta
 	r_engine serviceapi.RouterEngine
 }
 
-func NewListener(ctx module.RegistrationContext, name string, config map[string]any) serviceapi.HttpListener {
-	return NewListenerWithEngine(ctx, iface.DEFAULT_LISTENER_NAME, name, config)
+func NewListener(ctx registration.Context, name string, config map[string]any) serviceapi.HttpListener {
+	return NewListenerWithEngine(ctx, DEFAULT_LISTENER_NAME, name, config)
 }
 
-func NewListenerWithEngine(ctx module.RegistrationContext, listenerType string,
+func NewListenerWithEngine(ctx registration.Context, listenerType string,
 	name string, config map[string]any) serviceapi.HttpListener {
 
 	if listenerType == "" || listenerType == "default" {
-		listenerType = iface.DEFAULT_LISTENER_NAME
+		listenerType = DEFAULT_LISTENER_NAME
 	}
 
 	lsAny, err := ctx.CreateService(listenerType, name, config)
@@ -46,17 +47,17 @@ func NewListenerWithEngine(ctx module.RegistrationContext, listenerType string,
 	return ls
 }
 
-func NewRouter(ctx module.RegistrationContext, name string, config map[string]any) Router {
-	return NewRouterWithEngine(ctx, iface.DEFAULT_ROUTER_ENGINE_NAME, name, config)
+func NewRouter(ctx registration.Context, name string, config map[string]any) Router {
+	return NewRouterWithEngine(ctx, DEFAULT_ROUTER_ENGINE_NAME, name, config)
 }
 
-func NewRouterWithEngine(ctx module.RegistrationContext, engineType string,
+func NewRouterWithEngine(ctx registration.Context, engineType string,
 	name string, config map[string]any) Router {
 
 	if engineType == "" || engineType == "default" {
-		engineType = iface.DEFAULT_ROUTER_ENGINE_NAME
+		engineType = DEFAULT_ROUTER_ENGINE_NAME
 	}
-	rtmt := meta.NewRouter().WithRouterEngineType(engineType)
+	rtmt := NewRouterMeta().WithRouterEngineType(engineType)
 	rtAny, err := ctx.CreateService(engineType, name, config)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create router engine %s: %v", rtmt.GetRouterEngineType(), err))
@@ -72,7 +73,7 @@ func NewRouterWithEngine(ctx module.RegistrationContext, engineType string,
 }
 
 // GetMeta implements Router.
-func (r *RouterImpl) GetMeta() *meta.RouterMeta {
+func (r *RouterImpl) GetMeta() *RouterMeta {
 	return r.meta
 }
 
@@ -83,7 +84,7 @@ func (r *RouterImpl) DELETE(path string, handler any, mw ...any) Router {
 
 // DumpRoutes implements Router.
 func (r *RouterImpl) DumpRoutes() {
-	r.RecurseAllHandler(func(rt *meta.RouteMeta) {
+	r.RecurseAllHandler(func(rt *RouteMeta) {
 		fmt.Printf("[ROUTE] %s %s\n", rt.Method, rt.Path)
 	})
 }
@@ -99,8 +100,8 @@ func (r *RouterImpl) GET(path string, handler any, mw ...any) Router {
 }
 
 // GetMiddleware implements Router.
-func (r *RouterImpl) GetMiddleware() []*meta.MiddlewareExecution {
-	mwf := make([]*meta.MiddlewareExecution, len(r.meta.Middleware))
+func (r *RouterImpl) GetMiddleware() []*midware.Execution {
+	mwf := make([]*midware.Execution, len(r.meta.Middleware))
 	copy(mwf, r.meta.Middleware)
 	return mwf
 }
@@ -109,7 +110,7 @@ func (r *RouterImpl) GetMiddleware() []*meta.MiddlewareExecution {
 func (r *RouterImpl) Group(prefix string, mw ...any) Router {
 	r.mwLocked = true
 
-	rm := meta.NewRouter()
+	rm := NewRouterMeta()
 	rm.Prefix = r.cleanPrefix(prefix)
 
 	for _, m := range mw {
@@ -131,12 +132,12 @@ func (r *RouterImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 }
 
 // Handle implements Router.
-func (r *RouterImpl) Handle(method iface.HTTPMethod, path string, handler any,
+func (r *RouterImpl) Handle(method request.HTTPMethod, path string, handler any,
 	mw ...any) Router {
 	return r.handle(method, path, handler, false, mw...)
 }
 
-func (r *RouterImpl) handle(method iface.HTTPMethod, path string, handler any,
+func (r *RouterImpl) handle(method request.HTTPMethod, path string, handler any,
 	overrideMiddleware bool, mw ...any) Router {
 	r.mwLocked = true
 
@@ -166,7 +167,7 @@ func (r *RouterImpl) handle(method iface.HTTPMethod, path string, handler any,
 }
 
 // HandleOverrideMiddleware implements Router.
-func (r *RouterImpl) HandleOverrideMiddleware(method iface.HTTPMethod, path string,
+func (r *RouterImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string,
 	handler any, mw ...any) Router {
 	return r.handle(method, path, handler, true, mw...)
 }
@@ -226,7 +227,7 @@ func (r *RouterImpl) MountRpcService(path string, svc any, overrideMiddleware bo
 	if overrideMiddleware {
 		r.meta.HandleWithOverrideMiddleware("POST", cleanPath, handlerMeta, mw...)
 	} else {
-		r.meta.Handle("POST", cleanPath, handlerMeta, mw...)
+		r.Handle("POST", cleanPath, handlerMeta, mw...)
 	}
 	return r
 }
@@ -258,7 +259,7 @@ func (r *RouterImpl) Prefix() string {
 }
 
 // RecurseAllHandler implements Router.
-func (r *RouterImpl) RecurseAllHandler(callback func(rt *meta.RouteMeta)) {
+func (r *RouterImpl) RecurseAllHandler(callback func(rt *RouteMeta)) {
 	for _, route := range r.meta.Routes {
 		callback(route)
 	}
@@ -286,7 +287,15 @@ func (r *RouterImpl) WithOverrideMiddleware(enable bool) Router {
 
 // WithPrefix implements Router.
 func (r *RouterImpl) WithPrefix(prefix string) Router {
-	r.meta.Prefix = r.cleanPrefix(prefix)
+	if prefix == "/" || prefix == "" {
+		return r
+	}
+
+	if strings.HasPrefix(prefix, "/") {
+		r.meta.Prefix = "/" + strings.Trim(prefix, "/") // replace absolute prefix
+	} else {
+		r.meta.Prefix = r.cleanPrefix(prefix) // add relative prefix
+	}
 	return r
 }
 
@@ -303,14 +312,14 @@ func (r *RouterImpl) cleanPrefix(prefix string) string {
 	return r.meta.Prefix + "/" + strings.Trim(prefix, "/")
 }
 
-func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []*meta.MiddlewareExecution) {
-	var mwh []*meta.MiddlewareExecution
+func (r *RouterImpl) handleRouteMeta(route *RouteMeta, mwParent []*midware.Execution) {
+	var mwh []*midware.Execution
 
 	if route.OverrideMiddleware {
-		mwh = make([]*meta.MiddlewareExecution, len(route.Middleware))
+		mwh = make([]*midware.Execution, len(route.Middleware))
 		copy(mwh, route.Middleware)
 	} else {
-		mwh = slices.Concat(mwParent, route.Middleware)
+		mwh = utils.SlicesConcat(mwParent, route.Middleware)
 	}
 
 	handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
@@ -362,14 +371,14 @@ func (r *RouterImpl) handleRouteMeta(route *meta.RouteMeta, mwParent []*meta.Mid
 	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
 }
 
-func (r *RouterImpl) buildRouter(router *meta.RouterMeta, mwParent []*meta.MiddlewareExecution) {
-	var mwh []*meta.MiddlewareExecution
+func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Execution) {
+	var mwh []*midware.Execution
 
 	if router.OverrideMiddleware {
-		mwh = make([]*meta.MiddlewareExecution, len(router.Middleware))
+		mwh = make([]*midware.Execution, len(router.Middleware))
 		copy(mwh, router.Middleware)
 	} else {
-		mwh = slices.Concat(mwParent, router.Middleware)
+		mwh = utils.SlicesConcat(mwParent, router.Middleware)
 	}
 
 	for _, route := range router.Routes {
@@ -385,7 +394,7 @@ func (r *RouterImpl) BuildRouter() {
 	r.buildRouter(r.meta, nil)
 }
 
-func composeMiddleware(mw []*meta.MiddlewareExecution,
+func composeMiddleware(mw []*midware.Execution,
 	finalHandler request.HandlerFunc) request.HandlerFunc {
 	// Update execution order based on order of addition
 	execOrder := 0
@@ -395,7 +404,7 @@ func composeMiddleware(mw []*meta.MiddlewareExecution,
 	}
 
 	// Sort middleware by priority and execution order
-	slices.SortStableFunc(mw, func(a, b *meta.MiddlewareExecution) int {
+	slices.SortStableFunc(mw, func(a, b *midware.Execution) int {
 		aOrder := a.Priority + a.ExecutionOrder
 		bOrder := b.Priority + b.ExecutionOrder
 

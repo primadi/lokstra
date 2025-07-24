@@ -10,17 +10,17 @@ import (
 )
 
 func main() {
-	ctx := lokstra.NewGlobalContext()
+	regCtx := lokstra.NewGlobalRegistrationContext()
 
-	registerAllComponents(ctx)
+	registerAllComponents(regCtx)
 
-	server := newServerFormConfig(ctx, "configs/dev")
+	server := newServerFormConfig(regCtx, "configs/dev")
 	server.Start()
 }
 
-func registerAllComponents(ctx *lokstra.GlobalContext) {
+func registerAllComponents(regCtx *lokstra.GlobalRegistrationContext) {
 	// Register hardcoded modules, services, middleware, and handlers if needed
-	ctx.RegisterMiddlewareFunc("auth", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
+	regCtx.RegisterMiddlewareFunc("auth", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
 			fmt.Println("[Middleware] Auth check passed")
 			return next(ctx)
@@ -28,27 +28,26 @@ func registerAllComponents(ctx *lokstra.GlobalContext) {
 	})
 
 	// Simulate an admin-only middleware
-	ctx.RegisterMiddlewareFunc("admin_only", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
+	regCtx.RegisterMiddlewareFunc("admin_only", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
 			fmt.Println("[Middleware] Admin check passed")
 			return next(ctx)
 		}
 	})
 
-	// tips: to know middlware name, hover over .GetModule() function below
-	ctx.RegisterMiddlewareModule(recovery.GetModule())
-	ctx.RegisterMiddlewareModule(cors.GetModule())
+	recovery.GetModule().Register(regCtx)
+	cors.GetModule().Register(regCtx)
 
-	ctx.RegisterHandler("user.profile", func(c *lokstra.Context) error {
+	regCtx.RegisterHandler("user.profile", func(c *lokstra.Context) error {
 		return c.Ok("User Profile Handler")
 	})
 
-	ctx.RegisterHandler("user.list", func(c *lokstra.Context) error {
+	regCtx.RegisterHandler("user.list", func(c *lokstra.Context) error {
 		return c.Ok("User List Handler")
 	})
 }
 
-func newServerFormConfig(ctx *lokstra.GlobalContext, dir string) *lokstra.Server {
+func newServerFormConfig(ctx *lokstra.GlobalRegistrationContext, dir string) *lokstra.Server {
 	cfg, err := lokstra.LoadConfigDir(dir)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config from %s: %v", dir, err))

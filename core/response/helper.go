@@ -88,6 +88,9 @@ func (r *Response) ErrorInternal(msg string) error {
 }
 
 func (r *Response) WriteRaw(contentType string, status int, data []byte) error {
+	if r.Headers == nil {
+		r.Headers = make(http.Header)
+	}
 	r.Headers.Set("Content-Type", contentType)
 	r.StatusCode = status
 	r.Success = true

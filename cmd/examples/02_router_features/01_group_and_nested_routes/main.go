@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	ctx := lokstra.NewGlobalContext()
+	ctx := lokstra.NewGlobalRegistrationContext()
 
 	// Create the root router
 	app1 := lokstra.NewApp(ctx, "my-app", ":8080")

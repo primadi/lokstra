@@ -1,4 +1,4 @@
-package pg_dbpool
+package dbpool_pg
 
 import (
 	"context"

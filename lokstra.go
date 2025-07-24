@@ -1,11 +1,10 @@
 package lokstra
 
 import (
-	"github.com/primadi/lokstra/common/config"
-	"github.com/primadi/lokstra/common/iface"
-	"github.com/primadi/lokstra/common/meta"
-	"github.com/primadi/lokstra/common/module"
 	"github.com/primadi/lokstra/core/app"
+	"github.com/primadi/lokstra/core/config"
+	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/server"
 	"github.com/primadi/lokstra/core/service"
@@ -17,15 +16,15 @@ import (
 )
 
 type Context = request.Context
-type RegistrationContext = module.RegistrationContext
-type GlobalContext = module.RegistrationContextImpl
+type RegistrationContext = registration.Context
+type GlobalRegistrationContext = registration.ContextImpl
 
-type HandlerFunc = iface.HandlerFunc
+type HandlerFunc = request.HandlerFunc
 
-type MiddlewareFunc = iface.MiddlewareFunc
-type MiddlewareFactory = iface.MiddlewareFactory
-type MiddlewareMeta = iface.MiddlewareMeta
-type MiddlewareModule = iface.MiddlewareModule
+type MiddlewareFunc = midware.Func
+type MiddlewareFactory = midware.Factory
+
+type Module = registration.Module
 
 type Server = server.Server
 type App = app.App
@@ -33,25 +32,25 @@ type App = app.App
 type LogFields = serviceapi.LogFields
 
 type Service = service.Service
-type ServiceModule = service.ServiceModule
 type ServiceFactory = service.ServiceFactory
 
 var Logger, _ = logger.NewService("default", serviceapi.LogLevelInfo)
 
-func NewGlobalContext() *GlobalContext {
-	ctx := module.NewGlobalContext()
+func NewGlobalRegistrationContext() *GlobalRegistrationContext {
+	ctx := registration.NewGlobalContext()
 
-	_ = ctx.RegisterServiceModule(logger.GetModule())
-	_ = ctx.RegisterModule("coreservice_module", coreservice.RegisterModule)
+	// automatically register logger and core services module
+	_ = logger.GetModule().Register(ctx)
+	_ = coreservice.GetModule().Register(ctx)
 
 	return ctx
 }
 
-func NewServer(ctx *GlobalContext, name string) *Server {
+func NewServer(ctx *GlobalRegistrationContext, name string) *Server {
 	return server.NewServer(ctx, name)
 }
 
-func NewServerFromConfig(ctx *GlobalContext, cfg *config.LokstraConfig) (*Server, error) {
+func NewServerFromConfig(ctx *GlobalRegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
 	return config.NewServerFromConfig(ctx, cfg)
 }
 
@@ -100,8 +99,8 @@ func NewAppFastHTTP(ctx RegistrationContext, name string, addr string) *App {
 	return app.NewAppCustom(ctx, name, addr, LISTENER_FASTHTTP, ROUTER_ENGINE_HTTPROUTER, nil)
 }
 
-func NamedMiddleware(middlewareType string, config ...any) *meta.MiddlewareExecution {
-	return meta.NamedMiddleware(middlewareType, config...)
+func NamedMiddleware(middlewareType string, config ...any) *midware.Execution {
+	return midware.Named(middlewareType, config...)
 }
 
 // LoadConfigDir loads the configuration from the specified directory.

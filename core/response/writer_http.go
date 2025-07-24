@@ -22,7 +22,7 @@ func (r *Response) WriteHttp(w http.ResponseWriter) error {
 		w.Header().Set("Content-Type", "application/json")
 	}
 
-	w.WriteHeader(r.StatusCode)
+	w.WriteHeader(r.GetStatusCode())
 
 	if r.RawData != nil {
 		_, err := w.Write(r.RawData)

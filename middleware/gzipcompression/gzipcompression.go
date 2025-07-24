@@ -2,9 +2,10 @@ package gzipcompression
 
 import (
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/registration"
 )
 
-const NAME = "lokstra.gzipcompression"
+const NAME = "gzipcompression"
 const MIN_SIZE_KEY = "min_size"
 const LEVEL_KEY = "level"
 const DEFAULT_MIN_SIZE = 1024 // Minimum size in bytes to apply Gzip compression
@@ -12,22 +13,23 @@ const DEFAULT_LEVEL = 5       // Default compression level if not specified
 
 type GzipCompressionMiddleware struct{}
 
-// Name implements iface.MiddlewareModule.
+// Description implements registration.Module.
+func (g *GzipCompressionMiddleware) Description() string {
+	return "Gzip Compression Middleware for Lokstra, should be the outermost middleware"
+}
+
+// Register implements registration.Module.
+func (g *GzipCompressionMiddleware) Register(regCtx registration.Context) error {
+	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
+}
+
+// Name implements registration.Module.
 func (g *GzipCompressionMiddleware) Name() string {
 	return NAME
 }
 
-// Meta implements iface.MiddlewareModule.
-func (g *GzipCompressionMiddleware) Meta() *lokstra.MiddlewareMeta {
-	return &lokstra.MiddlewareMeta{
-		Priority:    20,
-		Description: "Compress response using Gzip compression. Should be the outermost middleware.",
-		Tags:        []string{"compression", "gzip"},
-	}
-}
-
 // Factory implements iface.MiddlewareModule.
-func (g *GzipCompressionMiddleware) Factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) lokstra.MiddlewareFunc {
 	minSize := DEFAULT_MIN_SIZE
 	level := DEFAULT_LEVEL
 
@@ -79,9 +81,9 @@ func (g *GzipCompressionMiddleware) Factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.MiddlewareModule = (*GzipCompressionMiddleware)(nil)
+var _ lokstra.Module = (*GzipCompressionMiddleware)(nil)
 
 // return GzipCompressionMiddleware with name "lokstra.gzipcompression"
-func GetModule() lokstra.MiddlewareModule {
+func GetModule() lokstra.Module {
 	return &GzipCompressionMiddleware{}
 }
