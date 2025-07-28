@@ -22,12 +22,12 @@ func TestGroupImpl_BasicMethods(t *testing.T) {
 	})
 
 	t.Run("GetMeta", func(t *testing.T) {
-		meta := group.GetMeta()
-		if meta == nil {
+		groupMeta := group.GetMeta()
+		if groupMeta == nil {
 			t.Error("Expected meta to be available, got nil")
 		}
-		if meta.Prefix != "/api" {
-			t.Errorf("Expected meta prefix '/api', got %s", meta.Prefix)
+		if groupMeta.Prefix != "/api" {
+			t.Errorf("Expected meta prefix '/api', got %s", groupMeta.Prefix)
 		}
 	})
 

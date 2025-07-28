@@ -1,5 +1,5 @@
-# services:
-#   - type: lokstra.logger
-#     name: default-logger
-#     config:
-#       level: ${LOG_LEVEL:info}
+services:
+  - type: lokstra.logger
+    name: default-logger
+    config:
+      level: ${LOG_LEVEL:warn}

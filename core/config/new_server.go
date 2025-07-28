@@ -12,40 +12,40 @@ import (
 	"github.com/primadi/lokstra/core/server"
 )
 
-func NewServerFromConfig(ctx *registration.ContextImpl, cfg *LokstraConfig) (*server.Server, error) {
-	if err := startAllServices(ctx, cfg.Services); err != nil {
+func NewServerFromConfig(regCtx registration.Context, cfg *LokstraConfig) (*server.Server, error) {
+	if err := startAllServices(regCtx, cfg.Services); err != nil {
 		return nil, fmt.Errorf("start services: %w", err)
 	}
 
-	if err := startModulesFromConfig(ctx, cfg.Modules); err != nil {
+	if err := startModulesFromConfig(regCtx, cfg.Modules); err != nil {
 		return nil, fmt.Errorf("start modules: %w", err)
 	}
 
-	server := server.NewServer(ctx, cfg.Server.Name)
+	server := server.NewServer(regCtx, cfg.Server.Name)
 	for k, v := range cfg.Server.Settings {
 		server.SetSetting(k, v)
 	}
 
-	if err := newAppsFromConfig(ctx, server, cfg.Apps); err != nil {
+	if err := newAppsFromConfig(regCtx, server, cfg.Apps); err != nil {
 		return nil, fmt.Errorf("start apps: %w", err)
 	}
 
 	return server, nil
 }
 
-func startAllServices(ctx *registration.ContextImpl, services []*ServiceConfig) error {
+func startAllServices(regCtx registration.Context, services []*ServiceConfig) error {
 	for _, svc := range services {
-		if _, err := ctx.CreateService(svc.Type, svc.Name, svc.Config); err != nil {
+		if _, err := regCtx.CreateService(svc.Type, svc.Name, svc.Config); err != nil {
 			return fmt.Errorf("register service %s: %w", svc.Name, err)
 		}
 	}
 	return nil
 }
 
-func startModulesFromConfig(ctx *registration.ContextImpl, modules []*ModuleConfig) error {
+func startModulesFromConfig(regCtx registration.Context, modules []*ModuleConfig) error {
 	for _, mod := range modules {
 		if mod.Path != "" || mod.Entry != "" {
-			newCtx := ctx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
+			newCtx := regCtx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
 			if err := newCtx.RegisterCompiledModuleWithFuncName(mod.Name, mod.Path, mod.Entry); err != nil {
 				return fmt.Errorf("register module %s: %w", mod.Name, err)
 			}
@@ -54,9 +54,9 @@ func startModulesFromConfig(ctx *registration.ContextImpl, modules []*ModuleConf
 	return nil
 }
 
-func newAppsFromConfig(ctx *registration.ContextImpl, server *server.Server, apps []*AppConfig) error {
+func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps []*AppConfig) error {
 	for _, ac := range apps {
-		app := app.NewAppCustom(ctx, ac.Name, ac.Address,
+		app := app.NewAppCustom(regCtx, ac.Name, ac.Address,
 			ac.ListenerType, ac.RouterEngineType, ac.Settings)
 
 		for _, mw := range ac.Middleware {
@@ -92,7 +92,7 @@ func newAppsFromConfig(ctx *registration.ContextImpl, server *server.Server, app
 		}
 
 		for _, group := range ac.Groups {
-			buildGroup(ctx, app, group)
+			buildGroup(regCtx, app, group)
 		}
 
 		server.AddApp(app)
@@ -101,7 +101,7 @@ func newAppsFromConfig(ctx *registration.ContextImpl, server *server.Server, app
 	return nil
 }
 
-func buildGroup(ctx *registration.ContextImpl, parent router.Router, group GroupConfig) {
+func buildGroup(regCtx registration.Context, parent router.Router, group GroupConfig) {
 	gr := parent.Group(group.Prefix)
 
 	for _, mw := range group.Middleware {
@@ -128,7 +128,7 @@ func buildGroup(ctx *registration.ContextImpl, parent router.Router, group Group
 		gr.MountStatic(static.Prefix, http.Dir(static.Folder))
 	}
 
-	for _, spa := range group.MountSPA {
+	for _, spa := range group.MountSpa {
 		gr.MountSPA(spa.Prefix, spa.FallbackFile)
 	}
 
@@ -137,7 +137,7 @@ func buildGroup(ctx *registration.ContextImpl, parent router.Router, group Group
 	}
 
 	for _, subGroup := range group.Groups {
-		buildGroup(ctx, gr, subGroup)
+		buildGroup(regCtx, gr, subGroup)
 	}
 
 }

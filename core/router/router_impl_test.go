@@ -22,6 +22,13 @@ func (m *MockRegistrationContext) RegisterMiddlewareFactoryWithPriority(name str
 	return nil
 }
 
+// NewPermissionContextFromConfig implements registration.Context.
+func (m *MockRegistrationContext) NewPermissionContextFromConfig(
+	settings map[string]any,
+	permission map[string]any) registration.Context {
+	return &MockRegistrationContext{}
+}
+
 // RegisterMiddlewareFuncWithPriority implements registration.Context.
 func (m *MockRegistrationContext) RegisterMiddlewareFuncWithPriority(name string, middlewareFunc midware.Func, priority int) error {
 	return nil
@@ -67,9 +74,11 @@ func (m *MockRegistrationContext) CreateService(factoryName, serviceName string,
 	return nil, nil
 }
 
-func (m *MockRegistrationContext) RegisterService(svc service.Service) error    { return nil }
-func (m *MockRegistrationContext) GetService(serviceUri string) service.Service { return nil }
-func (m *MockRegistrationContext) RegisterServiceFactory(factoryName string, serviceFactory func(serviceName string, config any) (service.Service, error)) {
+func (m *MockRegistrationContext) RegisterService(name string, svc service.Service) error { return nil }
+func (m *MockRegistrationContext) GetService(serviceName string) (service.Service, error) {
+	return nil, nil
+}
+func (m *MockRegistrationContext) RegisterServiceFactory(factoryName string, serviceFactory func(config any) (service.Service, error)) {
 }
 func (m *MockRegistrationContext) GetServiceFactory(factoryName string) (service.ServiceFactory, bool) {
 	return nil, false
@@ -122,17 +131,12 @@ func (m *MockRouterEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
-func (m *MockRouterEngine) GetServiceUri() string {
-	return "mock://router-engine"
-}
-
 type MockHttpListener struct{}
 
 func (m *MockHttpListener) ListenAndServe(addr string, handler http.Handler) error { return nil }
 func (m *MockHttpListener) Shutdown(shutdownTimeout time.Duration) error           { return nil }
 func (m *MockHttpListener) IsRunning() bool                                        { return false }
 func (m *MockHttpListener) ActiveRequest() int                                     { return 0 }
-func (m *MockHttpListener) GetServiceUri() string                                  { return "mock://listener" }
 
 var _ registration.Context = (*MockRegistrationContext)(nil)
 var _ serviceapi.RouterEngine = (*MockRouterEngine)(nil)

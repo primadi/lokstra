@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/meta"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
@@ -143,14 +142,14 @@ func (r *RouterImpl) handle(method request.HTTPMethod, path string, handler any,
 
 	cleanPath := r.cleanPrefix(path)
 
-	var handlerMeta *meta.HandlerMeta
+	var handlerMeta *request.HandlerMeta
 
 	switch h := handler.(type) {
 	case request.HandlerFunc:
-		handlerMeta = &meta.HandlerMeta{HandlerFunc: h}
+		handlerMeta = &request.HandlerMeta{HandlerFunc: h}
 	case string:
-		handlerMeta = &meta.HandlerMeta{Name: h}
-	case *meta.HandlerMeta:
+		handlerMeta = &request.HandlerMeta{Name: h}
+	case *request.HandlerMeta:
 		handlerMeta = h
 	default:
 		fmt.Printf("Handler type: %T\n", handler)
@@ -199,25 +198,23 @@ func (r *RouterImpl) MountStatic(prefix string, folder http.Dir) Router {
 func (r *RouterImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
 	r.mwLocked = true
 
-	cleanPath := r.cleanPrefix(path)
-
-	rpcMeta := &meta.RpcServiceMeta{
-		MethodParam: ":method",
+	cleanPath := r.cleanPrefix(path) + "/:method"
+	rpcMeta := &service.RpcServiceMeta{
+		MethodParam: "method",
 	}
 	switch s := svc.(type) {
 	case string:
-		rpcMeta.ServiceURI = s
-	case service.Service:
-		rpcMeta.ServiceURI = s.GetServiceUri()
-		rpcMeta.ServiceInst = s
-	case *meta.RpcServiceMeta:
+		rpcMeta.ServiceName = s
+	case *service.RpcServiceMeta:
 		rpcMeta = s
+	case service.Service:
+		rpcMeta.ServiceInst = s
 	default:
 		fmt.Printf("Service type: %T\n", svc)
 		panic("Invalid service type, must be a string, *RpcServiceMeta, or iface.Service")
 	}
 
-	handlerMeta := &meta.HandlerMeta{
+	handlerMeta := &request.HandlerMeta{
 		HandlerFunc: func(ctx *request.Context) error {
 			return ctx.ErrorInternal("RpcService not yet resolved")
 		},
@@ -323,51 +320,23 @@ func (r *RouterImpl) handleRouteMeta(route *RouteMeta, mwParent []*midware.Execu
 	}
 
 	handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
-	var finalHandler http.HandlerFunc
-	if rpcService, ok := route.Handler.Extension.(*meta.RpcServiceMeta); ok {
-		svc := rpcService.ServiceInst
-		if svc == nil {
-			return
+	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ctx, ok := request.ContextFromRequest(req)
+
+		var cancel func()
+		if !ok {
+			ctx, cancel = request.NewContext(w, req)
+			defer cancel()
 		}
+		if err := handler_with_mw(ctx); err != nil {
+			_ = ctx.ErrorInternal(err.Error())
+		}
+		if err := ctx.Err(); err != nil {
+			_ = ctx.ErrorInternal("Request aborted")
+		}
+		_ = ctx.Response.WriteHttp(ctx.Writer)
+	})
 
-		finalHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			ctx, ok := request.ContextFromRequest(req)
-
-			var cancel func()
-			if !ok {
-				ctx, cancel = request.NewContext(w, req)
-				defer cancel()
-			}
-
-			// Set the RPC service URI in the context
-			// ctx.SetServiceURI(rpcService.ServiceURI)
-
-			if err := handler_with_mw(ctx); err != nil {
-				_ = ctx.ErrorInternal(err.Error())
-			}
-			if err := ctx.Err(); err != nil {
-				_ = ctx.ErrorInternal("Request aborted")
-			}
-			_ = ctx.Response.WriteHttp(ctx.Writer)
-		})
-	} else {
-		finalHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			ctx, ok := request.ContextFromRequest(req)
-
-			var cancel func()
-			if !ok {
-				ctx, cancel = request.NewContext(w, req)
-				defer cancel()
-			}
-			if err := handler_with_mw(ctx); err != nil {
-				_ = ctx.ErrorInternal(err.Error())
-			}
-			if err := ctx.Err(); err != nil {
-				_ = ctx.ErrorInternal("Request aborted")
-			}
-			_ = ctx.Response.WriteHttp(ctx.Writer)
-		})
-	}
 	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
 }
 

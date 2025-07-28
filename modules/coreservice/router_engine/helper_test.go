@@ -289,17 +289,6 @@ func TestCleanPrefix(t *testing.T) {
 	}
 }
 
-func TestConstants(t *testing.T) {
-	// Test that constants are defined correctly
-	if HTTPROUTER_ROUTER_ENGINE_NAME != "httprouter" {
-		t.Errorf("HTTPROUTER_ROUTER_ENGINE_NAME = %v, want %v", HTTPROUTER_ROUTER_ENGINE_NAME, "httprouter")
-	}
-
-	if SERVEMUX_ROUTER_ENGINE_NAME != "servemux" {
-		t.Errorf("SERVEMUX_ROUTER_ENGINE_NAME = %v, want %v", SERVEMUX_ROUTER_ENGINE_NAME, "servemux")
-	}
-}
-
 func TestHelperFunctionIntegration(t *testing.T) {
 	tests := []struct {
 		name         string

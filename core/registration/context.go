@@ -13,15 +13,18 @@ type HandlerRegister = request.HandlerRegister
 var ErrServiceNotFound = errors.New("service not found")
 var ErrServiceTypeInvalid = errors.New("service type is invalid")
 
+// registration.Context is used only during startup phase
+// to register services, handlers, middleware, and modules.
+// It must not be used after server.Start().
 type Context interface {
 	// Service creation and retrieval
-	RegisterService(service service.Service) error
-	GetService(serviceUri string) service.Service
+	RegisterService(serviceName string, service service.Service) error
+	GetService(serviceName string) (service.Service, error)
 	CreateService(factoryName, serviceName string, config ...any) (service.Service, error)
 
 	// Service factory registration and retrieval
 	RegisterServiceFactory(factoryName string,
-		serviceFactory func(serviceName string, config any) (service.Service, error))
+		serviceFactory func(config any) (service.Service, error))
 	GetServiceFactory(factoryName string) (service.ServiceFactory, bool)
 
 	// Handler registration and retrieval
@@ -50,4 +53,6 @@ type Context interface {
 	RegisterCompiledModule(moduleName string, pluginPath string) error // funcName is "GetModule"
 	RegisterCompiledModuleWithFuncName(moduleName string, pluginPath string, getModuleFuncName string) error
 	RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx Context) error) error
+
+	NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) Context
 }

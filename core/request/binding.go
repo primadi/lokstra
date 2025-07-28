@@ -19,10 +19,10 @@ func (ctx *Context) bindPathField(fieldMeta bindingFieldMeta, rv reflect.Value) 
 }
 
 func (ctx *Context) BindPath(v any) error {
-	meta := getOrBuildBindingMeta(reflect.TypeOf(v))
+	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 
-	for _, fieldMeta := range meta.Fields {
+	for _, fieldMeta := range bindMeta.Fields {
 		if fieldMeta.Tag != "path" {
 			continue
 		}
@@ -89,11 +89,11 @@ func (ctx *Context) bindQueryField(fieldMeta bindingFieldMeta, rv reflect.Value,
 }
 
 func (ctx *Context) BindQuery(v any) error {
-	meta := getOrBuildBindingMeta(reflect.TypeOf(v))
+	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 	query := ctx.Request.URL.Query()
 
-	for _, fieldMeta := range meta.Fields {
+	for _, fieldMeta := range bindMeta.Fields {
 		if fieldMeta.Tag != "query" {
 			continue
 		}
@@ -122,11 +122,11 @@ func (ctx *Context) bindHeaderField(fieldMeta bindingFieldMeta, rv reflect.Value
 }
 
 func (ctx *Context) BindHeader(v any) error {
-	meta := getOrBuildBindingMeta(reflect.TypeOf(v))
+	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 	header := ctx.Request.Header
 
-	for _, fieldMeta := range meta.Fields {
+	for _, fieldMeta := range bindMeta.Fields {
 		if fieldMeta.Tag != "header" {
 			continue
 		}
@@ -148,12 +148,12 @@ func (ctx *Context) BindBody(v any) error {
 }
 
 func (ctx *Context) BindAll(v any) error {
-	meta := getOrBuildBindingMeta(reflect.TypeOf(v))
+	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 	header := ctx.Request.Header
 	query := ctx.Request.URL.Query()
 
-	for _, fieldMeta := range meta.Fields {
+	for _, fieldMeta := range bindMeta.Fields {
 		switch fieldMeta.Tag {
 		case "query":
 			if err := ctx.bindQueryField(fieldMeta, rv, query); err != nil {

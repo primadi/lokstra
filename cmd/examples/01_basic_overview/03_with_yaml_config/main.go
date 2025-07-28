@@ -18,7 +18,7 @@ func main() {
 	server.Start()
 }
 
-func registerAllComponents(regCtx *lokstra.GlobalRegistrationContext) {
+func registerAllComponents(regCtx lokstra.RegistrationContext) {
 	// Register hardcoded modules, services, middleware, and handlers if needed
 	regCtx.RegisterMiddlewareFunc("auth", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
@@ -47,7 +47,7 @@ func registerAllComponents(regCtx *lokstra.GlobalRegistrationContext) {
 	})
 }
 
-func newServerFormConfig(ctx *lokstra.GlobalRegistrationContext, dir string) *lokstra.Server {
+func newServerFormConfig(ctx lokstra.RegistrationContext, dir string) *lokstra.Server {
 	cfg, err := lokstra.LoadConfigDir(dir)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config from %s: %v", dir, err))

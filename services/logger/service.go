@@ -12,22 +12,15 @@ import (
 
 // LoggerService implements iface.Service and Logger
 type LoggerService struct {
-	*service.BaseService
 	logger *zerolog.Logger
 }
 
-// GetServiceUri implements service.Service.
-func (l *LoggerService) GetServiceUri() string {
-	return "lokstra://logger/" + l.GetServiceName()
-}
-
-func NewService(name string, level serviceapi.LogLevel) (*LoggerService, error) {
+func NewService(level serviceapi.LogLevel) (*LoggerService, error) {
 	zerolog.TimeFieldFormat = time.RFC3339
 	zlogger := zerolog.New(os.Stdout).Level(toZerologLevel(level)).With().Timestamp().Logger()
 
 	return &LoggerService{
-		BaseService: service.NewBaseService(name),
-		logger:      &zlogger,
+		logger: &zlogger,
 	}, nil
 }
 

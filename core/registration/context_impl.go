@@ -26,17 +26,18 @@ var mwMetas = make(map[string]*mwMeta)
 var modules = make(map[string]bool)
 
 type ContextImpl struct {
-	permission *PermissionGranted
+	permission                *PermissionGranted
+	allowNewPermissionContext bool
 }
 
 // RegisterCompiledModule implements Context.
-func (g *ContextImpl) RegisterCompiledModule(moduleName string,
+func (c *ContextImpl) RegisterCompiledModule(moduleName string,
 	pluginPath string) error {
-	return g.RegisterCompiledModuleWithFuncName(moduleName, pluginPath, EntryFnRegisterModule)
+	return c.RegisterCompiledModuleWithFuncName(moduleName, pluginPath, EntryFnRegisterModule)
 }
 
 // RegisterCompiledModuleWithFuncName implements Context.
-func (g *ContextImpl) RegisterCompiledModuleWithFuncName(moduleName string,
+func (c *ContextImpl) RegisterCompiledModuleWithFuncName(moduleName string,
 	pluginPath string, getModuleFuncName string) error {
 
 	if pluginPath == "" {
@@ -59,16 +60,16 @@ func (g *ContextImpl) RegisterCompiledModuleWithFuncName(moduleName string,
 	if !ok {
 		return fmt.Errorf("plugin entry %s has wrong signature", getModuleFuncName)
 	}
-	return g.RegisterModuleWithFunc(moduleName, getModuleFunc)
+	return c.RegisterModuleWithFunc(moduleName, getModuleFunc)
 }
 
 // RegisterModuleWithFunc implements Context.
-func (g *ContextImpl) RegisterModuleWithFunc(moduleName string,
+func (c *ContextImpl) RegisterModuleWithFunc(moduleName string,
 	getModuleFunc func(regCtx Context) error) error {
 	if _, exists := modules[moduleName]; exists {
 		return errors.New("module with name '" + moduleName + "' already registered")
 	}
-	if err := getModuleFunc(g); err != nil {
+	if err := getModuleFunc(c); err != nil {
 		return err
 	}
 	modules[moduleName] = true
@@ -76,30 +77,30 @@ func (g *ContextImpl) RegisterModuleWithFunc(moduleName string,
 }
 
 // GetHandler implements Context.
-func (g *ContextImpl) GetHandler(name string) *HandlerRegister {
+func (c *ContextImpl) GetHandler(name string) *HandlerRegister {
 	return handlers[name]
 }
 
 // GetService implements Context.
-func (g *ContextImpl) GetService(serviceUri string) service.Service {
-	if !g.permission.IsAllowedGetService(serviceUri) {
-		panic("service '" + serviceUri + "' is not allowed to be accessed")
+func (c *ContextImpl) GetService(serviceName string) (service.Service, error) {
+	if !c.permission.IsAllowedGetService(serviceName) {
+		return nil, errors.New("service '" + serviceName + "' is not allowed to be accessed")
 	}
 
-	if service, exists := serviceInstances[serviceUri]; exists {
-		return service
+	if service, exists := serviceInstances[serviceName]; exists {
+		return service, nil
 	}
-	return nil
+	return nil, errors.New("service '" + serviceName + "' not found")
 }
 
 // GetServiceFactory implements Context.
-func (g *ContextImpl) GetServiceFactory(factoryName string) (service.ServiceFactory, bool) {
+func (c *ContextImpl) GetServiceFactory(factoryName string) (service.ServiceFactory, bool) {
 	sf, exists := serviceFactories[factoryName]
 	return sf, exists
 }
 
 // CreateService implements Context.
-func (g *ContextImpl) CreateService(factoryName string, serviceName string, config ...any) (service.Service, error) {
+func (c *ContextImpl) CreateService(factoryName string, serviceName string, config ...any) (service.Service, error) {
 	factory, exists := serviceFactories[factoryName]
 	if !exists {
 		return nil, errors.New("service factory not found for type: " + factoryName)
@@ -114,24 +115,23 @@ func (g *ContextImpl) CreateService(factoryName string, serviceName string, conf
 		cfg = config
 	}
 
-	service, err := factory(serviceName, cfg)
+	service, err := factory(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceUri := service.GetServiceUri()
-	if _, found := serviceInstances[serviceUri]; found {
-		return nil, errors.New("service with name '" + serviceUri + "' already exists")
+	if _, found := serviceInstances[serviceName]; found {
+		return nil, errors.New("service with name '" + serviceName + "' already exists")
 	}
 
-	serviceInstances[serviceUri] = service
+	serviceInstances[serviceName] = service
 
 	return service, nil
 }
 
 // RegisterHandler implements Context.
-func (g *ContextImpl) RegisterHandler(name string, handler request.HandlerFunc) {
-	if !g.permission.IsAllowedRegisterHandler() {
+func (c *ContextImpl) RegisterHandler(name string, handler request.HandlerFunc) {
+	if !c.permission.IsAllowedRegisterHandler() {
 		panic("registering handler '" + name + "' is not allowed")
 	}
 
@@ -151,18 +151,23 @@ func (g *ContextImpl) RegisterHandler(name string, handler request.HandlerFunc) 
 }
 
 // RegisterService implements Context.
-func (g *ContextImpl) RegisterService(service service.Service) error {
-	if !g.permission.IsAllowedRegisterService() {
-		return errors.New("registering service '" + service.GetServiceUri() + "' is not allowed")
+func (c *ContextImpl) RegisterService(serviceName string, service service.Service) error {
+	if !c.permission.IsAllowedRegisterService() {
+		return errors.New("registering service '" + serviceName + "' is not allowed")
 	}
-	serviceInstances[service.GetServiceUri()] = service
+
+	if _, found := serviceInstances[serviceName]; found {
+		return errors.New("service with name '" + serviceName + "' already exists")
+
+	}
+	serviceInstances[serviceName] = service
 	return nil
 }
 
 // RegisterServiceFactory implements Context.
-func (g *ContextImpl) RegisterServiceFactory(factoryName string,
-	serviceFactory func(serviceName string, config any) (service.Service, error)) {
-	if !g.permission.IsAllowedRegisterService() {
+func (c *ContextImpl) RegisterServiceFactory(factoryName string,
+	serviceFactory func(config any) (service.Service, error)) {
+	if !c.permission.IsAllowedRegisterService() {
 		panic("registering service factory for '" + factoryName + "' is not allowed")
 	}
 
@@ -177,7 +182,7 @@ func (g *ContextImpl) RegisterServiceFactory(factoryName string,
 }
 
 // GetMiddlewareFactory implements Context.
-func (g *ContextImpl) GetMiddlewareFactory(name string) (midware.Factory, int, bool) {
+func (c *ContextImpl) GetMiddlewareFactory(name string) (midware.Factory, int, bool) {
 	if mt, exists := mwMetas[name]; exists {
 		return mt.factory, mt.priority, true
 	}
@@ -185,38 +190,38 @@ func (g *ContextImpl) GetMiddlewareFactory(name string) (midware.Factory, int, b
 }
 
 // RegisterMiddlewareFunc implements Context.
-func (g *ContextImpl) RegisterMiddlewareFunc(name string,
+func (c *ContextImpl) RegisterMiddlewareFunc(name string,
 	middlewareFunc midware.Func) error {
-	return g.RegisterMiddlewareFactoryWithPriority(name,
+	return c.RegisterMiddlewareFactoryWithPriority(name,
 		func(_ any) midware.Func {
 			return middlewareFunc
 		}, 50)
 }
 
 // RegisterMiddlewareFuncWithPriority implements Context.
-func (g *ContextImpl) RegisterMiddlewareFuncWithPriority(name string,
+func (c *ContextImpl) RegisterMiddlewareFuncWithPriority(name string,
 	middlewareFunc midware.Func, priority int) error {
-	return g.RegisterMiddlewareFactoryWithPriority(name,
+	return c.RegisterMiddlewareFactoryWithPriority(name,
 		func(_ any) midware.Func {
 			return middlewareFunc
 		}, priority)
 }
 
 // RegisterMiddlewareFactory implements Context.
-func (g *ContextImpl) RegisterMiddlewareFactory(name string,
+func (c *ContextImpl) RegisterMiddlewareFactory(name string,
 	middlewareFactory midware.Factory) error {
-	return g.RegisterMiddlewareFactoryWithPriority(name, middlewareFactory, 50)
+	return c.RegisterMiddlewareFactoryWithPriority(name, middlewareFactory, 50)
 }
 
 // RegisterMiddlewareFactoryWithPriority implements Context.
-func (g *ContextImpl) RegisterMiddlewareFactoryWithPriority(name string,
+func (c *ContextImpl) RegisterMiddlewareFactoryWithPriority(name string,
 	middlewareFactory midware.Factory, priority int) error {
 
 	if name == "" {
 		return fmt.Errorf("middleware name cannot be empty")
 	}
 
-	if !g.permission.IsAllowedRegisterMiddleware() {
+	if !c.permission.IsAllowedRegisterMiddleware() {
 		return fmt.Errorf("registering middleware '%s' is not allowed", name)
 	}
 
@@ -232,16 +237,13 @@ func (g *ContextImpl) RegisterMiddlewareFactoryWithPriority(name string,
 	return nil
 }
 
-var _ Context = (*ContextImpl)(nil)
-
-func NewPermissionContext(permission *PermissionRequest) Context {
-	return &ContextImpl{
-		permission: newPermissionGranted(permission),
-	}
-}
-
-func (g *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
+// NewPermissionContextFromConfig implements Context.
+func (c *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
 	permission map[string]any) Context {
+
+	if !c.allowNewPermissionContext {
+		panic("NewPermissionContextFromConfig is not allowed in this context")
+	}
 
 	pr := &PermissionRequest{
 		WhitelistGetService:     utils.GetValueFromMap(permission, "get_service", []string{}),
@@ -255,3 +257,5 @@ func (g *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
 		permission: newPermissionGranted(pr),
 	}
 }
+
+var _ Context = (*ContextImpl)(nil)

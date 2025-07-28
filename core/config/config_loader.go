@@ -29,7 +29,7 @@ func LoadConfigDir(dir string) (*LokstraConfig, error) {
 			return nil, fmt.Errorf("read file %s: %w", path, err)
 		}
 
-		expanded := ExpandVariables(string(data))
+		expanded := expandVariables(string(data))
 
 		var raw map[string]any
 		if err := yaml.Unmarshal([]byte(expanded), &raw); err != nil {
@@ -41,10 +41,17 @@ func LoadConfigDir(dir string) (*LokstraConfig, error) {
 		}
 	}
 
+	// Expand group includes
+	for i := range cfg.Apps {
+		if err := expandGroupIncludes(dir, &cfg.Apps[i].Groups); err != nil {
+			return nil, fmt.Errorf("expand group includes for app %s: %w", cfg.Apps[i].Name, err)
+		}
+	}
+
 	// Normalize middleware for apps, routes, and groups
 	for i, app := range cfg.Apps {
 		if app.MiddlewareRaw != nil {
-			mw, err := NormalizeMiddlewareConfig(app.MiddlewareRaw)
+			mw, err := normalizeMiddlewareConfig(app.MiddlewareRaw)
 			if err != nil {
 				return nil, fmt.Errorf("normalize middleware for app %s: %w", app.Name, err)
 			}
@@ -54,7 +61,7 @@ func LoadConfigDir(dir string) (*LokstraConfig, error) {
 		// Normalize middleware for routes
 		for i, route := range app.Routes {
 			if route.MiddlewareRaw != nil {
-				mw, err := NormalizeMiddlewareConfig(route.MiddlewareRaw)
+				mw, err := normalizeMiddlewareConfig(route.MiddlewareRaw)
 				if err != nil {
 					return nil, fmt.Errorf("normalize middleware for route %s in app %s: %w",
 						route.Path, app.Name, err)
@@ -99,7 +106,7 @@ func LoadConfigDir(dir string) (*LokstraConfig, error) {
 func loadGroupConfig(groupArr *[]GroupConfig) error {
 	for idx, group := range *groupArr {
 		if group.MiddlewareRaw != nil {
-			mw, err := NormalizeMiddlewareConfig(group.MiddlewareRaw)
+			mw, err := normalizeMiddlewareConfig(group.MiddlewareRaw)
 			if err != nil {
 				return fmt.Errorf("normalize middleware for group %s: %w", group.Prefix, err)
 			}
@@ -108,7 +115,7 @@ func loadGroupConfig(groupArr *[]GroupConfig) error {
 
 		for i, route := range group.Routes {
 			if route.MiddlewareRaw != nil {
-				mw, err := NormalizeMiddlewareConfig(route.MiddlewareRaw)
+				mw, err := normalizeMiddlewareConfig(route.MiddlewareRaw)
 				if err != nil {
 					return fmt.Errorf("normalize middleware for route %s in group %s: %w",
 						route.Path, group.Prefix, err)
@@ -247,4 +254,51 @@ func mergeModules(existing, incoming []*ModuleConfig) []*ModuleConfig {
 		}
 	}
 	return existing
+}
+
+func expandGroupIncludes(baseDir string, groups *[]GroupConfig) error {
+	for i := range *groups {
+		group := &(*groups)[i]
+
+		for _, relPath := range group.LoadFrom {
+			fullPath := filepath.Join(baseDir, relPath)
+			data, err := os.ReadFile(fullPath)
+			if err != nil {
+				return fmt.Errorf("read load_from file %s: %w", fullPath, err)
+			}
+
+			expanded := expandVariables(string(data))
+
+			var external GroupConfig
+			if err := yaml.Unmarshal([]byte(expanded), &external); err != nil {
+				return fmt.Errorf("unmarshal load_from file %s: %w", fullPath, err)
+			}
+
+			// === Warning if Prefix or OverrideMiddleware is set in load_from ===
+			if external.Prefix != "" {
+				return fmt.Errorf("prefix not allowed at root level in load_from file %s: %s", fullPath, external.Prefix)
+			}
+			if external.OverrideMiddleware {
+				return fmt.Errorf("override_middleware not allowed at root level in load_from file %s", fullPath)
+			}
+			if external.MiddlewareRaw != nil {
+				return fmt.Errorf("middleware not allowed at root level in load_from file %s — define group(s) inside instead", fullPath)
+			}
+
+			// Merge external group into current group
+			group.Routes = append(group.Routes, external.Routes...)
+			group.Groups = append(group.Groups, external.Groups...)
+
+			group.MountStatic = append(group.MountStatic, external.MountStatic...)
+			group.MountSpa = append(group.MountSpa, external.MountSpa...)
+			group.MountReverseProxy = append(group.MountReverseProxy, external.MountReverseProxy...)
+			group.MountRpcService = append(group.MountRpcService, external.MountRpcService...)
+		}
+
+		// === Recursive expand in nested groups ===
+		if err := expandGroupIncludes(baseDir, &group.Groups); err != nil {
+			return err
+		}
+	}
+	return nil
 }

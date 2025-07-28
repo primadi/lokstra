@@ -6,19 +6,10 @@ import (
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-type RpcServerImpl struct {
-	*service.BaseService
-}
+type RpcServerImpl struct{}
 
-// GetServiceUri implements service.Service.
-func (r *RpcServerImpl) GetServiceUri() string {
-	return "lokstra://rpc_server/" + r.GetServiceName()
-}
-
-func NewRpcServer(serviceName string, _ any) (service.Service, error) {
-	return &RpcServerImpl{
-		BaseService: service.NewBaseService(serviceName),
-	}, nil
+func NewRpcServer(_ any) (service.Service, error) {
+	return &RpcServerImpl{}, nil
 }
 
 // HandleRequest implements serviceapi.RpcServer.

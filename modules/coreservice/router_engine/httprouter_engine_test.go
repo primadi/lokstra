@@ -7,41 +7,34 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/serviceapi"
 )
 
 func TestNewHttpRouterEngine(t *testing.T) {
 	tests := []struct {
-		name        string
-		serviceName string
-		config      any
-		wantErr     bool
+		name    string
+		config  any
+		wantErr bool
 	}{
 		{
-			name:        "valid_creation",
-			serviceName: "test_router",
-			config:      nil,
-			wantErr:     false,
+			name:    "valid_creation",
+			config:  nil,
+			wantErr: false,
 		},
 		{
-			name:        "with_config",
-			serviceName: "test_router_config",
-			config:      map[string]any{"key": "value"},
-			wantErr:     false,
+			name:    "with_config",
+			config:  map[string]any{"key": "value"},
+			wantErr: false,
 		},
 		{
-			name:        "empty_service_name",
-			serviceName: "",
-			config:      nil,
-			wantErr:     true,
+			name:    "empty_service_name",
+			config:  nil,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewHttpRouterEngine(tt.serviceName, tt.config)
+			got, err := NewHttpRouterEngine(tt.config)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewHttpRouterEngine() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -55,32 +48,12 @@ func TestNewHttpRouterEngine(t *testing.T) {
 				t.Error("NewHttpRouterEngine() returned nil")
 				return
 			}
-
-			// Verify it implements the required interfaces
-			var _ service.Service = got
-
-			// Verify service name
-			if service, ok := got.(*HttpRouterEngine); ok {
-				// Verify RouterEngine interface
-				var _ serviceapi.RouterEngine = service
-				if service.GetServiceName() != tt.serviceName {
-					t.Errorf("Service name = %v, want %v", service.GetServiceName(), tt.serviceName)
-				}
-
-				// Test GetServiceUri
-				expectedUri := "lokstra://router_engine/" + tt.serviceName
-				if uri := service.GetServiceUri(); uri != expectedUri {
-					t.Errorf("GetServiceUri() = %v, want %v", uri, expectedUri)
-				}
-			} else {
-				t.Error("NewHttpRouterEngine() did not return *HttpRouterEngine")
-			}
 		})
 	}
 }
 
 func TestHttpRouterEngine_HandleMethod(t *testing.T) {
-	engine, err := NewHttpRouterEngine("test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
@@ -134,7 +107,7 @@ func TestHttpRouterEngine_HandleMethod(t *testing.T) {
 }
 
 func TestHttpRouterEngine_ServeHTTP(t *testing.T) {
-	engine, err := NewHttpRouterEngine("test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
@@ -224,7 +197,7 @@ func TestHttpRouterEngine_ServeHTTP(t *testing.T) {
 }
 
 func TestHttpRouterEngine_ServeStatic(t *testing.T) {
-	engine, err := NewHttpRouterEngine("test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
@@ -259,7 +232,7 @@ func TestHttpRouterEngine_ServeStatic(t *testing.T) {
 }
 
 func TestHttpRouterEngine_ServeSPA(t *testing.T) {
-	engine, err := NewHttpRouterEngine("test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
@@ -330,7 +303,7 @@ func TestHttpRouterEngine_ServeSPA(t *testing.T) {
 }
 
 func TestHttpRouterEngine_ServeReverseProxy(t *testing.T) {
-	engine, err := NewHttpRouterEngine("test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
@@ -365,7 +338,7 @@ func TestHttpRouterEngine_ServeReverseProxy(t *testing.T) {
 }
 
 func TestHttpRouterEngine_NotFoundFallback(t *testing.T) {
-	engine, err := NewHttpRouterEngine("test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
@@ -419,7 +392,7 @@ func TestHttpRouterEngine_NotFoundFallback(t *testing.T) {
 }
 
 func TestHttpRouterEngine_Integration(t *testing.T) {
-	engine, err := NewHttpRouterEngine("integration_test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}

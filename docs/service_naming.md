@@ -68,6 +68,5 @@ svc := ctx.GetService("lokstra://my_package.MyService/dev").(my_package.MyServic
 
 - Use short instance names like `default`, `read`, `write`, or environment-specific like `dev`, `prod`
 - Prefer `CamelCase` for interface names and `snake_case` for package names
-- Validate URIs using `ValidateServiceURI()` during development or CI
 
 ---

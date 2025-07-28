@@ -38,11 +38,11 @@ func createTestCertFiles(t *testing.T) (certFile, keyFile string, cleanup func()
 			StreetAddress: []string{""},
 			PostalCode:    []string{""},
 		},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1)},
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1)},
 	}
 
 	// Create certificate
@@ -129,13 +129,13 @@ func TestNewSecureNetHttpListener(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "valid_array_config",
-			config: []any{certFile, keyFile},
+			name:    "valid_array_config",
+			config:  []any{certFile, keyFile},
 			wantErr: false,
 		},
 		{
-			name:   "valid_string_array_config",
-			config: []string{certFile, keyFile},
+			name:    "valid_string_array_config",
+			config:  []string{certFile, keyFile},
 			wantErr: false,
 		},
 		{
@@ -188,7 +188,7 @@ func TestNewSecureNetHttpListener(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewSecureNetHttpListener("test", tt.config)
+			service, err := NewSecureNetHttpListener(tt.config)
 
 			if tt.wantErr {
 				if err == nil {
@@ -295,7 +295,7 @@ func TestSecureNetHttpListener_ListenAndServe_TCP(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFiles(t)
 	defer cleanup()
 
-	service, err := NewSecureNetHttpListener("test", map[string]any{
+	service, err := NewSecureNetHttpListener(map[string]any{
 		CERT_FILE_KEY:     certFile,
 		KEY_FILE_KEY:      keyFile,
 		READ_TIMEOUT_KEY:  "5s",
@@ -354,7 +354,7 @@ func TestSecureNetHttpListener_GracefulShutdown(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFiles(t)
 	defer cleanup()
 
-	service, err := NewSecureNetHttpListener("test", map[string]any{
+	service, err := NewSecureNetHttpListener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -438,7 +438,7 @@ func TestSecureNetHttpListener_ShutdownTimeout(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFiles(t)
 	defer cleanup()
 
-	service, err := NewSecureNetHttpListener("test", map[string]any{
+	service, err := NewSecureNetHttpListener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -485,7 +485,7 @@ func TestSecureNetHttpListener_ActiveRequestTracking(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFiles(t)
 	defer cleanup()
 
-	service, err := NewSecureNetHttpListener("test", map[string]any{
+	service, err := NewSecureNetHttpListener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -540,11 +540,11 @@ func TestSecureNetHttpListener_ConfigurationVariations(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name         string
-		config       map[string]any
-		wantRead     time.Duration
-		wantWrite    time.Duration
-		wantIdle     time.Duration
+		name      string
+		config    map[string]any
+		wantRead  time.Duration
+		wantWrite time.Duration
+		wantIdle  time.Duration
 	}{
 		{
 			name: "default_timeouts",
@@ -573,7 +573,7 @@ func TestSecureNetHttpListener_ConfigurationVariations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewSecureNetHttpListener("test", tt.config)
+			service, err := NewSecureNetHttpListener(tt.config)
 			if err != nil {
 				t.Fatalf("NewSecureNetHttpListener() error = %v", err)
 			}

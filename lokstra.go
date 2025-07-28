@@ -13,13 +13,13 @@ import (
 	"github.com/primadi/lokstra/modules/coreservice"
 	"github.com/primadi/lokstra/modules/coreservice/listener"
 	"github.com/primadi/lokstra/modules/coreservice/router_engine"
+	"github.com/primadi/lokstra/modules/rpc_service"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/logger"
 )
 
 type Context = request.Context
 type RegistrationContext = registration.Context
-type GlobalRegistrationContext = registration.ContextImpl
 
 type HandlerFunc = request.HandlerFunc
 
@@ -36,24 +36,33 @@ type LogFields = serviceapi.LogFields
 type Service = service.Service
 type ServiceFactory = service.ServiceFactory
 
-var Logger, _ = logger.NewService("default", serviceapi.LogLevelInfo)
+var Logger serviceapi.Logger
 
-func NewGlobalRegistrationContext() *GlobalRegistrationContext {
+func NewGlobalRegistrationContext() RegistrationContext {
 	ctx := registration.NewGlobalContext()
 
-	// automatically register logger and core services module
+	// register logger module
 	_ = logger.GetModule().Register(ctx)
+
+	// create default logger service
+	l, _ := ctx.CreateService(logger.FACTORY_NAME, "logger.default", "info")
+	Logger = l.(serviceapi.Logger)
+
+	// register core service module
 	_ = coreservice.GetModule().Register(ctx)
+
+	// register rpc service module
+	_ = rpc_service.GetModule().Register(ctx)
 
 	return ctx
 }
 
-func NewServer(ctx *GlobalRegistrationContext, name string) *Server {
-	return server.NewServer(ctx, name)
+func NewServer(regCtx RegistrationContext, name string) *Server {
+	return server.NewServer(regCtx, name)
 }
 
-func NewServerFromConfig(ctx *GlobalRegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
-	return config.NewServerFromConfig(ctx, cfg)
+func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
+	return config.NewServerFromConfig(regCtx, cfg)
 }
 
 const LISTENER_NETHTTP = listener.NETHTTP_LISTENER_NAME
@@ -111,15 +120,32 @@ func LoadConfigDir(dir string) (*config.LokstraConfig, error) {
 	return config.LoadConfigDir(dir)
 }
 
-func GetService[T service.Service](ctx RegistrationContext, serviceUri string) (T, error) {
-	svc := ctx.GetService(serviceUri)
-	if svc == nil {
+func GetService[T service.Service](ctx RegistrationContext, serviceName string) (T, error) {
+	svc, err := ctx.GetService(serviceName)
+	if err != nil {
 		var zero T
-		return zero, errors.New("service not found: " + serviceUri)
+		return zero, errors.New("service not found: " + serviceName)
 	}
 	if typedSvc, ok := svc.(T); ok {
 		return typedSvc, nil
 	}
 	var zero T
-	return zero, errors.New("service type mismatch: " + serviceUri)
+	return zero, errors.New("service type mismatch: " + serviceName)
+}
+
+func GetOrCreateService[T any](ctx RegistrationContext,
+	serviceName string, factoryName string, config ...any) (T, error) {
+	svc, err := ctx.GetService(serviceName)
+	if err != nil {
+		svc, err = ctx.CreateService(factoryName, serviceName, config...)
+		if err != nil {
+			var zero T
+			return zero, errors.New("failed to create service: " + err.Error())
+		}
+	}
+	if typedSvc, ok := svc.(T); ok {
+		return typedSvc, nil
+	}
+	var zero T
+	return zero, errors.New("service type mismatch: " + serviceName)
 }

@@ -36,8 +36,8 @@ func AddVariableResolver(name string, resolver VariableResolver) {
 	variableResolvers[name] = resolver
 }
 
-// ExpandVariables replaces placeholders in the form ${KEY}, ${KEY:default}, ${ENV:KEY}, ${ENV:KEY:default}
-func ExpandVariables(input string) string {
+// expandVariables replaces placeholders in the form ${KEY}, ${KEY:default}, ${ENV:KEY}, ${ENV:KEY:default}
+func expandVariables(input string) string {
 	return os.Expand(input, func(key string) string {
 		parts := strings.SplitN(key, ":", 3)
 

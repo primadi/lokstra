@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-const HTTPROUTER_ROUTER_ENGINE_NAME = "httprouter"
-const SERVEMUX_ROUTER_ENGINE_NAME = "servemux"
+const HTTPROUTER_ROUTER_ENGINE_NAME = "core_service.httprouter"
+const SERVEMUX_ROUTER_ENGINE_NAME = "core_service.servemux"
 
 // paramPattern is a regular expression that matches path parameters in the format
 // :param or *param. It captures both types of parameters:

@@ -1,6 +1,7 @@
 package registration
 
 var globalContext = &ContextImpl{
+	allowNewPermissionContext: true,
 	permission: &PermissionGranted{
 		whitelistGetService: []string{"*"},
 

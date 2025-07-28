@@ -1,7 +1,6 @@
 package router_engine
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -14,27 +13,16 @@ import (
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-func NewServeMuxEngine(serviceName string, _ any) (service.Service, error) {
-	if serviceName == "" {
-		return nil, errors.New("service name cannot be empty")
-	}
-
+func NewServeMuxEngine(_ any) (service.Service, error) {
 	return &ServeMuxEngine{
-		BaseService: service.NewBaseService(serviceName),
-		mux:         http.NewServeMux(),
-		handlers:    map[string]*handlerMethod{},
+		mux:      http.NewServeMux(),
+		handlers: map[string]*handlerMethod{},
 	}, nil
 }
 
 type ServeMuxEngine struct {
-	*service.BaseService
 	mux      *http.ServeMux
 	handlers map[string]*handlerMethod
-}
-
-// GetServiceUri implements service.Service.
-func (m *ServeMuxEngine) GetServiceUri() string {
-	return "lokstra://router_engine/" + m.GetServiceName()
 }
 
 type handlerMethod struct {

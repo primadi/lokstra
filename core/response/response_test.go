@@ -83,7 +83,7 @@ func TestResponse_WithMeta(t *testing.T) {
 	}
 
 	// Verify meta content
-	metaMap, ok := r.Meta.(map[string]interface{})
+	metaMap, ok := r.Meta.(map[string]any)
 	if !ok {
 		t.Error("Expected meta to be a map")
 	}

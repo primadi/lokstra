@@ -8,13 +8,21 @@ import (
 )
 
 func main() {
+	// Create the greeting service with various return types
+	svc := hello_service.NewGreetingService()
+
 	regCtx := lokstra.NewGlobalRegistrationContext()
 
-	svc := hello_service.NewGreetingService("greeting_service")
-	svr := lokstra.NewServer(regCtx, "hello-service-server")
-	app := svr.NewApp("hello-service-app", ":8080")
+	// Create new application
+	app := lokstra.NewApp(regCtx, "hello-service-app", ":8080")
 
+	// Mount RPC service at /rpc endpoint
 	app.MountRpcService("/rpc", svc, false)
 
+	// Create server and app
+	svr := lokstra.NewServer(regCtx, "hello-service-server")
+	svr.AddApp(app)
+
+	// Start the server
 	svr.StartAndWait(10 * time.Second)
 }

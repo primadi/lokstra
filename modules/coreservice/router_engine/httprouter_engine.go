@@ -1,7 +1,6 @@
 package router_engine
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/primadi/lokstra/core/service"
@@ -10,32 +9,21 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func NewHttpRouterEngine(serviceName string, _ any) (service.Service, error) {
-	if serviceName == "" {
-		return nil, errors.New("service name cannot be empty")
-	}
-
+func NewHttpRouterEngine(_ any) (service.Service, error) {
 	return &HttpRouterEngine{
-		BaseService: service.NewBaseService(serviceName),
-		hr:          httprouter.New(),
+		hr: httprouter.New(),
 	}, nil
 }
 
 type HttpRouterEngine struct {
-	*service.BaseService
 	hr *httprouter.Router
 	sm serviceapi.RouterEngine
-}
-
-// GetServiceUri implements service.Service.
-func (h *HttpRouterEngine) GetServiceUri() string {
-	return "lokstra://router_engine/" + h.GetServiceName()
 }
 
 // ServeReverseProxy implements RouterEngine.
 func (h *HttpRouterEngine) ServeReverseProxy(prefix string, target string) {
 	if h.sm == nil {
-		sm, _ := NewServeMuxEngine("default", nil)
+		sm, _ := NewServeMuxEngine(nil)
 		h.sm = sm.(serviceapi.RouterEngine)
 		h.hr.NotFound = h.sm
 	}
@@ -45,7 +33,7 @@ func (h *HttpRouterEngine) ServeReverseProxy(prefix string, target string) {
 // ServeSPA implements RouterEngine.
 func (h *HttpRouterEngine) ServeSPA(prefix string, indexFile string) {
 	if h.sm == nil {
-		sm, _ := NewServeMuxEngine("default", nil)
+		sm, _ := NewServeMuxEngine(nil)
 		h.sm = sm.(serviceapi.RouterEngine)
 		h.hr.NotFound = h.sm
 	}
@@ -55,7 +43,7 @@ func (h *HttpRouterEngine) ServeSPA(prefix string, indexFile string) {
 // ServeStatic implements RouterEngine.
 func (h *HttpRouterEngine) ServeStatic(prefix string, folder http.Dir) {
 	if h.sm == nil {
-		sm, _ := NewServeMuxEngine("default", nil)
+		sm, _ := NewServeMuxEngine(nil)
 		h.sm = sm.(serviceapi.RouterEngine)
 		h.hr.NotFound = h.sm
 	}

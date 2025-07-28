@@ -76,7 +76,7 @@ Lokstra offers a clear project structure and batteries-included features, but ne
 
 ```
 lokstra/
-├── common/         # Common: customtype, json, uri, utils
+├── common/         # Common: customtype, json, utils
 ├── core/           # Core: app, config, meta, midware, registration, 
 |                           request, response, router, server, service
 ├── middleware/     # Built-in middleware

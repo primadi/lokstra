@@ -28,21 +28,22 @@ type MountReverseProxyConfig struct {
 }
 
 type MountRpcServiceConfig struct {
-	BasePath   string `yaml:"base_path"`
-	ServiceUri string `yaml:"service_uri"`
+	BasePath    string `yaml:"base_path"`
+	ServiceName string `yaml:"service_name"`
 }
 
 type GroupConfig struct {
-	Prefix string        `yaml:"prefix"`
-	Groups []GroupConfig `yaml:"groups,omitempty"`
-	Routes []RouteConfig `yaml:"routes,omitempty"`
+	Prefix   string        `yaml:"prefix"`
+	Groups   []GroupConfig `yaml:"groups,omitempty"`
+	Routes   []RouteConfig `yaml:"routes,omitempty"`
+	LoadFrom []string      `yaml:"load_from,omitempty"` // multiple files
 
 	MiddlewareRaw      any                `yaml:"middleware"`
 	Middleware         []MiddlewareConfig `yaml:"-"`
 	OverrideMiddleware bool               `yaml:"override_middleware,omitempty"`
 
 	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
-	MountSPA          []MountSPAConfig          `yaml:"mount_spa,omitempty"`
+	MountSpa          []MountSPAConfig          `yaml:"mount_spa,omitempty"`
 	MountReverseProxy []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
 	MountRpcService   []MountRpcServiceConfig   `yaml:"mount_rpc_service,omitempty"`
 }
@@ -79,7 +80,7 @@ type ServiceConfig struct {
 type ModuleConfig struct {
 	Name        string         `yaml:"name"`
 	Path        string         `yaml:"path"`
-	Entry       string         `yaml:"entry, omitempty"`
+	Entry       string         `yaml:"entry,omitempty"`
 	Settings    map[string]any `yaml:"settings,omitempty"`
 	Permissions map[string]any `yaml:"permissions,omitempty"`
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/modules/coreservice"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
@@ -24,8 +25,8 @@ type App struct {
 }
 
 func NewApp(ctx registration.Context, name string, addr string) *App {
-	listenerType := router.DEFAULT_LISTENER_NAME
-	routerEngineType := router.DEFAULT_ROUTER_ENGINE_NAME
+	listenerType := coreservice.DEFAULT_LISTENER_NAME
+	routerEngineType := coreservice.DEFAULT_ROUTER_ENGINE_NAME
 	return NewAppCustom(ctx, name, addr, listenerType, routerEngineType, nil)
 }
 
@@ -42,10 +43,12 @@ func NewAppCustom(ctx registration.Context, name string, addr string,
 		addr: addr,
 
 		listenerType: listenerType,
-		listener:     router.NewListenerWithEngine(ctx, listenerType, name, settings),
+		listener: router.NewListenerWithEngine(ctx, listenerType,
+			"http_listener."+name, settings),
 
 		routingEngineType: routerEngineType,
-		Router:            router.NewRouterWithEngine(ctx, routerEngineType, name, settings),
+		Router: router.NewRouterWithEngine(ctx, routerEngineType,
+			"router_engine."+name, settings),
 
 		settings: maps.Clone(settings),
 	}

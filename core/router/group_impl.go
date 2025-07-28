@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/meta"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
@@ -127,25 +126,24 @@ func (g *GroupImpl) MountStatic(prefix string, folder http.Dir) Router {
 // MountRpcService implements Router.
 func (g *GroupImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
 	g.mwLocked = true
-	cleanPath := g.cleanPrefix(path)
+	cleanPath := g.cleanPrefix(path) + "/:method"
 
-	rpcMeta := &meta.RpcServiceMeta{
-		MethodParam: ":method",
+	rpcMeta := &service.RpcServiceMeta{
+		MethodParam: "method",
 	}
 	switch s := svc.(type) {
 	case string:
-		rpcMeta.ServiceURI = s
-	case service.Service:
-		rpcMeta.ServiceURI = s.GetServiceUri()
-		rpcMeta.ServiceInst = s
-	case *meta.RpcServiceMeta:
+		rpcMeta.ServiceName = s
+	case *service.RpcServiceMeta:
 		rpcMeta = s
+	case service.Service:
+		rpcMeta.ServiceInst = s
 	default:
 		fmt.Printf("Service type: %T\n", svc)
 		panic("Invalid service type, must be a string, *RpcServiceMeta, or iface.Service")
 	}
 
-	handlerMeta := &meta.HandlerMeta{
+	handlerMeta := &request.HandlerMeta{
 		HandlerFunc: func(ctx *request.Context) error {
 			return ctx.ErrorInternal("RpcService not yet resolved")
 		},

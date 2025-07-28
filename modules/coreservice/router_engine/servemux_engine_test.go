@@ -7,41 +7,29 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/serviceapi"
 )
 
 func TestNewServeMuxEngine(t *testing.T) {
 	tests := []struct {
-		name        string
-		serviceName string
-		config      any
-		wantErr     bool
+		name    string
+		config  any
+		wantErr bool
 	}{
 		{
-			name:        "valid_creation",
-			serviceName: "test_servemux",
-			config:      nil,
-			wantErr:     false,
+			name:    "valid_creation",
+			config:  nil,
+			wantErr: false,
 		},
 		{
-			name:        "with_config",
-			serviceName: "test_servemux_config",
-			config:      map[string]any{"key": "value"},
-			wantErr:     false,
-		},
-		{
-			name:        "empty_service_name",
-			serviceName: "",
-			config:      nil,
-			wantErr:     true,
+			name:    "with_config",
+			config:  map[string]any{"key": "value"},
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewServeMuxEngine(tt.serviceName, tt.config)
+			got, err := NewServeMuxEngine(tt.config)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewServeMuxEngine() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -55,33 +43,12 @@ func TestNewServeMuxEngine(t *testing.T) {
 				t.Error("NewServeMuxEngine() returned nil")
 				return
 			}
-
-			// Verify it implements the required interfaces
-			var _ service.Service = got
-
-			// Verify service name
-			if service, ok := got.(*ServeMuxEngine); ok {
-				// Verify RouterEngine interface
-				var _ serviceapi.RouterEngine = service
-
-				if service.GetServiceName() != tt.serviceName {
-					t.Errorf("Service name = %v, want %v", service.GetServiceName(), tt.serviceName)
-				}
-
-				// Test GetServiceUri
-				expectedUri := "lokstra://router_engine/" + tt.serviceName
-				if uri := service.GetServiceUri(); uri != expectedUri {
-					t.Errorf("GetServiceUri() = %v, want %v", uri, expectedUri)
-				}
-			} else {
-				t.Error("NewServeMuxEngine() did not return *ServeMuxEngine")
-			}
 		})
 	}
 }
 
 func TestServeMuxEngine_HandleMethod(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -153,7 +120,7 @@ func TestServeMuxEngine_HandleMethod(t *testing.T) {
 }
 
 func TestServeMuxEngine_ServeHTTP(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -243,7 +210,7 @@ func TestServeMuxEngine_ServeHTTP(t *testing.T) {
 }
 
 func TestServeMuxEngine_MethodNotAllowed(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -318,7 +285,7 @@ func TestServeMuxEngine_MethodNotAllowed(t *testing.T) {
 }
 
 func TestServeMuxEngine_HEADFallback(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -399,7 +366,7 @@ func TestServeMuxEngine_HEADFallback(t *testing.T) {
 }
 
 func TestServeMuxEngine_ServeStatic(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -477,7 +444,7 @@ func TestServeMuxEngine_ServeStatic(t *testing.T) {
 }
 
 func TestServeMuxEngine_ServeSPA(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -566,7 +533,7 @@ func TestServeMuxEngine_ServeSPA(t *testing.T) {
 }
 
 func TestServeMuxEngine_ServeReverseProxy(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -654,7 +621,7 @@ func TestServeMuxEngine_ServeReverseProxy(t *testing.T) {
 }
 
 func TestServeMuxEngine_MultipleMethodsOnSamePath(t *testing.T) {
-	engine, err := NewServeMuxEngine("test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -752,7 +719,7 @@ func TestServeMuxEngine_MultipleMethodsOnSamePath(t *testing.T) {
 }
 
 func TestServeMuxEngine_Integration(t *testing.T) {
-	engine, err := NewServeMuxEngine("integration_test", nil)
+	engine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}

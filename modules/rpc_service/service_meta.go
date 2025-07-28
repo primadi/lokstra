@@ -27,14 +27,14 @@ type methodMeta struct {
 var serviceMetaRegistry = make(map[string]*serviceMeta)
 
 func registerServiceMeta(svc service.Service) (*serviceMeta, error) {
-	serviceUri := svc.GetServiceUri()
-	if _, exists := serviceMetaRegistry[serviceUri]; exists {
-		return nil, fmt.Errorf("rpc service %q already registered", serviceUri)
+	serviceName := reflect.TypeOf(svc).Name()
+	if _, exists := serviceMetaRegistry[serviceName]; exists {
+		return nil, fmt.Errorf("rpc service %q already registered", serviceName)
 	}
 
 	t := reflect.TypeOf(svc)
 	if t.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("rpc service %q must be a pointer", serviceUri)
+		return nil, fmt.Errorf("rpc service %q must be a pointer", serviceName)
 	}
 
 	methods := map[string]*methodMeta{}
@@ -79,24 +79,24 @@ func registerServiceMeta(svc service.Service) (*serviceMeta, error) {
 	}
 
 	svcMeta := &serviceMeta{
-		Name:    serviceUri,
+		Name:    serviceName,
 		Impl:    svc,
 		Methods: methods,
 	}
 
-	serviceMetaRegistry[serviceUri] = svcMeta
+	serviceMetaRegistry[serviceName] = svcMeta
 
 	return svcMeta, nil
 }
 
 func getServiceMeta(svc service.Service) (*serviceMeta, error) {
-	serviceUri := svc.GetServiceUri()
-	svcMeta, ok := serviceMetaRegistry[serviceUri]
+	serviceName := reflect.TypeOf(svc).Name()
+	svcMeta, ok := serviceMetaRegistry[serviceName]
 	if !ok {
 		var err error
 		svcMeta, err = registerServiceMeta(svc)
 		if err != nil {
-			return nil, fmt.Errorf("failed to register service %q: %w", serviceUri, err)
+			return nil, fmt.Errorf("failed to register service %q: %w", serviceName, err)
 		}
 	}
 	return svcMeta, nil
@@ -139,7 +139,7 @@ func (mm *methodMeta) HandleRequest(svc *serviceMeta, ctx *request.Context) erro
 			errVal := result[0].Interface().(error)
 			return ctx.ErrorInternal(errVal.Error())
 		}
-		ctx.Headers.Set("Content-Type", "application/octet-stream")
+		ctx.WithHeader("Content-Type", "application/octet-stream")
 		return ctx.Ok(nil) // No content
 	case 2:
 		if !result[1].IsNil() {

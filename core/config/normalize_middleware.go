@@ -2,7 +2,7 @@ package config
 
 import "fmt"
 
-func NormalizeMiddlewareConfig(input any) ([]MiddlewareConfig, error) {
+func normalizeMiddlewareConfig(input any) ([]MiddlewareConfig, error) {
 	var result []MiddlewareConfig
 
 	switch items := input.(type) {

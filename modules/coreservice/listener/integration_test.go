@@ -18,14 +18,14 @@ import (
 // TestListener_InterfaceCompliance tests that all listeners implement required interfaces
 func TestListener_InterfaceCompliance(t *testing.T) {
 	// Test NetHttpListener
-	netListener, err := NewNetHttpListener("test", nil)
+	netListener, err := NewNetHttpListener(nil)
 	if err != nil {
 		t.Fatalf("Failed to create NetHttpListener: %v", err)
 	}
 	var _ serviceapi.HttpListener = netListener.(*NetHttpListener)
 
 	// Test FastHttpListener
-	fastListener, err := NewFastHttpListener("test", nil)
+	fastListener, err := NewFastHttpListener(nil)
 	if err != nil {
 		t.Fatalf("Failed to create FastHttpListener: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestListener_InterfaceCompliance(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertsIntegration(t)
 	defer cleanup()
 
-	secureListener, err := NewSecureNetHttpListener("test", map[string]any{
+	secureListener, err := NewSecureNetHttpListener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -45,7 +45,7 @@ func TestListener_InterfaceCompliance(t *testing.T) {
 	var _ serviceapi.HttpListener = secureListener.(*SecureNetHttpListener)
 
 	// Test Http3Listener with test certs
-	http3Listener, err := NewHttp3Listener("test", map[string]any{
+	http3Listener, err := NewHttp3Listener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -64,14 +64,14 @@ func TestListener_BasicFunctionality(t *testing.T) {
 		{
 			name: "NetHttpListener",
 			createListener: func() serviceapi.HttpListener {
-				listener, _ := NewNetHttpListener("test", nil)
+				listener, _ := NewNetHttpListener(nil)
 				return listener.(*NetHttpListener)
 			},
 		},
 		{
 			name: "FastHttpListener",
 			createListener: func() serviceapi.HttpListener {
-				listener, _ := NewFastHttpListener("test", nil)
+				listener, _ := NewFastHttpListener(nil)
 				return listener.(*FastHttpListener)
 			},
 		},
@@ -110,7 +110,7 @@ func TestListener_TLSListeners(t *testing.T) {
 		{
 			name: "SecureNetHttpListener",
 			createListener: func() serviceapi.HttpListener {
-				listener, err := NewSecureNetHttpListener("test", map[string]any{
+				listener, err := NewSecureNetHttpListener(map[string]any{
 					CERT_FILE_KEY: certFile,
 					KEY_FILE_KEY:  keyFile,
 				})
@@ -123,7 +123,7 @@ func TestListener_TLSListeners(t *testing.T) {
 		{
 			name: "Http3Listener",
 			createListener: func() serviceapi.HttpListener {
-				listener, err := NewHttp3Listener("test", map[string]any{
+				listener, err := NewHttp3Listener(map[string]any{
 					CERT_FILE_KEY: certFile,
 					KEY_FILE_KEY:  keyFile,
 				})
@@ -163,19 +163,19 @@ func TestListener_ConfigurationParsing(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		factory       func(string, any) (any, error)
+		factory       func(any) (any, error)
 		validConfig   any
 		invalidConfig any
 	}{
 		{
 			name:          "NetHttpListener",
-			factory:       func(n string, c any) (any, error) { return NewNetHttpListener(n, c) },
+			factory:       func(c any) (any, error) { return NewNetHttpListener(c) },
 			validConfig:   map[string]any{},
 			invalidConfig: nil, // NetHttpListener accepts any config
 		},
 		{
 			name:    "FastHttpListener",
-			factory: func(n string, c any) (any, error) { return NewFastHttpListener(n, c) },
+			factory: func(c any) (any, error) { return NewFastHttpListener(c) },
 			validConfig: map[string]any{
 				READ_TIMEOUT_KEY:  "5s",
 				WRITE_TIMEOUT_KEY: "5s",
@@ -185,7 +185,7 @@ func TestListener_ConfigurationParsing(t *testing.T) {
 		},
 		{
 			name:    "SecureNetHttpListener",
-			factory: func(n string, c any) (any, error) { return NewSecureNetHttpListener(n, c) },
+			factory: func(c any) (any, error) { return NewSecureNetHttpListener(c) },
 			validConfig: map[string]any{
 				CERT_FILE_KEY: certFile,
 				KEY_FILE_KEY:  keyFile,
@@ -196,7 +196,7 @@ func TestListener_ConfigurationParsing(t *testing.T) {
 		},
 		{
 			name:    "Http3Listener",
-			factory: func(n string, c any) (any, error) { return NewHttp3Listener(n, c) },
+			factory: func(c any) (any, error) { return NewHttp3Listener(c) },
 			validConfig: map[string]any{
 				CERT_FILE_KEY: certFile,
 				KEY_FILE_KEY:  keyFile,
@@ -209,7 +209,7 @@ func TestListener_ConfigurationParsing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name+"_valid_config", func(t *testing.T) {
-			_, err := tt.factory("test", tt.validConfig)
+			_, err := tt.factory(tt.validConfig)
 			if err != nil {
 				t.Errorf("Valid config should not error: %v", err)
 			}
@@ -217,7 +217,7 @@ func TestListener_ConfigurationParsing(t *testing.T) {
 
 		if tt.invalidConfig != nil {
 			t.Run(tt.name+"_invalid_config", func(t *testing.T) {
-				_, err := tt.factory("test", tt.invalidConfig)
+				_, err := tt.factory(tt.invalidConfig)
 				if err == nil {
 					t.Error("Invalid config should error")
 				}
@@ -257,7 +257,7 @@ func TestListener_TimeoutBehavior(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("FastHttpListener_"+tt.name, func(t *testing.T) {
-			service, err := NewFastHttpListener("test", tt.timeoutConfig)
+			service, err := NewFastHttpListener(tt.timeoutConfig)
 			if err != nil {
 				t.Fatalf("Failed to create FastHttpListener: %v", err)
 			}
@@ -287,7 +287,7 @@ func TestListener_TimeoutBehavior(t *testing.T) {
 		}
 
 		t.Run("SecureNetHttpListener_"+tt.name, func(t *testing.T) {
-			service, err := NewSecureNetHttpListener("test", secureConfig)
+			service, err := NewSecureNetHttpListener(secureConfig)
 			if err != nil {
 				t.Fatalf("Failed to create SecureNetHttpListener: %v", err)
 			}

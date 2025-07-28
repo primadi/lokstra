@@ -19,7 +19,6 @@ import (
 // NetHttpListener implements the HttpListener interface using the net/http package.
 // It provides a standard HTTP server with graceful shutdown capabilities.
 type NetHttpListener struct {
-	*service.BaseService
 	server *http.Server
 
 	mu             sync.RWMutex
@@ -29,15 +28,8 @@ type NetHttpListener struct {
 	activeCount    atomic.Int32
 }
 
-// GetServiceUri implements service.Service.
-func (n *NetHttpListener) GetServiceUri() string {
-	return "lokstra://http_listener/" + n.GetServiceName()
-}
-
-func NewNetHttpListener(serviceName string, _ any) (service.Service, error) {
-	return &NetHttpListener{
-		BaseService: service.NewBaseService(serviceName),
-	}, nil
+func NewNetHttpListener(_ any) (service.Service, error) {
+	return &NetHttpListener{}, nil
 }
 
 func (n *NetHttpListener) IsRunning() bool {

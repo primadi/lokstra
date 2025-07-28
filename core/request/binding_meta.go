@@ -31,11 +31,11 @@ func getOrBuildBindingMeta(t reflect.Type) *bindingMeta {
 		t = t.Elem()
 	}
 
-	if meta, ok := bindingMetaCache.Load(t); ok {
-		return meta.(*bindingMeta)
+	if bindMeta, ok := bindingMetaCache.Load(t); ok {
+		return bindMeta.(*bindingMeta)
 	}
 
-	meta := &bindingMeta{
+	bindMeta := &bindingMeta{
 		Type: t,
 	}
 
@@ -88,14 +88,14 @@ func getOrBuildBindingMeta(t reflect.Type) *bindingMeta {
 			IsMap:             isMap,
 		}
 
-		meta.Fields = append(meta.Fields, fieldMeta)
+		bindMeta.Fields = append(bindMeta.Fields, fieldMeta)
 	}
 
-	actual, loaded := bindingMetaCache.LoadOrStore(t, meta)
+	actual, loaded := bindingMetaCache.LoadOrStore(t, bindMeta)
 	if loaded {
 		return actual.(*bindingMeta)
 	}
-	return meta
+	return bindMeta
 }
 
 func parseBindingTag(field reflect.StructField) (tagType, paramName string) {

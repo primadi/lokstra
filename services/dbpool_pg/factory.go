@@ -8,17 +8,13 @@ import (
 
 const DSN_KEY = "dsn"
 
-func ServiceFactory(serviceName string, config any) (service.Service, error) {
+func ServiceFactory(config any) (service.Service, error) {
 	var dsn string
 
-	name := "default"
 	switch t := config.(type) {
 	case string:
 		dsn = t
 	case map[string]any:
-		if nm, ok := t["name"].(string); ok {
-			name = nm
-		}
 		if dk, ok := t[DSN_KEY].(string); ok {
 			dsn = dk
 		} else {
@@ -27,9 +23,6 @@ func ServiceFactory(serviceName string, config any) (service.Service, error) {
 	case []string:
 		if len(t) == 1 {
 			dsn = t[0]
-		} else if len(t) == 2 {
-			name = t[0]
-			dsn = t[1]
 		} else {
 			return nil, fmt.Errorf("dbpool_pg requires a valid DSN in the configuration slice")
 		}
@@ -37,5 +30,5 @@ func ServiceFactory(serviceName string, config any) (service.Service, error) {
 		return nil, fmt.Errorf("dbpool_pg requires a valid DSN in the configuration")
 	}
 
-	return NewPgxPostgresPool(name, dsn)
+	return NewPgxPostgresPool(dsn)
 }

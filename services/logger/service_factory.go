@@ -7,7 +7,7 @@ import (
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-func ServiceFactory(serviceName string, config any) (service.Service, error) {
+func ServiceFactory(config any) (service.Service, error) {
 	levelStr := "info"
 
 	switch v := config.(type) {
@@ -25,5 +25,5 @@ func ServiceFactory(serviceName string, config any) (service.Service, error) {
 	if !ok {
 		fmt.Printf("Invalid log level '%s', defaulting to 'info'", levelStr)
 	}
-	return NewService(serviceName, level)
+	return NewService(level)
 }

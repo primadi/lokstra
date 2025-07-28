@@ -75,7 +75,7 @@ func TestNewFastHttpListener(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewFastHttpListener("test", tt.config)
+			service, err := NewFastHttpListener(tt.config)
 			if err != nil {
 				t.Errorf("NewFastHttpListener() error = %v, want nil", err)
 				return
@@ -157,7 +157,7 @@ func TestFastHttpListener_ActiveRequest(t *testing.T) {
 }
 
 func TestFastHttpListener_ListenAndServe_TCP(t *testing.T) {
-	service, err := NewFastHttpListener("test", map[string]any{
+	service, err := NewFastHttpListener(map[string]any{
 		READ_TIMEOUT_KEY:  "5s",
 		WRITE_TIMEOUT_KEY: "5s",
 		IDLE_TIMEOUT_LEY:  "10s",
@@ -615,7 +615,7 @@ func TestFastHttpListener_TimeoutConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewFastHttpListener("test", tt.config)
+			service, err := NewFastHttpListener(tt.config)
 			if err != nil {
 				t.Fatalf("NewFastHttpListener() error = %v", err)
 			}

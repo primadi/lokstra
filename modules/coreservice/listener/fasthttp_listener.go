@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -23,7 +24,6 @@ import (
 // FastHttpListener implements the HttpListener interface using the fasthttp package.
 // It provides a high-performance HTTP server with graceful shutdown capabilities.
 type FastHttpListener struct {
-	*service.BaseService
 	server *fasthttp.Server
 
 	readTimeout  time.Duration
@@ -38,12 +38,7 @@ type FastHttpListener struct {
 	activeCount    atomic.Int32
 }
 
-// GetServiceUri implements service.Service.
-func (f *FastHttpListener) GetServiceUri() string {
-	return "lokstra://http_listener/" + f.GetServiceName()
-}
-
-func NewFastHttpListener(serviceName string, config any) (service.Service, error) {
+func NewFastHttpListener(config any) (service.Service, error) {
 	var readTimeout, writeTimeout, idleTimeout time.Duration
 	if cfg, ok := config.(map[string]any); ok {
 
@@ -52,7 +47,6 @@ func NewFastHttpListener(serviceName string, config any) (service.Service, error
 		idleTimeout = utils.GetDurationFromMap(cfg, IDLE_TIMEOUT_LEY, DEFAULT_IDLE_TIMEOUT)
 	}
 	return &FastHttpListener{
-		BaseService:  service.NewBaseService(serviceName),
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
 		idleTimeout:  idleTimeout,

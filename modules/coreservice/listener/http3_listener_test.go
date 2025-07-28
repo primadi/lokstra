@@ -186,7 +186,7 @@ func TestNewHttp3Listener(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewHttp3Listener("test", tt.config)
+			service, err := NewHttp3Listener(tt.config)
 
 			if tt.wantErr {
 				if err == nil {
@@ -298,7 +298,7 @@ func TestHttp3Listener_ListenAndServe(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFilesHttp3(t)
 	defer cleanup()
 
-	service, err := NewHttp3Listener("test", map[string]any{
+	service, err := NewHttp3Listener(map[string]any{
 		CERT_FILE_KEY:    certFile,
 		KEY_FILE_KEY:     keyFile,
 		IDLE_TIMEOUT_LEY: "10s",
@@ -353,7 +353,7 @@ func TestHttp3Listener_GracefulShutdown(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFilesHttp3(t)
 	defer cleanup()
 
-	service, err := NewHttp3Listener("test", map[string]any{
+	service, err := NewHttp3Listener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -434,7 +434,7 @@ func TestHttp3Listener_ShutdownTimeout(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFilesHttp3(t)
 	defer cleanup()
 
-	service, err := NewHttp3Listener("test", map[string]any{
+	service, err := NewHttp3Listener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -479,7 +479,7 @@ func TestHttp3Listener_ActiveRequestTracking(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFilesHttp3(t)
 	defer cleanup()
 
-	service, err := NewHttp3Listener("test", map[string]any{
+	service, err := NewHttp3Listener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})
@@ -546,7 +546,7 @@ func TestHttp3Listener_ConfigurationVariations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewHttp3Listener("test", tt.config)
+			service, err := NewHttp3Listener(tt.config)
 			if err != nil {
 				t.Fatalf("NewHttp3Listener() error = %v", err)
 			}
@@ -564,7 +564,7 @@ func TestHttp3Listener_RequestHandlingDuringShutdown(t *testing.T) {
 	certFile, keyFile, cleanup := createTestCertFilesHttp3(t)
 	defer cleanup()
 
-	service, err := NewHttp3Listener("test", map[string]any{
+	service, err := NewHttp3Listener(map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 	})

@@ -30,7 +30,7 @@ func TestHttpRouterDefaultBehavior(t *testing.T) {
 
 func TestOurHttpRouterBehavior(t *testing.T) {
 	// Test our HttpRouterEngine behavior
-	engine, err := NewHttpRouterEngine("test", nil)
+	engine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}

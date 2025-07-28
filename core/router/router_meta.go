@@ -1,21 +1,22 @@
 package router
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/primadi/lokstra/core/meta"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
 type RouteMeta struct {
 	Path               string
 	Method             request.HTTPMethod
-	Handler            *meta.HandlerMeta
+	Handler            *request.HandlerMeta
 	OverrideMiddleware bool
 	Middleware         []*midware.Execution
 }
@@ -97,14 +98,14 @@ func (r *RouterMeta) HandleWithOverrideMiddleware(method request.HTTPMethod, pat
 
 func (r *RouterMeta) handle(method request.HTTPMethod, path string, handler any,
 	overrideMiddleware bool, middleware ...any) *RouterMeta {
-	var handlerInfo *meta.HandlerMeta
+	var handlerInfo *request.HandlerMeta
 
 	switch h := handler.(type) {
 	case request.HandlerFunc:
-		handlerInfo = &meta.HandlerMeta{HandlerFunc: h}
+		handlerInfo = &request.HandlerMeta{HandlerFunc: h}
 	case string:
-		handlerInfo = &meta.HandlerMeta{Name: h}
-	case *meta.HandlerMeta:
+		handlerInfo = &request.HandlerMeta{Name: h}
+	case *request.HandlerMeta:
 		handlerInfo = h
 	default:
 		fmt.Printf("Handler type: %T\n", handler)
@@ -173,21 +174,25 @@ func (r *RouterMeta) cleanPrefix(prefix string) string {
 
 func ResolveAllNamed(ctx registration.Context, r *RouterMeta) {
 	for i, route := range r.Routes {
-		if rpcServiceMeta, ok := route.Handler.Extension.(*meta.RpcServiceMeta); ok {
+		if rpcServiceMeta, ok := route.Handler.Extension.(*service.RpcServiceMeta); ok {
 			svc := rpcServiceMeta.ServiceInst
 			if svc == nil {
-				svc = ctx.GetService(rpcServiceMeta.ServiceURI)
-				if svc == nil {
-					panic(fmt.Sprintf("Rpc Service '%s' not found", rpcServiceMeta.ServiceURI))
+				var err error
+				svc, err = ctx.GetService(rpcServiceMeta.ServiceName)
+				if err != nil {
+					panic(fmt.Sprintf("Rpc Service '%s' not found", rpcServiceMeta.ServiceName))
 				}
-				r.Routes[i].Handler.Extension.(*meta.RpcServiceMeta).ServiceInst = svc
+				r.Routes[i].Handler.Extension.(*service.RpcServiceMeta).ServiceInst = svc
 			}
-			rpcService := ctx.GetService("lokstra://rpc_server/default").(serviceapi.RpcServer)
-			if rpcService != nil {
-				r.Routes[i].Handler.HandlerFunc = func(ctx *request.Context) error {
-					methodParam := ctx.GetPathParam(rpcServiceMeta.MethodParam)
-					return rpcService.HandleRequest(ctx, svc, methodParam)
-				}
+			rpcSvr, err := getOrCreateService[serviceapi.RpcServer](ctx, "rpc_server.default",
+				"rpc_service.rpc_server")
+			if err != nil {
+				panic(fmt.Sprintf("Failed to get RPC server: %s", err.Error()))
+			}
+
+			r.Routes[i].Handler.HandlerFunc = func(ctx *request.Context) error {
+				methodParam := ctx.GetPathParam(rpcServiceMeta.MethodParam)
+				return rpcSvr.HandleRequest(ctx, svc, methodParam)
 			}
 		} else if route.Handler.HandlerFunc == nil {
 			handler := ctx.GetHandler(route.Handler.Name)
@@ -219,4 +224,21 @@ func resolveMiddleware(ctx registration.Context, mw *midware.Execution) {
 		mw.MiddlewareFn = mwFactory(mw.Config)
 		mw.Priority = priority
 	}
+}
+
+func getOrCreateService[T any](ctx registration.Context,
+	serviceName string, factoryName string, config ...any) (T, error) {
+	svc, err := ctx.GetService(serviceName)
+	if err != nil {
+		svc, err = ctx.CreateService(factoryName, serviceName, config...)
+		if err != nil {
+			var zero T
+			return zero, errors.New("failed to create service: " + err.Error())
+		}
+	}
+	if typedSvc, ok := svc.(T); ok {
+		return typedSvc, nil
+	}
+	var zero T
+	return zero, errors.New("service type mismatch: " + serviceName)
 }

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/primadi/lokstra/core/meta"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
@@ -12,11 +11,7 @@ import (
 
 // Mock RPC Service for testing
 type MockRpcService struct {
-	uri string
-}
-
-func (m *MockRpcService) GetServiceUri() string {
-	return m.uri
+	name string
 }
 
 var _ service.Service = (*MockRpcService)(nil)
@@ -25,8 +20,8 @@ func TestRouterImpl_MountRpcService_StringService(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 	r := router.NewRouter(ctx, "test-router", map[string]any{})
 
-	serviceURI := "user.service"
-	result := r.MountRpcService("/rpc", serviceURI, false)
+	serviceName := "user.service"
+	result := r.MountRpcService("/rpc", serviceName, false)
 
 	if result == nil {
 		t.Error("Expected router to be returned, got nil")
@@ -41,8 +36,8 @@ func TestRouterImpl_MountRpcService_StringService(t *testing.T) {
 	if route.Method != "POST" {
 		t.Errorf("Expected RPC route method to be POST, got %s", route.Method)
 	}
-	if route.Path != "/rpc" {
-		t.Errorf("Expected RPC route path to be '/rpc', got %s", route.Path)
+	if route.Path != "/rpc/:method" {
+		t.Errorf("Expected RPC route path to be '/rpc/:method', got %s", route.Path)
 	}
 }
 
@@ -50,7 +45,7 @@ func TestRouterImpl_MountRpcService_ServiceInterface(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 	r := router.NewRouter(ctx, "test-router", map[string]any{})
 
-	mockService := &MockRpcService{uri: "user.service"}
+	mockService := &MockRpcService{name: "user.service"}
 	result := r.MountRpcService("/rpc", mockService, false)
 
 	if result == nil {
@@ -67,12 +62,12 @@ func TestRouterImpl_MountRpcService_ServiceInterface(t *testing.T) {
 		t.Error("Expected RPC route to have extension metadata")
 	}
 
-	rpcMeta, ok := route.Handler.Extension.(*meta.RpcServiceMeta)
+	rpcMeta, ok := route.Handler.Extension.(*service.RpcServiceMeta)
 	if !ok {
 		t.Error("Expected RPC route extension to be *RpcServiceMeta")
 	}
-	if rpcMeta.ServiceURI != "user.service" {
-		t.Errorf("Expected RPC service URI to be 'user.service', got %s", rpcMeta.ServiceURI)
+	if rpcMeta.ServiceInst.(*MockRpcService).name != "user.service" {
+		t.Errorf("Expected RPC service Name to be 'user.service', got %s", rpcMeta.ServiceName)
 	}
 }
 
@@ -80,8 +75,8 @@ func TestRouterImpl_MountRpcService_RpcServiceMeta(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 	r := router.NewRouter(ctx, "test-router", map[string]any{})
 
-	rpcMeta := &meta.RpcServiceMeta{
-		ServiceURI:  "custom.service",
+	rpcMeta := &service.RpcServiceMeta{
+		ServiceName: "custom.service",
 		MethodParam: ":action",
 	}
 
@@ -97,12 +92,12 @@ func TestRouterImpl_MountRpcService_RpcServiceMeta(t *testing.T) {
 	}
 
 	route := routerMeta.Routes[len(routerMeta.Routes)-1]
-	storedRpcMeta, ok := route.Handler.Extension.(*meta.RpcServiceMeta)
+	storedRpcMeta, ok := route.Handler.Extension.(*service.RpcServiceMeta)
 	if !ok {
 		t.Error("Expected RPC route extension to be *RpcServiceMeta")
 	}
-	if storedRpcMeta.ServiceURI != "custom.service" {
-		t.Errorf("Expected RPC service URI to be 'custom.service', got %s", storedRpcMeta.ServiceURI)
+	if storedRpcMeta.ServiceName != "custom.service" {
+		t.Errorf("Expected RPC service name to be 'custom.service', got %s", storedRpcMeta.ServiceName)
 	}
 	if storedRpcMeta.MethodParam != ":action" {
 		t.Errorf("Expected RPC method param to be ':action', got %s", storedRpcMeta.MethodParam)
@@ -132,7 +127,7 @@ func TestRouterImpl_HandlerTypes(t *testing.T) {
 		},
 		{
 			name: "HandlerMeta",
-			handler: &meta.HandlerMeta{
+			handler: &request.HandlerMeta{
 				Name: "user.getAll",
 				HandlerFunc: func(ctx *request.Context) error {
 					return ctx.Ok("OK")

@@ -21,7 +21,6 @@ import (
 
 // HTTP3Listner implements the HttpListener interface with HTTP/3 support.
 type Http3Listener struct {
-	*service.BaseService
 	server   *http3.Server
 	certFile string
 	keyFile  string
@@ -36,13 +35,8 @@ type Http3Listener struct {
 	activeCount    atomic.Int32
 }
 
-// GetServiceUri implements service.Service.
-func (s *Http3Listener) GetServiceUri() string {
-	return "lokstra://http_listener/" + s.GetServiceName()
-}
-
 // NewHttp3Listener returns a new Http3Listener instance.
-func NewHttp3Listener(serviceName string, config any) (service.Service, error) {
+func NewHttp3Listener(config any) (service.Service, error) {
 	var certFile, keyFile, caFile string
 	var idleTimeout time.Duration
 
@@ -83,10 +77,9 @@ func NewHttp3Listener(serviceName string, config any) (service.Service, error) {
 	}
 
 	return &Http3Listener{
-		BaseService: service.NewBaseService(serviceName),
-		certFile:    certFile,
-		keyFile:     keyFile,
-		caFile:      caFile,
+		certFile: certFile,
+		keyFile:  keyFile,
+		caFile:   caFile,
 
 		idleTimeout: idleTimeout,
 	}, nil

@@ -14,14 +14,8 @@ import (
 )
 
 type pgxPostgresPool struct {
-	*service.BaseService
 	dsn  string
 	pool *pgxpool.Pool
-}
-
-// GetServiceUri implements service.Service.
-func (p *pgxPostgresPool) GetServiceUri() string {
-	return "lokstra://db_pool/" + p.GetServiceName()
 }
 
 var _ service.Service = (*pgxPostgresPool)(nil)
@@ -34,7 +28,7 @@ func (p *pgxPostgresPool) GetSetting(key string) any {
 	return nil
 }
 
-func NewPgxPostgresPool(name, dsn string) (*pgxPostgresPool, error) {
+func NewPgxPostgresPool(dsn string) (*pgxPostgresPool, error) {
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		return nil, err
@@ -43,9 +37,8 @@ func NewPgxPostgresPool(name, dsn string) (*pgxPostgresPool, error) {
 		return nil, err
 	}
 	return &pgxPostgresPool{
-		BaseService: service.NewBaseService(name),
-		dsn:         dsn,
-		pool:        pool,
+		dsn:  dsn,
+		pool: pool,
 	}, nil
 }
 

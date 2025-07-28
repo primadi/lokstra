@@ -25,7 +25,6 @@ const CA_FILE_KEY = "ca_file"
 
 // SecureNetHttpListener implements the HttpListener interface with TLS support.
 type SecureNetHttpListener struct {
-	*service.BaseService
 	server   *http.Server
 	certFile string
 	keyFile  string
@@ -42,13 +41,8 @@ type SecureNetHttpListener struct {
 	activeCount    atomic.Int32
 }
 
-// GetServiceUri implements service.Service.
-func (s *SecureNetHttpListener) GetServiceUri() string {
-	return "lokstra://http_listener/" + s.GetServiceName()
-}
-
 // NewSecureNetHttpListener returns a new SecureNetHttpListener instance.
-func NewSecureNetHttpListener(serviceName string, config any) (service.Service, error) {
+func NewSecureNetHttpListener(config any) (service.Service, error) {
 	var certFile, keyFile, caFile string
 	var readTimeout, writeTimeout, idleTimeout time.Duration
 
@@ -91,10 +85,9 @@ func NewSecureNetHttpListener(serviceName string, config any) (service.Service, 
 	}
 
 	return &SecureNetHttpListener{
-		BaseService: service.NewBaseService(serviceName),
-		certFile:    certFile,
-		keyFile:     keyFile,
-		caFile:      caFile,
+		certFile: certFile,
+		keyFile:  keyFile,
+		caFile:   caFile,
 
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,

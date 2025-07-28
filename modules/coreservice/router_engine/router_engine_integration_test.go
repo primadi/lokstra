@@ -20,7 +20,7 @@ func TestRouterEngineInterface(t *testing.T) {
 		{
 			name: "HttpRouterEngine",
 			factory: func(serviceName string, config any) (serviceapi.RouterEngine, error) {
-				service, err := NewHttpRouterEngine(serviceName, config)
+				service, err := NewHttpRouterEngine(config)
 				if err != nil {
 					return nil, err
 				}
@@ -30,7 +30,7 @@ func TestRouterEngineInterface(t *testing.T) {
 		{
 			name: "ServeMuxEngine",
 			factory: func(serviceName string, config any) (serviceapi.RouterEngine, error) {
-				service, err := NewServeMuxEngine(serviceName, config)
+				service, err := NewServeMuxEngine(config)
 				if err != nil {
 					return nil, err
 				}
@@ -99,12 +99,12 @@ func TestRouterEngineInterface(t *testing.T) {
 
 func TestRouterEngineComparison(t *testing.T) {
 	// Compare behavior between HttpRouter and ServeMux engines
-	httpEngine, err := NewHttpRouterEngine("http_test", nil)
+	httpEngine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
 
-	serveMuxEngine, err := NewServeMuxEngine("servemux_test", nil)
+	serveMuxEngine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -177,12 +177,12 @@ func TestRouterEngineComparison(t *testing.T) {
 
 func TestRouterEngineMethodNotAllowedBehavior(t *testing.T) {
 	// Test different behavior between engines for method not allowed
-	httpEngine, err := NewHttpRouterEngine("http_test", nil)
+	httpEngine, err := NewHttpRouterEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create HttpRouterEngine: %v", err)
 	}
 
-	serveMuxEngine, err := NewServeMuxEngine("servemux_test", nil)
+	serveMuxEngine, err := NewServeMuxEngine(nil)
 	if err != nil {
 		t.Fatalf("Failed to create ServeMuxEngine: %v", err)
 	}
@@ -260,14 +260,14 @@ func TestRouterEngineStaticFileHandling(t *testing.T) {
 		{
 			name: "HttpRouter",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewHttpRouterEngine("test", nil)
+				e, _ := NewHttpRouterEngine(nil)
 				return e.(*HttpRouterEngine)
 			}(),
 		},
 		{
 			name: "ServeMux",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewServeMuxEngine("test", nil)
+				e, _ := NewServeMuxEngine(nil)
 				return e.(*ServeMuxEngine)
 			}(),
 		},
@@ -349,14 +349,14 @@ func TestRouterEngineSPAHandling(t *testing.T) {
 		{
 			name: "HttpRouter",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewHttpRouterEngine("test", nil)
+				e, _ := NewHttpRouterEngine(nil)
 				return e.(*HttpRouterEngine)
 			}(),
 		},
 		{
 			name: "ServeMux",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewServeMuxEngine("test", nil)
+				e, _ := NewServeMuxEngine(nil)
 				return e.(*ServeMuxEngine)
 			}(),
 		},
@@ -439,14 +439,14 @@ func TestRouterEngineProxyHandling(t *testing.T) {
 		{
 			name: "HttpRouter",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewHttpRouterEngine("test", nil)
+				e, _ := NewHttpRouterEngine(nil)
 				return e.(*HttpRouterEngine)
 			}(),
 		},
 		{
 			name: "ServeMux",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewServeMuxEngine("test", nil)
+				e, _ := NewServeMuxEngine(nil)
 				return e.(*ServeMuxEngine)
 			}(),
 		},
@@ -562,14 +562,14 @@ func TestRouterEngineComplexIntegration(t *testing.T) {
 		{
 			name: "HttpRouter",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewHttpRouterEngine("integration_test", nil)
+				e, _ := NewHttpRouterEngine(nil)
 				return e.(*HttpRouterEngine)
 			}(),
 		},
 		{
 			name: "ServeMux",
 			engine: func() serviceapi.RouterEngine {
-				e, _ := NewServeMuxEngine("integration_test", nil)
+				e, _ := NewServeMuxEngine(nil)
 				return e.(*ServeMuxEngine)
 			}(),
 		},
