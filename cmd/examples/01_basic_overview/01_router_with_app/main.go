@@ -51,6 +51,18 @@ func main() {
 		return ctx.Ok("Pong from anonymous handler")
 	})
 
+	type helloParams struct {
+		Name string `query:"name"`
+	}
+
+	app.GET("/hello", func(ctx *lokstra.Context, params *helloParams) error {
+		if params.Name == "" {
+			return ctx.ErrorBadRequest("Name parameter is required")
+		}
+
+		return ctx.Ok("Hello " + params.Name)
+	})
+
 	lokstra.Logger.Infof("Lokstra Application started")
 
 	app.Start()

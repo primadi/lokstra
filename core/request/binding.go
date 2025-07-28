@@ -144,6 +144,9 @@ func (ctx *Context) BindBody(v any) error {
 	if ctx.bodyErr != nil {
 		return ctx.bodyErr
 	}
+	if len(ctx.rawBody) == 0 {
+		return nil // No body to bind
+	}
 	return jsonBodyDecoder.Unmarshal(ctx.rawBody, v)
 }
 

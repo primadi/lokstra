@@ -65,7 +65,6 @@ func (ctx *Context) IsHeaderContainValue(name, value string) bool {
 func (ctx *Context) cacheBody() {
 	ctx.bodyOnce.Do(func() {
 		if ctx.Request.Body == nil {
-			ctx.bodyErr = io.EOF
 			return
 		}
 		body, err := io.ReadAll(ctx.Request.Body)
@@ -73,9 +72,6 @@ func (ctx *Context) cacheBody() {
 			ctx.bodyErr = err
 		} else {
 			ctx.rawBody = body
-			if len(ctx.rawBody) == 0 {
-				ctx.bodyErr = io.EOF
-			}
 		}
 	})
 }

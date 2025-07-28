@@ -83,8 +83,8 @@ func (m *MockRegistrationContext) RegisterServiceFactory(factoryName string, ser
 func (m *MockRegistrationContext) GetServiceFactory(factoryName string) (service.ServiceFactory, bool) {
 	return nil, false
 }
-func (m *MockRegistrationContext) GetHandler(name string) *request.HandlerRegister          { return nil }
-func (m *MockRegistrationContext) RegisterHandler(name string, handler request.HandlerFunc) {}
+func (m *MockRegistrationContext) GetHandler(name string) *request.HandlerRegister { return nil }
+func (m *MockRegistrationContext) RegisterHandler(name string, handler any)        {}
 
 type MockRouterEngine struct {
 	routes         map[string]map[string]http.Handler

@@ -78,7 +78,7 @@ func (r *RouterImpl) GetMeta() *RouterMeta {
 
 // DELETE implements Router.
 func (r *RouterImpl) DELETE(path string, handler any, mw ...any) Router {
-	return r.handle("DELETE", path, handler, false, mw...)
+	return r.Handle("DELETE", path, handler, mw...)
 }
 
 // DumpRoutes implements Router.
@@ -95,7 +95,7 @@ func (r *RouterImpl) FastHttpHandler() fasthttp.RequestHandler {
 
 // GET implements Router.
 func (r *RouterImpl) GET(path string, handler any, mw ...any) Router {
-	return r.handle("GET", path, handler, false, mw...)
+	return r.Handle("GET", path, handler, mw...)
 }
 
 // GetMiddleware implements Router.
@@ -133,42 +133,17 @@ func (r *RouterImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 // Handle implements Router.
 func (r *RouterImpl) Handle(method request.HTTPMethod, path string, handler any,
 	mw ...any) Router {
-	return r.handle(method, path, handler, false, mw...)
-}
-
-func (r *RouterImpl) handle(method request.HTTPMethod, path string, handler any,
-	overrideMiddleware bool, mw ...any) Router {
 	r.mwLocked = true
-
-	cleanPath := r.cleanPrefix(path)
-
-	var handlerMeta *request.HandlerMeta
-
-	switch h := handler.(type) {
-	case request.HandlerFunc:
-		handlerMeta = &request.HandlerMeta{HandlerFunc: h}
-	case string:
-		handlerMeta = &request.HandlerMeta{Name: h}
-	case *request.HandlerMeta:
-		handlerMeta = h
-	default:
-		fmt.Printf("Handler type: %T\n", handler)
-		panic("Invalid handler type, must be a RequestHandler, string, or HandlerMeta")
-	}
-
-	if overrideMiddleware {
-		r.meta.HandleWithOverrideMiddleware(method, cleanPath, handlerMeta, mw...)
-	} else {
-		r.meta.Handle(method, cleanPath, handlerMeta, mw...)
-	}
-
+	r.meta.Handle(method, path, handler, mw...)
 	return r
 }
 
 // HandleOverrideMiddleware implements Router.
 func (r *RouterImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string,
 	handler any, mw ...any) Router {
-	return r.handle(method, path, handler, true, mw...)
+	r.mwLocked = true
+	r.meta.HandleWithOverrideMiddleware(method, path, handler, mw...)
+	return r
 }
 
 // LockMiddleware implements Router.
@@ -237,17 +212,17 @@ func (r *RouterImpl) OverrideMiddleware() Router {
 
 // PATCH implements Router.
 func (r *RouterImpl) PATCH(path string, handler any, mw ...any) Router {
-	return r.handle("PATCH", path, handler, false, mw...)
+	return r.Handle("PATCH", path, handler, mw...)
 }
 
 // POST implements Router.
 func (r *RouterImpl) POST(path string, handler any, mw ...any) Router {
-	return r.handle("POST", path, handler, false, mw...)
+	return r.Handle("POST", path, handler, mw...)
 }
 
 // PUT implements Router.
 func (r *RouterImpl) PUT(path string, handler any, mw ...any) Router {
-	return r.handle("PUT", path, handler, false, mw...)
+	return r.Handle("PUT", path, handler, mw...)
 }
 
 // Prefix implements Router.

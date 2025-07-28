@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"plugin"
+	"reflect"
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/midware"
@@ -130,7 +131,7 @@ func (c *ContextImpl) CreateService(factoryName string, serviceName string, conf
 }
 
 // RegisterHandler implements Context.
-func (c *ContextImpl) RegisterHandler(name string, handler request.HandlerFunc) {
+func (c *ContextImpl) RegisterHandler(name string, handler any) {
 	if !c.permission.IsAllowedRegisterHandler() {
 		panic("registering handler '" + name + "' is not allowed")
 	}
@@ -142,9 +143,45 @@ func (c *ContextImpl) RegisterHandler(name string, handler request.HandlerFunc) 
 		panic("handler name cannot be empty")
 	}
 
+	var handlerFunc request.HandlerFunc
+	switch h := handler.(type) {
+	case request.HandlerFunc:
+		handlerFunc = h
+	default:
+		// Try to match func(ctx *request.Context, params *T) error
+		fnVal := reflect.ValueOf(handler)
+		fnType := fnVal.Type()
+
+		if fnType.Kind() == reflect.Func &&
+			fnType.NumIn() == 2 &&
+			fnType.NumOut() == 1 &&
+			fnType.In(0) == reflect.TypeOf((*request.Context)(nil)) &&
+			fnType.Out(0) == reflect.TypeOf((*error)(nil)).Elem() &&
+			fnType.In(1).Kind() == reflect.Ptr &&
+			fnType.In(1).Elem().Kind() == reflect.Struct {
+
+			paramType := fnType.In(1)
+
+			handlerFunc = func(ctx *request.Context) error {
+				paramPtr := reflect.New(paramType.Elem()).Interface()
+				if err := ctx.BindAll(paramPtr); err != nil {
+					return ctx.ErrorBadRequest(err.Error())
+				}
+				out := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(paramPtr)})
+				if !out[0].IsNil() {
+					return out[0].Interface().(error)
+				}
+				return nil
+			}
+		} else {
+			fmt.Printf("Handler type: %T\n", handler)
+			panic("Invalid handler type, must be a HandlerFunc, or func(ctx, params)")
+		}
+	}
+
 	info := &request.HandlerRegister{
 		Name:        name,
-		HandlerFunc: handler,
+		HandlerFunc: handlerFunc,
 	}
 
 	handlers[name] = info

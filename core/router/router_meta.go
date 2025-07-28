@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/primadi/lokstra/core/midware"
@@ -108,8 +109,37 @@ func (r *RouterMeta) handle(method request.HTTPMethod, path string, handler any,
 	case *request.HandlerMeta:
 		handlerInfo = h
 	default:
-		fmt.Printf("Handler type: %T\n", handler)
-		panic("Invalid handler type, must be a RequestHandler, string, or HandlerInfo")
+		// Try to match func(ctx *request.Context, params *T) error
+		fnVal := reflect.ValueOf(handler)
+		fnType := fnVal.Type()
+
+		if fnType.Kind() == reflect.Func &&
+			fnType.NumIn() == 2 &&
+			fnType.NumOut() == 1 &&
+			fnType.In(0) == reflect.TypeOf((*request.Context)(nil)) &&
+			fnType.Out(0) == reflect.TypeOf((*error)(nil)).Elem() &&
+			fnType.In(1).Kind() == reflect.Ptr &&
+			fnType.In(1).Elem().Kind() == reflect.Struct {
+
+			paramType := fnType.In(1)
+
+			wrapped := func(ctx *request.Context) error {
+				paramPtr := reflect.New(paramType.Elem()).Interface()
+				if err := ctx.BindAll(paramPtr); err != nil {
+					return ctx.ErrorBadRequest(err.Error())
+				}
+				out := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(paramPtr)})
+				if !out[0].IsNil() {
+					return out[0].Interface().(error)
+				}
+				return nil
+			}
+
+			handlerInfo = &request.HandlerMeta{HandlerFunc: wrapped}
+		} else {
+			fmt.Printf("Handler type: %T\n", handler)
+			panic("Invalid handler type, must be a HandlerFunc, string, HandlerMeta, or func(ctx, params)")
+		}
 	}
 
 	mwp := make([]*midware.Execution, len(middleware))

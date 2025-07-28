@@ -29,7 +29,7 @@ type Context interface {
 
 	// Handler registration and retrieval
 	GetHandler(name string) *HandlerRegister
-	RegisterHandler(name string, handler request.HandlerFunc)
+	RegisterHandler(name string, handler any)
 
 	// Middleware registration and retrieval
 
