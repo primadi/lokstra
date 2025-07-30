@@ -72,9 +72,10 @@ type MiddlewareConfig struct {
 }
 
 type ServiceConfig struct {
-	Name   string         `yaml:"name"`
-	Type   string         `yaml:"type"`
-	Config map[string]any `yaml:"config"`
+	Name      string         `yaml:"name"`
+	Type      string         `yaml:"type"`
+	Config    map[string]any `yaml:"config"`
+	DependsOn []string       `yaml:"depends_on,omitempty"`
 }
 
 type ModuleConfig struct {

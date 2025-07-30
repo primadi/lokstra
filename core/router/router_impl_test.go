@@ -74,6 +74,9 @@ func (m *MockRegistrationContext) CreateService(factoryName, serviceName string,
 	return nil, nil
 }
 
+func (m *MockRegistrationContext) GetValue(key string) (any, bool) { return nil, false }
+func (m *MockRegistrationContext) SetValue(key string, value any)  {}
+
 func (m *MockRegistrationContext) RegisterService(name string, svc service.Service) error { return nil }
 func (m *MockRegistrationContext) GetService(serviceName string) (service.Service, error) {
 	return nil, nil

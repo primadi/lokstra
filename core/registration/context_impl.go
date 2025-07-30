@@ -226,6 +226,20 @@ func (c *ContextImpl) GetMiddlewareFactory(name string) (midware.Factory, int, b
 	return nil, 0, false
 }
 
+// GetValue implements Context.
+func (c *ContextImpl) GetValue(key string) (any, bool) {
+	if value, exists := c.permission.contextSettings[key]; exists {
+		return value, true
+	}
+
+	return nil, false
+}
+
+// SetValue implements Context.
+func (c *ContextImpl) SetValue(key string, value any) {
+	c.permission.contextSettings[key] = value
+}
+
 // RegisterMiddlewareFunc implements Context.
 func (c *ContextImpl) RegisterMiddlewareFunc(name string,
 	middlewareFunc midware.Func) error {
@@ -287,7 +301,7 @@ func (c *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
 		AllowRegisterHandler:    utils.GetValueFromMap(permission, "allow_register_handler", false),
 		AllowRegisterMiddleware: utils.GetValueFromMap(permission, "allow_register_middleware", false),
 		AllowRegisterService:    utils.GetValueFromMap(permission, "allow_register_service", false),
-		ContextSettings:         settings,
+		ContextSettings:         utils.CloneMap(settings),
 	}
 
 	return &ContextImpl{

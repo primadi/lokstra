@@ -49,6 +49,9 @@ type Context interface {
 	// return the factory, priority, and whether it exists
 	GetMiddlewareFactory(name string) (midware.Factory, int, bool)
 
+	GetValue(key string) (any, bool)
+	SetValue(key string, value any)
+
 	// Module registration
 	RegisterCompiledModule(moduleName string, pluginPath string) error // funcName is "GetModule"
 	RegisterCompiledModuleWithFuncName(moduleName string, pluginPath string, getModuleFuncName string) error

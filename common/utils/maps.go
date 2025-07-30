@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"maps"
 	"time"
 )
 
@@ -39,4 +40,10 @@ func GetDurationFromMap(settings map[string]any, key string, defaultValue time.D
 		}
 	}
 	return defaultValue
+}
+
+func CloneMap[K comparable, V any](original map[K]V) map[K]V {
+	clone := make(map[K]V, len(original))
+	maps.Copy(clone, original)
+	return clone
 }

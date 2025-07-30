@@ -62,7 +62,21 @@ func NewServer(regCtx RegistrationContext, name string) *Server {
 }
 
 func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
-	return config.NewServerFromConfig(regCtx, cfg)
+	svr, err := config.NewServerFromConfig(regCtx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// change log_level is exists on server settings
+	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogLevel]; exists {
+		if LvlStr, ok := l.(string); ok {
+			if logLvl, ok := serviceapi.ParseLogLevelSafe(LvlStr); ok {
+				Logger.SetLogLevel(logLvl)
+			}
+		}
+	}
+
+	return svr, nil
 }
 
 const LISTENER_NETHTTP = listener.NETHTTP_LISTENER_NAME

@@ -13,7 +13,7 @@ import (
 )
 
 func NewServerFromConfig(regCtx registration.Context, cfg *LokstraConfig) (*server.Server, error) {
-	if err := startAllServices(regCtx, cfg.Services); err != nil {
+	if err := startServicesInOrder(regCtx, cfg.Services); err != nil {
 		return nil, fmt.Errorf("start services: %w", err)
 	}
 
@@ -33,12 +33,54 @@ func NewServerFromConfig(regCtx registration.Context, cfg *LokstraConfig) (*serv
 	return server, nil
 }
 
-func startAllServices(regCtx registration.Context, services []*ServiceConfig) error {
+func startServicesInOrder(regCtx registration.Context,
+	services []*ServiceConfig) error {
+	depMap := map[string][]string{}
+	inDegree := map[string]int{}
+	serviceMap := map[string]*ServiceConfig{}
+
 	for _, svc := range services {
-		if _, err := regCtx.CreateService(svc.Type, svc.Name, svc.Config); err != nil {
-			return fmt.Errorf("register service %s: %w", svc.Name, err)
+		serviceMap[svc.Name] = svc
+		for _, dep := range svc.DependsOn {
+			depMap[dep] = append(depMap[dep], svc.Name)
+			inDegree[svc.Name]++
 		}
 	}
+
+	// Queue service without dependencies
+	var queue []string
+	for _, svc := range services {
+		if inDegree[svc.Name] == 0 {
+			queue = append(queue, svc.Name)
+		}
+	}
+
+	var ordered []string
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		ordered = append(ordered, current)
+
+		for _, dependent := range depMap[current] {
+			inDegree[dependent]--
+			if inDegree[dependent] == 0 {
+				queue = append(queue, dependent)
+			}
+		}
+	}
+
+	if len(ordered) != len(services) {
+		return fmt.Errorf("cyclic dependency detected in services")
+	}
+
+	// Start services in order
+	for _, name := range ordered {
+		svc := serviceMap[name]
+		if _, err := regCtx.CreateService(svc.Type, svc.Name, svc.Config); err != nil {
+			return fmt.Errorf("start service %s: %w", name, err)
+		}
+	}
+
 	return nil
 }
 
