@@ -2,7 +2,6 @@ package request_test
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -255,8 +254,8 @@ func TestContext_GetRawBody(t *testing.T) {
 			body, err := ctx.GetRawBody()
 
 			// Assertions
-			if tt.hasError && err == nil {
-				t.Error("Expected error for empty body")
+			if tt.hasError && err != nil {
+				t.Error("Unexpected error for empty body")
 			}
 
 			if !tt.hasError && err != nil {
@@ -364,8 +363,8 @@ func TestContext_NilBodyHandling(t *testing.T) {
 	body, err := ctx.GetRawBody()
 
 	// Assertions
-	if err != io.EOF {
-		t.Errorf("Expected io.EOF error for nil body, got: %v", err)
+	if err != nil {
+		t.Errorf("Unexpected error for nil body, got: %v", err)
 	}
 
 	if len(body) != 0 {

@@ -4,7 +4,7 @@ import (
 	"runtime/debug"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/core/iface"
 )
 
 const NAME = "recovery"
@@ -17,7 +17,7 @@ func (r *RecoveryMiddleware) Description() string {
 }
 
 // Register implements registration.Module.
-func (r *RecoveryMiddleware) Register(regCtx registration.Context) error {
+func (r *RecoveryMiddleware) Register(regCtx iface.RegistrationContext) error {
 	regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 10)
 
 	return nil

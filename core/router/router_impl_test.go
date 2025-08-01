@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
@@ -25,7 +25,7 @@ func (m *MockRegistrationContext) RegisterMiddlewareFactoryWithPriority(name str
 // NewPermissionContextFromConfig implements registration.Context.
 func (m *MockRegistrationContext) NewPermissionContextFromConfig(
 	settings map[string]any,
-	permission map[string]any) registration.Context {
+	permission map[string]any) iface.RegistrationContext {
 	return &MockRegistrationContext{}
 }
 
@@ -60,15 +60,15 @@ func (m *MockRegistrationContext) RegisterMiddlewareFunc(name string, middleware
 }
 
 // RegisterModuleWithFunc implements registration.Context.
-func (m *MockRegistrationContext) RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx registration.Context) error) error {
+func (m *MockRegistrationContext) RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx iface.RegistrationContext) error) error {
 	return nil
 }
 
 func (m *MockRegistrationContext) CreateService(factoryName, serviceName string, config ...any) (service.Service, error) {
-	if factoryName == router.DEFAULT_ROUTER_ENGINE_NAME || factoryName == "default" {
+	if factoryName == "" || factoryName == "default" {
 		return NewMockRouterEngine(), nil
 	}
-	if factoryName == router.DEFAULT_LISTENER_NAME || factoryName == "default" {
+	if factoryName == "" || factoryName == "default" {
 		return &MockHttpListener{}, nil
 	}
 	return nil, nil
@@ -85,6 +85,9 @@ func (m *MockRegistrationContext) RegisterServiceFactory(factoryName string, ser
 }
 func (m *MockRegistrationContext) GetServiceFactory(factoryName string) (service.ServiceFactory, bool) {
 	return nil, false
+}
+func (m *MockRegistrationContext) GetServiceFactories(pattern string) []service.ServiceFactory {
+	return []service.ServiceFactory{}
 }
 func (m *MockRegistrationContext) GetHandler(name string) *request.HandlerRegister { return nil }
 func (m *MockRegistrationContext) RegisterHandler(name string, handler any)        {}
@@ -141,7 +144,7 @@ func (m *MockHttpListener) Shutdown(shutdownTimeout time.Duration) error        
 func (m *MockHttpListener) IsRunning() bool                                        { return false }
 func (m *MockHttpListener) ActiveRequest() int                                     { return 0 }
 
-var _ registration.Context = (*MockRegistrationContext)(nil)
+var _ iface.RegistrationContext = (*MockRegistrationContext)(nil)
 var _ serviceapi.RouterEngine = (*MockRouterEngine)(nil)
 var _ serviceapi.HttpListener = (*MockHttpListener)(nil)
 var _ service.Service = (*MockRouterEngine)(nil)
@@ -195,11 +198,6 @@ func TestNewRouterWithEngine(t *testing.T) {
 		{
 			name:       "empty engine type",
 			engineType: "",
-			config:     map[string]any{},
-		},
-		{
-			name:       "specific engine type",
-			engineType: router.DEFAULT_ROUTER_ENGINE_NAME,
 			config:     map[string]any{},
 		},
 	}
@@ -264,11 +262,6 @@ func TestNewListenerWithEngine(t *testing.T) {
 		{
 			name:         "empty listener type",
 			listenerType: "",
-			config:       map[string]any{},
-		},
-		{
-			name:         "specific listener type",
-			listenerType: router.DEFAULT_LISTENER_NAME,
 			config:       map[string]any{},
 		},
 	}

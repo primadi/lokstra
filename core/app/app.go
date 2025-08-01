@@ -5,16 +5,15 @@ import (
 	"maps"
 	"time"
 
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/router"
-	"github.com/primadi/lokstra/modules/coreservice"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
 type App struct {
 	router.Router
 
-	ctx      registration.Context
+	ctx      iface.RegistrationContext
 	listener serviceapi.HttpListener
 
 	name              string
@@ -24,31 +23,30 @@ type App struct {
 	settings          map[string]any
 }
 
-func NewApp(ctx registration.Context, name string, addr string) *App {
-	listenerType := coreservice.DEFAULT_LISTENER_NAME
-	routerEngineType := coreservice.DEFAULT_ROUTER_ENGINE_NAME
-	return NewAppCustom(ctx, name, addr, listenerType, routerEngineType, nil)
+func NewApp(ctx iface.RegistrationContext, name string, addr string) *App {
+	return NewAppCustom(ctx, name, addr, "", "", nil)
 }
 
-func NewAppCustom(ctx registration.Context, name string, addr string,
+func NewAppCustom(ctx iface.RegistrationContext, name string, addr string,
 	listenerType string, routerEngineType string, settings map[string]any) *App {
 
 	if settings == nil {
 		settings = make(map[string]any)
 	}
 
+	lType := router.NormalizeListenerType(listenerType)
+	rType := router.NormalizeRouterType(routerEngineType)
+
 	return &App{
 		ctx:  ctx,
 		name: name,
 		addr: addr,
 
-		listenerType: listenerType,
-		listener: router.NewListenerWithEngine(ctx, listenerType,
-			"http_listener."+name, settings),
+		listenerType: lType,
+		listener:     router.NewListenerWithEngine(ctx, lType, name, settings),
 
-		routingEngineType: routerEngineType,
-		Router: router.NewRouterWithEngine(ctx, routerEngineType,
-			"router_engine."+name, settings),
+		routingEngineType: rType,
+		Router:            router.NewRouterWithEngine(ctx, rType, name, settings),
 
 		settings: maps.Clone(settings),
 	}

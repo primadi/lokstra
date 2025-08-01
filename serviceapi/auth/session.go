@@ -1,4 +1,4 @@
-package session
+package auth
 
 import (
 	"context"
@@ -6,14 +6,12 @@ import (
 )
 
 type SessionData struct {
-	UserID    string
-	TenantID  string
-	CreatedAt time.Time
-	ExpiresAt time.Time
-	Metadata  map[string]string // optional (IP, device, role, etc)
+	UserID   string         `json:"user_id"`
+	TenantID string         `json:"tenant_id"`
+	Metadata map[string]any `json:"metadata,omitempty"` // optional (role, email, etc)
 }
 
-type Service interface {
+type Session interface {
 	Set(ctx context.Context, sessionID string, data *SessionData, ttl time.Duration) error
 	Get(ctx context.Context, sessionID string) (*SessionData, error)
 	Delete(ctx context.Context, sessionID string) error

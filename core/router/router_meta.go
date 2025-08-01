@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -39,7 +39,6 @@ type ReverseProxyMeta struct {
 
 type RouterMeta struct {
 	Prefix             string
-	RouterEngineType   string
 	OverrideMiddleware bool
 
 	Routes         []*RouteMeta
@@ -54,7 +53,6 @@ func NewRouterMeta() *RouterMeta {
 	return &RouterMeta{
 		Prefix:             "/",
 		OverrideMiddleware: false,
-		RouterEngineType:   DEFAULT_ROUTER_ENGINE_NAME,
 		Routes:             []*RouteMeta{},
 		Middleware:         []*midware.Execution{},
 		StaticMounts:       []*StaticDirMeta{},
@@ -77,15 +75,6 @@ func (r *RouterMeta) RecurseAllHandler(callback func(rt *RouteMeta)) {
 	for _, group := range r.Groups {
 		group.RecurseAllHandler(callback)
 	}
-}
-
-func (r *RouterMeta) GetRouterEngineType() string {
-	return r.RouterEngineType
-}
-
-func (r *RouterMeta) WithRouterEngineType(engineType string) *RouterMeta {
-	r.RouterEngineType = engineType
-	return r
 }
 
 func (r *RouterMeta) Handle(method request.HTTPMethod, path string, handler any, middleware ...any) *RouterMeta {
@@ -202,7 +191,7 @@ func (r *RouterMeta) cleanPrefix(prefix string) string {
 	return r.Prefix + "/" + strings.Trim(prefix, "/")
 }
 
-func ResolveAllNamed(ctx registration.Context, r *RouterMeta) {
+func ResolveAllNamed(ctx iface.RegistrationContext, r *RouterMeta) {
 	for i, route := range r.Routes {
 		if rpcServiceMeta, ok := route.Handler.Extension.(*service.RpcServiceMeta); ok {
 			svc := rpcServiceMeta.ServiceInst
@@ -245,7 +234,7 @@ func ResolveAllNamed(ctx registration.Context, r *RouterMeta) {
 	}
 }
 
-func resolveMiddleware(ctx registration.Context, mw *midware.Execution) {
+func resolveMiddleware(ctx iface.RegistrationContext, mw *midware.Execution) {
 	if mw.MiddlewareFn == nil {
 		mwFactory, priority, found := ctx.GetMiddlewareFactory(mw.Name)
 		if !found {
@@ -256,7 +245,7 @@ func resolveMiddleware(ctx registration.Context, mw *midware.Execution) {
 	}
 }
 
-func getOrCreateService[T any](ctx registration.Context,
+func getOrCreateService[T any](ctx iface.RegistrationContext,
 	serviceName string, factoryName string, config ...any) (T, error) {
 	svc, err := ctx.GetService(serviceName)
 	if err != nil {

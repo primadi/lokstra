@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -18,7 +19,7 @@ func (m *module) Name() string {
 }
 
 // Register implements registration.Module.
-func (m *module) Register(regCtx registration.Context) error {
+func (m *module) Register(regCtx iface.RegistrationContext) error {
 	factory := func(config any) (service.Service, error) {
 		levelStr := "info"
 

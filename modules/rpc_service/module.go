@@ -1,29 +1,34 @@
 package rpc_service
 
-import "github.com/primadi/lokstra/core/registration"
+import (
+	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
+)
 
-type RpcServiceModule struct{}
+const NAME = "rpc_service"
+
+type module struct{}
 
 // Description implements registration.Module.
-func (r *RpcServiceModule) Description() string {
+func (r *module) Description() string {
 	return "RPC Service Module provides RPC service functionality"
 }
 
 // Name implements registration.Module.
-func (r *RpcServiceModule) Name() string {
-	return "rpc_server"
+func (r *module) Name() string {
+	return NAME
 }
 
 // Register implements registration.Module.
-func (r *RpcServiceModule) Register(regCtx registration.Context) error {
+func (r *module) Register(regCtx iface.RegistrationContext) error {
 	// Register the RPC service factory
-	regCtx.RegisterServiceFactory("rpc_service.rpc_server", NewRpcServer)
+	regCtx.RegisterServiceFactory(r.Name(), NewRpcServer)
 
 	return nil
 }
 
-var _ registration.Module = (*RpcServiceModule)(nil)
+var _ registration.Module = (*module)(nil)
 
 func GetModule() registration.Module {
-	return &RpcServiceModule{}
+	return &module{}
 }

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/core/iface"
 )
 
 const NAME = "cors"
@@ -18,7 +18,7 @@ func (c *CorsMiddleware) Description() string {
 }
 
 // Register implements registration.Module.
-func (c *CorsMiddleware) Register(regCtx registration.Context) error {
+func (c *CorsMiddleware) Register(regCtx iface.RegistrationContext) error {
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 30)
 }
 

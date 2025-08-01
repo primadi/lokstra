@@ -5,6 +5,7 @@ import (
 
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/config"
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
@@ -12,14 +13,14 @@ import (
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/modules/coreservice"
 	"github.com/primadi/lokstra/modules/coreservice/listener"
-	"github.com/primadi/lokstra/modules/coreservice/router_engine"
 	"github.com/primadi/lokstra/modules/rpc_service"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/logger"
+	"github.com/primadi/lokstra/standardservices"
 )
 
 type Context = request.Context
-type RegistrationContext = registration.Context
+type RegistrationContext = iface.RegistrationContext
 
 type HandlerFunc = request.HandlerFunc
 
@@ -40,6 +41,8 @@ var Logger serviceapi.Logger
 
 func NewGlobalRegistrationContext() RegistrationContext {
 	ctx := registration.NewGlobalContext()
+
+	standardservices.RegisterAll(ctx)
 
 	// register logger module
 	_ = logger.GetModule().Register(ctx)
@@ -79,14 +82,6 @@ func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) 
 	return svr, nil
 }
 
-const LISTENER_NETHTTP = listener.NETHTTP_LISTENER_NAME
-const LISTENER_FASTHTTP = listener.FASTHTTP_LISTENER_NAME
-const LISTENER_SECURE_NETHTTP = listener.SECURE_NETHTTP_LISTENER_NAME
-const LISTENER_HTTP3 = listener.HTTP3_LISTENER_NAME
-
-const ROUTER_ENGINE_HTTPROUTER = router_engine.HTTPROUTER_ROUTER_ENGINE_NAME
-const ROUTER_ENGINE_SERVEMUX = router_engine.SERVEMUX_ROUTER_ENGINE_NAME
-
 const CERT_FILE_KEY = listener.CERT_FILE_KEY
 const KEY_FILE_KEY = listener.KEY_FILE_KEY
 const CA_FILE_KEY = listener.CA_FILE_KEY
@@ -107,7 +102,7 @@ func NewAppSecure(ctx RegistrationContext, name string, addr string,
 		KEY_FILE_KEY:  keyFile,
 		CA_FILE_KEY:   caFile,
 	}
-	return app.NewAppCustom(ctx, name, addr, LISTENER_SECURE_NETHTTP, ROUTER_ENGINE_HTTPROUTER, settings)
+	return app.NewAppCustom(ctx, name, addr, standardservices.HTTP_LISTENER_SECURE_NETHTTP, "", settings)
 }
 
 func NewAppHttp3(ctx RegistrationContext, name string, addr string,
@@ -117,11 +112,11 @@ func NewAppHttp3(ctx RegistrationContext, name string, addr string,
 		KEY_FILE_KEY:  keyFile,
 		CA_FILE_KEY:   caFile,
 	}
-	return app.NewAppCustom(ctx, name, addr, LISTENER_HTTP3, ROUTER_ENGINE_HTTPROUTER, settings)
+	return app.NewAppCustom(ctx, name, addr, standardservices.HTTP_LISTENER_HTTP3, "", settings)
 }
 
 func NewAppFastHTTP(ctx RegistrationContext, name string, addr string) *App {
-	return app.NewAppCustom(ctx, name, addr, LISTENER_FASTHTTP, ROUTER_ENGINE_HTTPROUTER, nil)
+	return app.NewAppCustom(ctx, name, addr, standardservices.HTTP_LISTENER_FASTHTTP, "", nil)
 }
 
 func NamedMiddleware(middlewareType string, config ...any) *midware.Execution {

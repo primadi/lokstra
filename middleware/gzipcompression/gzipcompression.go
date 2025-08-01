@@ -2,7 +2,7 @@ package gzipcompression
 
 import (
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/core/iface"
 )
 
 const NAME = "gzipcompression"
@@ -19,7 +19,7 @@ func (g *GzipCompressionMiddleware) Description() string {
 }
 
 // Register implements registration.Module.
-func (g *GzipCompressionMiddleware) Register(regCtx registration.Context) error {
+func (g *GzipCompressionMiddleware) Register(regCtx iface.RegistrationContext) error {
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
 }
 

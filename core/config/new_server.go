@@ -6,26 +6,30 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/app"
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
 )
 
-func NewServerFromConfig(regCtx registration.Context, cfg *LokstraConfig) (*server.Server, error) {
-	if err := startServicesInOrder(regCtx, cfg.Services); err != nil {
-		return nil, fmt.Errorf("start services: %w", err)
-	}
-
+func NewServerFromConfig(regCtx iface.RegistrationContext, cfg *LokstraConfig) (*server.Server, error) {
+	// 1. Start Modules
 	if err := startModulesFromConfig(regCtx, cfg.Modules); err != nil {
 		return nil, fmt.Errorf("start modules: %w", err)
 	}
 
+	// 2. Start Services
+	if err := startServicesInOrder(regCtx, cfg.Services); err != nil {
+		return nil, fmt.Errorf("start services: %w", err)
+	}
+
+	// 3. New Server
 	server := server.NewServer(regCtx, cfg.Server.Name)
 	for k, v := range cfg.Server.Settings {
 		server.SetSetting(k, v)
 	}
 
+	// 4. New Apps
 	if err := newAppsFromConfig(regCtx, server, cfg.Apps); err != nil {
 		return nil, fmt.Errorf("start apps: %w", err)
 	}
@@ -33,7 +37,7 @@ func NewServerFromConfig(regCtx registration.Context, cfg *LokstraConfig) (*serv
 	return server, nil
 }
 
-func startServicesInOrder(regCtx registration.Context,
+func startServicesInOrder(regCtx iface.RegistrationContext,
 	services []*ServiceConfig) error {
 	depMap := map[string][]string{}
 	inDegree := map[string]int{}
@@ -84,7 +88,7 @@ func startServicesInOrder(regCtx registration.Context,
 	return nil
 }
 
-func startModulesFromConfig(regCtx registration.Context, modules []*ModuleConfig) error {
+func startModulesFromConfig(regCtx iface.RegistrationContext, modules []*ModuleConfig) error {
 	for _, mod := range modules {
 		if mod.Path != "" || mod.Entry != "" {
 			newCtx := regCtx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
@@ -96,7 +100,7 @@ func startModulesFromConfig(regCtx registration.Context, modules []*ModuleConfig
 	return nil
 }
 
-func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps []*AppConfig) error {
+func newAppsFromConfig(regCtx iface.RegistrationContext, server *server.Server, apps []*AppConfig) error {
 	for _, ac := range apps {
 		app := app.NewAppCustom(regCtx, ac.Name, ac.Address,
 			ac.ListenerType, ac.RouterEngineType, ac.Settings)
@@ -143,7 +147,7 @@ func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps 
 	return nil
 }
 
-func buildGroup(regCtx registration.Context, parent router.Router, group GroupConfig) {
+func buildGroup(regCtx iface.RegistrationContext, parent router.Router, group GroupConfig) {
 	gr := parent.Group(group.Prefix)
 
 	for _, mw := range group.Middleware {

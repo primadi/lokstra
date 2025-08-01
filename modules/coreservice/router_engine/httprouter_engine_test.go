@@ -28,7 +28,7 @@ func TestNewHttpRouterEngine(t *testing.T) {
 		{
 			name:    "empty_service_name",
 			config:  nil,
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 

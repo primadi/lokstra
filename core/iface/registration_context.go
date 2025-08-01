@@ -1,4 +1,4 @@
-package registration
+package iface
 
 import (
 	"errors"
@@ -13,10 +13,10 @@ type HandlerRegister = request.HandlerRegister
 var ErrServiceNotFound = errors.New("service not found")
 var ErrServiceTypeInvalid = errors.New("service type is invalid")
 
-// registration.Context is used only during startup phase
+// iface.RegistrationContext is used only during startup phase
 // to register services, handlers, middleware, and modules.
 // It must not be used after server.Start().
-type Context interface {
+type RegistrationContext interface {
 	// Service creation and retrieval
 	RegisterService(serviceName string, service service.Service) error
 	GetService(serviceName string) (service.Service, error)
@@ -26,6 +26,7 @@ type Context interface {
 	RegisterServiceFactory(factoryName string,
 		serviceFactory func(config any) (service.Service, error))
 	GetServiceFactory(factoryName string) (service.ServiceFactory, bool)
+	GetServiceFactories(pattern string) []service.ServiceFactory
 
 	// Handler registration and retrieval
 	GetHandler(name string) *HandlerRegister
@@ -55,7 +56,7 @@ type Context interface {
 	// Module registration
 	RegisterCompiledModule(moduleName string, pluginPath string) error // funcName is "GetModule"
 	RegisterCompiledModuleWithFuncName(moduleName string, pluginPath string, getModuleFuncName string) error
-	RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx Context) error) error
+	RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx RegistrationContext) error) error
 
-	NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) Context
+	NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) RegistrationContext
 }

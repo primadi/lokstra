@@ -9,18 +9,19 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/core/app"
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/registration"
 )
 
 type Server struct {
-	ctx      registration.Context
+	ctx      iface.RegistrationContext
 	name     string
 	apps     []*app.App
 	settings map[string]any
 }
 
 // NewServer creates a new Server instance with the given context and name.
-func NewServer(ctx registration.Context, name string) *Server {
+func NewServer(ctx iface.RegistrationContext, name string) *Server {
 	return &Server{
 		ctx:      ctx,
 		name:     name,

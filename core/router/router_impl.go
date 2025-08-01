@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
+
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -24,18 +25,17 @@ type RouterImpl struct {
 	r_engine serviceapi.RouterEngine
 }
 
-func NewListener(ctx registration.Context, name string, config map[string]any) serviceapi.HttpListener {
-	return NewListenerWithEngine(ctx, DEFAULT_LISTENER_NAME, name, config)
+func NewListener(ctx iface.RegistrationContext, name string, config map[string]any) serviceapi.HttpListener {
+	return NewListenerWithEngine(ctx, "", name, config)
 }
 
-func NewListenerWithEngine(ctx registration.Context, listenerType string,
+func NewListenerWithEngine(ctx iface.RegistrationContext, listenerType string,
 	name string, config map[string]any) serviceapi.HttpListener {
 
-	if listenerType == "" || listenerType == "default" {
-		listenerType = DEFAULT_LISTENER_NAME
-	}
+	lType := NormalizeListenerType(listenerType)
+	lname := lType + "." + name
 
-	lsAny, err := ctx.CreateService(listenerType, name, config)
+	lsAny, err := ctx.CreateService(lType, lname, config)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create listener for app %s: %v", name, err))
 	}
@@ -46,27 +46,26 @@ func NewListenerWithEngine(ctx registration.Context, listenerType string,
 	return ls
 }
 
-func NewRouter(ctx registration.Context, name string, config map[string]any) Router {
-	return NewRouterWithEngine(ctx, DEFAULT_ROUTER_ENGINE_NAME, name, config)
+func NewRouter(ctx iface.RegistrationContext, name string, config map[string]any) Router {
+	return NewRouterWithEngine(ctx, "", name, config)
 }
 
-func NewRouterWithEngine(ctx registration.Context, engineType string,
+func NewRouterWithEngine(ctx iface.RegistrationContext, engineType string,
 	name string, config map[string]any) Router {
 
-	if engineType == "" || engineType == "default" {
-		engineType = DEFAULT_ROUTER_ENGINE_NAME
-	}
-	rtmt := NewRouterMeta().WithRouterEngineType(engineType)
-	rtAny, err := ctx.CreateService(engineType, name, config)
+	eType := NormalizeRouterType(engineType)
+	eName := eType + "." + name
+
+	rtAny, err := ctx.CreateService(eType, eName, config)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create router engine %s: %v", rtmt.GetRouterEngineType(), err))
+		panic(fmt.Sprintf("Failed to create router engine %s: %v", engineType, err))
 	}
 	rt := rtAny.(serviceapi.RouterEngine)
 	if rt == nil {
-		panic(fmt.Sprintf("Router engine %s is not initialized", rtmt.GetRouterEngineType()))
+		panic(fmt.Sprintf("Router engine %s is not initialized", engineType))
 	}
 	return &RouterImpl{
-		meta:     rtmt,
+		meta:     NewRouterMeta(),
 		r_engine: rt,
 	}
 }
@@ -367,6 +366,30 @@ func composeMiddleware(mw []*midware.Execution,
 		handler = mw[i].MiddlewareFn(handler)
 	}
 	return handler
+}
+
+func NormalizeListenerType(listenerType string) string {
+	if listenerType == "" {
+		listenerType = "default"
+	}
+
+	if !strings.HasPrefix(listenerType, serviceapi.HTTP_LISTENER_PREFIX) {
+		listenerType = serviceapi.HTTP_LISTENER_PREFIX + listenerType
+	}
+
+	return listenerType
+}
+
+func NormalizeRouterType(routerType string) string {
+	if routerType == "" {
+		routerType = "default"
+	}
+
+	if !strings.HasPrefix(routerType, serviceapi.HTTP_ROUTER_PREFIX) {
+		routerType = serviceapi.HTTP_ROUTER_PREFIX + routerType
+	}
+
+	return routerType
 }
 
 func init() {

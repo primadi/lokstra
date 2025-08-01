@@ -6,6 +6,8 @@ import (
 	"github.com/primadi/lokstra/core/request"
 )
 
+const HTTP_ROUTER_PREFIX string = "lokstra.http_router."
+
 // RouterEngine defines the interface for a router engine that can handle HTTP methods,
 // serve static files, single-page applications (SPA), and reverse proxies.
 type RouterEngine interface {

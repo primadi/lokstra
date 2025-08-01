@@ -3,10 +3,12 @@ package registration
 import (
 	"errors"
 	"fmt"
+	"path"
 	"plugin"
 	"reflect"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
@@ -57,7 +59,7 @@ func (c *ContextImpl) RegisterCompiledModuleWithFuncName(moduleName string,
 		return fmt.Errorf("load plugin %s: %w", pluginPath, err)
 	}
 	sym, _ := p.Lookup(getModuleFuncName)
-	getModuleFunc, ok := sym.(func(Context) error)
+	getModuleFunc, ok := sym.(func(iface.RegistrationContext) error)
 	if !ok {
 		return fmt.Errorf("plugin entry %s has wrong signature", getModuleFuncName)
 	}
@@ -66,7 +68,7 @@ func (c *ContextImpl) RegisterCompiledModuleWithFuncName(moduleName string,
 
 // RegisterModuleWithFunc implements Context.
 func (c *ContextImpl) RegisterModuleWithFunc(moduleName string,
-	getModuleFunc func(regCtx Context) error) error {
+	getModuleFunc func(regCtx iface.RegistrationContext) error) error {
 	if _, exists := modules[moduleName]; exists {
 		return errors.New("module with name '" + moduleName + "' already registered")
 	}
@@ -78,7 +80,7 @@ func (c *ContextImpl) RegisterModuleWithFunc(moduleName string,
 }
 
 // GetHandler implements Context.
-func (c *ContextImpl) GetHandler(name string) *HandlerRegister {
+func (c *ContextImpl) GetHandler(name string) *request.HandlerRegister {
 	return handlers[name]
 }
 
@@ -100,9 +102,20 @@ func (c *ContextImpl) GetServiceFactory(factoryName string) (service.ServiceFact
 	return sf, exists
 }
 
+// GetServiceFactories implements Context.
+func (c *ContextImpl) GetServiceFactories(pattern string) []service.ServiceFactory {
+	result := make([]service.ServiceFactory, 0)
+	for name, factory := range serviceFactories {
+		if matched, _ := path.Match(pattern, name); matched {
+			result = append(result, factory)
+		}
+	}
+	return result
+}
+
 // CreateService implements Context.
 func (c *ContextImpl) CreateService(factoryName string, serviceName string, config ...any) (service.Service, error) {
-	factory, exists := serviceFactories[factoryName]
+	factory, exists := c.GetServiceFactory(factoryName)
 	if !exists {
 		return nil, errors.New("service factory not found for type: " + factoryName)
 	}
@@ -290,7 +303,7 @@ func (c *ContextImpl) RegisterMiddlewareFactoryWithPriority(name string,
 
 // NewPermissionContextFromConfig implements Context.
 func (c *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
-	permission map[string]any) Context {
+	permission map[string]any) iface.RegistrationContext {
 
 	if !c.allowNewPermissionContext {
 		panic("NewPermissionContextFromConfig is not allowed in this context")
@@ -309,4 +322,4 @@ func (c *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
 	}
 }
 
-var _ Context = (*ContextImpl)(nil)
+var _ iface.RegistrationContext = (*ContextImpl)(nil)

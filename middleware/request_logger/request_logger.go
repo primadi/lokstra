@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/core/iface"
 )
 
 const NAME = "request_logger"
@@ -17,7 +17,7 @@ func (r *RequestLogger) Description() string {
 }
 
 // Register implements registration.Module.
-func (r *RequestLogger) Register(regCtx registration.Context) error {
+func (r *RequestLogger) Register(regCtx iface.RegistrationContext) error {
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
 }
 

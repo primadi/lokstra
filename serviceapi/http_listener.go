@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const HTTP_LISTENER_PREFIX string = "lokstra.http_listener."
+
 type HttpListener interface {
 	// ListenAndServe starts the HTTP server on the specified address.
 	// It returns an error if the server fails to start.

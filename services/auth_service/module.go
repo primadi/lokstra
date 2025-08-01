@@ -1,28 +1,31 @@
-package session_kvstore
+package auth_service
 
 import (
 	"fmt"
 
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
+const FACTORY_NAME = "auth_service.session.kvstore"
+
 type module struct{}
 
 // Description implements registration.Module.
 func (m *module) Description() string {
-	return "Session key-value store service"
+	return "Auth Service Module provides authentication and session management services."
 }
 
 // Name implements registration.Module.
 func (m *module) Name() string {
-	return "session_kvstore"
+	return "auth_service"
 }
 
 // Register implements registration.Module.
-func (m *module) Register(regCtx registration.Context) error {
-	factory := func(config any) (service.Service, error) {
+func (m *module) Register(regCtx iface.RegistrationContext) error {
+	factorySession := func(config any) (service.Service, error) {
 		var kvStoreName string
 		switch cfg := config.(type) {
 		case string:
@@ -43,10 +46,10 @@ func (m *module) Register(regCtx registration.Context) error {
 		if !ok {
 			return nil, service.ErrInvalidServiceType(kvStoreName, "serviceapi.KvStore")
 		}
-		return New(kvStore), nil
+		return NewSession(kvStore), nil
 	}
 
-	regCtx.RegisterServiceFactory(m.Name(), factory)
+	regCtx.RegisterServiceFactory(FACTORY_NAME, factorySession)
 	return nil
 }
 

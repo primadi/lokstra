@@ -1,6 +1,7 @@
 package kvstore_redis
 
 import (
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/redis/go-redis/v9"
@@ -21,7 +22,7 @@ func (m *module) Name() string {
 }
 
 // Register implements registration.Module.
-func (m *module) Register(regCtx registration.Context) error {
+func (m *module) Register(regCtx iface.RegistrationContext) error {
 	factory := func(config any) (service.Service, error) {
 		var redisServiceName string
 		switch cfg := config.(type) {

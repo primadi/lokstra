@@ -299,8 +299,8 @@ func TestContext_BindBody_EmptyBody(t *testing.T) {
 	err := ctx.BindBody(&params)
 
 	// Assertions - should return error due to empty body
-	if err == nil {
-		t.Error("Expected error due to empty body")
+	if err != nil {
+		t.Error("Unexpected error due to empty body")
 	}
 }
 
