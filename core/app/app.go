@@ -43,10 +43,10 @@ func NewAppCustom(ctx iface.RegistrationContext, name string, addr string,
 		addr: addr,
 
 		listenerType: lType,
-		listener:     router.NewListenerWithEngine(ctx, lType, name, settings),
+		listener:     router.NewListenerWithEngine(ctx, lType, settings),
 
 		routingEngineType: rType,
-		Router:            router.NewRouterWithEngine(ctx, rType, name, settings),
+		Router:            router.NewRouterWithEngine(ctx, rType, settings),
 
 		settings: maps.Clone(settings),
 	}

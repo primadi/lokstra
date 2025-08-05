@@ -88,6 +88,10 @@ func startServicesInOrder(regCtx iface.RegistrationContext,
 	return nil
 }
 
+// func generatePublicName(moduleName, methodName string) string {
+// 	return moduleName + "." + utils.CamelToSnake(methodName) // e.g. "auth.LoginHandler" → "auth.login_handler"
+// }
+
 func startModulesFromConfig(regCtx iface.RegistrationContext, modules []*ModuleConfig) error {
 	for _, mod := range modules {
 		if mod.Path != "" || mod.Entry != "" {
@@ -134,7 +138,7 @@ func newAppsFromConfig(regCtx iface.RegistrationContext, server *server.Server, 
 		}
 
 		for _, proxy := range ac.MountReverseProxy {
-			app.MountReverseProxy(proxy.Prefix, proxy.Target)
+			app.MountReverseProxy(proxy.Prefix, proxy.Target, false)
 		}
 
 		for _, group := range ac.Groups {
@@ -179,7 +183,7 @@ func buildGroup(regCtx iface.RegistrationContext, parent router.Router, group Gr
 	}
 
 	for _, proxy := range group.MountReverseProxy {
-		gr.MountReverseProxy(proxy.Prefix, proxy.Target)
+		gr.MountReverseProxy(proxy.Prefix, proxy.Target, false)
 	}
 
 	for _, subGroup := range group.Groups {

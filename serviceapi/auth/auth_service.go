@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 )
 
 type Service interface {
@@ -21,5 +20,3 @@ type LoginResponse struct {
 	RefreshToken string
 	ExpiresIn    int64 // dalam detik
 }
-
-var ErrFlowNotFound = errors.New("auth flow not found")

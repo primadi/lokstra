@@ -3,8 +3,6 @@ package router_engine
 import (
 	"fmt"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -85,24 +83,8 @@ func (m *ServeMuxEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeReverseProxy implements RouterEngine.
-func (m *ServeMuxEngine) ServeReverseProxy(prefix string, target string) {
-	targetURL, err := url.Parse(target)
-	if err != nil {
-		panic("invalid proxy target: " + err.Error())
-	}
-
+func (m *ServeMuxEngine) ServeReverseProxy(prefix string, handler http.HandlerFunc) {
 	cleanPrefix := cleanPrefix(prefix)
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
-
-	handler := http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			// Update host to match target
-			r.URL.Scheme = targetURL.Scheme
-			r.URL.Host = targetURL.Host
-			r.Host = targetURL.Host
-			proxy.ServeHTTP(w, r)
-		})
-
 	if cleanPrefix == "/" {
 		m.mux.Handle("/", handler)
 	} else {

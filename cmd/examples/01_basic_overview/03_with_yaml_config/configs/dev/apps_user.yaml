@@ -27,6 +27,13 @@ apps:
               - method: GET
                 path: /list
                 handler: user.list
+      - prefix: /api
+        load_from:
+          - api-routes-include.yaml
+        middleware:
+          - name: logger
+            config:
+              level: debug
     middleware:
       - name: logger
         enabled: false

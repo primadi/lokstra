@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lokstra Static Files Example</title>
+    <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Lokstra Static Files Example</h1>
+        
+        <div class="highlight">
+            <strong>This HTML file is served from the public directory!</strong>
+        </div>
+        
+        <p>This page demonstrates how Lokstra can serve static HTML files along with CSS assets.</p>
+        
+        <h2>Available Static Resources:</h2>
+        <ul>
+            <li><a href="/static/sample.txt">/static/sample.txt</a> - Text file from static directory</li>
+            <li><a href="/assets/style.css">/assets/style.css</a> - CSS file from assets directory</li>
+            <li><a href="/public/index.html">/public/index.html</a> - This HTML file from public directory</li>
+        </ul>
+        
+        <h2>API Endpoints:</h2>
+        <ul>
+            <li><a href="/api/info">/api/info</a> - Server configuration information</li>
+            <li><a href="/health">/health</a> - Health check endpoint</li>
+            <li><a href="/">/</a> - Root endpoint with available routes</li>
+        </ul>
+        
+        <p><em>Access this file at: <a href="http://localhost:8080/public/index.html">http://localhost:8080/public/index.html</a></em></p>
+    </div>
+</body>
+</html>

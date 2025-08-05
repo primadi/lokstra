@@ -1,4 +1,4 @@
-package auth_service
+package auth_module
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func (f *flowPassword) Authenticate(ctx context.Context, payload map[string]any)
 		return nil, err
 	}
 
-	if user == nil || user.Username != username || !CheckPasswordHash(password, user.PasswordHash) {
+	if user == nil || !CheckPasswordHash(password, user.PasswordHash) {
 		return nil, auth.ErrInvalidCredentials
 	}
 

@@ -68,10 +68,14 @@ func (m *MockRegistrationContext) CreateService(factoryName, serviceName string,
 	if factoryName == "" || factoryName == "default" {
 		return NewMockRouterEngine(), nil
 	}
-	if factoryName == "" || factoryName == "default" {
-		return &MockHttpListener{}, nil
-	}
 	return nil, nil
+}
+
+func (m *MockRegistrationContext) GetOrCreateService(factoryName, serviceName string, config ...any) (service.Service, error) {
+	if svc, err := m.GetService(serviceName); err == nil {
+		return svc, nil // Return existing service if found
+	}
+	return m.CreateService(factoryName, serviceName, config...)
 }
 
 func (m *MockRegistrationContext) GetValue(key string) (any, bool) { return nil, false }
@@ -84,6 +88,18 @@ func (m *MockRegistrationContext) GetService(serviceName string) (service.Servic
 func (m *MockRegistrationContext) RegisterServiceFactory(factoryName string, serviceFactory func(config any) (service.Service, error)) {
 }
 func (m *MockRegistrationContext) GetServiceFactory(factoryName string) (service.ServiceFactory, bool) {
+	if factoryName == "lokstra.http_router.default" {
+		return func(_ any) (service.Service, error) {
+			return NewMockRouterEngine(), nil
+		}, true
+	}
+
+	if factoryName == "lokstra.http_listener.default" {
+		return func(_ any) (service.Service, error) {
+			return NewMockListener(), nil
+		}, true
+	}
+
 	return nil, false
 }
 func (m *MockRegistrationContext) GetServiceFactories(pattern string) []service.ServiceFactory {
@@ -96,7 +112,7 @@ type MockRouterEngine struct {
 	routes         map[string]map[string]http.Handler
 	staticMounts   map[string]http.Dir
 	spaMounts      map[string]string
-	reverseProxies map[string]string
+	reverseProxies map[string]http.HandlerFunc
 }
 
 func NewMockRouterEngine() *MockRouterEngine {
@@ -104,7 +120,7 @@ func NewMockRouterEngine() *MockRouterEngine {
 		routes:         make(map[string]map[string]http.Handler),
 		staticMounts:   make(map[string]http.Dir),
 		spaMounts:      make(map[string]string),
-		reverseProxies: make(map[string]string),
+		reverseProxies: make(map[string]http.HandlerFunc),
 	}
 }
 
@@ -123,8 +139,8 @@ func (m *MockRouterEngine) ServeSPA(prefix string, fallbackFile string) {
 	m.spaMounts[prefix] = fallbackFile
 }
 
-func (m *MockRouterEngine) ServeReverseProxy(prefix string, target string) {
-	m.reverseProxies[prefix] = target
+func (m *MockRouterEngine) ServeReverseProxy(prefix string, handler http.HandlerFunc) {
+	m.reverseProxies[prefix] = handler
 }
 
 func (m *MockRouterEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -150,6 +166,10 @@ var _ serviceapi.HttpListener = (*MockHttpListener)(nil)
 var _ service.Service = (*MockRouterEngine)(nil)
 var _ service.Service = (*MockHttpListener)(nil)
 
+func NewMockListener() serviceapi.HttpListener {
+	return &MockHttpListener{}
+}
+
 func TestNewRouter(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 
@@ -169,7 +189,7 @@ func TestNewRouter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := router.NewRouter(ctx, "test-router", tt.config)
+			r := router.NewRouter(ctx, tt.config)
 
 			if r == nil {
 				t.Error("Expected router to be created, got nil")
@@ -204,7 +224,7 @@ func TestNewRouterWithEngine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := router.NewRouterWithEngine(ctx, tt.engineType, "test-router", tt.config)
+			r := router.NewRouterWithEngine(ctx, tt.engineType, tt.config)
 
 			if r == nil {
 				t.Error("Expected router to be created, got nil")
@@ -237,7 +257,7 @@ func TestNewListener(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			listener := router.NewListener(ctx, "test-listener", tt.config)
+			listener := router.NewListener(ctx, tt.config)
 
 			if listener == nil {
 				t.Error("Expected listener to be created, got nil")
@@ -268,7 +288,7 @@ func TestNewListenerWithEngine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			listener := router.NewListenerWithEngine(ctx, tt.listenerType, "test-listener", tt.config)
+			listener := router.NewListenerWithEngine(ctx, tt.listenerType, tt.config)
 
 			if listener == nil {
 				t.Error("Expected listener to be created, got nil")
@@ -279,7 +299,7 @@ func TestNewListenerWithEngine(t *testing.T) {
 
 func TestRouterImpl_BasicMethods(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	t.Run("Prefix", func(t *testing.T) {
 		prefix := r.Prefix()
@@ -313,7 +333,7 @@ func TestRouterImpl_BasicMethods(t *testing.T) {
 
 func TestRouterImpl_HTTPMethods(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	handler := func(ctx *request.Context) error {
 		return ctx.Ok("OK")
@@ -350,7 +370,7 @@ func TestRouterImpl_HTTPMethods(t *testing.T) {
 
 func TestRouterImpl_Handle(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	handler := func(ctx *request.Context) error {
 		return ctx.Ok("OK")
@@ -394,7 +414,7 @@ func TestRouterImpl_Handle(t *testing.T) {
 
 func TestRouterImpl_HandleOverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	handler := func(ctx *request.Context) error {
 		return ctx.Ok("OK")
@@ -419,7 +439,7 @@ func TestRouterImpl_HandleOverrideMiddleware(t *testing.T) {
 
 func TestRouterImpl_WithOverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	tests := []struct {
 		name   string
@@ -447,7 +467,7 @@ func TestRouterImpl_WithOverrideMiddleware(t *testing.T) {
 
 func TestRouterImpl_Group(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	tests := []struct {
 		name   string
@@ -477,7 +497,7 @@ func TestRouterImpl_Group(t *testing.T) {
 
 func TestRouterImpl_GroupBlock(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	handler := func(ctx *request.Context) error {
 		return ctx.Ok("OK")
@@ -505,7 +525,7 @@ func TestRouterImpl_GroupBlock(t *testing.T) {
 
 func TestRouterImpl_MountStatic(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	result := r.MountStatic("/static", http.Dir("./public"))
 
@@ -516,7 +536,7 @@ func TestRouterImpl_MountStatic(t *testing.T) {
 
 func TestRouterImpl_MountSPA(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	result := r.MountSPA("/app", "index.html")
 
@@ -527,9 +547,9 @@ func TestRouterImpl_MountSPA(t *testing.T) {
 
 func TestRouterImpl_MountReverseProxy(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
-	result := r.MountReverseProxy("/api", "http://backend:8080")
+	result := r.MountReverseProxy("/api", "http://backend:8080", false)
 
 	if result == nil {
 		t.Error("Expected router to be returned, got nil")
@@ -538,7 +558,7 @@ func TestRouterImpl_MountReverseProxy(t *testing.T) {
 
 func TestRouterImpl_ServeHTTP(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -549,7 +569,7 @@ func TestRouterImpl_ServeHTTP(t *testing.T) {
 
 func TestRouterImpl_LockMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	// Should not panic
 	r.LockMiddleware()
@@ -557,7 +577,7 @@ func TestRouterImpl_LockMiddleware(t *testing.T) {
 
 func TestRouterImpl_OverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	result := r.OverrideMiddleware()
 
@@ -573,7 +593,7 @@ func TestRouterImpl_OverrideMiddleware(t *testing.T) {
 
 func TestRouterImpl_RecurseAllHandler(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	handler := func(ctx *request.Context) error {
 		return ctx.Ok("OK")
@@ -594,7 +614,7 @@ func TestRouterImpl_RecurseAllHandler(t *testing.T) {
 
 func TestRouterImpl_DumpRoutes(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	handler := func(ctx *request.Context) error {
 		return ctx.Ok("OK")
@@ -608,7 +628,7 @@ func TestRouterImpl_DumpRoutes(t *testing.T) {
 
 func TestRouterImpl_FastHttpHandler(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	handler := r.FastHttpHandler()
 

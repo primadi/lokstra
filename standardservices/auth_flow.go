@@ -8,7 +8,7 @@ import (
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
 
-const AUTH_FLOW_PASSWORD = auth.AUTH_FLOW_PREFIX + "password"
+const AUTH_FLOW_PASSWORD = auth.FLOW_PREFIX + "password"
 
 func RegisterAllAuthFlow(regCtx iface.RegistrationContext) {
 	AuthPasswordfactory := func(config any) (service.Service, error) {

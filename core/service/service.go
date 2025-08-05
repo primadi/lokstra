@@ -1,6 +1,8 @@
 package service
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type ServiceFactory = func(config any) (Service, error)
 

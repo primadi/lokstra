@@ -143,6 +143,14 @@ func (c *ContextImpl) CreateService(factoryName string, serviceName string, conf
 	return service, nil
 }
 
+// GetOrCreateService implements Context.
+func (c *ContextImpl) GetOrCreateService(factoryName string, serviceName string, config ...any) (service.Service, error) {
+	if svc, err := c.GetService(serviceName); err == nil {
+		return svc, nil // Return existing service if found
+	}
+	return c.CreateService(factoryName, serviceName, config...)
+}
+
 // RegisterHandler implements Context.
 func (c *ContextImpl) RegisterHandler(name string, handler any) {
 	if !c.permission.IsAllowedRegisterHandler() {

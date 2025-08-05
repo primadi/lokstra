@@ -21,13 +21,13 @@ type HttpRouterEngine struct {
 }
 
 // ServeReverseProxy implements RouterEngine.
-func (h *HttpRouterEngine) ServeReverseProxy(prefix string, target string) {
+func (h *HttpRouterEngine) ServeReverseProxy(prefix string, handler http.HandlerFunc) {
 	if h.sm == nil {
 		sm, _ := NewServeMuxEngine(nil)
 		h.sm = sm.(serviceapi.RouterEngine)
 		h.hr.NotFound = h.sm
 	}
-	h.sm.ServeReverseProxy(prefix, target)
+	h.sm.ServeReverseProxy(prefix, handler)
 }
 
 // ServeSPA implements RouterEngine.

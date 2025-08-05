@@ -33,18 +33,20 @@ type SPADirMeta struct {
 }
 
 type ReverseProxyMeta struct {
-	Prefix string
-	Target string
+	Prefix             string
+	Target             string
+	OverrideMiddleware bool
+	Middleware         []*midware.Execution
 }
 
 type RouterMeta struct {
 	Prefix             string
 	OverrideMiddleware bool
 
-	Routes         []*RouteMeta
-	Middleware     []*midware.Execution
-	StaticMounts   []*StaticDirMeta
-	SPAMounts      []*SPADirMeta
+	Routes     []*RouteMeta
+	Middleware []*midware.Execution
+	// StaticMounts   []*StaticDirMeta
+	// SPAMounts      []*SPADirMeta
 	ReverseProxies []*ReverseProxyMeta
 	Groups         []*RouterMeta
 }
@@ -55,10 +57,10 @@ func NewRouterMeta() *RouterMeta {
 		OverrideMiddleware: false,
 		Routes:             []*RouteMeta{},
 		Middleware:         []*midware.Execution{},
-		StaticMounts:       []*StaticDirMeta{},
-		SPAMounts:          []*SPADirMeta{},
-		ReverseProxies:     []*ReverseProxyMeta{},
-		Groups:             []*RouterMeta{},
+		// StaticMounts:       []*StaticDirMeta{},
+		// SPAMounts:          []*SPADirMeta{},
+		ReverseProxies: []*ReverseProxyMeta{},
+		Groups:         []*RouterMeta{},
 	}
 }
 
@@ -191,6 +193,18 @@ func (r *RouterMeta) cleanPrefix(prefix string) string {
 	return r.Prefix + "/" + strings.Trim(prefix, "/")
 }
 
+func (r *RouterMeta) MountReverseProxy(prefix string, target string,
+	overrideMiddleware bool, middleware ...any) *RouterMeta {
+	mwp := anyArraytoMiddleware(middleware)
+	r.ReverseProxies = append(r.ReverseProxies, &ReverseProxyMeta{
+		Prefix:             prefix,
+		Target:             target,
+		OverrideMiddleware: overrideMiddleware,
+		Middleware:         mwp,
+	})
+	return r
+}
+
 func ResolveAllNamed(ctx iface.RegistrationContext, r *RouterMeta) {
 	for i, route := range r.Routes {
 		if rpcServiceMeta, ok := route.Handler.Extension.(*service.RpcServiceMeta); ok {
@@ -227,6 +241,12 @@ func ResolveAllNamed(ctx iface.RegistrationContext, r *RouterMeta) {
 
 	for _, mwExec := range r.Middleware {
 		resolveMiddleware(ctx, mwExec)
+	}
+
+	for _, rp := range r.ReverseProxies {
+		for _, mwExec := range rp.Middleware {
+			resolveMiddleware(ctx, mwExec)
+		}
 	}
 
 	for _, gr := range r.Groups {

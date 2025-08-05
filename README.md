@@ -63,6 +63,7 @@ Lokstra offers a clear project structure and batteries-included features, but ne
 - ✅ Config via **YAML**, **code**, or hybrid
 - ✅ Modular, clean file structure
 - ✅ Optional `ContextHelper` injection for DX
+- ✅ **JSON Schema for YAML IntelliSense** - Auto-completion and validation in VS Code and other editors
 
 ### 🌍 Multi-Tenant Ready
 
@@ -111,6 +112,61 @@ func main() {
 
 	srv.AddApp(app)
 	_ = srv.Start()
+}
+```
+
+---
+
+## ⚙️ YAML Configuration with Schema Support
+
+Lokstra provides comprehensive YAML configuration with full IntelliSense support for modern editors.
+
+### JSON Schema for YAML Language Server
+
+The `schema/lokstra.json` file provides complete validation and auto-completion for all configuration options:
+
+```yaml
+# yaml-language-server: $schema=./schema/lokstra.json
+
+server:
+  name: my-server
+  global_setting:
+    log_level: info
+
+apps:
+  - name: api-app
+    address: ":8080"
+    routes:
+      - method: GET
+        path: /health
+        handler: health.check
+    middleware:
+      - name: cors
+        enabled: true
+      - name: logger
+        config:
+          level: debug
+
+services:
+  - name: main-db
+    type: lokstra.dbpool.pg
+    config:
+      dsn: "postgres://user:pass@localhost/db"
+```
+
+### VS Code Setup
+
+Add to your `.vscode/settings.json`:
+
+```json
+{
+  "yaml.schemas": {
+    "./schema/lokstra.json": [
+      "**/configs/**/*.yaml",
+      "lokstra.yaml",
+      "server.yaml"
+    ]
+  }
 }
 ```
 

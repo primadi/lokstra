@@ -1,15 +1,16 @@
-package auth_service
+package auth_module
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
 
 type AuthServiceImpl struct {
-	FlowRegistry    map[string]auth.Flow
+	regCtx          iface.RegistrationContext
 	TokenIssuer     auth.TokenIssuer
 	SessionService  auth.Session
 	AccessTokenTTL  time.Duration
@@ -19,13 +20,19 @@ type AuthServiceImpl struct {
 // Login implements auth.Service.
 func (a *AuthServiceImpl) Login(ctx context.Context, input auth.LoginRequest) (*auth.LoginResponse, error) {
 	// Validate flow
-	flow, ok := a.FlowRegistry[input.Flow]
-	if !ok {
+	fname := auth.FLOW_PREFIX + input.Flow
+	flow, err := a.regCtx.GetOrCreateService(fname, fname)
+	if err != nil {
 		return nil, auth.ErrFlowNotFound // Assuming this error is defined in the auth package
 	}
 
+	authFlow, ok := flow.(auth.Flow)
+	if !ok {
+		return nil, fmt.Errorf("service %s is not a valid auth flow", fname)
+	}
+
 	// Authenticate using the flow
-	result, err := flow.Authenticate(ctx, input.Payload)
+	result, err := authFlow.Authenticate(ctx, input.Payload)
 	if err != nil {
 		return nil, err
 	}

@@ -10,20 +10,6 @@ type VariableResolver interface {
 	Resolve(source string, key string, defaultValue string) (string, bool)
 }
 
-// EnvResolver implements VariableResolverService for OS environment variables.
-type EnvResolver struct{}
-
-func (e *EnvResolver) Resolve(source, key, def string) (string, bool) {
-	if source != "ENV" {
-		return "", false
-	}
-	val := os.Getenv(key)
-	if val == "" {
-		return def, false
-	}
-	return val, true
-}
-
 // Registry of available variable resolvers.
 var variableResolvers = map[string]VariableResolver{
 	"ENV": &EnvResolver{},

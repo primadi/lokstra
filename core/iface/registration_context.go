@@ -2,6 +2,7 @@ package iface
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
@@ -21,6 +22,7 @@ type RegistrationContext interface {
 	RegisterService(serviceName string, service service.Service) error
 	GetService(serviceName string) (service.Service, error)
 	CreateService(factoryName, serviceName string, config ...any) (service.Service, error)
+	GetOrCreateService(factoryName, serviceName string, config ...any) (service.Service, error)
 
 	// Service factory registration and retrieval
 	RegisterServiceFactory(factoryName string,
@@ -59,4 +61,56 @@ type RegistrationContext interface {
 	RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx RegistrationContext) error) error
 
 	NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) RegistrationContext
+}
+
+func GetServiceFromConfig[T service.Service](regCtx RegistrationContext,
+	config any, paramServiceName string) (T, error) {
+	var zero T
+	svcName := ""
+	switch cfg := config.(type) {
+	case string:
+		svcName = cfg
+	case map[string]string:
+		svcName = cfg[paramServiceName]
+	default:
+		return zero, service.ErrUnsupportedConfig(config)
+	}
+
+	if svcName == "" {
+		return zero, fmt.Errorf(
+			"failed to get service for %s: service name must be provided in config",
+			paramServiceName)
+	}
+	svc, err := regCtx.GetService(svcName)
+	if err != nil {
+		return zero, fmt.Errorf("failed to get service for %s: %s", paramServiceName, err.Error())
+	}
+	if typedSvc, ok := svc.(T); ok {
+		return typedSvc, nil
+	}
+
+	return zero, service.ErrInvalidServiceType(paramServiceName,
+		fmt.Sprintf("%T", (*T)(nil)))
+}
+
+func GetValueFromConfig[T any](regCtx RegistrationContext,
+	config any, paramName string) (T, error) {
+	var zero T
+	switch cfg := config.(type) {
+	case map[string]any:
+		if val, ok := cfg[paramName]; ok {
+			if typedVal, ok := val.(T); ok {
+				return typedVal, nil
+			}
+			return zero, fmt.Errorf(
+				"failed to get value for %s: expected type %T, got %T", paramName, zero, val)
+		}
+		return zero, fmt.Errorf("failed to get value for %s: key not found", paramName)
+	default:
+		if typedVal, ok := cfg.(T); ok {
+			return typedVal, nil
+		}
+		return zero, fmt.Errorf("failed to get value for %s: unsupported config type %T",
+			paramName, cfg)
+	}
 }

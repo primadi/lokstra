@@ -84,6 +84,12 @@ type ModuleConfig struct {
 	Entry       string         `yaml:"entry,omitempty"`
 	Settings    map[string]any `yaml:"settings,omitempty"`
 	Permissions map[string]any `yaml:"permissions,omitempty"`
+
+	RequiredServices         []string        `yaml:"required_services,omitempty"`
+	CreateServices           []ServiceConfig `yaml:"create_services,omitempty"`
+	RegisterServiceFactories []string        `yaml:"register_service_factories,omitempty"` // list of method names
+	RegisterHandlers         []string        `yaml:"register_handlers,omitempty"`          // list of method names
+	RegisterMiddleware       []string        `yaml:"register_middleware,omitempty"`        // list of method names
 }
 
 type RouteConfig struct {

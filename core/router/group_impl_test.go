@@ -10,7 +10,7 @@ import (
 
 func TestGroupImpl_BasicMethods(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	group := r.Group("/api")
 
@@ -41,7 +41,7 @@ func TestGroupImpl_BasicMethods(t *testing.T) {
 
 func TestGroupImpl_WithPrefix(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	tests := []struct {
 		name        string
@@ -74,7 +74,7 @@ func TestGroupImpl_WithPrefix(t *testing.T) {
 
 func TestGroupImpl_WithOverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	tests := []struct {
@@ -103,7 +103,7 @@ func TestGroupImpl_WithOverrideMiddleware(t *testing.T) {
 
 func TestGroupImpl_HTTPMethods(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	handler := func(ctx *request.Context) error {
@@ -147,7 +147,7 @@ func TestGroupImpl_HTTPMethods(t *testing.T) {
 
 func TestGroupImpl_Handle(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	handler := func(ctx *request.Context) error {
@@ -192,7 +192,7 @@ func TestGroupImpl_Handle(t *testing.T) {
 
 func TestGroupImpl_HandleOverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	handler := func(ctx *request.Context) error {
@@ -221,7 +221,7 @@ func TestGroupImpl_HandleOverrideMiddleware(t *testing.T) {
 
 func TestGroupImpl_NestedGroups(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	apiGroup := r.Group("/api")
 	v1Group := apiGroup.Group("/v1")
@@ -249,7 +249,7 @@ func TestGroupImpl_NestedGroups(t *testing.T) {
 
 func TestGroupImpl_GroupBlock(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	handler := func(ctx *request.Context) error {
@@ -286,7 +286,7 @@ func TestGroupImpl_GroupBlock(t *testing.T) {
 
 func TestGroupImpl_Use(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	mockMiddleware := func(next request.HandlerFunc) request.HandlerFunc {
@@ -309,7 +309,7 @@ func TestGroupImpl_Use(t *testing.T) {
 
 func TestGroupImpl_LockMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	// Should not panic
@@ -318,7 +318,7 @@ func TestGroupImpl_LockMiddleware(t *testing.T) {
 
 func TestGroupImpl_OverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	result := group.OverrideMiddleware()
@@ -335,7 +335,7 @@ func TestGroupImpl_OverrideMiddleware(t *testing.T) {
 
 func TestGroupImpl_MountStatic(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	result := group.MountStatic("/static", http.Dir("./public"))
@@ -347,7 +347,7 @@ func TestGroupImpl_MountStatic(t *testing.T) {
 
 func TestGroupImpl_MountSPA(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	result := group.MountSPA("/app", "index.html")
@@ -359,10 +359,10 @@ func TestGroupImpl_MountSPA(t *testing.T) {
 
 func TestGroupImpl_MountReverseProxy(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
-	result := group.MountReverseProxy("/proxy", "http://backend:8080")
+	result := group.MountReverseProxy("/proxy", "http://backend:8080", false)
 
 	if result == nil {
 		t.Error("Expected group to be returned, got nil")
@@ -371,7 +371,7 @@ func TestGroupImpl_MountReverseProxy(t *testing.T) {
 
 func TestGroupImpl_CleanPrefix(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	tests := []struct {
 		name           string
@@ -415,7 +415,7 @@ func TestGroupImpl_CleanPrefix(t *testing.T) {
 // Test panic scenarios for GroupImpl
 func TestGroupImpl_PanicScenarios(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
 	t.Run("DumpRoutes should panic", func(t *testing.T) {

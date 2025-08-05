@@ -17,5 +17,5 @@ type RouterEngine interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 	ServeStatic(prefix string, folder http.Dir)
 	ServeSPA(prefix string, indexFile string)
-	ServeReverseProxy(prefix string, target string)
+	ServeReverseProxy(prefix string, handler http.HandlerFunc)
 }

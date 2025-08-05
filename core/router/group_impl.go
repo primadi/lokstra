@@ -106,8 +106,10 @@ func (g *GroupImpl) LockMiddleware() {
 }
 
 // MountReverseProxy implements Router.
-func (g *GroupImpl) MountReverseProxy(prefix string, target string) Router {
-	g.parent.r_engine.ServeReverseProxy(g.cleanPrefix(prefix), target)
+func (g *GroupImpl) MountReverseProxy(prefix string, target string,
+	overrideMiddleware bool, mw ...any) Router {
+	g.mwLocked = true
+	g.meta.MountReverseProxy(prefix, target, overrideMiddleware, mw...)
 	return g
 }
 

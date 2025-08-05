@@ -1,0 +1,321 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/primadi/lokstra/main/schema/group-include.json",
+  "title": "Lokstra Group Include Configuration Schema",
+  "description": "JSON Schema for Lokstra group include files loaded via load_from",
+  "type": "object",
+  "properties": {
+    "routes": {
+      "type": "array",
+      "description": "Routes to be included in the parent group",
+      "items": {
+        "$ref": "#/definitions/RouteConfig"
+      }
+    },
+    "groups": {
+      "type": "array", 
+      "description": "Nested groups to be included in the parent group",
+      "items": {
+        "$ref": "#/definitions/GroupConfig"
+      }
+    },
+    "mount_static": {
+      "type": "array",
+      "description": "Static file mount points to be included",
+      "items": {
+        "$ref": "#/definitions/MountStaticConfig"
+      }
+    },
+    "mount_spa": {
+      "type": "array",
+      "description": "SPA mount points to be included",
+      "items": {
+        "$ref": "#/definitions/MountSPAConfig"
+      }
+    },
+    "mount_reverse_proxy": {
+      "type": "array",
+      "description": "Reverse proxy mount points to be included",
+      "items": {
+        "$ref": "#/definitions/MountReverseProxyConfig"
+      }
+    },
+    "mount_rpc_service": {
+      "type": "array",
+      "description": "RPC service mount points to be included",
+      "items": {
+        "$ref": "#/definitions/MountRpcServiceConfig"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "not": {
+    "anyOf": [
+      {
+        "required": ["prefix"],
+        "errorMessage": "prefix is not allowed at root level in load_from files - define groups inside instead"
+      },
+      {
+        "required": ["override_middleware"],
+        "errorMessage": "override_middleware is not allowed at root level in load_from files"
+      },
+      {
+        "required": ["middleware"],
+        "errorMessage": "middleware is not allowed at root level in load_from files - define groups inside instead"
+      }
+    ]
+  },
+  "definitions": {
+    "RouteConfig": {
+      "type": "object",
+      "description": "Individual route configuration",
+      "required": ["method", "path", "handler"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "HTTP method",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"]
+        },
+        "path": {
+          "type": "string",
+          "description": "Route path pattern (e.g., '/users/:id', '/health')"
+        },
+        "handler": {
+          "type": "string",
+          "description": "Handler name to execute for this route (e.g., 'user.profile', 'health.check')"
+        },
+        "override_middleware": {
+          "type": "boolean",
+          "description": "Whether to override parent middleware",
+          "default": false
+        },
+        "middleware": {
+          "$ref": "#/definitions/MiddlewareList"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GroupConfig": {
+      "type": "object",
+      "description": "Route group configuration with prefix and nested routes",
+      "required": ["prefix"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix for this group (e.g., '/api', '/v1')",
+          "pattern": "^/.*"
+        },
+        "groups": {
+          "type": "array",
+          "description": "Nested route groups",
+          "items": {
+            "$ref": "#/definitions/GroupConfig"
+          }
+        },
+        "routes": {
+          "type": "array",
+          "description": "Routes within this group",
+          "items": {
+            "$ref": "#/definitions/RouteConfig"
+          }
+        },
+        "load_from": {
+          "type": "array",
+          "description": "Load group configuration from external files",
+          "items": {
+            "type": "string"
+          }
+        },
+        "middleware": {
+          "$ref": "#/definitions/MiddlewareList"
+        },
+        "override_middleware": {
+          "type": "boolean",
+          "description": "Whether to override parent middleware",
+          "default": false
+        },
+        "mount_static": {
+          "type": "array",
+          "description": "Static file mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountStaticConfig"
+          }
+        },
+        "mount_spa": {
+          "type": "array",
+          "description": "SPA mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountSPAConfig"
+          }
+        },
+        "mount_reverse_proxy": {
+          "type": "array",
+          "description": "Reverse proxy mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountReverseProxyConfig"
+          }
+        },
+        "mount_rpc_service": {
+          "type": "array",
+          "description": "RPC service mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountRpcServiceConfig"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "MiddlewareList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "description": "List of middleware configurations",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Middleware name (shorthand)"
+              },
+              {
+                "$ref": "#/definitions/MiddlewareConfig"
+              }
+            ]
+          }
+        },
+        {
+          "type": "string",
+          "description": "Single middleware name"
+        },
+        {
+          "$ref": "#/definitions/MiddlewareConfig"
+        }
+      ]
+    },
+    "MiddlewareConfig": {
+      "type": "object",
+      "description": "Middleware configuration",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the middleware",
+          "examples": ["auth", "cors", "logger", "recovery", "rate_limit"]
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this middleware is enabled",
+          "default": true
+        },
+        "config": {
+          "type": "object",
+          "description": "Middleware-specific configuration",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountStaticConfig": {
+      "type": "object",
+      "description": "Static file serving configuration",
+      "required": ["prefix", "folder"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix to serve static files from (e.g., '/static', '/assets')",
+          "pattern": "^/.*"
+        },
+        "folder": {
+          "type": "string",
+          "description": "Local folder path to serve files from (e.g., './static', './public')"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountSPAConfig": {
+      "type": "object",
+      "description": "Single Page Application serving configuration",
+      "required": ["prefix", "fallback_file"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix for SPA routes (typically '/')",
+          "pattern": "^/.*"
+        },
+        "fallback_file": {
+          "type": "string",
+          "description": "Fallback HTML file for client-side routing (e.g., './dist/index.html')"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountReverseProxyConfig": {
+      "type": "object",
+      "description": "Reverse proxy configuration",
+      "required": ["prefix", "target"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix to proxy (e.g., '/api', '/external')",
+          "pattern": "^/.*"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target URL to proxy requests to (e.g., 'http://localhost:3000', 'https://api.example.com')",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountRpcServiceConfig": {
+      "type": "object",
+      "description": "RPC service mount configuration",
+      "required": ["base_path", "service_name"],
+      "properties": {
+        "base_path": {
+          "type": "string",
+          "description": "Base URL path for RPC endpoints (e.g., '/rpc', '/api/rpc')",
+          "pattern": "^/.*"
+        },
+        "service_name": {
+          "type": "string",
+          "description": "Name of the RPC service to mount"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/external",
+          "handler": "external.Handler"
+        },
+        {
+          "method": "POST", 
+          "path": "/create",
+          "handler": "external.CreateHandler"
+        }
+      ],
+      "mount_static": [
+        {
+          "prefix": "/assets",
+          "folder": "./static"
+        }
+      ],
+      "groups": [
+        {
+          "prefix": "/nested",
+          "routes": [
+            {
+              "method": "GET",
+              "path": "/item",
+              "handler": "nested.Handler"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -25,38 +25,46 @@ type RouterImpl struct {
 	r_engine serviceapi.RouterEngine
 }
 
-func NewListener(ctx iface.RegistrationContext, name string, config map[string]any) serviceapi.HttpListener {
-	return NewListenerWithEngine(ctx, "", name, config)
+func NewListener(ctx iface.RegistrationContext, config map[string]any) serviceapi.HttpListener {
+	return NewListenerWithEngine(ctx, "", config)
 }
 
 func NewListenerWithEngine(ctx iface.RegistrationContext, listenerType string,
-	name string, config map[string]any) serviceapi.HttpListener {
+	config map[string]any) serviceapi.HttpListener {
 
 	lType := NormalizeListenerType(listenerType)
-	lname := lType + "." + name
 
-	lsAny, err := ctx.CreateService(lType, lname, config)
+	factory, found := ctx.GetServiceFactory(lType)
+	if !found {
+		panic(fmt.Sprintf("Listener type %s not found", lType))
+	}
+
+	lsAny, err := factory(config)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create listener for app %s: %v", name, err))
+		panic(fmt.Sprintf("failed to create listener for app %s: %v", lType, err))
 	}
 	ls, ok := lsAny.(serviceapi.HttpListener)
 	if !ok {
-		panic(fmt.Sprintf("listener for app %s is not of type serviceapi.HttpListener", name))
+		panic(fmt.Sprintf("listener for app %s is not of type serviceapi.HttpListener", lType))
 	}
 	return ls
 }
 
-func NewRouter(ctx iface.RegistrationContext, name string, config map[string]any) Router {
-	return NewRouterWithEngine(ctx, "", name, config)
+func NewRouter(regCtx iface.RegistrationContext, config map[string]any) Router {
+	return NewRouterWithEngine(regCtx, "", config)
 }
 
-func NewRouterWithEngine(ctx iface.RegistrationContext, engineType string,
-	name string, config map[string]any) Router {
+func NewRouterWithEngine(regCtx iface.RegistrationContext, engineType string,
+	config map[string]any) Router {
 
-	eType := NormalizeRouterType(engineType)
-	eName := eType + "." + name
+	serviceType := NormalizeRouterType(engineType)
 
-	rtAny, err := ctx.CreateService(eType, eName, config)
+	factory, found := regCtx.GetServiceFactory(serviceType)
+	if !found {
+		panic(fmt.Sprintf("Router engine %s not found", serviceType))
+	}
+
+	rtAny, err := factory(config)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create router engine %s: %v", engineType, err))
 	}
@@ -151,8 +159,10 @@ func (r *RouterImpl) LockMiddleware() {
 }
 
 // MountReverseProxy implements Router.
-func (r *RouterImpl) MountReverseProxy(prefix string, target string) Router {
-	r.r_engine.ServeReverseProxy(prefix, target)
+func (r *RouterImpl) MountReverseProxy(prefix string, target string,
+	overrideMiddleware bool, mw ...any) Router {
+	r.mwLocked = true
+	r.meta.MountReverseProxy(prefix, target, overrideMiddleware, mw...)
 	return r
 }
 
@@ -328,6 +338,11 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 		r.handleRouteMeta(route, mwh)
 	}
 
+	for _, rp := range router.ReverseProxies {
+		handler := composeReverseProxyMw(rp, mwh)
+		r.r_engine.ServeReverseProxy(rp.Prefix, handler)
+	}
+
 	for _, gr := range router.Groups {
 		r.buildRouter(gr, mwh)
 	}
@@ -360,12 +375,27 @@ func composeMiddleware(mw []*midware.Execution,
 		return 0
 	})
 
-	// Compose middleware functions in reverse order
+	// Compose middleware functions in reverse order with error-aware composition
 	handler := finalHandler
 	for i := len(mw) - 1; i >= 0; i-- {
-		handler = mw[i].MiddlewareFn(handler)
+		currentMw := mw[i]
+		handler = func(innerHandler request.HandlerFunc, middleware *midware.Execution) request.HandlerFunc {
+			return middleware.MiddlewareFn(func(ctx *request.Context) error {
+				// Check if previous middleware already set an error response
+				if ctx.ShouldStopMiddlewareChain(nil) {
+					// Previous middleware set error status (>= 400), stop chain
+					return fmt.Errorf("previous middleware set error response (status: %d)", ctx.StatusCode)
+				}
+				return innerHandler(ctx)
+			})
+		}(handler, currentMw)
 	}
 	return handler
+}
+
+// ComposeMiddlewareForTest exposes composeMiddleware for testing
+func ComposeMiddlewareForTest(mw []*midware.Execution, finalHandler request.HandlerFunc) request.HandlerFunc {
+	return composeMiddleware(mw, finalHandler)
 }
 
 func NormalizeListenerType(listenerType string) string {

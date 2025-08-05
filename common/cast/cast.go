@@ -201,3 +201,38 @@ func SliceConvert[T any](slice any) (T, error) {
 
 	return result.Interface().(T), nil
 }
+
+func IsEmpty(val any) bool {
+	if val == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(val)
+
+	switch v.Kind() {
+	case reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return v.Len() == 0
+	case reflect.Ptr, reflect.Interface:
+		return v.IsNil()
+	case reflect.Struct:
+		// Optionally: check if all fields in struct are empty
+		for i := 0; i < v.NumField(); i++ {
+			if !IsEmpty(v.Field(i).Interface()) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}

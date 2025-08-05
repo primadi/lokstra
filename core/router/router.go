@@ -26,7 +26,7 @@ type Router interface {
 
 	MountStatic(prefix string, folder http.Dir) Router
 	MountSPA(prefix string, fallbackFile string) Router
-	MountReverseProxy(prefix string, target string) Router
+	MountReverseProxy(prefix string, target string, overrideMiddleware bool, mw ...any) Router
 	MountRpcService(path string, service any, overrideMiddleware bool, mw ...any) Router
 
 	Group(prefix string, mw ...any) Router

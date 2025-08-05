@@ -47,6 +47,24 @@ func (ctx *Context) GetQueryParam(name string) string {
 	return ctx.Request.URL.Query().Get(name)
 }
 
+// ShouldStopMiddlewareChain checks if middleware chain should stop due to error or HTTP error status.
+// This helper ensures consistent error checking across all middleware implementations.
+//
+// Returns true if:
+//   - err is not nil (any error occurred)
+//   - ctx.StatusCode >= 400 (HTTP error status)
+//
+// Usage in middleware:
+//
+//	err := next(ctx)
+//	if ctx.ShouldStopMiddlewareChain(err) {
+//	    return err
+//	}
+//	// Continue with post-processing...
+func (ctx *Context) ShouldStopMiddlewareChain(err error) bool {
+	return err != nil || ctx.StatusCode >= 400
+}
+
 func (ctx *Context) GetHeader(name string) string {
 	return ctx.Request.Header.Get(name)
 }

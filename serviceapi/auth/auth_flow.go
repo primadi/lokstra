@@ -2,11 +2,7 @@ package auth
 
 import (
 	"context"
-	"errors"
-)
-
-const (
-	AUTH_FLOW_PREFIX = "lokstra.auth_flow."
+	"time"
 )
 
 type Flow interface {
@@ -18,6 +14,5 @@ type Result struct {
 	UserID   string
 	TenantID string
 	Metadata map[string]any // optional (role, email, etc)
+	IssuedAt time.Time
 }
-
-var ErrInvalidCredentials = errors.New("invalid credentials")

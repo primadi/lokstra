@@ -18,7 +18,7 @@ var _ service.Service = (*MockRpcService)(nil)
 
 func TestRouterImpl_MountRpcService_StringService(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	serviceName := "user.service"
 	result := r.MountRpcService("/rpc", serviceName, false)
@@ -43,7 +43,7 @@ func TestRouterImpl_MountRpcService_StringService(t *testing.T) {
 
 func TestRouterImpl_MountRpcService_ServiceInterface(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	mockService := &MockRpcService{name: "user.service"}
 	result := r.MountRpcService("/rpc", mockService, false)
@@ -73,7 +73,7 @@ func TestRouterImpl_MountRpcService_ServiceInterface(t *testing.T) {
 
 func TestRouterImpl_MountRpcService_RpcServiceMeta(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	rpcMeta := &service.RpcServiceMeta{
 		ServiceName: "custom.service",
@@ -106,7 +106,7 @@ func TestRouterImpl_MountRpcService_RpcServiceMeta(t *testing.T) {
 
 func TestRouterImpl_HandlerTypes(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	tests := []struct {
 		name    string
@@ -159,7 +159,7 @@ func TestRouterImpl_HandlerTypes(t *testing.T) {
 
 func TestRouterImpl_StaticMounts(t *testing.T) {
 	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, "test-router", map[string]any{})
+	r := router.NewRouter(ctx, map[string]any{})
 
 	// Test static mount
 	staticDir := http.Dir("./public")
@@ -177,7 +177,7 @@ func TestRouterImpl_StaticMounts(t *testing.T) {
 	}
 
 	// Test reverse proxy mount
-	result = r.MountReverseProxy("/api", "http://backend:8080")
+	result = r.MountReverseProxy("/api", "http://backend:8080", false)
 
 	if result == nil {
 		t.Error("Expected router to be returned, got nil")
@@ -203,7 +203,7 @@ func TestRouterImpl_PrefixCleaning(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := router.NewRouter(ctx, "test-router", map[string]any{})
+			r := router.NewRouter(ctx, map[string]any{})
 			r = r.WithPrefix(tt.routerPrefix)
 
 			handler := func(ctx *request.Context) error {
