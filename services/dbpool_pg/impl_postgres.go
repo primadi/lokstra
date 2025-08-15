@@ -28,12 +28,12 @@ func (p *pgxPostgresPool) GetSetting(key string) any {
 	return nil
 }
 
-func NewPgxPostgresPool(dsn string) (*pgxPostgresPool, error) {
-	pool, err := pgxpool.New(context.Background(), dsn)
+func NewPgxPostgresPool(ctx context.Context, dsn string) (*pgxPostgresPool, error) {
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}
-	if err := pool.Ping(context.Background()); err != nil {
+	if err := pool.Ping(ctx); err != nil {
 		return nil, err
 	}
 	return &pgxPostgresPool{
@@ -42,14 +42,14 @@ func NewPgxPostgresPool(dsn string) (*pgxPostgresPool, error) {
 	}, nil
 }
 
-func (p *pgxPostgresPool) Acquire(schema string) (serviceapi.DbConn, error) {
-	conn, err := p.pool.Acquire(context.Background())
+func (p *pgxPostgresPool) Acquire(ctx context.Context, schema string) (serviceapi.DbConn, error) {
+	conn, err := p.pool.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	stmt := "SET search_path TO " + pgx.Identifier{schema}.Sanitize()
-	if _, err := conn.Exec(context.Background(), stmt); err != nil {
+	if _, err := conn.Exec(ctx, stmt); err != nil {
 		conn.Release()
 		return nil, err
 	}
@@ -63,10 +63,10 @@ type pgxConnWrapper struct {
 
 func (c *pgxConnWrapper) Exec(ctx context.Context, query string, args ...any) (serviceapi.CommandResult, error) {
 	tag, err := c.conn.Exec(ctx, query, args...)
-	return &pgxCommandResult{fnRowsAffected: tag.RowsAffected}, err
+	return serviceapi.NewCommandResult(tag.RowsAffected), err
 }
 
-func (c *pgxConnWrapper) Query(ctx context.Context, query string, args ...any) (serviceapi.RowIterator, error) {
+func (c *pgxConnWrapper) Query(ctx context.Context, query string, args ...any) (serviceapi.Rows, error) {
 	rows, err := c.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -74,11 +74,11 @@ func (c *pgxConnWrapper) Query(ctx context.Context, query string, args ...any) (
 	return &pgxRowIterator{rows: rows}, nil
 }
 
-func (c *pgxConnWrapper) QueryRow(ctx context.Context, query string, args ...any) serviceapi.RowScanner {
+func (c *pgxConnWrapper) QueryRow(ctx context.Context, query string, args ...any) serviceapi.Row {
 	return c.conn.QueryRow(ctx, query, args...)
 }
 
-func (c *pgxConnWrapper) IsErrNoRows(err error) bool {
+func (c *pgxConnWrapper) IsErrorNoRows(err error) bool {
 	return errors.Is(err, pgx.ErrNoRows)
 }
 
@@ -112,54 +112,67 @@ func pgxSelectMustOne(ctx context.Context, conn dbExecutor, query string, args [
 	return nil
 }
 
-func (c *pgxConnWrapper) SelectMany(ctx context.Context, query string, args ...any) (any, error) {
+func (c *pgxConnWrapper) SelectOneRowMap(ctx context.Context, query string,
+	args ...any) (serviceapi.RowMap, error) {
+	rows, err := c.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return pgx.CollectOneRow(rows, pgx.RowToMap)
+}
+
+func (c *pgxConnWrapper) SelectManyRowMap(ctx context.Context, query string,
+	args ...any) ([]serviceapi.RowMap, error) {
 	return pgxSelectMany(ctx, c.conn, query, args...)
 }
 
 func pgxSelectMany(ctx context.Context,
-	conn dbExecutor, query string, args ...any) (any, error) {
+	conn dbExecutor, query string, args ...any) ([]serviceapi.RowMap, error) {
 	rows, err := conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
 
-	var resultSlice []map[string]any
-	for rows.Next() {
-		columns := rows.FieldDescriptions()
-		values := make([]any, len(columns))
-		valuePtrs := make([]any, len(columns))
+	return pgx.CollectRows(rows, pgx.RowToMap)
+	// var resultSlice []map[string]any
+	// for rows.Next() {
+	// 	columns := rows.FieldDescriptions()
+	// 	values := make([]any, len(columns))
+	// 	valuePtrs := make([]any, len(columns))
 
-		for i := range columns {
-			valuePtrs[i] = &values[i]
-		}
+	// 	for i := range columns {
+	// 		valuePtrs[i] = &values[i]
+	// 	}
 
-		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
-		}
+	// 	if err := rows.Scan(valuePtrs...); err != nil {
+	// 		return nil, fmt.Errorf("failed to scan row: %w", err)
+	// 	}
 
-		rowMap := make(map[string]any)
-		for i, col := range columns {
-			rowMap[string(col.Name)] = values[i]
-		}
-		resultSlice = append(resultSlice, rowMap)
-	}
+	// 	rowMap := make(map[string]any)
+	// 	for i, col := range columns {
+	// 		rowMap[string(col.Name)] = values[i]
+	// 	}
+	// 	resultSlice = append(resultSlice, rowMap)
+	// }
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", err)
-	}
+	// if err := rows.Err(); err != nil {
+	// 	return nil, fmt.Errorf("error iterating rows: %w", err)
+	// }
 
-	return resultSlice, nil
+	// return resultSlice, nil
 }
 
 func (c *pgxConnWrapper) SelectManyWithMapper(ctx context.Context,
-	fnScan func(serviceapi.RowScanner) (any, error), query string, args ...any) (any, error) {
+	fnScan func(serviceapi.Row) (any, error), query string, args ...any) (any, error) {
 
 	return pgxSelectManyWithMapper(ctx, c.conn, fnScan, query, args...)
 }
 
 func pgxSelectManyWithMapper(ctx context.Context,
-	conn dbExecutor, fnScan func(serviceapi.RowScanner) (any, error), query string, args ...any) (any, error) {
+	conn dbExecutor, fnScan func(serviceapi.Row) (any, error), query string, args ...any) (any, error) {
 	rows, err := conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)

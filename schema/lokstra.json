@@ -206,7 +206,7 @@
         "method": {
           "type": "string",
           "description": "HTTP method",
-          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"]
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]
         },
         "path": {
           "type": "string",
@@ -308,7 +308,7 @@
     "ModuleConfig": {
       "type": "object",
       "description": "Module configuration for loading external modules",
-      "required": ["name", "path"],
+      "required": ["name"],
       "properties": {
         "name": {
           "type": "string",
@@ -316,7 +316,7 @@
         },
         "path": {
           "type": "string",
-          "description": "Path to the module file (e.g., './plugins/user_module.so')"
+          "description": "Path to the module file (e.g., './plugins/user_module.so'). Optional - if not provided, this will be a configuration-only module."
         },
         "entry": {
           "type": "string",

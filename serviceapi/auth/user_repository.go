@@ -1,6 +1,10 @@
 package auth
 
-import "context"
+import (
+	"context"
+
+	"github.com/primadi/lokstra/common/customtype"
+)
 
 type UserRepository interface {
 	// GetUserByName retrieves a user by their TenantID, UserName.
@@ -16,10 +20,14 @@ type UserRepository interface {
 }
 
 type User struct {
-	ID           string         `json:"id"`
-	TenantID     string         `json:"tenant_id"`
-	Username     string         `json:"username"`
-	Email        string         `json:"email"`
-	PasswordHash string         `json:"-"`
-	Metadata     map[string]any `json:"metadata,omitempty"` // optional (role, preferences, etc)
+	ID           string              `json:"id"`
+	TenantID     string              `json:"tenant_id"`
+	Username     string              `json:"username"`
+	Email        string              `json:"email"`
+	PasswordHash string              `json:"-"`
+	IsActive     bool                `json:"is_active"`
+	CreatedAt    customtype.DateTime `json:"created_at"`
+	UpdatedAt    customtype.DateTime `json:"updated_at"`
+	LastLogin    customtype.DateTime `json:"last_login,omitempty"` // optional, can be nil if never logged in
+	Metadata     map[string]any      `json:"metadata,omitempty"`   // optional (role, preferences, etc)
 }

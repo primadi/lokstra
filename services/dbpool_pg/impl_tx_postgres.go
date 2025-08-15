@@ -27,7 +27,7 @@ func (p *pgxTxWrapper) Commit(ctx context.Context) error {
 // Exec implements Tx.
 func (p *pgxTxWrapper) Exec(ctx context.Context, query string, args ...any) (serviceapi.CommandResult, error) {
 	tag, err := p.tx.Exec(ctx, query, args...)
-	return &pgxCommandResult{fnRowsAffected: tag.RowsAffected}, err
+	return serviceapi.NewCommandResult(tag.RowsAffected), err
 }
 
 // IsExists implements Tx.
@@ -38,7 +38,7 @@ func (p *pgxTxWrapper) IsExists(ctx context.Context, query string, args ...any) 
 }
 
 // Query implements Tx.
-func (p *pgxTxWrapper) Query(ctx context.Context, query string, args ...any) (serviceapi.RowIterator, error) {
+func (p *pgxTxWrapper) Query(ctx context.Context, query string, args ...any) (serviceapi.Rows, error) {
 	rows, err := p.tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (p *pgxTxWrapper) Query(ctx context.Context, query string, args ...any) (se
 }
 
 // QueryRow implements Tx.
-func (p *pgxTxWrapper) QueryRow(ctx context.Context, query string, args ...any) serviceapi.RowScanner {
+func (p *pgxTxWrapper) QueryRow(ctx context.Context, query string, args ...any) serviceapi.Row {
 	return p.tx.QueryRow(ctx, query, args...)
 }
 
@@ -56,19 +56,37 @@ func (p *pgxTxWrapper) Release() error {
 	return errors.New("transaction does not support Release")
 }
 
+// IsErrorNoRows implements Tx.
+func (p *pgxTxWrapper) IsErrorNoRows(err error) bool {
+	return errors.Is(err, pgx.ErrNoRows)
+}
+
 // Rollback implements Tx.
 func (p *pgxTxWrapper) Rollback(ctx context.Context) error {
 	return p.tx.Rollback(ctx)
 }
 
+func (p *pgxTxWrapper) SelectOneRowMap(ctx context.Context, query string,
+	args ...any) (serviceapi.RowMap, error) {
+	rows, err := p.tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return pgx.CollectOneRow(rows, pgx.RowToMap)
+}
+
 // SelectMany implements Tx.
-func (p *pgxTxWrapper) SelectMany(ctx context.Context, query string, args ...any) (any, error) {
+func (p *pgxTxWrapper) SelectManyRowMap(ctx context.Context, query string,
+	args ...any) ([]map[string]any, error) {
 	return pgxSelectMany(ctx, p.tx, query, args...)
 }
 
 // SelectManyWithMapper implements Tx.
 func (p *pgxTxWrapper) SelectManyWithMapper(ctx context.Context,
-	fnScan func(serviceapi.RowScanner) (any, error), query string, args ...any) (any, error) {
+	fnScan func(serviceapi.Row) (any, error), query string,
+	args ...any) (any, error) {
 	return pgxSelectManyWithMapper(ctx, p.tx, fnScan, query, args...)
 
 }

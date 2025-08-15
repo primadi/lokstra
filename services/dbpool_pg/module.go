@@ -1,6 +1,7 @@
 package dbpool_pg
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/primadi/lokstra/core/iface"
@@ -39,7 +40,7 @@ func (m *module) Register(regCtx iface.RegistrationContext) error {
 			return nil, fmt.Errorf("dbpool_pg requires a valid DSN in the configuration")
 		}
 
-		return NewPgxPostgresPool(dsn)
+		return NewPgxPostgresPool(context.Background(), dsn)
 	}
 
 	regCtx.RegisterServiceFactory(m.Name(), factory)

@@ -20,6 +20,8 @@ func main() {
 			lokstra.Logger.Infof("[PROXY] Forwarding %s %s", ctx.Request.Method, ctx.Request.URL.Path)
 
 			err := next(ctx)
+
+			// Check if middleware chain should stop before post-processing
 			if ctx.ShouldStopMiddlewareChain(err) {
 				return err
 			}
@@ -41,6 +43,8 @@ func main() {
 			lokstra.Logger.Infof("[PROXY-AUTH] Authenticated request to %s", ctx.Request.URL.Path)
 
 			err := next(ctx)
+
+			// Check if middleware chain should stop before post-processing
 			if ctx.ShouldStopMiddlewareChain(err) {
 				return err
 			}
@@ -48,9 +52,7 @@ func main() {
 			lokstra.Logger.Infof("[PROXY-AUTH] After authenticated request to %s", ctx.Request.URL.Path)
 			return nil
 		}
-	})
-
-	// Local API endpoints (not proxied)
+	}) // Local API endpoints (not proxied)
 	app.GET("/api/local/status", func(ctx *lokstra.Context) error {
 		return ctx.Ok(map[string]any{
 			"service": "Local API",

@@ -62,7 +62,8 @@ func (ctx *Context) GetQueryParam(name string) string {
 //	}
 //	// Continue with post-processing...
 func (ctx *Context) ShouldStopMiddlewareChain(err error) bool {
-	return err != nil || ctx.StatusCode >= 400
+	// Pure check function - no side effects
+	return err != nil || ctx.StatusCode >= 400 || ctx.Err() != nil
 }
 
 func (ctx *Context) GetHeader(name string) string {

@@ -375,20 +375,10 @@ func composeMiddleware(mw []*midware.Execution,
 		return 0
 	})
 
-	// Compose middleware functions in reverse order with error-aware composition
+	// Compose middleware functions in reverse order
 	handler := finalHandler
 	for i := len(mw) - 1; i >= 0; i-- {
-		currentMw := mw[i]
-		handler = func(innerHandler request.HandlerFunc, middleware *midware.Execution) request.HandlerFunc {
-			return middleware.MiddlewareFn(func(ctx *request.Context) error {
-				// Check if previous middleware already set an error response
-				if ctx.ShouldStopMiddlewareChain(nil) {
-					// Previous middleware set error status (>= 400), stop chain
-					return fmt.Errorf("previous middleware set error response (status: %d)", ctx.StatusCode)
-				}
-				return innerHandler(ctx)
-			})
-		}(handler, currentMw)
+		handler = mw[i].MiddlewareFn(handler)
 	}
 	return handler
 }

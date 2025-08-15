@@ -1,0 +1,87 @@
+# Example module configuration demonstrating the new implemented features
+
+modules:
+  # Example 1: External plugin module with comprehensive configuration
+  - name: user-auth-module
+    path: ./plugins/user_auth.so
+    entry: GetAuthModule  # Custom entry function name
+    
+    # Module settings that will be passed to the module
+    settings:
+      jwt_secret: "${JWT_SECRET:default-secret}"
+      token_expiry: 3600
+      refresh_enabled: true
+    
+    # Permissions for this module
+    permissions:
+      allow_services: ["main-db", "redis-cache", "logger.default"]
+      allow_create_services: true
+      
+    # Services that must exist before this module can be loaded
+    required_services:
+      - "logger.default"
+      - "main-db"
+    
+    # Services to be created by this module configuration
+    create_services:
+      - name: "jwt-validator"
+        type: "lokstra.jwt_auth"
+        config:
+          secret_key: "${JWT_SECRET:default}"
+          algorithm: "HS256"
+          
+      - name: "user-session"
+        type: "lokstra.redis"
+        config:
+          addr: "${REDIS_ADDR:localhost:6379}"
+          db: 1
+    
+    # Methods to call from the plugin for registering service factories
+    register_service_factories:
+      - "RegisterUserServiceFactory"
+      - "RegisterSessionServiceFactory"
+    
+    # Methods to call from the plugin for registering handlers  
+    register_handlers:
+      - "RegisterAuthHandlers"
+      - "RegisterUserHandlers"
+    
+    # Methods to call from the plugin for registering middleware
+    register_middleware:
+      - "RegisterAuthMiddleware"
+      - "RegisterRateLimitMiddleware"
+
+  # Example 2: Simple module with minimal configuration
+  - name: health-check-module
+    path: ./plugins/health.so
+    
+    # Only create services, no other setup needed
+    create_services:
+      - name: "health-checker"
+        type: "lokstra.health"
+        config:
+          check_interval: 30
+          endpoints:
+            - "/health"
+            - "/ready"
+
+  # Example 3: Module without plugin (configuration-only)
+  - name: logging-setup
+    # No path - this is a configuration-only module
+    
+    create_services:
+      - name: "app-logger"
+        type: "lokstra.logger"
+        config:
+          level: "${LOG_LEVEL:info}"
+          format: "json"
+          output: "stdout"
+          
+      - name: "audit-logger"
+        type: "lokstra.logger"
+        config:
+          level: "warn"
+          format: "json"
+          output: "./logs/audit.log"
+        depends_on:
+          - "app-logger"

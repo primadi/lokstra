@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/http"
+	"plugin"
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/app"
@@ -88,16 +89,48 @@ func startServicesInOrder(regCtx iface.RegistrationContext,
 	return nil
 }
 
-// func generatePublicName(moduleName, methodName string) string {
-// 	return moduleName + "." + utils.CamelToSnake(methodName) // e.g. "auth.LoginHandler" → "auth.login_handler"
-// }
-
 func startModulesFromConfig(regCtx iface.RegistrationContext, modules []*ModuleConfig) error {
 	for _, mod := range modules {
-		if mod.Path != "" || mod.Entry != "" {
+		// 1. Register the module itself if path is provided
+		if mod.Path != "" {
 			newCtx := regCtx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
 			if err := newCtx.RegisterCompiledModuleWithFuncName(mod.Name, mod.Path, mod.Entry); err != nil {
 				return fmt.Errorf("register module %s: %w", mod.Name, err)
+			}
+		}
+
+		// 2. Check required services
+		for _, serviceName := range mod.RequiredServices {
+			if _, err := regCtx.GetService(serviceName); err != nil {
+				return fmt.Errorf("module %s requires service %s which is not available: %w", mod.Name, serviceName, err)
+			}
+		}
+
+		// 3. Create services defined in the module
+		for _, serviceConfig := range mod.CreateServices {
+			if err := createServiceFromConfig(regCtx, &serviceConfig); err != nil {
+				return fmt.Errorf("module %s failed to create service %s: %w", mod.Name, serviceConfig.Name, err)
+			}
+		}
+
+		// 4. Register service factories from the module
+		if mod.Path != "" && len(mod.RegisterServiceFactories) > 0 {
+			if err := callModuleMethods(mod.Path, mod.RegisterServiceFactories, regCtx, "service factory"); err != nil {
+				return fmt.Errorf("module %s failed to register service factories: %w", mod.Name, err)
+			}
+		}
+
+		// 5. Register handlers from the module
+		if mod.Path != "" && len(mod.RegisterHandlers) > 0 {
+			if err := callModuleMethods(mod.Path, mod.RegisterHandlers, regCtx, "handler"); err != nil {
+				return fmt.Errorf("module %s failed to register handlers: %w", mod.Name, err)
+			}
+		}
+
+		// 6. Register middleware from the module
+		if mod.Path != "" && len(mod.RegisterMiddleware) > 0 {
+			if err := callModuleMethods(mod.Path, mod.RegisterMiddleware, regCtx, "middleware"); err != nil {
+				return fmt.Errorf("module %s failed to register middleware: %w", mod.Name, err)
 			}
 		}
 	}
@@ -190,4 +223,69 @@ func buildGroup(regCtx iface.RegistrationContext, parent router.Router, group Gr
 		buildGroup(regCtx, gr, subGroup)
 	}
 
+}
+
+// createServiceFromConfig creates a service instance from ServiceConfig
+func createServiceFromConfig(regCtx iface.RegistrationContext, serviceConfig *ServiceConfig) error {
+	_, err := regCtx.CreateService(serviceConfig.Type, serviceConfig.Name, serviceConfig.Config)
+	if err != nil {
+		return fmt.Errorf("failed to create service %s of type %s: %w", serviceConfig.Name, serviceConfig.Type, err)
+	}
+	return nil
+}
+
+// callModuleMethods calls specified methods from a plugin module
+func callModuleMethods(pluginPath string, methodNames []string, regCtx iface.RegistrationContext, methodType string) error {
+	if len(methodNames) == 0 {
+		return nil
+	}
+
+	// Open the plugin
+	p, err := plugin.Open(pluginPath)
+	if err != nil {
+		return fmt.Errorf("failed to open plugin %s: %w", pluginPath, err)
+	}
+
+	// Call each method
+	for _, methodName := range methodNames {
+		sym, err := p.Lookup(methodName)
+		if err != nil {
+			return fmt.Errorf("method %s not found in plugin %s: %w", methodName, pluginPath, err)
+		}
+
+		// Try different function signatures based on method type
+		switch methodType {
+		case "service factory":
+			if factoryFunc, ok := sym.(func(iface.RegistrationContext) error); ok {
+				if err := factoryFunc(regCtx); err != nil {
+					return fmt.Errorf("failed to execute service factory method %s: %w", methodName, err)
+				}
+			} else {
+				return fmt.Errorf("method %s has invalid signature for service factory (expected: func(iface.RegistrationContext) error)", methodName)
+			}
+
+		case "handler":
+			if handlerFunc, ok := sym.(func(iface.RegistrationContext) error); ok {
+				if err := handlerFunc(regCtx); err != nil {
+					return fmt.Errorf("failed to execute handler method %s: %w", methodName, err)
+				}
+			} else {
+				return fmt.Errorf("method %s has invalid signature for handler (expected: func(iface.RegistrationContext) error)", methodName)
+			}
+
+		case "middleware":
+			if middlewareFunc, ok := sym.(func(iface.RegistrationContext) error); ok {
+				if err := middlewareFunc(regCtx); err != nil {
+					return fmt.Errorf("failed to execute middleware method %s: %w", methodName, err)
+				}
+			} else {
+				return fmt.Errorf("method %s has invalid signature for middleware (expected: func(iface.RegistrationContext) error)", methodName)
+			}
+
+		default:
+			return fmt.Errorf("unknown method type: %s", methodType)
+		}
+	}
+
+	return nil
 }

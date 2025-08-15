@@ -18,19 +18,6 @@ type dbExecutor interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
-// pgxCommandResult implements CommandResult for pgx
-// It wraps the pgconn.CommandTag to provide RowsAffected method.
-// It is used to return the number of rows affected by an Exec operation.
-type pgxCommandResult struct {
-	fnRowsAffected func() int64
-}
-
-func (r *pgxCommandResult) RowsAffected() int64 {
-	return r.fnRowsAffected()
-}
-
-var _ serviceapi.CommandResult = (*pgxCommandResult)(nil)
-
 // pgxRowIterator implements RowIterator for pgx
 // It wraps pgx.Rows to provide methods for iterating over query results.
 // It provides methods to check if there are more rows, scan the current row into destination variables,
@@ -57,4 +44,4 @@ func (r *pgxRowIterator) Err() error {
 	return r.rows.Err()
 }
 
-var _ serviceapi.RowIterator = (*pgxRowIterator)(nil)
+var _ serviceapi.Rows = (*pgxRowIterator)(nil)
