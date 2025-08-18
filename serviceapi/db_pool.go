@@ -13,6 +13,21 @@ type RowMap = map[string]any
 
 // DbConn represents a live DB connection (e.g. from pgxpool)
 type DbConn interface {
+	Begin(ctx context.Context) (DbTx, error)
+	Transaction(ctx context.Context, fn func(tx DbExecutor) error) error
+
+	Release() error
+	DbExecutor
+}
+
+// DbTx represents an ongoing transaction
+type DbTx interface {
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+	DbExecutor
+}
+
+type DbExecutor interface {
 	Exec(ctx context.Context, query string, args ...any) (CommandResult, error)
 	Query(ctx context.Context, query string, args ...any) (Rows, error)
 	QueryRow(ctx context.Context, query string, args ...any) Row
@@ -28,18 +43,6 @@ type DbConn interface {
 
 	IsExists(ctx context.Context, query string, args ...any) (bool, error)
 	IsErrorNoRows(err error) bool
-
-	Begin(ctx context.Context) (Tx, error)
-	Transaction(ctx context.Context, fn func(tx DbConn) error) error
-
-	Release() error
-}
-
-// Tx represents an ongoing transaction
-type Tx interface {
-	Commit(ctx context.Context) error
-	Rollback(ctx context.Context) error
-	DbConn
 }
 
 // CommandResult abstracts result from Exec()

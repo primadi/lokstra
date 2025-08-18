@@ -15,7 +15,7 @@ type pgxTxWrapper struct {
 }
 
 // Begin implements Tx.
-func (p *pgxTxWrapper) Begin(ctx context.Context) (serviceapi.Tx, error) {
+func (p *pgxTxWrapper) Begin(ctx context.Context) (serviceapi.DbTx, error) {
 	return nil, errors.New("nested transactions not supported")
 }
 
@@ -106,4 +106,4 @@ func (p *pgxTxWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.Db
 	return errors.New("nested transactions not supported")
 }
 
-var _ serviceapi.Tx = (*pgxTxWrapper)(nil)
+var _ serviceapi.DbTx = (*pgxTxWrapper)(nil)

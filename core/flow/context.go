@@ -12,7 +12,7 @@ type Context struct {
 	pool       serviceapi.DbPool
 	schema     string
 	dbConn     serviceapi.DbConn
-	dbTx       serviceapi.Tx
+	dbTx       serviceapi.DbTx
 
 	vars map[string]any // runtime variables
 }
@@ -30,7 +30,7 @@ func (c *Context) StdContext() context.Context {
 	return c.stdContext
 }
 
-func (c *Context) CurrentExecutor() (serviceapi.DbConn, error) {
+func (c *Context) CurrentExecutor() (serviceapi.DbExecutor, error) {
 	if c.dbTx != nil {
 		return c.dbTx, nil
 	}

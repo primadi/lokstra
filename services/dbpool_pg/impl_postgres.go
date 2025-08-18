@@ -206,7 +206,7 @@ func (c *pgxConnWrapper) IsExists(ctx context.Context, query string, args ...any
 	return exists, err
 }
 
-func (c *pgxConnWrapper) Begin(ctx context.Context) (serviceapi.Tx, error) {
+func (c *pgxConnWrapper) Begin(ctx context.Context) (serviceapi.DbTx, error) {
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -214,7 +214,7 @@ func (c *pgxConnWrapper) Begin(ctx context.Context) (serviceapi.Tx, error) {
 	return &pgxTxWrapper{tx: tx}, nil
 }
 
-func (c *pgxConnWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.DbConn) error) error {
+func (c *pgxConnWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.DbExecutor) error) error {
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
 		return err

@@ -2,6 +2,8 @@ package flow
 
 import (
 	"fmt"
+
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 // txBeginStep implements Step interface for beginning a transaction
@@ -20,7 +22,11 @@ func (s *txBeginStep) Run(ctx *Context) error {
 	}
 
 	// Begin transaction
-	tx, err := conn.Begin(ctx.StdContext())
+	dbConn, valid := conn.(serviceapi.DbConn)
+	if !valid {
+		return fmt.Errorf("current executor does not support transactions: %T", conn)
+	}
+	tx, err := dbConn.Begin(ctx.StdContext())
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}

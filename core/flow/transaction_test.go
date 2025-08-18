@@ -214,8 +214,8 @@ func (m *mockTx) SelectManyWithMapper(ctx context.Context, fnScan func(serviceap
 func (m *mockTx) IsExists(ctx context.Context, query string, args ...any) (bool, error) {
 	return false, nil
 }
-func (m *mockTx) IsErrorNoRows(err error) bool                     { return false }
-func (m *mockTx) Begin(ctx context.Context) (serviceapi.Tx, error) { return nil, nil }
+func (m *mockTx) IsErrorNoRows(err error) bool                       { return false }
+func (m *mockTx) Begin(ctx context.Context) (serviceapi.DbTx, error) { return nil, nil }
 func (m *mockTx) Transaction(ctx context.Context, fn func(tx serviceapi.DbConn) error) error {
 	return nil
 }
