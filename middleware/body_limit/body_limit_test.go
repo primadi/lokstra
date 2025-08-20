@@ -118,9 +118,9 @@ func TestBodyLimitMiddleware_ExceedsLimit_Reading(t *testing.T) {
 
 func TestBodyLimitMiddleware_SkipLargePayloads(t *testing.T) {
 	config := Config{
-		MaxBodySize:       1024,
+		MaxSize:           1024,
 		SkipLargePayloads: true,
-		ErrorMessage:      "Body too large",
+		Message:           "Body too large",
 		StatusCode:        http.StatusRequestEntityTooLarge,
 	}
 
@@ -180,9 +180,9 @@ func TestBodyLimitMiddleware_NoBody(t *testing.T) {
 
 func TestBodyLimitMiddleware_CustomConfig(t *testing.T) {
 	config := Config{
-		MaxBodySize:  500,
-		ErrorMessage: "Custom error: payload too big",
-		StatusCode:   http.StatusBadRequest, // 400 instead of 413
+		MaxSize:    500,
+		Message:    "Custom error: payload too big",
+		StatusCode: http.StatusBadRequest, // 400 instead of 413
 	}
 
 	middleware := BodyLimitMiddleware(config)
@@ -260,7 +260,7 @@ func TestConvenienceFunctions(t *testing.T) {
 func TestLimitedReadCloser(t *testing.T) {
 	// Test the internal limitedReadCloser directly
 	config := DefaultConfig()
-	config.MaxBodySize = 5 // Very small limit
+	config.MaxSize = 5 // Very small limit
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/test", nil)
@@ -269,7 +269,7 @@ func TestLimitedReadCloser(t *testing.T) {
 
 	limitedReader := &limitedReadCloser{
 		reader:    http.NoBody,
-		remaining: config.MaxBodySize,
+		remaining: config.MaxSize,
 		config:    config,
 		ctx:       ctx,
 	}
@@ -297,12 +297,12 @@ func TestLimitedReadCloser(t *testing.T) {
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
 
-	if config.MaxBodySize != 10*1024*1024 {
-		t.Errorf("Expected default max body size 10MB, got: %d", config.MaxBodySize)
+	if config.MaxSize != 10*1024*1024 {
+		t.Errorf("Expected default max body size 10MB, got: %d", config.MaxSize)
 	}
 
-	if config.ErrorMessage != "Request body too large" {
-		t.Errorf("Expected default error message, got: %s", config.ErrorMessage)
+	if config.Message != "Request body too large" {
+		t.Errorf("Expected default error message, got: %s", config.Message)
 	}
 
 	if config.StatusCode != http.StatusRequestEntityTooLarge {

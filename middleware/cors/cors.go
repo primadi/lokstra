@@ -2,6 +2,7 @@ package cors
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -98,7 +99,7 @@ func factory(config any) lokstra.MiddlewareFunc {
 
 				// Set allowed headers
 				if len(cfg.AllowedHeaders) > 0 {
-					if contains(cfg.AllowedHeaders, "*") {
+					if slices.Contains(cfg.AllowedHeaders, "*") {
 						// If wildcard is allowed, echo back the requested headers
 						if reqHeaders := ctx.GetHeader("Access-Control-Request-Headers"); reqHeaders != "" {
 							ctx.WithHeader("Access-Control-Allow-Headers", reqHeaders)
@@ -196,16 +197,6 @@ func parseStringSlice(v any) []string {
 		return []string{val}
 	}
 	return nil
-}
-
-// contains checks if slice contains a string
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 var _ lokstra.Module = (*CorsMiddleware)(nil)

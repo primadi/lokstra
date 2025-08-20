@@ -31,9 +31,9 @@ func demonstrateBodyLimitMiddleware() {
 	// Test 3: Custom configuration
 	fmt.Println("\n3. Testing custom configuration (100 byte limit):")
 	customConfig := body_limit.BodyLimitMiddleware(body_limit.Config{
-		MaxBodySize:  100,
-		ErrorMessage: "Custom: Payload too large",
-		StatusCode:   http.StatusRequestEntityTooLarge,
+		MaxSize:    100,
+		Message:    "Custom: Payload too large",
+		StatusCode: http.StatusRequestEntityTooLarge,
 	})
 	testBodyLimit(customConfig, "This is a longer payload that exceeds 100 bytes limit", false)
 
