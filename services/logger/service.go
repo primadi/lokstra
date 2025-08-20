@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"io"
 	"os"
 	"time"
 
@@ -13,14 +14,61 @@ import (
 // LoggerService implements iface.Service and Logger
 type LoggerService struct {
 	logger *zerolog.Logger
+	writer io.Writer
+}
+
+// LoggerConfig holds configuration for logger service
+type LoggerConfig struct {
+	Level  serviceapi.LogLevel
+	Format string // "json", "text", "console"
+	Output string // "stdout", "stderr", "file"
 }
 
 func NewService(level serviceapi.LogLevel) (*LoggerService, error) {
+	return NewServiceWithConfig(&LoggerConfig{
+		Level:  level,
+		Format: "json",
+		Output: "stdout",
+	})
+}
+
+func NewServiceWithConfig(config *LoggerConfig) (*LoggerService, error) {
 	zerolog.TimeFieldFormat = time.RFC3339
-	zlogger := zerolog.New(os.Stdout).Level(toZerologLevel(level)).With().Timestamp().Logger()
+
+	// Determine output writer
+	var writer io.Writer
+	switch config.Output {
+	case "stderr":
+		writer = os.Stderr
+	case "stdout":
+		writer = os.Stdout
+	default:
+		writer = os.Stdout
+	}
+
+	// Configure format
+	switch config.Format {
+	case "text", "console":
+		// Use ConsoleWriter for human-readable output
+		consoleWriter := zerolog.ConsoleWriter{
+			Out:        writer,
+			TimeFormat: time.RFC3339,
+		}
+		writer = consoleWriter
+	case "json":
+		// Keep default JSON format
+		// writer is already set above
+	default:
+		// Default to JSON format
+		// writer is already set above
+	}
+
+	zlogger := zerolog.New(writer).Level(toZerologLevel(config.Level)).
+		With().Timestamp().Logger()
 
 	return &LoggerService{
 		logger: &zlogger,
+		writer: writer,
 	}, nil
 }
 
@@ -33,6 +81,51 @@ func (l *LoggerService) GetLogLevel() serviceapi.LogLevel {
 func (l *LoggerService) SetLogLevel(level serviceapi.LogLevel) {
 	newLogger := l.logger.Level(toZerologLevel(level))
 	l.logger = &newLogger
+}
+
+// SetFormat implements serviceapi.Logger.
+func (l *LoggerService) SetFormat(format string) {
+	// Get current level to maintain it
+	currentLevel := l.logger.GetLevel()
+
+	// Determine output writer (use current output, could be enhanced to track this)
+	writer := l.writer
+
+	// Configure format based on the new format
+	switch format {
+	case "text", "console":
+		// Use ConsoleWriter for human-readable output
+		consoleWriter := zerolog.ConsoleWriter{
+			Out:        writer,
+			TimeFormat: time.RFC3339,
+		}
+		writer = consoleWriter
+	case "json":
+		// Keep default JSON format with plain writer
+		// writer is already set to os.Stdout
+	default:
+		// Default to JSON format
+		// writer is already set to os.Stdout
+	}
+
+	// Create new logger with the new format but same level
+	newLogger := zerolog.New(writer).Level(currentLevel).
+		With().Timestamp().Logger()
+	l.logger = &newLogger
+}
+
+// SetOutput implements serviceapi.Logger.
+func (l *LoggerService) SetOutput(output string) {
+	var writer io.Writer
+	switch output {
+	case "stderr":
+		writer = os.Stderr
+	case "stdout":
+		writer = os.Stdout
+	default:
+		writer = os.Stdout
+	}
+	l.writer = writer
 }
 
 // WithField implements serviceapi.Logger.

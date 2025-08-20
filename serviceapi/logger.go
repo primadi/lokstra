@@ -3,6 +3,8 @@ package serviceapi
 type LogLevel int
 
 const ConfigKeyLogLevel = "log_level"
+const ConfigKeyLogFormat = "log_format"
+const ConfigKeyLogOutput = "log_output"
 
 const (
 	LogLevelDebug LogLevel = iota
@@ -65,4 +67,7 @@ type Logger interface {
 	SetLogLevel(level LogLevel)
 	WithField(key string, value any) Logger
 	WithFields(fields LogFields) Logger
+
+	SetFormat(format string)
+	SetOutput(output string)
 }

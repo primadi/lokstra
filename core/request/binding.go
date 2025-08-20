@@ -140,14 +140,14 @@ func (ctx *Context) BindHeader(v any) error {
 }
 
 func (ctx *Context) BindBody(v any) error {
-	ctx.cacheBody()
-	if ctx.bodyErr != nil {
-		return ctx.bodyErr
+	ctx.cacheRequestBody()
+	if ctx.requestBodyErr != nil {
+		return ctx.requestBodyErr
 	}
-	if len(ctx.rawBody) == 0 {
+	if len(ctx.rawRequestBody) == 0 {
 		return nil // No body to bind
 	}
-	return jsonBodyDecoder.Unmarshal(ctx.rawBody, v)
+	return jsonBodyDecoder.Unmarshal(ctx.rawRequestBody, v)
 }
 
 func (ctx *Context) BindAll(v any) error {

@@ -39,7 +39,7 @@ func main() {
 	})
 
 	// Wait for shutdown signal with a timeout
-	server.StartAndWait(5 * time.Second)
+	server.StartAndWaitForShutdown(5 * time.Second)
 }
 
 // func main() {

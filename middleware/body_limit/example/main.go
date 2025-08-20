@@ -48,7 +48,7 @@ func demonstrateBodyLimitMiddleware() {
 func testBodyLimit(middleware lokstra.MiddlewareFunc, payload string, expectSuccess bool) {
 	// Create a test handler
 	handler := func(ctx *request.Context) error {
-		body, err := ctx.GetRawBody()
+		body, err := ctx.GetRawRequestBody()
 		if err != nil {
 			return ctx.ErrorBadRequest("Failed to read body: " + err.Error())
 		}

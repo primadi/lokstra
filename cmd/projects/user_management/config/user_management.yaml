@@ -1,0 +1,174 @@
+# yaml-language-server: $schema=../../../../schema/lokstra.json
+
+server:
+  name: user_management_service
+  global_setting:
+    log_level: info
+    log_format: text
+    log_output: stdout
+    handler_dbPool: default_dbpool
+
+services:
+  # - name: "logger"
+  #   type: "lokstra.logger"
+  #   config:
+  #     level: "info"
+  #     format: "json"
+  #     output: "stdout"
+
+  # - name: "metrics"
+  #   type: "lokstra.metrics"
+  #   config:
+  #     enabled: true
+  #     endpoint: "/metrics"
+  #     namespace: "user_management"
+  #     subsystem: "api"
+  #     collect_interval: "15s"
+
+  # - name: "i18n"
+  #   type: "lokstra.i18n"
+  #   config:
+  #     default_language: "en"
+  #     fallback_language: "en"
+  #     supported_languages:
+  #       - "en"
+  #       - "id"
+  #     messages_path: "locales"
+  #     format: "json"
+
+  - name: "db_global"
+    type: "lokstra.dbpool_pg"
+    config:
+      # Database connection settings
+      host: ${ENV:DB_HOST:192.168.18.10}
+      port: ${ENV:DB_PORT:5433}
+      database: ${ENV:DB_NAME:global-db}
+      username: ${ENV:DB_USER:global-admin}
+      password: ${ENV:DB_PASSWORD:admin@2025}
+      
+      # Connection pool settings
+      max_connections: 5
+      min_connections: 0
+      max_idle_time: "30m"
+      max_lifetime: "1h"
+      ssl_mode: "disable" # ${ENV:DB_SSL_MODE:disable}
+
+apps:
+  - name: "user_management_api"
+    address: "${ENV:SERVER_PORT::8080}"
+    listener_type: "default"
+    router_engine_type: "default"
+    
+    setting:
+      cors: true
+      request_timeout: "30s"
+      max_request_size: "10MB"
+    
+    middleware:
+      - name: "request_logger"
+        enabled: true
+        config:
+          include_request_body: false
+          include_response_body: false
+          
+      - name: "recovery"
+        enabled: true
+        config:
+          enable_stack_trace: true
+          
+      - name: "cors"
+        enabled: true
+        config:
+          allowed_origins: ["*"]
+          allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+          allowed_headers: ["*"]
+          exposed_headers: ["X-Total-Count", "X-Page", "X-Page-Size"]
+          allow_credentials: true
+          max_age: 3600
+          
+      - name: "metrics"
+        enabled: true
+        config:
+          collect_request_metrics: true
+          collect_response_metrics: true
+
+    routes:
+      - method: "GET"
+        path: "/health"
+        handler: "health.check"
+        
+    groups:
+      - prefix: "/api/v1"
+        middleware:
+          - name: "rate_limiter"
+            enabled: true
+            config:
+              requests_per_minute: 100
+              burst: 10
+              
+        groups:
+          # User management endpoints
+          - prefix: "/users"
+            routes:
+              - method: "GET"
+                path: ""
+                handler: "user.list"
+                  
+              - method: "POST"
+                path: ""
+                handler: "user.create"
+                  
+              - method: "GET"
+                path: "/:id"
+                handler: "user.get"
+                  
+              - method: "PUT"
+                path: "/:id"
+                handler: "user.update"
+                  
+              - method: "DELETE"
+                path: "/:id"
+                handler: "user.delete"
+                  
+              - method: "GET"
+                path: "/by-name/:username"
+                handler: "user.get_by_name"
+
+          # Authentication endpoints (optional, can be separated to auth service)
+          - prefix: "/auth"
+            routes:
+              - method: "POST"
+                path: "/login"
+                handler: "auth.login"
+                  
+              - method: "POST"
+                path: "/logout"
+                handler: "auth.logout"
+                  
+              - method: "POST"
+                path: "/refresh"
+                handler: "auth.refresh"
+
+          # Admin endpoints with additional security
+          - prefix: "/admin"
+            middleware:
+              - name: "auth"
+                enabled: true
+                config:
+                  token_type: "bearer"
+                  required_roles: ["admin"]
+                  
+            groups:
+              - prefix: "/users"
+                routes:
+                  - method: "GET"
+                    path: "/stats"
+                    handler: "admin.user_stats"
+                      
+                  - method: "POST"
+                    path: "/:id/activate"
+                    handler: "admin.activate_user"
+                      
+                  - method: "POST"
+                    path: "/:id/deactivate"
+                    handler: "admin.deactivate_user"

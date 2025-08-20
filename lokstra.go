@@ -11,9 +11,7 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/server"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/modules/coreservice"
 	"github.com/primadi/lokstra/modules/coreservice/listener"
-	"github.com/primadi/lokstra/modules/rpc_service"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/logger"
 	"github.com/primadi/lokstra/standardservices"
@@ -27,7 +25,7 @@ type HandlerFunc = request.HandlerFunc
 type MiddlewareFunc = midware.Func
 type MiddlewareFactory = midware.Factory
 
-type Module = registration.Module
+type Module = iface.Module
 
 type Server = server.Server
 type App = app.App
@@ -48,14 +46,8 @@ func NewGlobalRegistrationContext() RegistrationContext {
 	_ = logger.GetModule().Register(ctx)
 
 	// create default logger service
-	l, _ := ctx.CreateService(logger.FACTORY_NAME, "logger.default", "info")
+	l, _ := ctx.CreateService(logger.MODULE_NAME, "logger.default", "info")
 	Logger = l.(serviceapi.Logger)
-
-	// register core service module
-	_ = coreservice.GetModule().Register(ctx)
-
-	// register rpc service module
-	_ = rpc_service.GetModule().Register(ctx)
 
 	return ctx
 }
@@ -76,6 +68,19 @@ func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) 
 			if logLvl, ok := serviceapi.ParseLogLevelSafe(LvlStr); ok {
 				Logger.SetLogLevel(logLvl)
 			}
+		}
+	}
+
+	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogFormat]; exists {
+		if formatStr, ok := l.(string); ok {
+			Logger.SetFormat(formatStr)
+		}
+	}
+
+	// change log_output if exists on server settings
+	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogOutput]; exists {
+		if output, ok := l.(string); ok {
+			Logger.SetOutput(output)
 		}
 	}
 

@@ -2,7 +2,6 @@ package kvstore_mem
 
 import (
 	"github.com/primadi/lokstra/core/iface"
-	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 )
 
@@ -27,8 +26,8 @@ func (m *module) Register(regCtx iface.RegistrationContext) error {
 	return nil
 }
 
-var _ registration.Module = (*module)(nil)
+var _ iface.Module = (*module)(nil)
 
-func GetModule() registration.Module {
+func GetModule() iface.Module {
 	return &module{}
 }

@@ -2,7 +2,6 @@ package rpc_service
 
 import (
 	"github.com/primadi/lokstra/core/iface"
-	"github.com/primadi/lokstra/core/registration"
 )
 
 const NAME = "rpc_service"
@@ -27,8 +26,8 @@ func (r *module) Register(regCtx iface.RegistrationContext) error {
 	return nil
 }
 
-var _ registration.Module = (*module)(nil)
+var _ iface.Module = (*module)(nil)
 
-func GetModule() registration.Module {
+func GetModule() iface.Module {
 	return &module{}
 }

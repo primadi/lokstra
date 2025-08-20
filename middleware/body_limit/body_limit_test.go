@@ -16,7 +16,7 @@ func TestBodyLimitMiddleware_WithinLimit(t *testing.T) {
 
 	// Create handler that reads body
 	handler := func(ctx *request.Context) error {
-		body, err := ctx.GetRawBody()
+		body, err := ctx.GetRawRequestBody()
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,7 @@ func TestBodyLimitMiddleware_ExceedsLimit_Reading(t *testing.T) {
 
 	handler := func(ctx *request.Context) error {
 		// Try to read body - this should trigger the limit
-		_, err := ctx.GetRawBody()
+		_, err := ctx.GetRawRequestBody()
 		return err
 	}
 

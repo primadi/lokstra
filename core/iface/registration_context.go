@@ -14,6 +14,13 @@ type HandlerRegister = request.HandlerRegister
 var ErrServiceNotFound = errors.New("service not found")
 var ErrServiceTypeInvalid = errors.New("service type is invalid")
 
+// Module defines the interface for a module in Lokstra.
+type Module interface {
+	Name() string
+	Description() string
+	Register(regCtx RegistrationContext) error
+}
+
 // iface.RegistrationContext is used only during startup phase
 // to register services, handlers, middleware, and modules.
 // It must not be used after server.Start().
@@ -56,9 +63,9 @@ type RegistrationContext interface {
 	SetValue(key string, value any)
 
 	// Module registration
-	RegisterCompiledModule(moduleName string, pluginPath string) error // funcName is "GetModule"
-	RegisterCompiledModuleWithFuncName(moduleName string, pluginPath string, getModuleFuncName string) error
-	RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx RegistrationContext) error) error
+	RegisterCompiledModule(pluginPath string) error // funcName is "GetModule"
+	RegisterCompiledModuleWithFuncName(pluginPath string, getModuleFuncName string) error
+	RegisterModule(getModuleFunc func() Module) error
 
 	NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) RegistrationContext
 }

@@ -4,16 +4,23 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/json"
 	"github.com/primadi/lokstra/core/iface"
 )
 
 const NAME = "request_logger"
 
+// Config holds the configuration for request logger middleware
+type Config struct {
+	IncludeRequestBody  bool `json:"include_request_body" yaml:"include_request_body"`
+	IncludeResponseBody bool `json:"include_response_body" yaml:"include_response_body"`
+}
+
 type RequestLogger struct{}
 
 // Description implements registration.Module.
 func (r *RequestLogger) Description() string {
-	return "Logs incoming requests and their metadata."
+	return "Logs incoming requests and their metadata with optional request/response body logging."
 }
 
 // Register implements registration.Module.
@@ -27,26 +34,112 @@ func (r *RequestLogger) Name() string {
 }
 
 func factory(config any) lokstra.MiddlewareFunc {
+	// Parse configuration
+	cfg := &Config{
+		IncludeRequestBody:  false,
+		IncludeResponseBody: false,
+	}
+
+	if config != nil {
+		switch v := config.(type) {
+		case map[string]any:
+			if val, ok := v["include_request_body"]; ok {
+				if b, ok := val.(bool); ok {
+					cfg.IncludeRequestBody = b
+				}
+			}
+			if val, ok := v["include_response_body"]; ok {
+				if b, ok := val.(bool); ok {
+					cfg.IncludeResponseBody = b
+				}
+			}
+		case *Config:
+			cfg = v
+		case Config:
+			cfg = &v
+		}
+	}
+
 	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
-			// Log the request details
-			logger := lokstra.Logger.WithFields(lokstra.LogFields{
-				"method": ctx.Request.Method,
-				"path":   ctx.Request.URL.Path})
+			// Prepare base log fields
+			logFields := lokstra.LogFields{
+				"method":     ctx.Request.Method,
+				"path":       ctx.Request.URL.Path,
+				"query":      ctx.Request.URL.RawQuery,
+				"remote_ip":  ctx.Request.RemoteAddr,
+				"user_agent": ctx.Request.Header.Get("User-Agent"),
+			}
 
-			logger.Infof("Incoming request")
+			// Include request body if configured
+			if cfg.IncludeRequestBody {
+				bodyBytes, err := ctx.GetRawRequestBody()
+				if err == nil && len(bodyBytes) > 0 {
+					// Try to parse as JSON for better logging
+					var jsonBody any
+					if err := json.Unmarshal(bodyBytes, &jsonBody); err == nil {
+						logFields["request_body"] = jsonBody
+					} else {
+						// If not JSON, log as string (truncate if too long)
+						bodyStr := string(bodyBytes)
+						if len(bodyStr) > 1000 {
+							bodyStr = bodyStr[:1000] + "... (truncated)"
+						}
+						logFields["request_body"] = bodyStr
+					}
+				}
+			}
+
+			logger := lokstra.Logger
+			if logger == nil {
+				// Fallback when no logger is available (e.g., in tests)
+				return next(ctx)
+			}
+
+			loggerWithFields := logger.WithFields(logFields)
+			loggerWithFields.Infof("Incoming request")
 
 			startTime := time.Now()
-			defer func() {
-				duration := time.Since(startTime)
-				logger.WithFields(lokstra.LogFields{
-					"duration": duration.String(),
-					"status":   ctx.Response.StatusCode}).
-					Infof("Request completed")
-			}()
 
-			// Call the next handler in the chain
-			return next(ctx)
+			// Execute the request
+			err := next(ctx)
+
+			// Log completion
+			duration := time.Since(startTime)
+			completionFields := lokstra.LogFields{
+				"duration":    duration.String(),
+				"duration_ms": duration.Milliseconds(),
+				"status":      ctx.Response.StatusCode,
+			}
+
+			// Include response body if configured
+			if cfg.IncludeResponseBody {
+				responseBody, err := ctx.GetRawResponseBody()
+				if err == nil && len(responseBody) > 0 {
+					var jsonBody any
+					if err := json.Unmarshal(responseBody, &jsonBody); err == nil {
+						completionFields["response_body"] = jsonBody
+					} else {
+						bodyStr := string(responseBody)
+						if len(bodyStr) > 1000 {
+							bodyStr = bodyStr[:1000] + "... (truncated)"
+						}
+						completionFields["response_body"] = bodyStr
+					}
+				}
+			}
+
+			// Log appropriate level based on status code
+			completionLogger := loggerWithFields.WithFields(completionFields)
+			if ctx.Response.StatusCode >= 500 {
+				completionLogger.Errorf("Request completed with server error")
+			} else if ctx.Response.StatusCode >= 400 {
+				completionLogger.Warnf("Request completed with client error")
+			} else {
+				completionLogger.Infof("Request completed successfully")
+			}
+
+			return err
 		}
 	}
 }

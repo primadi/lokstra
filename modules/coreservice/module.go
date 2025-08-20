@@ -2,11 +2,7 @@ package coreservice
 
 import (
 	"github.com/primadi/lokstra/core/iface"
-	"github.com/primadi/lokstra/core/registration"
 )
-
-const DEFAULT_LISTENER_NAME = "coreservice.nethttp"
-const DEFAULT_ROUTER_ENGINE_NAME = "coreservice.httprouter"
 
 type CoreServiceModule struct{}
 
@@ -22,13 +18,13 @@ func (c *CoreServiceModule) Name() string {
 
 // Register implements registration.Module.
 func (c *CoreServiceModule) Register(regCtx iface.RegistrationContext) error {
-	// skip register, because this module is registered on standardservices package
+	// skip register, because this module is registered using standardservices package
 
 	return nil
 }
 
-var _ registration.Module = (*CoreServiceModule)(nil)
+var _ iface.Module = (*CoreServiceModule)(nil)
 
-func GetModule() registration.Module {
+func GetModule() iface.Module {
 	return &CoreServiceModule{}
 }

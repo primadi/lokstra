@@ -251,7 +251,7 @@ func TestContext_GetRawBody(t *testing.T) {
 			defer cancel()
 
 			// Test
-			body, err := ctx.GetRawBody()
+			body, err := ctx.GetRawRequestBody()
 
 			// Assertions
 			if tt.hasError && err != nil {
@@ -267,7 +267,7 @@ func TestContext_GetRawBody(t *testing.T) {
 			}
 
 			// Test that subsequent calls return same data (caching)
-			body2, err2 := ctx.GetRawBody()
+			body2, err2 := ctx.GetRawRequestBody()
 			if string(body2) != string(body) {
 				t.Error("Expected cached body to be the same")
 			}
@@ -287,9 +287,9 @@ func TestContext_CacheBodyMultipleCalls(t *testing.T) {
 	defer cancel()
 
 	// Test multiple calls
-	body1, err1 := ctx.GetRawBody()
-	body2, err2 := ctx.GetRawBody()
-	body3, err3 := ctx.GetRawBody()
+	body1, err1 := ctx.GetRawRequestBody()
+	body2, err2 := ctx.GetRawRequestBody()
+	body3, err3 := ctx.GetRawRequestBody()
 
 	// All should return the same result
 	if string(body1) != body || string(body2) != body || string(body3) != body {
@@ -360,7 +360,7 @@ func TestContext_NilBodyHandling(t *testing.T) {
 	defer cancel()
 
 	// Test
-	body, err := ctx.GetRawBody()
+	body, err := ctx.GetRawRequestBody()
 
 	// Assertions
 	if err != nil {
@@ -369,5 +369,142 @@ func TestContext_NilBodyHandling(t *testing.T) {
 
 	if len(body) != 0 {
 		t.Errorf("Expected empty body for nil request body, got: %s", string(body))
+	}
+}
+
+func TestContext_GetRawResponseBody(t *testing.T) {
+	testCases := []struct {
+		name         string
+		responseData []byte
+		expected     string
+	}{
+		{
+			name:         "Empty response body",
+			responseData: []byte{},
+			expected:     "",
+		},
+		{
+			name:         "JSON response body",
+			responseData: []byte(`{"message":"success","data":{"id":1,"name":"test"}}`),
+			expected:     `{"message":"success","data":{"id":1,"name":"test"}}`,
+		},
+		{
+			name:         "Plain text response body",
+			responseData: []byte("Hello, World!"),
+			expected:     "Hello, World!",
+		},
+		{
+			name:         "Nil response data",
+			responseData: nil,
+			expected:     "",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "/test", nil)
+			ctx, cancel := request.NewContext(w, r)
+			defer cancel()
+
+			// Set response data directly to Response.RawData
+			if tt.responseData != nil {
+				ctx.Response.RawData = tt.responseData
+			}
+
+			// Test
+			body, err := ctx.GetRawResponseBody()
+
+			// Assertions
+			if err != nil {
+				t.Errorf("Expected no error, got: %v", err)
+			}
+
+			if string(body) != tt.expected {
+				t.Errorf("Expected response body to be '%s', got '%s'", tt.expected, string(body))
+			}
+		})
+	}
+}
+
+func TestContext_ResponseBodyDirectAccess(t *testing.T) {
+	// Setup
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/test", nil)
+	ctx, cancel := request.NewContext(w, r)
+	defer cancel()
+
+	// Test direct access to Response.RawData
+	responseData := []byte("direct access test")
+	ctx.Response.RawData = responseData
+
+	// Verify GetRawResponseBody returns the same data
+	body, err := ctx.GetRawResponseBody()
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+
+	if string(body) != string(responseData) {
+		t.Errorf("Expected response body to be '%s', got '%s'", string(responseData), string(body))
+	}
+}
+
+func TestContext_ResponseBodyModification(t *testing.T) {
+	// Setup
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/test", nil)
+	ctx, cancel := request.NewContext(w, r)
+	defer cancel()
+
+	// Test setting response body directly
+	testData := []byte("test response data")
+	ctx.Response.RawData = testData
+
+	// Verify GetRawResponseBody returns the same data
+	body, err := ctx.GetRawResponseBody()
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+
+	if string(body) != string(testData) {
+		t.Errorf("Expected response body to be '%s', got '%s'", string(testData), string(body))
+	}
+
+	// Test modifying response body directly
+	newData := []byte("updated response data")
+	ctx.Response.RawData = newData
+
+	// Verify the data was updated
+	body2, err2 := ctx.GetRawResponseBody()
+	if err2 != nil {
+		t.Errorf("Expected no error, got: %v", err2)
+	}
+
+	if string(body2) != string(newData) {
+		t.Errorf("Expected updated response body to be '%s', got '%s'", string(newData), string(body2))
+	}
+}
+
+func TestContext_GetRawResponseBodyNilResponse(t *testing.T) {
+	// Setup context with nil Response (edge case)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/test", nil)
+	ctx, cancel := request.NewContext(w, r)
+	defer cancel()
+
+	// Manually set Response to nil to test edge case
+	ctx.Response = nil
+
+	// Test
+	body, err := ctx.GetRawResponseBody()
+
+	// Assertions
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+
+	if body != nil {
+		t.Errorf("Expected nil body for nil response, got: %v", body)
 	}
 }

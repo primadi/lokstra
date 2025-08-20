@@ -10,11 +10,16 @@ import (
 )
 
 func main() {
+	// 1. Setup registration context
 	regCtx := lokstra.NewGlobalRegistrationContext()
 
+	// 2. Register all components
 	registerAllComponents(regCtx)
 
-	server := newServerFormConfig(regCtx, "configs/dev")
+	// 3. Create server from config
+	server := newServerFromConfig(regCtx, "configs/dev")
+
+	// 4. Start Server
 	server.Start()
 }
 
@@ -47,7 +52,7 @@ func registerAllComponents(regCtx lokstra.RegistrationContext) {
 	})
 }
 
-func newServerFormConfig(ctx lokstra.RegistrationContext, dir string) *lokstra.Server {
+func newServerFromConfig(ctx lokstra.RegistrationContext, dir string) *lokstra.Server {
 	cfg, err := lokstra.LoadConfigDir(dir)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config from %s: %v", dir, err))

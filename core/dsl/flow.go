@@ -1,6 +1,8 @@
 package dsl
 
 import (
+	"time"
+
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -126,6 +128,24 @@ func (f *Flow[TParam]) QueryOne(query string, args ...any) *Flow[TParam] {
 	return f.Then(newStepQuerySelectOne[TParam](query, args...))
 }
 
+func (f *Flow[TParam]) QuerySaveAs(query string, saveAs string, args ...any) *Flow[TParam] {
+	step := newStepQuerySelectMany[TParam](query, args...)
+	step.SaveAs(saveAs)
+	return f.Then(step)
+}
+
+func (f *Flow[TParam]) QueryOneSaveAs(query string, saveAs string, args ...any) *Flow[TParam] {
+	step := newStepQuerySelectOne[TParam](query, args...)
+	step.SaveAs(saveAs)
+	return f.Then(step)
+}
+
+func (f *Flow[TParam]) ExecSqlSaveAs(query string, saveAs string, args ...any) *Flow[TParam] {
+	step := newExecSqlStep[TParam](query, args...)
+	step.SaveAs(saveAs)
+	return f.Then(step)
+}
+
 func (f *Flow[TParam]) QueryForEach(query string, args ...any) stepQueryForEachIface[TParam] {
 	return newStepQueryForEach(f, query, args...)
 }
@@ -136,6 +156,26 @@ func (f *Flow[TParam]) ErrorIfExists(err error, query string, args ...any) *Flow
 
 func (f *Flow[TParam]) ErrorIfNotExists(err error, query string, args ...any) *Flow[TParam] {
 	return f.Then(newStepQueryErrorIfNotExists[TParam](err, query, args...))
+}
+
+func (f *Flow[TParam]) Do(fn func(*FlowContext[TParam]) error) *Flow[TParam] {
+	return f.Then(newStepCustom(fn))
+}
+
+func (f *Flow[TParam]) If(condition func(*FlowContext[TParam]) bool, thenStep Step[TParam]) *Flow[TParam] {
+	return f.Then(newStepConditional(condition, thenStep))
+}
+
+func (f *Flow[TParam]) Retry(step Step[TParam], maxRetries int) *Flow[TParam] {
+	return f.Then(newStepRetry(step, maxRetries))
+}
+
+func (f *Flow[TParam]) Validate(validationFn func(*FlowContext[TParam]) error) *Flow[TParam] {
+	return f.Then(ValidateStep(validationFn))
+}
+
+func (f *Flow[TParam]) Error(err error) *Flow[TParam] {
+	return f.Then(ErrorStep[TParam](err))
 }
 
 func (f *Flow[TParam]) RunStep(step Step[TParam], flowCtx *FlowContext[TParam]) error {
@@ -161,13 +201,129 @@ func (f *Flow[TParam]) RunStep(step Step[TParam], flowCtx *FlowContext[TParam]) 
 	return step.Run(flowCtx)
 }
 
+// getStepKindString converts StepKind to string for metrics
+func (f *Flow[TParam]) getStepKindString(kind StepKind) string {
+	switch kind {
+	case StepNormal:
+		return "normal"
+	case StepTxBegin:
+		return "tx_begin"
+	case StepTxEnd:
+		return "tx_end"
+	case StepAfterCommit:
+		return "after_commit"
+	case StepFinalize:
+		return "finalize"
+	default:
+		return "unknown"
+	}
+}
+
 func (f *Flow[TParam]) Run(reqContext *request.Context) error {
 	flowCtx := NewFlowContext(reqContext, f.sv)
-	for _, step := range f.steps {
+
+	// Metrics: Flow execution start
+	if f.sv.Metrics != nil {
+		f.sv.Metrics.IncCounter("dsl_flow_started", serviceapi.Labels{
+			"flow_name": f.name,
+		})
+	}
+
+	flowStartTime := time.Now()
+
+	defer func() {
+		// Always cleanup resources
+		if err := flowCtx.Cleanup(); err != nil {
+			// Log cleanup error but don't override main error
+			if f.sv.Logger != nil {
+				f.sv.Logger.Errorf("Failed to cleanup flow context: %v", err)
+			}
+		}
+
+		// Metrics: Flow execution duration
+		if f.sv.Metrics != nil {
+			duration := time.Since(flowStartTime).Seconds()
+			f.sv.Metrics.ObserveHistogram("dsl_flow_duration_seconds", duration, serviceapi.Labels{
+				"flow_name": f.name,
+			})
+		}
+	}()
+
+	for i, step := range f.steps {
+		stepStartTime := time.Now()
+		stepName := step.Meta().Name
+
+		// Log step execution start
+		if f.sv.Logger != nil {
+			f.sv.Logger.Debugf("Executing step '%s' at index %d", stepName, i)
+		}
+
+		// Metrics: Step execution start
+		if f.sv.Metrics != nil {
+			f.sv.Metrics.IncCounter("dsl_step_started", serviceapi.Labels{
+				"flow_name": f.name,
+				"step_name": stepName,
+				"step_kind": f.getStepKindString(step.Meta().Kind),
+			})
+		}
+
 		var err error
 		if err = f.RunStep(step, flowCtx); err != nil {
+			// Log error and set in context
+			if f.sv.Logger != nil {
+				f.sv.Logger.Errorf("Step execution failed '%s' at index %d: %v", stepName, i, err)
+			}
+			flowCtx.SetError(err)
+
+			// Metrics: Step execution failed
+			if f.sv.Metrics != nil {
+				f.sv.Metrics.IncCounter("dsl_step_failed", serviceapi.Labels{
+					"flow_name": f.name,
+					"step_name": stepName,
+					"step_kind": f.getStepKindString(step.Meta().Kind),
+				})
+
+				f.sv.Metrics.IncCounter("dsl_flow_failed", serviceapi.Labels{
+					"flow_name": f.name,
+				})
+			}
+
+			// If we have a transaction, mark for rollback
+			if flowCtx.dbTx != nil {
+				f.forceRollback = true
+			}
+
 			return err
 		}
+
+		// Metrics: Step execution success
+		if f.sv.Metrics != nil {
+			stepDuration := time.Since(stepStartTime).Seconds()
+			f.sv.Metrics.ObserveHistogram("dsl_step_duration_seconds", stepDuration, serviceapi.Labels{
+				"flow_name": f.name,
+				"step_name": stepName,
+				"step_kind": f.getStepKindString(step.Meta().Kind),
+			})
+
+			f.sv.Metrics.IncCounter("dsl_step_succeeded", serviceapi.Labels{
+				"flow_name": f.name,
+				"step_name": stepName,
+				"step_kind": f.getStepKindString(step.Meta().Kind),
+			})
+		}
+
+		// Log successful execution
+		if f.sv.Logger != nil {
+			f.sv.Logger.Debugf("Step executed successfully '%s' at index %d", stepName, i)
+		}
 	}
+
+	// Metrics: Flow execution success
+	if f.sv.Metrics != nil {
+		f.sv.Metrics.IncCounter("dsl_flow_succeeded", serviceapi.Labels{
+			"flow_name": f.name,
+		})
+	}
+
 	return nil
 }

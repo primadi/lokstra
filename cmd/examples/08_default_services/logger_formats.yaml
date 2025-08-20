@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../../schema/lokstra.json
+
+# Logger Service Examples - Different Formats
+
+services:
+  # JSON Format Logger (default, machine-readable)
+  - name: "logger_json"
+    type: "lokstra.logger"
+    config:
+      level: "info"
+      format: "json"
+      output: "stdout"
+
+  # Text/Console Format Logger (human-readable)
+  - name: "logger_console"
+    type: "lokstra.logger"
+    config:
+      level: "debug"
+      format: "console"
+      output: "stdout"
+
+  # Text Format Logger (same as console)
+  - name: "logger_text"
+    type: "lokstra.logger"
+    config:
+      level: "warn"
+      format: "text"
+      output: "stderr"

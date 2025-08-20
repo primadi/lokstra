@@ -40,12 +40,12 @@ func (m *MockRegistrationContext) GetMiddlewareFactory(name string) (midware.Fac
 }
 
 // RegisterCompiledModule implements registration.Context.
-func (m *MockRegistrationContext) RegisterCompiledModule(moduleName string, pluginPath string) error {
+func (m *MockRegistrationContext) RegisterCompiledModule(pluginPath string) error {
 	return nil
 }
 
 // RegisterCompiledModuleWithFuncName implements registration.Context.
-func (m *MockRegistrationContext) RegisterCompiledModuleWithFuncName(moduleName string, pluginPath string, getModuleFuncName string) error {
+func (m *MockRegistrationContext) RegisterCompiledModuleWithFuncName(pluginPath string, getModuleFuncName string) error {
 	return nil
 }
 
@@ -59,8 +59,8 @@ func (m *MockRegistrationContext) RegisterMiddlewareFunc(name string, middleware
 	return nil
 }
 
-// RegisterModuleWithFunc implements registration.Context.
-func (m *MockRegistrationContext) RegisterModuleWithFunc(moduleName string, getModuleFunc func(ctx iface.RegistrationContext) error) error {
+// RegisterModule implements registration.Context.
+func (m *MockRegistrationContext) RegisterModule(getModuleFunc func() iface.Module) error {
 	return nil
 }
 

@@ -10,7 +10,6 @@ import (
 
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/iface"
-	"github.com/primadi/lokstra/core/registration"
 )
 
 type Server struct {
@@ -46,7 +45,7 @@ func (s *Server) NewApp(name string, addr string) *app.App {
 	return newApp
 }
 
-func (s *Server) RegisterModule(module registration.Module) error {
+func (s *Server) RegisterModule(module iface.Module) error {
 	if err := module.Register(s.ctx); err != nil {
 		return fmt.Errorf("failed to register module '%s': %w", module.Name(), err)
 	}
@@ -114,8 +113,8 @@ func (s *Server) WaitForShutdown(shutdownTimeout time.Duration) {
 	s.Shutdown(shutdownTimeout)
 }
 
-// StartAndWait starts the server and waits for shutdown signal.
-func (s *Server) StartAndWait(shutdownTimeout time.Duration) error {
+// StartAndWaitForShutdown starts the server and waits for shutdown signal.
+func (s *Server) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
 	// Start async
 	go func() {
 		if err := s.Start(); err != nil {

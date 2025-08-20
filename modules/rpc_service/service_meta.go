@@ -104,7 +104,7 @@ func getServiceMeta(svc service.Service) (*serviceMeta, error) {
 
 func (mm *methodMeta) HandleRequest(svc *serviceMeta, ctx *request.Context) error {
 	// Step 1: Decode body (msgpack)
-	body, err := ctx.GetRawBody()
+	body, err := ctx.GetRawRequestBody()
 	if err != nil {
 		return ctx.ErrorBadRequest("invalid body")
 	}

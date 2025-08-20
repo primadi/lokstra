@@ -1,0 +1,53 @@
+# Lokstra Configuration Example with Metrics Service
+# This example shows how to configure metrics service alongside other services
+
+server:
+  name: "user-api-server"
+  global_setting:
+    log_level: "info"
+
+services:
+  # HTTP Router Service
+  - name: "router"
+    type: "lokstra.http_router"
+    config:
+      host: "0.0.0.0"
+      port: 8080
+      timeout: "30s"
+    
+  # Database Pool Service (optional)
+  - name: "dbpool"
+    type: "lokstra.dbpool_pg"
+    config:
+      dsn: "postgres://user:password@localhost:5432/mydb?sslmode=disable"
+      max_connections: 5
+      min_connections: 1
+    
+  # Logger Service
+  - name: "logger"
+    type: "lokstra.logger"
+    config:
+      level: "info"
+      format: "json"
+      output: "stdout"
+    
+  # Metrics Service
+  - name: "metrics"
+    type: "lokstra.metrics"
+    config:
+      enabled: true
+      host: "0.0.0.0"
+      port: 9090
+      timeout: "30s"
+      endpoint: "/metrics"
+      namespace: "lokstra"
+      subsystem: "userapi"
+      # Additional labels applied to all metrics
+      labels:
+        service: "user-api"
+        environment: "development"
+        version: "1.0.0"
+      # Custom histogram buckets for response time metrics
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+      collect_interval: "15s"
+      include_go_metrics: true

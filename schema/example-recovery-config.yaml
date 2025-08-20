@@ -1,0 +1,56 @@
+server:
+  name: "recovery-test-server"
+  global_setting:
+    log_level: "debug"
+    log_format: "json"
+
+apps:
+  - name: "test-app"
+    address: ":8080"
+    
+    middleware:
+      # Recovery middleware dengan stack trace untuk development
+      - name: "recovery"
+        config:
+          enable_stack_trace: true
+      
+      # Request logger untuk monitoring
+      - name: "request_logger"
+        config:
+          include_request_body: false
+          include_response_body: false
+    
+    routes:
+      - method: "GET"
+        path: "/health"
+        handler: "health.check"
+      
+      - method: "GET"
+        path: "/test-panic"
+        handler: "test.panic"
+    
+    groups:
+      # Production API group tanpa stack trace
+      - prefix: "/api"
+        override_middleware: true
+        middleware:
+          - name: "recovery"
+            config:
+              enable_stack_trace: false  # Nonaktifkan stack trace untuk production API
+          - name: "request_logger"
+        
+        routes:
+          - method: "GET"
+            path: "/users"
+            handler: "user.list"
+          - method: "POST"
+            path: "/users"
+            handler: "user.create"
+
+services:
+  - name: "default_logger"
+    type: "lokstra.logger"
+    config:
+      level: "debug"
+      format: "json"
+      output: "stdout"

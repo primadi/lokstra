@@ -94,7 +94,7 @@ func startModulesFromConfig(regCtx iface.RegistrationContext, modules []*ModuleC
 		// 1. Register the module itself if path is provided
 		if mod.Path != "" {
 			newCtx := regCtx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
-			if err := newCtx.RegisterCompiledModuleWithFuncName(mod.Name, mod.Path, mod.Entry); err != nil {
+			if err := newCtx.RegisterCompiledModuleWithFuncName(mod.Path, mod.Entry); err != nil {
 				return fmt.Errorf("register module %s: %w", mod.Name, err)
 			}
 		}

@@ -34,15 +34,13 @@ type ContextImpl struct {
 }
 
 // RegisterCompiledModule implements Context.
-func (c *ContextImpl) RegisterCompiledModule(moduleName string,
-	pluginPath string) error {
-	return c.RegisterCompiledModuleWithFuncName(moduleName, pluginPath, EntryFnRegisterModule)
+func (c *ContextImpl) RegisterCompiledModule(pluginPath string) error {
+	return c.RegisterCompiledModuleWithFuncName(pluginPath, EntryFnRegisterModule)
 }
 
 // RegisterCompiledModuleWithFuncName implements Context.
-func (c *ContextImpl) RegisterCompiledModuleWithFuncName(moduleName string,
-	pluginPath string, getModuleFuncName string) error {
-
+func (c *ContextImpl) RegisterCompiledModuleWithFuncName(pluginPath string,
+	getModuleFuncName string) error {
 	if pluginPath == "" {
 		return fmt.Errorf("plugin path cannot be empty")
 	}
@@ -51,32 +49,34 @@ func (c *ContextImpl) RegisterCompiledModuleWithFuncName(moduleName string,
 		getModuleFuncName = EntryFnRegisterModule
 	}
 
-	if _, exists := modules[moduleName]; exists {
-		return errors.New("module with name '" + moduleName + "' already registered")
-	}
 	p, err := plugin.Open(pluginPath)
 	if err != nil {
 		return fmt.Errorf("load plugin %s: %w", pluginPath, err)
 	}
 	sym, _ := p.Lookup(getModuleFuncName)
-	getModuleFunc, ok := sym.(func(iface.RegistrationContext) error)
+	getModuleFunc, ok := sym.(func() iface.Module)
 	if !ok {
 		return fmt.Errorf("plugin entry %s has wrong signature", getModuleFuncName)
 	}
-	return c.RegisterModuleWithFunc(moduleName, getModuleFunc)
-}
+	moduleName := getModuleFunc().Name()
 
-// RegisterModuleWithFunc implements Context.
-func (c *ContextImpl) RegisterModuleWithFunc(moduleName string,
-	getModuleFunc func(regCtx iface.RegistrationContext) error) error {
 	if _, exists := modules[moduleName]; exists {
 		return errors.New("module with name '" + moduleName + "' already registered")
 	}
-	if err := getModuleFunc(c); err != nil {
-		return err
+	return c.RegisterModule(getModuleFunc)
+}
+
+// RegisterModule implements Context.
+func (c *ContextImpl) RegisterModule(getModuleFunc func() iface.Module) error {
+	mdl := getModuleFunc()
+	moduleName := mdl.Name()
+
+	if _, exists := modules[moduleName]; exists {
+		return errors.New("module with name '" + moduleName + "' already registered")
 	}
 	modules[moduleName] = true
-	return nil
+
+	return mdl.Register(c)
 }
 
 // GetHandler implements Context.

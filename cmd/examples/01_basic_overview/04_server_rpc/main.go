@@ -24,5 +24,5 @@ func main() {
 	svr.AddApp(app)
 
 	// Start the server
-	svr.StartAndWait(10 * time.Second)
+	svr.StartAndWaitForShutdown(10 * time.Second)
 }

@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=../../../schema/lokstra.json
+
+# Metrics Service Examples - Different Configurations
+
+services:
+  # Basic Metrics Service (default configuration)
+  - name: "metrics_basic"
+    type: "lokstra.metrics"
+    config:
+      enabled: true
+      endpoint: "/metrics"
+
+  # Advanced Metrics Service with custom configuration
+  - name: "metrics_advanced"
+    type: "lokstra.metrics"
+    config:
+      enabled: true
+      endpoint: "/metrics"
+      namespace: "myapp"
+      subsystem: "api"
+      collect_interval: "30s"
+      timeout: "15s"
+      include_go_metrics: true
+      include_process_metrics: true
+      
+      # Custom histogram buckets for latency metrics
+      buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+      
+      # Constant labels added to all metrics
+      labels:
+        service: "user_management"
+        version: "1.0.0"
+        environment: "production"
+
+  # Metrics for development (minimal configuration)
+  - name: "metrics_dev"
+    type: "lokstra.metrics"
+    config:
+      enabled: true
+      endpoint: "/debug/metrics"
+      namespace: "dev"
+      collect_interval: "10s"
+      include_go_metrics: true
+      include_process_metrics: false
+
+  # Disabled metrics (for performance testing)
+  - name: "metrics_disabled"
+    type: "lokstra.metrics"
+    config:
+      enabled: false
+
+  # Metrics with separate HTTP server
+  - name: "metrics_standalone"
+    type: "lokstra.metrics"
+    config:
+      enabled: true
+      endpoint: "/metrics"
+      host: "0.0.0.0"
+      port: 9090
+      namespace: "standalone"
+      labels:
+        instance: "server-1"

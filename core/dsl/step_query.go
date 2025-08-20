@@ -26,14 +26,46 @@ func (s *stepQuerySelectMany[TParam]) Run(ctx *FlowContext[TParam]) error {
 	if err != nil {
 		return err
 	}
+
+	// Metrics: Database operation start
+	if ctx.serviceVar.Metrics != nil {
+		ctx.serviceVar.Metrics.IncCounter("dsl_db_operation_started", map[string]string{
+			"operation": "select_many",
+		})
+	}
+
 	result, err := conn.SelectManyRowMap(ctx.reqCtx.Context, s.query, s.args...)
 	if err != nil {
+		// Metrics: Database operation failed
+		if ctx.serviceVar.Metrics != nil {
+			ctx.serviceVar.Metrics.IncCounter("dsl_db_operation_failed", map[string]string{
+				"operation": "select_many",
+			})
+		}
 		return err
 	}
+
+	// Metrics: Database operation success
+	if ctx.serviceVar.Metrics != nil {
+		ctx.serviceVar.Metrics.IncCounter("dsl_db_operation_succeeded", map[string]string{
+			"operation": "select_many",
+		})
+
+		// Track rows returned
+		ctx.serviceVar.Metrics.ObserveHistogram("dsl_db_rows_returned", float64(len(result)), map[string]string{
+			"operation": "select_many",
+		})
+	}
+
 	if s.saveAs != "" {
 		ctx.SetVar(s.saveAs, result)
 	}
 	return nil
+}
+
+func (s *stepQuerySelectMany[TParam]) SaveAs(name string) Step[TParam] {
+	s.saveAs = name
+	return s
 }
 
 // ---------------
@@ -62,14 +94,41 @@ func (s *stepQuerySelectOne[TParam]) Run(ctx *FlowContext[TParam]) error {
 	if err != nil {
 		return err
 	}
+
+	// Metrics: Database operation start
+	if ctx.serviceVar.Metrics != nil {
+		ctx.serviceVar.Metrics.IncCounter("dsl_db_operation_started", map[string]string{
+			"operation": "select_one",
+		})
+	}
+
 	result, err := conn.SelectOneRowMap(ctx.reqCtx.Context, s.query, s.args...)
 	if err != nil {
+		// Metrics: Database operation failed
+		if ctx.serviceVar.Metrics != nil {
+			ctx.serviceVar.Metrics.IncCounter("dsl_db_operation_failed", map[string]string{
+				"operation": "select_one",
+			})
+		}
 		return err
 	}
+
+	// Metrics: Database operation success
+	if ctx.serviceVar.Metrics != nil {
+		ctx.serviceVar.Metrics.IncCounter("dsl_db_operation_succeeded", map[string]string{
+			"operation": "select_one",
+		})
+	}
+
 	if s.saveAs != "" {
 		ctx.SetVar(s.saveAs, result)
 	}
 	return nil
+}
+
+func (s *stepQuerySelectOne[TParam]) SaveAs(name string) Step[TParam] {
+	s.saveAs = name
+	return s
 }
 
 // --------------------
@@ -106,23 +165,40 @@ func (s *stepQueryForEach[TParam]) Run(ctx *FlowContext[TParam]) error {
 		return err
 	}
 	defer rows.Close()
+
 	for rows.Next() {
-		var row serviceapi.Row
-		if err := rows.Scan(&row); err != nil {
-			return err
-		}
+		// Create a row scanner that implements serviceapi.Row interface
+		row := &rowScanner{rows: rows}
 		if err := s.fn(row); err != nil {
 			return err
 		}
 	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// rowScanner implements serviceapi.Row interface for stepQueryForEach
+type rowScanner struct {
+	rows serviceapi.Rows
+}
+
+func (r *rowScanner) Scan(dest ...any) error {
+	return r.rows.Scan(dest...)
+}
+
+func (s *stepQueryForEach[TParam]) SaveAs(name string) Step[TParam] {
+	s.saveAs = name
+	return s
 }
 
 func (s *stepQueryForEach[TParam]) ForEach(fn func(serviceapi.Row) error) *Flow[TParam] {
 	s.fn = fn
-	return &Flow[TParam]{
-		steps: []Step[TParam]{s},
-	}
+	// Return the flow that contains this step
+	return s.flow.Then(s)
 }
 
 type stepQueryForEachIface[TParam any] interface {
@@ -169,6 +245,11 @@ func (s *stepQueryErrorIfNotExists[TParam]) Run(ctx *FlowContext[TParam]) error 
 	return nil
 }
 
+func (s *stepQueryErrorIfNotExists[TParam]) SaveAs(name string) Step[TParam] {
+	s.saveAs = name
+	return s
+}
+
 // --------------------
 
 type stepQueryErrorIfExists[TParam any] struct {
@@ -207,4 +288,9 @@ func (s *stepQueryErrorIfExists[TParam]) Run(ctx *FlowContext[TParam]) error {
 	}
 
 	return nil
+}
+
+func (s *stepQueryErrorIfExists[TParam]) SaveAs(name string) Step[TParam] {
+	s.saveAs = name
+	return s
 }

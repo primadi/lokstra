@@ -14,11 +14,11 @@ type Context struct {
 	context.Context
 	*response.Response
 
-	Writer   http.ResponseWriter
-	Request  *http.Request
-	rawBody  []byte
-	bodyOnce sync.Once
-	bodyErr  error
+	Writer          http.ResponseWriter
+	Request         *http.Request
+	rawRequestBody  []byte
+	requestBodyOnce sync.Once
+	requestBodyErr  error
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request) (*Context, func()) {
@@ -81,21 +81,30 @@ func (ctx *Context) IsHeaderContainValue(name, value string) bool {
 	return false
 }
 
-func (ctx *Context) cacheBody() {
-	ctx.bodyOnce.Do(func() {
+func (ctx *Context) cacheRequestBody() {
+	ctx.requestBodyOnce.Do(func() {
 		if ctx.Request.Body == nil {
 			return
 		}
 		body, err := io.ReadAll(ctx.Request.Body)
 		if err != nil {
-			ctx.bodyErr = err
+			ctx.requestBodyErr = err
 		} else {
-			ctx.rawBody = body
+			ctx.rawRequestBody = body
 		}
 	})
 }
 
-func (ctx *Context) GetRawBody() ([]byte, error) {
-	ctx.cacheBody()
-	return ctx.rawBody, ctx.bodyErr
+func (ctx *Context) GetRawRequestBody() ([]byte, error) {
+	ctx.cacheRequestBody()
+	return ctx.rawRequestBody, ctx.requestBodyErr
+}
+
+// GetRawResponseBody returns the raw response body data
+// It accesses the RawData field from the Response object
+func (ctx *Context) GetRawResponseBody() ([]byte, error) {
+	if ctx.Response == nil {
+		return nil, nil
+	}
+	return ctx.Response.RawData, nil
 }
