@@ -3,8 +3,10 @@ package slow_request_logger
 import (
 	"time"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 const NAME = "slow_request_logger"
@@ -18,8 +20,13 @@ func (r *SlowRequestLogger) Description() string {
 	return "Logs slow requests and their metadata."
 }
 
+var logger serviceapi.Logger
+
 // Register implements registration.Module.
 func (r *SlowRequestLogger) Register(regCtx iface.RegistrationContext) error {
+	if svc, err := regCtx.GetService("logger.default"); err == nil {
+		logger = svc.(serviceapi.Logger)
+	}
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
 }
 
@@ -28,7 +35,7 @@ func (r *SlowRequestLogger) Name() string {
 	return NAME
 }
 
-func factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) midware.Func {
 	dur_th := DEFAULT_THRESHOLD
 	switch cfg := config.(type) {
 	case map[string]any:
@@ -51,14 +58,14 @@ func factory(config any) lokstra.MiddlewareFunc {
 		}
 	}
 
-	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
-		return func(ctx *lokstra.Context) error {
+	return func(next request.HandlerFunc) request.HandlerFunc {
+		return func(ctx *request.Context) error {
 
 			startTime := time.Now()
 			defer func() {
 				duration := time.Since(startTime)
 				if duration >= dur_th {
-					lokstra.Logger.WithFields(lokstra.LogFields{
+					logger.WithFields(serviceapi.LogFields{
 						"method":   ctx.Request.Method,
 						"path":     ctx.Request.URL.Path,
 						"duration": duration.String(),
@@ -73,9 +80,9 @@ func factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.Module = (*SlowRequestLogger)(nil)
+var _ iface.Module = (*SlowRequestLogger)(nil)
 
 // return SlowRequestLogger with name "lokstra.slow_request_logger"
-func GetModule() lokstra.Module {
+func GetModule() iface.Module {
 	return &SlowRequestLogger{}
 }

@@ -1,8 +1,9 @@
 package gzipcompression
 
 import (
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/request"
 )
 
 const NAME = "gzipcompression"
@@ -29,7 +30,7 @@ func (g *GzipCompressionMiddleware) Name() string {
 }
 
 // Factory implements iface.MiddlewareModule.
-func factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) midware.Func {
 	minSize := DEFAULT_MIN_SIZE
 	level := DEFAULT_LEVEL
 
@@ -58,8 +59,8 @@ func factory(config any) lokstra.MiddlewareFunc {
 		}
 	}
 
-	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
-		return func(ctx *lokstra.Context) error {
+	return func(next request.HandlerFunc) request.HandlerFunc {
+		return func(ctx *request.Context) error {
 			// Skip if client does not accept gzip
 			if !ctx.IsHeaderContainValue("Accept-Encoding", "gzip") {
 				return next(ctx)
@@ -81,9 +82,9 @@ func factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.Module = (*GzipCompressionMiddleware)(nil)
+var _ iface.Module = (*GzipCompressionMiddleware)(nil)
 
 // return GzipCompressionMiddleware with name "lokstra.gzipcompression"
-func GetModule() lokstra.Module {
+func GetModule() iface.Module {
 	return &GzipCompressionMiddleware{}
 }

@@ -1,4 +1,4 @@
-package standardservices
+package defaults
 
 import (
 	"errors"

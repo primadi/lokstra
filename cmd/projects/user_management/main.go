@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/services/dbpool_pg"
+	"github.com/primadi/lokstra/defaults"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 
 func registerComponents(regCtx lokstra.RegistrationContext) {
 	// Register Services
-	regCtx.RegisterModule(dbpool_pg.GetModule)
+	defaults.RegisterAll(regCtx)
 
 	// For now, register simple handlers to test the setup
 	regCtx.RegisterHandler("user.create", func(c *lokstra.Context) error {

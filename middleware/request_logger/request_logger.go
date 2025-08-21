@@ -3,9 +3,11 @@ package request_logger
 import (
 	"time"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/json"
 	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 const NAME = "request_logger"
@@ -23,8 +25,13 @@ func (r *RequestLogger) Description() string {
 	return "Logs incoming requests and their metadata with optional request/response body logging."
 }
 
+var logger serviceapi.Logger
+
 // Register implements registration.Module.
 func (r *RequestLogger) Register(regCtx iface.RegistrationContext) error {
+	if svc, err := regCtx.GetService("logger.default"); err == nil {
+		logger = svc.(serviceapi.Logger)
+	}
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
 }
 
@@ -33,7 +40,7 @@ func (r *RequestLogger) Name() string {
 	return NAME
 }
 
-func factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) midware.Func {
 	// Parse configuration
 	cfg := &Config{
 		IncludeRequestBody:  false,
@@ -60,10 +67,10 @@ func factory(config any) lokstra.MiddlewareFunc {
 		}
 	}
 
-	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
-		return func(ctx *lokstra.Context) error {
+	return func(next request.HandlerFunc) request.HandlerFunc {
+		return func(ctx *request.Context) error {
 			// Prepare base log fields
-			logFields := lokstra.LogFields{
+			logFields := serviceapi.LogFields{
 				"method":     ctx.Request.Method,
 				"path":       ctx.Request.URL.Path,
 				"query":      ctx.Request.URL.RawQuery,
@@ -90,12 +97,6 @@ func factory(config any) lokstra.MiddlewareFunc {
 				}
 			}
 
-			logger := lokstra.Logger
-			if logger == nil {
-				// Fallback when no logger is available (e.g., in tests)
-				return next(ctx)
-			}
-
 			loggerWithFields := logger.WithFields(logFields)
 			loggerWithFields.Infof("Incoming request")
 
@@ -106,7 +107,7 @@ func factory(config any) lokstra.MiddlewareFunc {
 
 			// Log completion
 			duration := time.Since(startTime)
-			completionFields := lokstra.LogFields{
+			completionFields := serviceapi.LogFields{
 				"duration":    duration.String(),
 				"duration_ms": duration.Milliseconds(),
 				"status":      ctx.Response.StatusCode,
@@ -144,8 +145,8 @@ func factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.Module = (*RequestLogger)(nil)
+var _ iface.Module = (*RequestLogger)(nil)
 
-func GetModule() lokstra.Module {
+func GetModule() iface.Module {
 	return &RequestLogger{}
 }

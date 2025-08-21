@@ -11,10 +11,10 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/server"
 	"github.com/primadi/lokstra/core/service"
+	"github.com/primadi/lokstra/defaults"
 	"github.com/primadi/lokstra/modules/coreservice/listener"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/logger"
-	"github.com/primadi/lokstra/standardservices"
 )
 
 type Context = request.Context
@@ -40,7 +40,7 @@ var Logger serviceapi.Logger
 func NewGlobalRegistrationContext() RegistrationContext {
 	ctx := registration.NewGlobalContext()
 
-	standardservices.RegisterAll(ctx)
+	defaults.RegisterAll(ctx)
 
 	// register logger module
 	_ = logger.GetModule().Register(ctx)
@@ -107,7 +107,7 @@ func NewAppSecure(ctx RegistrationContext, name string, addr string,
 		KEY_FILE_KEY:  keyFile,
 		CA_FILE_KEY:   caFile,
 	}
-	return app.NewAppCustom(ctx, name, addr, standardservices.HTTP_LISTENER_SECURE_NETHTTP, "", settings)
+	return app.NewAppCustom(ctx, name, addr, defaults.HTTP_LISTENER_SECURE_NETHTTP, "", settings)
 }
 
 func NewAppHttp3(ctx RegistrationContext, name string, addr string,
@@ -117,11 +117,11 @@ func NewAppHttp3(ctx RegistrationContext, name string, addr string,
 		KEY_FILE_KEY:  keyFile,
 		CA_FILE_KEY:   caFile,
 	}
-	return app.NewAppCustom(ctx, name, addr, standardservices.HTTP_LISTENER_HTTP3, "", settings)
+	return app.NewAppCustom(ctx, name, addr, defaults.HTTP_LISTENER_HTTP3, "", settings)
 }
 
 func NewAppFastHTTP(ctx RegistrationContext, name string, addr string) *App {
-	return app.NewAppCustom(ctx, name, addr, standardservices.HTTP_LISTENER_FASTHTTP, "", nil)
+	return app.NewAppCustom(ctx, name, addr, defaults.HTTP_LISTENER_FASTHTTP, "", nil)
 }
 
 func NamedMiddleware(middlewareType string, config ...any) *midware.Execution {

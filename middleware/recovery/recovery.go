@@ -3,8 +3,10 @@ package recovery
 import (
 	"runtime/debug"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 const NAME = "recovery"
@@ -21,10 +23,14 @@ func (r *RecoveryMiddleware) Description() string {
 	return "Recover from panic and return 500 error response. Should be the outermost middleware."
 }
 
+var logger serviceapi.Logger
+
 // Register implements registration.Module.
 func (r *RecoveryMiddleware) Register(regCtx iface.RegistrationContext) error {
 	regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 10)
-
+	if svc, err := regCtx.GetService("logger.default"); err == nil {
+		logger = svc.(serviceapi.Logger)
+	}
 	return nil
 }
 
@@ -33,7 +39,7 @@ func (r *RecoveryMiddleware) Name() string {
 	return NAME
 }
 
-func factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) midware.Func {
 	// Parse configuration
 	cfg := &Config{
 		EnableStackTrace: true, // Default to true for backward compatibility
@@ -54,13 +60,13 @@ func factory(config any) lokstra.MiddlewareFunc {
 		}
 	}
 
-	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
-		return func(ctx *lokstra.Context) error {
+	return func(next request.HandlerFunc) request.HandlerFunc {
+		return func(ctx *request.Context) error {
 			defer func() {
 				if err := recover(); err != nil {
 					_ = ctx.ErrorInternal("Internal Server Error")
 
-					logFields := lokstra.LogFields{
+					logFields := serviceapi.LogFields{
 						"error": err,
 					}
 
@@ -69,7 +75,7 @@ func factory(config any) lokstra.MiddlewareFunc {
 						logFields["stack"] = string(debug.Stack())
 					}
 
-					lokstra.Logger.WithFields(logFields).
+					logger.WithFields(logFields).
 						Errorf("Recovered from panic in middleware")
 				}
 			}()
@@ -79,9 +85,9 @@ func factory(config any) lokstra.MiddlewareFunc {
 	}
 }
 
-var _ lokstra.Module = (*RecoveryMiddleware)(nil)
+var _ iface.Module = (*RecoveryMiddleware)(nil)
 
 // return RecoveryMiddleware with name "lokstra.recovery"
-func GetModule() lokstra.Module {
+func GetModule() iface.Module {
 	return &RecoveryMiddleware{}
 }

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response"
 )
@@ -100,7 +99,7 @@ func TestRequestLogger_BasicLogging(t *testing.T) {
 	middleware := factory(nil)
 
 	// Create a test handler
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		return nil
 	}
@@ -113,7 +112,7 @@ func TestRequestLogger_BasicLogging(t *testing.T) {
 	req.Header.Set("User-Agent", "test-agent")
 
 	// Create test context
-	ctx := &lokstra.Context{
+	ctx := &request.Context{
 		Request:  req,
 		Response: response.NewResponse(),
 	}
@@ -134,7 +133,7 @@ func TestRequestLogger_WithRequestBody(t *testing.T) {
 	middleware := factory(config)
 
 	// Create a test handler
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		return nil
 	}
@@ -214,7 +213,7 @@ func TestRequestLogger_ErrorStatusLogging(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testHandler := func(ctx *lokstra.Context) error {
+			testHandler := func(ctx *request.Context) error {
 				ctx.Response.StatusCode = tt.statusCode
 				return nil
 			}
@@ -222,7 +221,7 @@ func TestRequestLogger_ErrorStatusLogging(t *testing.T) {
 			wrappedHandler := middleware(testHandler)
 
 			req := httptest.NewRequest("GET", "/test", nil)
-			ctx := &lokstra.Context{
+			ctx := &request.Context{
 				Request:  req,
 				Response: response.NewResponse(),
 			}
@@ -242,7 +241,7 @@ func TestRequestLogger_LongBodyTruncation(t *testing.T) {
 	}
 	middleware := factory(config)
 
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		return nil
 	}
@@ -253,7 +252,7 @@ func TestRequestLogger_LongBodyTruncation(t *testing.T) {
 	longBody := strings.Repeat("a", 1500)
 	req := httptest.NewRequest("POST", "/test", strings.NewReader(longBody))
 
-	ctx := &lokstra.Context{
+	ctx := &request.Context{
 		Request:  req,
 		Response: response.NewResponse(),
 	}
@@ -276,7 +275,7 @@ func TestRequestLogger_WithResponseBody(t *testing.T) {
 	middleware := factory(config)
 
 	// Create a test handler that sets response data
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		responseData := map[string]any{
 			"message": "success",
@@ -321,7 +320,7 @@ func TestRequestLogger_WithResponseBody(t *testing.T) {
 
 	// Test with empty response body
 	t.Run("Empty response body", func(t *testing.T) {
-		emptyHandler := func(ctx *lokstra.Context) error {
+		emptyHandler := func(ctx *request.Context) error {
 			ctx.Response.StatusCode = 204 // No Content
 			// No response data set
 			return nil

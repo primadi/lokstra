@@ -18,7 +18,7 @@ func (c *CoreServiceModule) Name() string {
 
 // Register implements registration.Module.
 func (c *CoreServiceModule) Register(regCtx iface.RegistrationContext) error {
-	// skip register, because this module is registered using standardservices package
+	// skip register, because this module is registered using defaults package
 
 	return nil
 }

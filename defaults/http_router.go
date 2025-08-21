@@ -1,4 +1,4 @@
-package standardservices
+package defaults
 
 import (
 	"github.com/primadi/lokstra/core/iface"

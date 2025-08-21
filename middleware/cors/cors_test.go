@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/request"
 )
 
@@ -136,7 +135,7 @@ func TestCorsMiddleware_ActualRequest(t *testing.T) {
 	middleware := factory(config)
 
 	// Create a test handler
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		ctx.Response.Message = "Success"
 		return nil
@@ -188,7 +187,7 @@ func TestCorsMiddleware_PreflightRequest(t *testing.T) {
 	middleware := factory(config)
 
 	// Create a test handler (should not be called for OPTIONS)
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		t.Error("Handler should not be called for OPTIONS request")
 		return nil
 	}
@@ -243,7 +242,7 @@ func TestCorsMiddleware_WildcardHeaders(t *testing.T) {
 	}
 	middleware := factory(config)
 
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		return nil
 	}
 
@@ -276,7 +275,7 @@ func TestCorsMiddleware_NoOriginHeader(t *testing.T) {
 	// Create middleware
 	middleware := factory(nil)
 
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		return nil
 	}
@@ -311,7 +310,7 @@ func TestCorsMiddleware_OriginNotAllowed(t *testing.T) {
 	}
 	middleware := factory(config)
 
-	testHandler := func(ctx *lokstra.Context) error {
+	testHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		return nil
 	}

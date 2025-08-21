@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -25,11 +24,11 @@ func (m *mockLogger) WithFields(fields serviceapi.LogFields) serviceapi.Logger {
 func (m *mockLogger) SetFormat(format string)                                  {}
 func (m *mockLogger) SetOutput(output string)                                  {}
 
+var Logger serviceapi.Logger
+
 func setupLogger() {
 	// Set a mock logger for testing
-	if lokstra.Logger == nil {
-		lokstra.Logger = &mockLogger{}
-	}
+	Logger = &mockLogger{}
 }
 
 func TestConfig_Parsing(t *testing.T) {
@@ -112,7 +111,7 @@ func TestRecoveryMiddleware_PanicRecovery(t *testing.T) {
 	})
 
 	// Create a handler that panics
-	panicHandler := func(ctx *lokstra.Context) error {
+	panicHandler := func(ctx *request.Context) error {
 		panic("test panic message")
 	}
 
@@ -154,7 +153,7 @@ func TestRecoveryMiddleware_NormalExecution(t *testing.T) {
 	middleware := factory(nil)
 
 	// Create a normal handler that doesn't panic
-	normalHandler := func(ctx *lokstra.Context) error {
+	normalHandler := func(ctx *request.Context) error {
 		ctx.Response.StatusCode = 200
 		ctx.Response.Message = "Success"
 		return nil
@@ -193,7 +192,7 @@ func TestRecoveryMiddleware_DisabledStackTrace(t *testing.T) {
 	})
 
 	// Create a handler that panics
-	panicHandler := func(ctx *lokstra.Context) error {
+	panicHandler := func(ctx *request.Context) error {
 		panic("test panic without stack trace")
 	}
 

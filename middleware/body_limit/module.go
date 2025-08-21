@@ -1,7 +1,6 @@
 package body_limit
 
 import (
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/iface"
 )
 
@@ -24,9 +23,9 @@ func (b *BodyLimitModule) Register(regCtx iface.RegistrationContext) error {
 	return regCtx.RegisterMiddlewareFactory(MODULE_NAME, factory)
 }
 
-var _ lokstra.Module = (*BodyLimitModule)(nil)
+var _ iface.Module = (*BodyLimitModule)(nil)
 
 // GetModule returns the body limit module
-func GetModule() lokstra.Module {
+func GetModule() iface.Module {
 	return &BodyLimitModule{}
 }

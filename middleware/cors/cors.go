@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/request"
 )
 
 const NAME = "cors"
@@ -51,7 +52,7 @@ func (c *CorsMiddleware) Name() string {
 	return NAME
 }
 
-func factory(config any) lokstra.MiddlewareFunc {
+func factory(config any) midware.Func {
 	cfg := getDefaultConfig()
 
 	// Parse configuration
@@ -73,8 +74,8 @@ func factory(config any) lokstra.MiddlewareFunc {
 		}
 	}
 
-	return func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
-		return func(ctx *lokstra.Context) error {
+	return func(next request.HandlerFunc) request.HandlerFunc {
+		return func(ctx *request.Context) error {
 			origin := ctx.GetHeader("Origin")
 
 			// Handle actual request
@@ -199,9 +200,9 @@ func parseStringSlice(v any) []string {
 	return nil
 }
 
-var _ lokstra.Module = (*CorsMiddleware)(nil)
+var _ iface.Module = (*CorsMiddleware)(nil)
 
 // GetModule returns the CORS middleware module
-func GetModule() lokstra.Module {
+func GetModule() iface.Module {
 	return &CorsMiddleware{}
 }

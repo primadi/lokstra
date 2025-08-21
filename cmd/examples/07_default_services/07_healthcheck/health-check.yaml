@@ -1,0 +1,64 @@
+# Health Check Service Configuration
+# Example configuration for Lokstra health check service
+
+# Server configuration
+server:
+  name: health-check-example
+  global_setting:
+    log_level: info
+
+# Services configuration
+services:
+  - type: health_check
+    name: health-service
+    config:
+      enabled: true
+      checkers:
+        - name: memory
+          type: memory
+          config:
+            threshold: 80
+        - name: disk
+          type: disk
+          config:
+            path: "/"
+            threshold: 85
+        - name: application
+          type: application
+          config:
+            name: health-check-example
+            version: "1.0.0"
+
+# Applications configuration  
+apps:
+  - name: health-app
+    address: :8080
+    routes:
+      # Health endpoints
+      - method: GET
+        path: /health
+        handler: health.check
+        
+      - method: GET
+        path: /health/liveness
+        handler: health.liveness
+        
+      - method: GET  
+        path: /health/readiness
+        handler: health.readiness
+        
+      - method: GET
+        path: /health/detailed
+        handler: health.detailed
+        
+      - method: GET
+        path: /health/list
+        handler: health.list
+        
+      - method: GET
+        path: /health/check/:name
+        handler: health.check_by_name
+        
+      - method: GET
+        path: /health/metrics
+        handler: health.metrics
