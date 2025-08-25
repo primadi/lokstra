@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/cmd/projects/user_management/handlers"
 	"github.com/primadi/lokstra/defaults"
 )
 
@@ -33,50 +34,68 @@ func registerComponents(regCtx lokstra.RegistrationContext) {
 	// Register Services
 	defaults.RegisterAll(regCtx)
 
-	// For now, register simple handlers to test the setup
-	regCtx.RegisterHandler("user.create", func(c *lokstra.Context) error {
+	// Register actual CRUD handlers
+	regCtx.RegisterHandler("user.create", handlers.CreateNewUserHandler())
+	regCtx.RegisterHandler("user.list", handlers.CreateListUserHandler())
+	regCtx.RegisterHandler("user.get", handlers.CreateGetUserByIDHandler()) // GET by ID
+	regCtx.RegisterHandler("user.update", handlers.CreateUpdateUserHandler())
+	regCtx.RegisterHandler("user.delete", handlers.CreateDeleteUserHandler())
+	regCtx.RegisterHandler("user.get_by_name", handlers.CreateGetUserByNameHandler())
+
+	regCtx.RegisterHandler("auth.login", func(c *lokstra.Context) error {
 		return c.Ok(map[string]any{
-			"message": "User creation endpoint - implementation in progress",
+			"message": "Login endpoint - implementation in progress",
 			"status":  "success",
 		})
 	})
 
-	regCtx.RegisterHandler("user.list", func(c *lokstra.Context) error {
+	regCtx.RegisterHandler("auth.logout", func(c *lokstra.Context) error {
 		return c.Ok(map[string]any{
-			"users":   []any{},
-			"total":   0,
-			"message": "User list endpoint - implementation in progress",
+			"message": "Logout endpoint - implementation in progress",
+			"status":  "success",
 		})
 	})
 
-	regCtx.RegisterHandler("user.get", func(c *lokstra.Context) error {
-		username := c.GetQueryParam("username")
+	regCtx.RegisterHandler("auth.refresh", func(c *lokstra.Context) error {
 		return c.Ok(map[string]any{
-			"username": username,
-			"message":  "User get endpoint - implementation in progress",
+			"message": "Refresh token endpoint - implementation in progress",
+			"status":  "success",
 		})
 	})
 
-	regCtx.RegisterHandler("user.update", func(c *lokstra.Context) error {
-		username := c.GetQueryParam("username")
+	regCtx.RegisterHandler("admin.user_stats", func(c *lokstra.Context) error {
 		return c.Ok(map[string]any{
-			"username": username,
-			"message":  "User update endpoint - implementation in progress",
+			"total_users":    0,
+			"active_users":   0,
+			"inactive_users": 0,
+			"message":        "Admin user stats endpoint - implementation in progress",
 		})
 	})
 
-	regCtx.RegisterHandler("user.delete", func(c *lokstra.Context) error {
-		username := c.GetQueryParam("username")
+	regCtx.RegisterHandler("admin.activate_user", func(c *lokstra.Context) error {
+		userID := c.GetPathParam("id")
 		return c.Ok(map[string]any{
-			"username": username,
-			"message":  "User delete endpoint - implementation in progress",
+			"user_id": userID,
+			"message": "User activated successfully",
+			"status":  "active",
+		})
+	})
+
+	regCtx.RegisterHandler("admin.deactivate_user", func(c *lokstra.Context) error {
+		userID := c.GetPathParam("id")
+		return c.Ok(map[string]any{
+			"user_id": userID,
+			"message": "User deactivated successfully",
+			"status":  "inactive",
 		})
 	})
 
 	regCtx.RegisterHandler("health.check", func(c *lokstra.Context) error {
 		return c.Ok(map[string]any{
-			"status":  "ok",
-			"service": "user-management",
+			"status":    "ok",
+			"service":   "user-management",
+			"timestamp": time.Now().UTC(),
+			"version":   "1.0.0",
 		})
 	})
 }

@@ -3,10 +3,10 @@ package serviceapi
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 )
 
-func GetService[T any](regCtx iface.RegistrationContext, name string) (T, error) {
+func GetService[T any](regCtx registration.Context, name string) (T, error) {
 	var zero T
 
 	service, err := regCtx.GetService(name)

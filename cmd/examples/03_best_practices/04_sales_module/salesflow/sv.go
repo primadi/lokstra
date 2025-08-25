@@ -12,7 +12,7 @@ type SalesSV struct {
 	// Services (auto inject by lokstra)
 	DBPool    serviceapi.DbPool `service:"lokstra.dbpool.main"`
 	Inventory InventoryService  `service:"svc.inventory"`
-	Logger    serviceapi.Logger `service:"logger.default"`
+	Logger    serviceapi.Logger `service:"logger"`
 	I18n      serviceapi.I18n   `service:"i18n.default"`
 
 	// Vars runtime

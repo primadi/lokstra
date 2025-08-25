@@ -3,8 +3,8 @@ package slow_request_logger
 import (
 	"time"
 
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -23,8 +23,8 @@ func (r *SlowRequestLogger) Description() string {
 var logger serviceapi.Logger
 
 // Register implements registration.Module.
-func (r *SlowRequestLogger) Register(regCtx iface.RegistrationContext) error {
-	if svc, err := regCtx.GetService("logger.default"); err == nil {
+func (r *SlowRequestLogger) Register(regCtx registration.Context) error {
+	if svc, err := regCtx.GetService("logger"); err == nil {
 		logger = svc.(serviceapi.Logger)
 	}
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
@@ -80,9 +80,9 @@ func factory(config any) midware.Func {
 	}
 }
 
-var _ iface.Module = (*SlowRequestLogger)(nil)
+var _ registration.Module = (*SlowRequestLogger)(nil)
 
 // return SlowRequestLogger with name "lokstra.slow_request_logger"
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &SlowRequestLogger{}
 }

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
 
 type AuthServiceImpl struct {
-	regCtx          iface.RegistrationContext
+	regCtx          registration.Context
 	TokenIssuer     auth.TokenIssuer
 	SessionService  auth.Session
 	AccessTokenTTL  time.Duration

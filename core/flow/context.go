@@ -1,124 +1,140 @@
 package flow
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-type Context struct {
-	stdContext context.Context
-	pool       serviceapi.DbPool
-	schema     string
-	dbConn     serviceapi.DbConn
-	dbTx       serviceapi.DbTx
+type Context[T any] struct {
+	*request.Context
+	Params *T
+	flow   *Flow[T]
+	dbConn serviceapi.DbConn
+	dbTx   serviceapi.DbTx
 
-	vars map[string]any // runtime variables
+	// Store for passing data between flow steps
+	store map[string]interface{}
 }
 
-func NewContext(stdContext context.Context, pool serviceapi.DbPool, schema string) *Context {
-	return &Context{
-		stdContext: stdContext,
-		pool:       pool,
-		schema:     schema,
-		vars:       make(map[string]any),
+func newContext[T any](f *Flow[T], reqCtx *request.Context) *Context[T] {
+	return &Context[T]{
+		flow:    f,
+		store:   make(map[string]any),
+		Context: reqCtx,
 	}
 }
 
-func (c *Context) StdContext() context.Context {
-	return c.stdContext
+func (c *Context[T]) GetDbExecutor() serviceapi.DbExecutor {
+	if c.dbTx != nil {
+		return c.dbTx
+	}
+	if c.dbConn == nil {
+		if c.flow.DbPool == nil {
+			c.flow.DbPool = defaultDbPool
+		}
+		if c.flow.DbPool == nil {
+			// Return an error if no database pool is available
+			panic("no database pool available - make sure to configure flow_dbPool in global settings")
+		}
+		if c.flow.DbSchemaName == "" {
+			c.flow.DbSchemaName = defaultDbSchemaName
+		}
+
+		var err error
+		c.dbConn, err = c.flow.DbPool.Acquire(c.Context, c.flow.DbSchemaName)
+		if err != nil {
+			panic(fmt.Sprintf("failed to acquire database connection: %v", err))
+		}
+	}
+	return c.dbConn
 }
 
-func (c *Context) CurrentExecutor() (serviceapi.DbExecutor, error) {
+func (c *Context[T]) RollbackTx() error {
+	if c.dbTx == nil {
+		return fmt.Errorf("no transaction to rollback")
+	}
+
+	// Rollback the transaction and handle potential errors
+	if err := c.dbTx.Rollback(c.Context); err != nil {
+		c.cleanupDbResources()
+		return fmt.Errorf("failed to rollback transaction: %w", err)
+	}
+
+	// Clean up resources after rollback
+	c.cleanupDbResources()
+	return nil
+}
+
+func (c *Context[T]) CommitTx() error {
+	if c.dbTx == nil {
+		return fmt.Errorf("no transaction to commit")
+	}
+
+	// Commit the transaction and handle potential errors
+	if err := c.dbTx.Commit(c.Context); err != nil {
+		// Even if commit fails, we should still clean up resources
+		c.cleanupDbResources()
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Clean up resources after successful commit
+	c.cleanupDbResources()
+	return nil
+}
+
+// cleanupDbResources centralizes the cleanup logic for database resources
+func (c *Context[T]) cleanupDbResources() {
 	if c.dbTx != nil {
-		return c.dbTx, nil
+		c.dbTx = nil
 	}
 	if c.dbConn != nil {
-		return c.dbConn, nil
+		c.dbConn.Release()
+		c.dbConn = nil
 	}
-	conn, err := c.pool.Acquire(c.stdContext, c.schema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire DB connection: %s", err.Error())
-	}
-	c.dbConn = conn
-	return c.dbConn, nil
 }
 
-func (c *Context) Set(name string, value any) {
-	c.vars[name] = value
+func (c *Context[T]) releaseDb(err error) {
+	if err != nil && defaultLogger != nil {
+		defaultLogger.Errorf("Step [%s] Error occurred: %v", c.flow.CurrentStepName, err)
+	}
+
+	if c.dbTx != nil {
+		if err != nil {
+			if err = c.dbTx.Rollback(c.Context); err != nil {
+				if defaultLogger != nil {
+					defaultLogger.Errorf("Step [%s] Failed to rollback transaction: %v",
+						c.flow.CurrentStepName, err)
+				}
+			}
+		} else {
+			// Log commit errors but don't fail the cleanup process
+			if err = c.dbTx.Commit(c.Context); err != nil {
+				if defaultLogger != nil {
+					defaultLogger.Errorf("Step [%s] Failed to commit transaction: %v",
+						c.flow.CurrentStepName, err)
+				}
+			}
+		}
+	}
+
+	c.cleanupDbResources()
 }
 
-func (c *Context) Get(name string) (any, bool) {
-	value, exists := c.vars[name]
+// Store/Get methods for passing data between flow steps
+func (c *Context[T]) Set(key string, value interface{}) {
+	c.store[key] = value
+}
+
+func (c *Context[T]) Get(key string) (interface{}, bool) {
+	value, exists := c.store[key]
 	return value, exists
 }
 
-// GetAll returns all variables in the context
-func (c *Context) GetAll() map[string]any {
-	result := make(map[string]any)
-	for key, value := range c.vars {
-		result[key] = value
+func (c *Context[T]) MustGet(key string) interface{} {
+	if value, exists := c.store[key]; exists {
+		return value
 	}
-	return result
-}
-
-func (c *Context) Exec(query string, args ...any) (serviceapi.CommandResult, error) {
-	exec, err := c.CurrentExecutor()
-	if err != nil {
-		return nil, err
-	}
-	return exec.Exec(c.StdContext(), query, args...)
-}
-
-func (c *Context) QueryRow(query string, args ...any) (serviceapi.Row, error) {
-	exec, err := c.CurrentExecutor()
-	if err != nil {
-		return nil, err
-	}
-	return exec.QueryRow(c.StdContext(), query, args...), nil
-}
-
-func (c *Context) Query(query string, args ...any) (serviceapi.Rows, error) {
-	exec, err := c.CurrentExecutor()
-	if err != nil {
-		return nil, err
-	}
-	return exec.Query(c.StdContext(), query, args...)
-}
-
-func (c *Context) ForEach(fn func(serviceapi.Row) error, query string, args ...any) (int, error) {
-	rows, err := c.Query(query, args...)
-	if err != nil {
-		return 0, fmt.Errorf("failed to execute query: %w", err)
-	}
-	defer rows.Close()
-
-	rowCount := 0
-	for rows.Next() {
-		rowCount++
-		if err := fn(rows); err != nil {
-			return rowCount, fmt.Errorf("failed to process row: %w", err)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return rowCount, fmt.Errorf("error iterating rows: %w", err)
-	}
-	return rowCount, nil
-}
-
-func (c *Context) QueryRowMap(query string, args ...any) (serviceapi.RowMap, error) {
-	exec, err := c.CurrentExecutor()
-	if err != nil {
-		return nil, err
-	}
-	return exec.SelectOneRowMap(c.StdContext(), query, args...)
-}
-
-func (c *Context) QueryManyRowMap(query string, args ...any) ([]serviceapi.RowMap, error) {
-	exec, err := c.CurrentExecutor()
-	if err != nil {
-		return nil, err
-	}
-	return exec.SelectManyRowMap(c.StdContext(), query, args...)
+	panic("Key '" + key + "' does not exist in flow context")
 }

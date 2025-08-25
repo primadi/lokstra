@@ -5,7 +5,8 @@ import (
 
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/config"
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/flow"
+
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
@@ -14,18 +15,17 @@ import (
 	"github.com/primadi/lokstra/defaults"
 	"github.com/primadi/lokstra/modules/coreservice/listener"
 	"github.com/primadi/lokstra/serviceapi"
-	"github.com/primadi/lokstra/services/logger"
 )
 
 type Context = request.Context
-type RegistrationContext = iface.RegistrationContext
+type RegistrationContext = registration.Context
 
 type HandlerFunc = request.HandlerFunc
 
 type MiddlewareFunc = midware.Func
 type MiddlewareFactory = midware.Factory
 
-type Module = iface.Module
+type Module = registration.Module
 
 type Server = server.Server
 type App = app.App
@@ -42,12 +42,8 @@ func NewGlobalRegistrationContext() RegistrationContext {
 
 	defaults.RegisterAll(ctx)
 
-	// register logger module
-	_ = logger.GetModule().Register(ctx)
-
-	// create default logger service
-	l, _ := ctx.CreateService(logger.MODULE_NAME, "logger.default", "info")
-	Logger = l.(serviceapi.Logger)
+	// get default logger service
+	Logger, _ = serviceapi.GetService[serviceapi.Logger](ctx, "logger")
 
 	return ctx
 }
@@ -81,6 +77,31 @@ func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) 
 	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogOutput]; exists {
 		if output, ok := l.(string); ok {
 			Logger.SetOutput(output)
+		}
+	}
+
+	// change Logger if exists on server settings
+	svc, err := serviceapi.GetService[serviceapi.Logger](regCtx, "logger")
+	if err == nil {
+		Logger = svc
+	}
+
+	// Initialize default flow services from global settings
+	if dbPoolName, exists := cfg.Server.Settings["flow_dbPool"]; exists {
+		if dbPoolStr, ok := dbPoolName.(string); ok {
+			flow.SetDefaultDbPool(regCtx, dbPoolStr)
+		}
+	}
+
+	if loggerName, exists := cfg.Server.Settings["flow_logger"]; exists {
+		if loggerStr, ok := loggerName.(string); ok {
+			flow.SetDefaultLogger(regCtx, loggerStr)
+		}
+	}
+
+	if dbSchemaName, exists := cfg.Server.Settings["flow_dbschema"]; exists {
+		if dbSchemaStr, ok := dbSchemaName.(string); ok {
+			flow.SetDefaultDbSchemaName(dbSchemaStr)
 		}
 	}
 

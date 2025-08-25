@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/examples/application_architecture/modules/user_management/handlers"
 	"github.com/primadi/lokstra/examples/application_architecture/modules/user_management/repository"
 	"github.com/primadi/lokstra/examples/application_architecture/modules/user_management/services"
@@ -26,7 +26,7 @@ type UserManagementModule struct {
 
 // RegisterModule is the entry point for the user management module
 // This function will be called by the Lokstra framework when loading the module
-func RegisterModule(ctx iface.RegistrationContext) error {
+func RegisterModule(ctx registration.RegistrationContext) error {
 	// Parse module settings
 	config := &ModuleConfig{
 		TableName:         "users",
@@ -93,20 +93,20 @@ func CreateServices() map[string]interface{} {
 }
 
 // RegisterServiceFactories registers service factories that other modules can use
-func RegisterServiceFactories(ctx iface.RegistrationContext) error {
+func RegisterServiceFactories(ctx registration.RegistrationContext) error {
 	// This module doesn't register service factories, but could for reusable components
 	return nil
 }
 
 // RegisterHandlers registers additional handlers (already done in RegisterModule)
-func RegisterHandlers(ctx iface.RegistrationContext) error {
+func RegisterHandlers(ctx registration.RegistrationContext) error {
 	// Handlers are already registered in RegisterModule
 	// This could be used for registering additional handlers or organizing registration
 	return nil
 }
 
 // RegisterMiddleware registers middleware that this module provides
-func RegisterMiddleware(ctx iface.RegistrationContext) error {
+func RegisterMiddleware(ctx registration.RegistrationContext) error {
 	// This module doesn't provide middleware, but could for user authentication, etc.
 	return nil
 }

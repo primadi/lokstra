@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/iface"
+
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -19,7 +20,7 @@ func (m *module) Name() string {
 }
 
 // Register implements registration.Module.
-func (m *module) Register(regCtx iface.RegistrationContext) error {
+func (m *module) Register(regCtx registration.Context) error {
 	factory := func(config any) (service.Service, error) {
 		loggerConfig := &LoggerConfig{
 			Level:  serviceapi.LogLevelInfo,
@@ -69,8 +70,8 @@ func (m *module) Description() string {
 }
 
 // GetModule returns the logger service with serviceType "lokstra.logger".
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &module{}
 }
 
-var _ iface.Module = (*module)(nil)
+var _ registration.Module = (*module)(nil)

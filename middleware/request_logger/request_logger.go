@@ -4,8 +4,9 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/json"
-	"github.com/primadi/lokstra/core/iface"
+
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -28,8 +29,8 @@ func (r *RequestLogger) Description() string {
 var logger serviceapi.Logger
 
 // Register implements registration.Module.
-func (r *RequestLogger) Register(regCtx iface.RegistrationContext) error {
-	if svc, err := regCtx.GetService("logger.default"); err == nil {
+func (r *RequestLogger) Register(regCtx registration.Context) error {
+	if svc, err := regCtx.GetService("logger"); err == nil {
 		logger = svc.(serviceapi.Logger)
 	}
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
@@ -97,6 +98,11 @@ func factory(config any) midware.Func {
 				}
 			}
 
+			// Check if logger is available, if not skip logging
+			if logger == nil {
+				panic("Logger service not available for request_logger middleware")
+			}
+
 			loggerWithFields := logger.WithFields(logFields)
 			loggerWithFields.Infof("Incoming request")
 
@@ -145,8 +151,8 @@ func factory(config any) midware.Func {
 	}
 }
 
-var _ iface.Module = (*RequestLogger)(nil)
+var _ registration.Module = (*RequestLogger)(nil)
 
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &RequestLogger{}
 }

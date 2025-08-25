@@ -1,0 +1,37 @@
+services:
+  - name: "db_global"
+    type: "lokstra.dbpool_pg"
+    config:
+      # Database connection settings
+      host: ${ENV:DB_HOST:192.168.18.10}
+      port: ${ENV:DB_PORT:5433}
+      database: ${ENV:DB_NAME:global-db}
+      username: ${ENV:DB_USER:global-admin}
+      password: ${ENV:DB_PASSWORD:admin@2025}
+      
+      # Connection pool settings
+      max_connections: 5
+      min_connections: 0
+      max_idle_time: "30m"
+      max_lifetime: "1h"
+      ssl_mode: "disable" # ${ENV:DB_SSL_MODE:disable}
+
+  # - name: "metrics"
+  #   type: "lokstra.metrics"
+  #   config:
+  #     enabled: true
+  #     endpoint: "/metrics"
+  #     namespace: "user_management"
+  #     subsystem: "api"
+  #     collect_interval: "15s"
+
+  # - name: "i18n"
+  #   type: "lokstra.i18n"
+  #   config:
+  #     default_language: "en"
+  #     fallback_language: "en"
+  #     supported_languages:
+  #       - "en"
+  #       - "id"
+  #     messages_path: "locales"
+  #     format: "json"

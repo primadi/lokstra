@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/iface"
+
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -20,7 +21,7 @@ func (m *module) Name() string {
 }
 
 // Register implements registration.Module.
-func (m *module) Register(regCtx iface.RegistrationContext) error {
+func (m *module) Register(regCtx registration.Context) error {
 	factory := func(config any) (service.Service, error) {
 		metricsConfig := &MetricsConfig{
 			Enabled:               true,
@@ -185,8 +186,8 @@ func parseLabels(labelsInterface interface{}) (map[string]string, error) {
 }
 
 // GetModule returns the metrics service with serviceType "lokstra.metrics".
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &module{}
 }
 
-var _ iface.Module = (*module)(nil)
+var _ registration.Module = (*module)(nil)

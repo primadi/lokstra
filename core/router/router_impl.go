@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
@@ -25,11 +25,11 @@ type RouterImpl struct {
 	r_engine serviceapi.RouterEngine
 }
 
-func NewListener(ctx iface.RegistrationContext, config map[string]any) serviceapi.HttpListener {
+func NewListener(ctx registration.Context, config map[string]any) serviceapi.HttpListener {
 	return NewListenerWithEngine(ctx, "", config)
 }
 
-func NewListenerWithEngine(ctx iface.RegistrationContext, listenerType string,
+func NewListenerWithEngine(ctx registration.Context, listenerType string,
 	config map[string]any) serviceapi.HttpListener {
 
 	lType := NormalizeListenerType(listenerType)
@@ -50,11 +50,11 @@ func NewListenerWithEngine(ctx iface.RegistrationContext, listenerType string,
 	return ls
 }
 
-func NewRouter(regCtx iface.RegistrationContext, config map[string]any) Router {
+func NewRouter(regCtx registration.Context, config map[string]any) Router {
 	return NewRouterWithEngine(regCtx, "", config)
 }
 
-func NewRouterWithEngine(regCtx iface.RegistrationContext, engineType string,
+func NewRouterWithEngine(regCtx registration.Context, engineType string,
 	config map[string]any) Router {
 
 	serviceType := NormalizeRouterType(engineType)

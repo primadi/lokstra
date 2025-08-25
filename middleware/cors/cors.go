@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 )
 
@@ -43,7 +43,7 @@ func (c *CorsMiddleware) Description() string {
 }
 
 // Register implements registration.Module.
-func (c *CorsMiddleware) Register(regCtx iface.RegistrationContext) error {
+func (c *CorsMiddleware) Register(regCtx registration.Context) error {
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 30)
 }
 
@@ -200,9 +200,9 @@ func parseStringSlice(v any) []string {
 	return nil
 }
 
-var _ iface.Module = (*CorsMiddleware)(nil)
+var _ registration.Module = (*CorsMiddleware)(nil)
 
 // GetModule returns the CORS middleware module
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &CorsMiddleware{}
 }

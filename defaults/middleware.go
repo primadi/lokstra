@@ -1,7 +1,7 @@
 package defaults
 
 import (
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/middleware/body_limit"
 	"github.com/primadi/lokstra/middleware/cors"
 	"github.com/primadi/lokstra/middleware/gzipcompression"
@@ -10,7 +10,7 @@ import (
 	"github.com/primadi/lokstra/middleware/slow_request_logger"
 )
 
-func RegisterAllMiddleware(regCtx iface.RegistrationContext) {
+func RegisterAllMiddleware(regCtx registration.Context) {
 	regCtx.RegisterModule(body_limit.GetModule)
 	regCtx.RegisterModule(cors.GetModule)
 	regCtx.RegisterModule(gzipcompression.GetModule)

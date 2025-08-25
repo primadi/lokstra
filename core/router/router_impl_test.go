@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
@@ -25,7 +25,7 @@ func (m *MockRegistrationContext) RegisterMiddlewareFactoryWithPriority(name str
 // NewPermissionContextFromConfig implements registration.Context.
 func (m *MockRegistrationContext) NewPermissionContextFromConfig(
 	settings map[string]any,
-	permission map[string]any) iface.RegistrationContext {
+	permission map[string]any) registration.Context {
 	return &MockRegistrationContext{}
 }
 
@@ -60,7 +60,7 @@ func (m *MockRegistrationContext) RegisterMiddlewareFunc(name string, middleware
 }
 
 // RegisterModule implements registration.Context.
-func (m *MockRegistrationContext) RegisterModule(getModuleFunc func() iface.Module) error {
+func (m *MockRegistrationContext) RegisterModule(getModuleFunc func() registration.Module) error {
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (m *MockHttpListener) Shutdown(shutdownTimeout time.Duration) error        
 func (m *MockHttpListener) IsRunning() bool                                        { return false }
 func (m *MockHttpListener) ActiveRequest() int                                     { return 0 }
 
-var _ iface.RegistrationContext = (*MockRegistrationContext)(nil)
+var _ registration.Context = (*MockRegistrationContext)(nil)
 var _ serviceapi.RouterEngine = (*MockRouterEngine)(nil)
 var _ serviceapi.HttpListener = (*MockHttpListener)(nil)
 var _ service.Service = (*MockRouterEngine)(nil)

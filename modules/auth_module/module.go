@@ -1,7 +1,7 @@
 package auth_module
 
 import (
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/serviceapi/auth"
@@ -27,21 +27,21 @@ func (m *module) Name() string {
 }
 
 // Register implements registration.Module.
-func (m *module) Register(regCtx iface.RegistrationContext) error {
+func (m *module) Register(regCtx registration.Context) error {
 	regCtx.RegisterServiceFactory(FLOW_PASSWORD_NAME, createPasswordFlowFactory(regCtx))
 	regCtx.RegisterServiceFactory(SESSION_FACTORY_NAME, createSessionFactory(regCtx))
 	return nil
 }
 
-var _ iface.Module = (*module)(nil)
+var _ registration.Module = (*module)(nil)
 
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &module{}
 }
 
-func createSessionFactory(regCtx iface.RegistrationContext) service.ServiceFactory {
+func createSessionFactory(regCtx registration.Context) service.ServiceFactory {
 	return func(config any) (service.Service, error) {
-		kvStore, err := iface.GetServiceFromConfig[serviceapi.KvStore](regCtx, config, "kvstore")
+		kvStore, err := registration.GetServiceFromConfig[serviceapi.KvStore](regCtx, config, "kvstore")
 		if err != nil {
 			return nil, err
 		}
@@ -49,9 +49,9 @@ func createSessionFactory(regCtx iface.RegistrationContext) service.ServiceFacto
 	}
 }
 
-func createPasswordFlowFactory(regCtx iface.RegistrationContext) service.ServiceFactory {
+func createPasswordFlowFactory(regCtx registration.Context) service.ServiceFactory {
 	return func(config any) (service.Service, error) {
-		userRepo, err := iface.GetServiceFromConfig[auth.UserRepository](regCtx,
+		userRepo, err := registration.GetServiceFromConfig[auth.UserRepository](regCtx,
 			config, "user_repo")
 		if err != nil {
 			return nil, err

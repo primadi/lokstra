@@ -8,7 +8,6 @@ import (
 	"reflect"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
@@ -54,7 +53,7 @@ func (c *ContextImpl) RegisterCompiledModuleWithFuncName(pluginPath string,
 		return fmt.Errorf("load plugin %s: %w", pluginPath, err)
 	}
 	sym, _ := p.Lookup(getModuleFuncName)
-	getModuleFunc, ok := sym.(func() iface.Module)
+	getModuleFunc, ok := sym.(func() Module)
 	if !ok {
 		return fmt.Errorf("plugin entry %s has wrong signature", getModuleFuncName)
 	}
@@ -67,7 +66,7 @@ func (c *ContextImpl) RegisterCompiledModuleWithFuncName(pluginPath string,
 }
 
 // RegisterModule implements Context.
-func (c *ContextImpl) RegisterModule(getModuleFunc func() iface.Module) error {
+func (c *ContextImpl) RegisterModule(getModuleFunc func() Module) error {
 	mdl := getModuleFunc()
 	moduleName := mdl.Name()
 
@@ -311,7 +310,7 @@ func (c *ContextImpl) RegisterMiddlewareFactoryWithPriority(name string,
 
 // NewPermissionContextFromConfig implements Context.
 func (c *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
-	permission map[string]any) iface.RegistrationContext {
+	permission map[string]any) Context {
 
 	if !c.allowNewPermissionContext {
 		panic("NewPermissionContextFromConfig is not allowed in this context")
@@ -330,4 +329,4 @@ func (c *ContextImpl) NewPermissionContextFromConfig(settings map[string]any,
 	}
 }
 
-var _ iface.RegistrationContext = (*ContextImpl)(nil)
+var _ Context = (*ContextImpl)(nil)

@@ -14,12 +14,12 @@ modules:
     
     # Permissions for this module
     permissions:
-      allow_services: ["main-db", "redis-cache", "logger.default"]
+      allow_services: ["main-db", "redis-cache", "logger"]
       allow_create_services: true
       
     # Services that must exist before this module can be loaded
     required_services:
-      - "logger.default"
+      - "logger"
       - "main-db"
     
     # Services to be created by this module configuration

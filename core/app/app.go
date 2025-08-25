@@ -5,7 +5,7 @@ import (
 	"maps"
 	"time"
 
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -13,7 +13,7 @@ import (
 type App struct {
 	router.Router
 
-	ctx      iface.RegistrationContext
+	ctx      registration.Context
 	listener serviceapi.HttpListener
 
 	name              string
@@ -23,11 +23,11 @@ type App struct {
 	settings          map[string]any
 }
 
-func NewApp(ctx iface.RegistrationContext, name string, addr string) *App {
+func NewApp(ctx registration.Context, name string, addr string) *App {
 	return NewAppCustom(ctx, name, addr, "", "", nil)
 }
 
-func NewAppCustom(ctx iface.RegistrationContext, name string, addr string,
+func NewAppCustom(ctx registration.Context, name string, addr string,
 	listenerType string, routerEngineType string, settings map[string]any) *App {
 
 	if settings == nil {

@@ -1,31 +1,31 @@
 package body_limit
 
 import (
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 )
 
 const MODULE_NAME = "body_limit"
 
 type BodyLimitModule struct{}
 
-// Description implements iface.Module.
+// Description implements registration.Module.
 func (b *BodyLimitModule) Description() string {
 	return "Body limit middleware"
 }
 
-// Name implements iface.Module.
+// Name implements registration.Module.
 func (b *BodyLimitModule) Name() string {
 	return MODULE_NAME
 }
 
-// Register implements iface.Module.
-func (b *BodyLimitModule) Register(regCtx iface.RegistrationContext) error {
+// Register implements registration.Module.
+func (b *BodyLimitModule) Register(regCtx registration.Context) error {
 	return regCtx.RegisterMiddlewareFactory(MODULE_NAME, factory)
 }
 
-var _ iface.Module = (*BodyLimitModule)(nil)
+var _ registration.Module = (*BodyLimitModule)(nil)
 
 // GetModule returns the body limit module
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &BodyLimitModule{}
 }

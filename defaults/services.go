@@ -1,7 +1,7 @@
 package defaults
 
 import (
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/services/dbpool_pg"
 	"github.com/primadi/lokstra/services/health_check"
 	"github.com/primadi/lokstra/services/kvstore_mem"
@@ -11,7 +11,7 @@ import (
 	"github.com/primadi/lokstra/services/redis"
 )
 
-func RegisterAllServices(regCtx iface.RegistrationContext) {
+func RegisterAllServices(regCtx registration.Context) {
 	// Database services
 	regCtx.RegisterModule(dbpool_pg.GetModule)
 
@@ -26,4 +26,7 @@ func RegisterAllServices(regCtx iface.RegistrationContext) {
 
 	// Redis service
 	regCtx.RegisterModule(redis.GetModule)
+
+	// create default logger service
+	_, _ = regCtx.CreateService(logger.MODULE_NAME, "logger", "info")
 }

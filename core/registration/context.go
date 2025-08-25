@@ -1,4 +1,4 @@
-package iface
+package registration
 
 import (
 	"errors"
@@ -18,13 +18,13 @@ var ErrServiceTypeInvalid = errors.New("service type is invalid")
 type Module interface {
 	Name() string
 	Description() string
-	Register(regCtx RegistrationContext) error
+	Register(regCtx Context) error
 }
 
-// iface.RegistrationContext is used only during startup phase
+// registration.Context is used only during startup phase
 // to register services, handlers, middleware, and modules.
 // It must not be used after server.Start().
-type RegistrationContext interface {
+type Context interface {
 	// Service creation and retrieval
 	RegisterService(serviceName string, service service.Service) error
 	GetService(serviceName string) (service.Service, error)
@@ -67,10 +67,10 @@ type RegistrationContext interface {
 	RegisterCompiledModuleWithFuncName(pluginPath string, getModuleFuncName string) error
 	RegisterModule(getModuleFunc func() Module) error
 
-	NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) RegistrationContext
+	NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) Context
 }
 
-func GetServiceFromConfig[T service.Service](regCtx RegistrationContext,
+func GetServiceFromConfig[T service.Service](regCtx Context,
 	config any, paramServiceName string) (T, error) {
 	var zero T
 	svcName := ""
@@ -100,7 +100,7 @@ func GetServiceFromConfig[T service.Service](regCtx RegistrationContext,
 		fmt.Sprintf("%T", (*T)(nil)))
 }
 
-func GetValueFromConfig[T any](regCtx RegistrationContext,
+func GetValueFromConfig[T any](regCtx Context,
 	config any, paramName string) (T, error) {
 	var zero T
 	switch cfg := config.(type) {

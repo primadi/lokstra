@@ -3,14 +3,14 @@ package defaults
 import (
 	"errors"
 
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
 
 const AUTH_FLOW_PASSWORD = auth.FLOW_PREFIX + "password"
 
-func RegisterAllAuthFlow(regCtx iface.RegistrationContext) {
+func RegisterAllAuthFlow(regCtx registration.Context) {
 	AuthPasswordfactory := func(config any) (service.Service, error) {
 		var ok bool
 		var userRepo auth.UserRepository

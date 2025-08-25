@@ -3,56 +3,16 @@
 server:
   name: user_management_service
   global_setting:
-    log_level: info
-    log_format: text
-    log_output: stdout
-    handler_dbPool: default_dbpool
-
-services:
-  # - name: "logger"
-  #   type: "lokstra.logger"
-  #   config:
-  #     level: "info"
-  #     format: "json"
-  #     output: "stdout"
-
-  # - name: "metrics"
-  #   type: "lokstra.metrics"
-  #   config:
-  #     enabled: true
-  #     endpoint: "/metrics"
-  #     namespace: "user_management"
-  #     subsystem: "api"
-  #     collect_interval: "15s"
-
-  # - name: "i18n"
-  #   type: "lokstra.i18n"
-  #   config:
-  #     default_language: "en"
-  #     fallback_language: "en"
-  #     supported_languages:
-  #       - "en"
-  #       - "id"
-  #     messages_path: "locales"
-  #     format: "json"
-
-  - name: "db_global"
-    type: "lokstra.dbpool_pg"
-    config:
-      # Database connection settings
-      host: ${ENV:DB_HOST:192.168.18.10}
-      port: ${ENV:DB_PORT:5433}
-      database: ${ENV:DB_NAME:global-db}
-      username: ${ENV:DB_USER:global-admin}
-      password: ${ENV:DB_PASSWORD:admin@2025}
-      
-      # Connection pool settings
-      max_connections: 5
-      min_connections: 0
-      max_idle_time: "30m"
-      max_lifetime: "1h"
-      ssl_mode: "disable" # ${ENV:DB_SSL_MODE:disable}
-
+    # Logger Configuration (menggunakan default logger service)
+    log_level: "${LOG_LEVEL:info}"           # Options: debug, info, warn, error, fatal
+    log_format: json          # Options: text, json (json lebih baik untuk production)
+    log_output: stdout        # Options: stdout, stderr, atau path ke file log
+    
+    # Database dan Flow Configuration
+    flow_dbPool: db_global    # Default database pool untuk flow operations
+    flow_logger: logger       # Default logger service untuk flow operations
+    flow_dbschema: user_management
+    
 apps:
   - name: "user_management_api"
     address: "${ENV:SERVER_PORT::8080}"
@@ -87,7 +47,7 @@ apps:
           max_age: 3600
           
       - name: "metrics"
-        enabled: true
+        enabled: false        # Disabled until metrics middleware is registered
         config:
           collect_request_metrics: true
           collect_response_metrics: true
@@ -101,7 +61,7 @@ apps:
       - prefix: "/api/v1"
         middleware:
           - name: "rate_limiter"
-            enabled: true
+            enabled: false      # Disabled until rate_limiter middleware is registered
             config:
               requests_per_minute: 100
               burst: 10
@@ -118,16 +78,17 @@ apps:
                 path: ""
                 handler: "user.create"
                   
+              # Fixed routing: add "id" prefix to avoid conflict with httprouter
               - method: "GET"
-                path: "/:id"
+                path: "/id/:id"
                 handler: "user.get"
                   
               - method: "PUT"
-                path: "/:id"
+                path: "/id/:id"
                 handler: "user.update"
                   
               - method: "DELETE"
-                path: "/:id"
+                path: "/id/:id"
                 handler: "user.delete"
                   
               - method: "GET"
@@ -151,12 +112,12 @@ apps:
 
           # Admin endpoints with additional security
           - prefix: "/admin"
-            middleware:
-              - name: "auth"
-                enabled: true
-                config:
-                  token_type: "bearer"
-                  required_roles: ["admin"]
+            # middleware:
+            #   - name: "auth"
+            #     enabled: true
+            #     config:
+            #       token_type: "bearer"
+            #       required_roles: ["admin"]
                   
             groups:
               - prefix: "/users"
@@ -166,9 +127,9 @@ apps:
                     handler: "admin.user_stats"
                       
                   - method: "POST"
-                    path: "/:id/activate"
+                    path: "/id/:id/activate"
                     handler: "admin.activate_user"
                       
                   - method: "POST"
-                    path: "/:id/deactivate"
+                    path: "/id/:id/deactivate"
                     handler: "admin.deactivate_user"

@@ -1,7 +1,7 @@
 package defaults
 
 import (
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/modules/coreservice/listener"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -13,7 +13,7 @@ const (
 	HTTP_LISTENER_HTTP3          = serviceapi.HTTP_LISTENER_PREFIX + "http3"
 )
 
-func RegisterAllHTTPListeners(regCtx iface.RegistrationContext) {
+func RegisterAllHTTPListeners(regCtx registration.Context) {
 	regCtx.RegisterServiceFactory(HTTP_LISTENER_FASTHTTP,
 		listener.NewFastHttpListener)
 	regCtx.RegisterServiceFactory(HTTP_LISTENER_NETHTTP,

@@ -60,7 +60,7 @@ if mod.Path != "" && len(mod.RegisterServiceFactories) > 0 {
 Creates a service instance from `ServiceConfig`:
 
 ```go
-func createServiceFromConfig(regCtx iface.RegistrationContext, serviceConfig *ServiceConfig) error {
+func createServiceFromConfig(regCtx registration.RegistrationContext, serviceConfig *ServiceConfig) error {
     _, err := regCtx.CreateService(serviceConfig.Type, serviceConfig.Name, serviceConfig.Config)
     return err
 }
@@ -71,7 +71,7 @@ func createServiceFromConfig(regCtx iface.RegistrationContext, serviceConfig *Se
 Calls specified methods from a plugin module:
 
 ```go
-func callModuleMethods(pluginPath string, methodNames []string, regCtx iface.RegistrationContext, methodType string) error {
+func callModuleMethods(pluginPath string, methodNames []string, regCtx registration.RegistrationContext, methodType string) error {
     // Open plugin, lookup methods, call with proper signature validation
 }
 ```
@@ -80,7 +80,7 @@ func callModuleMethods(pluginPath string, methodNames []string, regCtx iface.Reg
 
 All plugin methods must have the signature:
 ```go
-func MethodName(regCtx iface.RegistrationContext) error
+func MethodName(regCtx registration.RegistrationContext) error
 ```
 
 This applies to:
@@ -97,7 +97,7 @@ modules:
     entry: GetAuthModule
     
     required_services:
-      - "logger.default"
+      - "logger"
       - "main-db"
     
     create_services:

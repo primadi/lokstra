@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -205,7 +205,7 @@ func (r *RouterMeta) MountReverseProxy(prefix string, target string,
 	return r
 }
 
-func ResolveAllNamed(ctx iface.RegistrationContext, r *RouterMeta) {
+func ResolveAllNamed(ctx registration.Context, r *RouterMeta) {
 	for i, route := range r.Routes {
 		if rpcServiceMeta, ok := route.Handler.Extension.(*service.RpcServiceMeta); ok {
 			svc := rpcServiceMeta.ServiceInst
@@ -254,7 +254,7 @@ func ResolveAllNamed(ctx iface.RegistrationContext, r *RouterMeta) {
 	}
 }
 
-func resolveMiddleware(ctx iface.RegistrationContext, mw *midware.Execution) {
+func resolveMiddleware(ctx registration.Context, mw *midware.Execution) {
 	if mw.MiddlewareFn == nil {
 		mwFactory, priority, found := ctx.GetMiddlewareFactory(mw.Name)
 		if !found {
@@ -265,7 +265,7 @@ func resolveMiddleware(ctx iface.RegistrationContext, mw *midware.Execution) {
 	}
 }
 
-func getOrCreateService[T any](ctx iface.RegistrationContext,
+func getOrCreateService[T any](ctx registration.Context,
 	serviceName string, factoryName string, config ...any) (T, error) {
 	svc, err := ctx.GetService(serviceName)
 	if err != nil {

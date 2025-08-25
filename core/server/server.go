@@ -9,18 +9,19 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/core/app"
-	"github.com/primadi/lokstra/core/iface"
+
+	"github.com/primadi/lokstra/core/registration"
 )
 
 type Server struct {
-	ctx      iface.RegistrationContext
+	ctx      registration.Context
 	name     string
 	apps     []*app.App
 	settings map[string]any
 }
 
 // NewServer creates a new Server instance with the given context and name.
-func NewServer(ctx iface.RegistrationContext, name string) *Server {
+func NewServer(ctx registration.Context, name string) *Server {
 	return &Server{
 		ctx:      ctx,
 		name:     name,
@@ -45,7 +46,7 @@ func (s *Server) NewApp(name string, addr string) *app.App {
 	return newApp
 }
 
-func (s *Server) RegisterModule(module iface.Module) error {
+func (s *Server) RegisterModule(module registration.Module) error {
 	if err := module.Register(s.ctx); err != nil {
 		return fmt.Errorf("failed to register module '%s': %w", module.Name(), err)
 	}

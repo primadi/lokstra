@@ -3,8 +3,8 @@ package recovery
 import (
 	"runtime/debug"
 
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -26,9 +26,9 @@ func (r *RecoveryMiddleware) Description() string {
 var logger serviceapi.Logger
 
 // Register implements registration.Module.
-func (r *RecoveryMiddleware) Register(regCtx iface.RegistrationContext) error {
+func (r *RecoveryMiddleware) Register(regCtx registration.Context) error {
 	regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 10)
-	if svc, err := regCtx.GetService("logger.default"); err == nil {
+	if svc, err := regCtx.GetService("logger"); err == nil {
 		logger = svc.(serviceapi.Logger)
 	}
 	return nil
@@ -85,9 +85,9 @@ func factory(config any) midware.Func {
 	}
 }
 
-var _ iface.Module = (*RecoveryMiddleware)(nil)
+var _ registration.Module = (*RecoveryMiddleware)(nil)
 
 // return RecoveryMiddleware with name "lokstra.recovery"
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &RecoveryMiddleware{}
 }

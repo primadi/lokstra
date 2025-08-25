@@ -3,17 +3,17 @@ package metrics
 import (
 	"testing"
 
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/service"
 )
 
-// mockRegistrationContext implements iface.RegistrationContext for testing
+// mockRegistrationContext implements registration.RegistrationContext for testing
 type mockRegistrationContext struct {
 	factories map[string]func(config any) (service.Service, error)
 }
 
-// Implement all required methods for iface.RegistrationContext
+// Implement all required methods for registration.RegistrationContext
 func (m *mockRegistrationContext) RegisterService(serviceName string, service service.Service) error {
 	return nil
 }
@@ -45,7 +45,7 @@ func (m *mockRegistrationContext) GetServiceFactories(pattern string) []service.
 	return nil
 }
 
-func (m *mockRegistrationContext) GetHandler(name string) *iface.HandlerRegister {
+func (m *mockRegistrationContext) GetHandler(name string) *registration.HandlerRegister {
 	return nil
 }
 
@@ -87,11 +87,11 @@ func (m *mockRegistrationContext) RegisterCompiledModuleWithFuncName(pluginPath 
 	return nil
 }
 
-func (m *mockRegistrationContext) RegisterModule(getModuleFunc func() iface.Module) error {
+func (m *mockRegistrationContext) RegisterModule(getModuleFunc func() registration.Module) error {
 	return nil
 }
 
-func (m *mockRegistrationContext) NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) iface.RegistrationContext {
+func (m *mockRegistrationContext) NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) registration.Context {
 	return m
 }
 
@@ -239,8 +239,8 @@ func TestModule_Description(t *testing.T) {
 func TestModule_Interface(t *testing.T) {
 	module := GetModule()
 
-	// Test that module implements iface.Module
-	var _ iface.Module = module
+	// Test that module implements registration.Module
+	var _ registration.Module = module
 }
 
 func TestParseBuckets(t *testing.T) {

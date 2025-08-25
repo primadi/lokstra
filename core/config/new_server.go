@@ -7,13 +7,13 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/app"
-	"github.com/primadi/lokstra/core/iface"
 	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
 )
 
-func NewServerFromConfig(regCtx iface.RegistrationContext, cfg *LokstraConfig) (*server.Server, error) {
+func NewServerFromConfig(regCtx registration.Context, cfg *LokstraConfig) (*server.Server, error) {
 	// 1. Start Modules
 	if err := startModulesFromConfig(regCtx, cfg.Modules); err != nil {
 		return nil, fmt.Errorf("start modules: %w", err)
@@ -38,7 +38,7 @@ func NewServerFromConfig(regCtx iface.RegistrationContext, cfg *LokstraConfig) (
 	return server, nil
 }
 
-func startServicesInOrder(regCtx iface.RegistrationContext,
+func startServicesInOrder(regCtx registration.Context,
 	services []*ServiceConfig) error {
 	depMap := map[string][]string{}
 	inDegree := map[string]int{}
@@ -89,7 +89,7 @@ func startServicesInOrder(regCtx iface.RegistrationContext,
 	return nil
 }
 
-func startModulesFromConfig(regCtx iface.RegistrationContext, modules []*ModuleConfig) error {
+func startModulesFromConfig(regCtx registration.Context, modules []*ModuleConfig) error {
 	for _, mod := range modules {
 		// 1. Register the module itself if path is provided
 		if mod.Path != "" {
@@ -137,7 +137,7 @@ func startModulesFromConfig(regCtx iface.RegistrationContext, modules []*ModuleC
 	return nil
 }
 
-func newAppsFromConfig(regCtx iface.RegistrationContext, server *server.Server, apps []*AppConfig) error {
+func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps []*AppConfig) error {
 	for _, ac := range apps {
 		app := app.NewAppCustom(regCtx, ac.Name, ac.Address,
 			ac.ListenerType, ac.RouterEngineType, ac.Settings)
@@ -184,7 +184,7 @@ func newAppsFromConfig(regCtx iface.RegistrationContext, server *server.Server, 
 	return nil
 }
 
-func buildGroup(regCtx iface.RegistrationContext, parent router.Router, group GroupConfig) {
+func buildGroup(regCtx registration.Context, parent router.Router, group GroupConfig) {
 	gr := parent.Group(group.Prefix)
 
 	for _, mw := range group.Middleware {
@@ -226,7 +226,7 @@ func buildGroup(regCtx iface.RegistrationContext, parent router.Router, group Gr
 }
 
 // createServiceFromConfig creates a service instance from ServiceConfig
-func createServiceFromConfig(regCtx iface.RegistrationContext, serviceConfig *ServiceConfig) error {
+func createServiceFromConfig(regCtx registration.Context, serviceConfig *ServiceConfig) error {
 	_, err := regCtx.CreateService(serviceConfig.Type, serviceConfig.Name, serviceConfig.Config)
 	if err != nil {
 		return fmt.Errorf("failed to create service %s of type %s: %w", serviceConfig.Name, serviceConfig.Type, err)
@@ -235,7 +235,7 @@ func createServiceFromConfig(regCtx iface.RegistrationContext, serviceConfig *Se
 }
 
 // callModuleMethods calls specified methods from a plugin module
-func callModuleMethods(pluginPath string, methodNames []string, regCtx iface.RegistrationContext, methodType string) error {
+func callModuleMethods(pluginPath string, methodNames []string, regCtx registration.Context, methodType string) error {
 	if len(methodNames) == 0 {
 		return nil
 	}
@@ -256,30 +256,30 @@ func callModuleMethods(pluginPath string, methodNames []string, regCtx iface.Reg
 		// Try different function signatures based on method type
 		switch methodType {
 		case "service factory":
-			if factoryFunc, ok := sym.(func(iface.RegistrationContext) error); ok {
+			if factoryFunc, ok := sym.(func(registration.Context) error); ok {
 				if err := factoryFunc(regCtx); err != nil {
 					return fmt.Errorf("failed to execute service factory method %s: %w", methodName, err)
 				}
 			} else {
-				return fmt.Errorf("method %s has invalid signature for service factory (expected: func(iface.RegistrationContext) error)", methodName)
+				return fmt.Errorf("method %s has invalid signature for service factory (expected: func(registration.RegistrationContext) error)", methodName)
 			}
 
 		case "handler":
-			if handlerFunc, ok := sym.(func(iface.RegistrationContext) error); ok {
+			if handlerFunc, ok := sym.(func(registration.Context) error); ok {
 				if err := handlerFunc(regCtx); err != nil {
 					return fmt.Errorf("failed to execute handler method %s: %w", methodName, err)
 				}
 			} else {
-				return fmt.Errorf("method %s has invalid signature for handler (expected: func(iface.RegistrationContext) error)", methodName)
+				return fmt.Errorf("method %s has invalid signature for handler (expected: func(registration.RegistrationContext) error)", methodName)
 			}
 
 		case "middleware":
-			if middlewareFunc, ok := sym.(func(iface.RegistrationContext) error); ok {
+			if middlewareFunc, ok := sym.(func(registration.Context) error); ok {
 				if err := middlewareFunc(regCtx); err != nil {
 					return fmt.Errorf("failed to execute middleware method %s: %w", methodName, err)
 				}
 			} else {
-				return fmt.Errorf("method %s has invalid signature for middleware (expected: func(iface.RegistrationContext) error)", methodName)
+				return fmt.Errorf("method %s has invalid signature for middleware (expected: func(registration.RegistrationContext) error)", methodName)
 			}
 
 		default:

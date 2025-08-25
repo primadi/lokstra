@@ -1,7 +1,7 @@
 package defaults
 
 import (
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/modules/coreservice/router_engine"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -11,7 +11,7 @@ const (
 	HTTP_ROUTER_SERVEMUX   = serviceapi.HTTP_ROUTER_PREFIX + "servemux"
 )
 
-func RegisterAllHTTPRouters(regCtx iface.RegistrationContext) {
+func RegisterAllHTTPRouters(regCtx registration.Context) {
 	regCtx.RegisterServiceFactory(HTTP_ROUTER_HTTPROUTER,
 		router_engine.NewHttpRouterEngine)
 	regCtx.RegisterServiceFactory(HTTP_ROUTER_SERVEMUX,

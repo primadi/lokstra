@@ -5,10 +5,10 @@ import (
 	"reflect"
 
 	"github.com/primadi/lokstra/common/cast"
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 )
 
-func AnyParamsToStruct[T any](regCtx iface.RegistrationContext, raw any) (*T, error) {
+func AnyParamsToStruct[T any](regCtx registration.Context, raw any) (*T, error) {
 	var cfg T
 	if err := decodeConfig(regCtx, raw, &cfg); err != nil {
 		return nil, fmt.Errorf("decode: %w", err)
@@ -17,7 +17,7 @@ func AnyParamsToStruct[T any](regCtx iface.RegistrationContext, raw any) (*T, er
 	return &cfg, nil
 }
 
-func decodeConfig[T any](regCtx iface.RegistrationContext, raw any, cfg *T) error {
+func decodeConfig[T any](regCtx registration.Context, raw any, cfg *T) error {
 	rawMap, ok := raw.(map[string]any)
 	if !ok {
 		return fmt.Errorf("raw must be map[string]any, got %T", raw)

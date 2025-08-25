@@ -47,7 +47,9 @@
           "properties": {
             "log_level": {
               "type": "string",
-              "enum": ["trace", "debug", "info", "warn", "error", "fatal", "panic"],
+              "enum": ["trace", "debug", "info", "warn", "error", 
+                "fatal", "panic", "${LOG_LEVEL:info}" , 
+                "${ENV:LOG_LEVEL:info}" ],
               "description": "Global log level"
             },
             "log_format": {
@@ -66,6 +68,21 @@
               "type": "string",
               "description": "default database connection pool name for handler",
               "default": "default_dbpool"
+            },
+            "flow_dbPool": {
+              "type": "string",
+              "description": "default database connection pool name for flow",
+              "default": "default_dbpool"
+            },
+            "flow_logger": {
+              "type": "string",
+              "description": "default logger service name for flow",
+              "default": "logger"
+            },
+            "flow_dbschema": {
+              "type": "string",
+              "description": "default database schema name for flow",
+              "default": "default_dbschema"
             }
           },
           "additionalProperties": true

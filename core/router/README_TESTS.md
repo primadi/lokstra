@@ -43,7 +43,7 @@ Integration tests and edge cases:
 Tests use mock implementations:
 
 ### MockRegistrationContext
-Mock for `iface.RegistrationContext` interface providing:
+Mock for `registration.RegistrationContext` interface providing:
 - Service creation dan retrieval
 - Handler registration
 - Middleware registration

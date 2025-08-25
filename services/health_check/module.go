@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -15,18 +15,18 @@ import (
 // Module for health check service
 type Module struct{}
 
-// Name implements iface.Module
+// Name implements registration.Module
 func (m *Module) Name() string {
 	return MODULE_NAME
 }
 
-// Description implements iface.Module
+// Description implements registration.Module
 func (m *Module) Description() string {
 	return "Health Check Service for Kubernetes and monitoring"
 }
 
-// Register implements iface.Module
-func (m *Module) Register(regCtx iface.RegistrationContext) error {
+// Register implements registration.Module
+func (m *Module) Register(regCtx registration.Context) error {
 	// Register health check service factory
 	regCtx.RegisterServiceFactory(MODULE_NAME, func(config any) (service.Service, error) {
 		return NewService(), nil
@@ -39,12 +39,12 @@ func (m *Module) Register(regCtx iface.RegistrationContext) error {
 }
 
 // GetModule returns a new health check module instance
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &Module{}
 }
 
 // registerHealthHandlers registers all health check HTTP endpoints
-func registerHealthHandlers(regCtx iface.RegistrationContext) {
+func registerHealthHandlers(regCtx registration.Context) {
 	// Helper function to get health service
 	getHealthService := func() serviceapi.HealthService {
 		service, err := regCtx.GetService(MODULE_NAME + ".default")

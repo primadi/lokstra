@@ -1,7 +1,7 @@
 package coreservice
 
 import (
-	"github.com/primadi/lokstra/core/iface"
+	"github.com/primadi/lokstra/core/registration"
 )
 
 type CoreServiceModule struct{}
@@ -17,14 +17,14 @@ func (c *CoreServiceModule) Name() string {
 }
 
 // Register implements registration.Module.
-func (c *CoreServiceModule) Register(regCtx iface.RegistrationContext) error {
+func (c *CoreServiceModule) Register(regCtx registration.Context) error {
 	// skip register, because this module is registered using defaults package
 
 	return nil
 }
 
-var _ iface.Module = (*CoreServiceModule)(nil)
+var _ registration.Module = (*CoreServiceModule)(nil)
 
-func GetModule() iface.Module {
+func GetModule() registration.Module {
 	return &CoreServiceModule{}
 }
