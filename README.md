@@ -71,6 +71,14 @@ Lokstra offers a clear project structure and batteries-included features, but ne
 - ✅ Supports isolated schema or shared table per tenant
 - ✅ Easy access via `getDbConnection(tenantId, name)`
 
+### 🔧 Cross-Platform Support
+
+- ✅ **Native Windows, Linux, macOS support**
+- ✅ **AMD64 and ARM64 architectures**
+- ✅ **Platform-specific optimizations** (disk monitoring, syscalls)
+- ✅ **Automated cross-compilation** with build scripts
+- ✅ **Container-ready** binaries for all platforms
+
 ---
 
 ## 🧱 Directory Structure
@@ -93,7 +101,35 @@ lokstra/
 
 ---
 
-## 📂 Example: Minimal App
+## �️ Building and Deployment
+
+### Cross-Platform Building
+
+Lokstra supports native compilation for multiple platforms and architectures:
+
+```bash
+# Build for all platforms (PowerShell)
+.\build.ps1 -Version "1.0.0"
+
+# Build for all platforms (Bash)
+./build.sh
+
+# Manual cross-compilation examples
+GOOS=linux GOARCH=amd64 go build -o lokstra-linux .
+GOOS=windows GOARCH=amd64 go build -o lokstra.exe .
+GOOS=darwin GOARCH=arm64 go build -o lokstra-macos-arm64 .
+```
+
+**Supported Platforms:**
+- Windows (AMD64)
+- Linux (AMD64, ARM64)
+- macOS/Darwin (AMD64, ARM64/Apple Silicon)
+
+📘 See [Cross-Platform Support Documentation](docs/cross-platform-support.md) for detailed information.
+
+---
+
+## �📂 Example: Minimal App
 
 ```go
 package main

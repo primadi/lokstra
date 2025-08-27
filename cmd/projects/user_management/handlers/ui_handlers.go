@@ -56,11 +56,11 @@ func getSidebarHTML(currentPage string) string {
 	return buf.String()
 }
 
-// Smart Handlers using SmartPageHandler - eliminate endpoint duplication
+// Modern Handlers using PageHandler - consistent behavior across full page and HTMX loads
 
-// CreateDashboardHandler creates a unified handler for dashboard that works consistently with both full page and HTMX requests
+// CreateDashboardHandler creates a handler for dashboard that works consistently with both full page and HTMX requests
 func CreateDashboardHandler() lokstra.HandlerFunc {
-	return UnifiedPageHandler(func(c *lokstra.Context) (*PageContent, error) {
+	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
 		content := `
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 				<div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
@@ -132,9 +132,9 @@ func CreateDashboardHandler() lokstra.HandlerFunc {
 	})
 }
 
-// CreateUsersHandler creates a unified handler for users page with page-specific assets that work consistently in both full page and HTMX requests
+// CreateUsersHandler creates a handler for users page with page-specific assets that work consistently in both full page and HTMX requests
 func CreateUsersHandler() lokstra.HandlerFunc {
-	return UnifiedPageHandler(func(c *lokstra.Context) (*PageContent, error) {
+	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
 		// Call the user.list API endpoint to get real data
 		users, err := getUsersFromAPI(c)
 		if err != nil {
@@ -154,34 +154,41 @@ func CreateUsersHandler() lokstra.HandlerFunc {
 
 			tableRows += fmt.Sprintf(`
 				<tr class="hover:bg-gray-600">
-					<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">%s</td>
+					<td class="px-6 py-4 text-sm text-gray-300">
+						<div class="truncate max-w-xs" title="%s">%s</div>
+					</td>
 					<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-100">%s</td>
-					<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">%s</td>
+					<td class="px-6 py-4 text-sm text-gray-300">
+						<div class="truncate" title="%s">%s</div>
+					</td>
 					<td class="px-6 py-4 whitespace-nowrap">
 						<span class="px-2 py-1 text-xs font-semibold rounded-full %s">%s</span>
 					</td>
-					<td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-						<button hx-get="/users/%s/edit" 
-								hx-target="#main-content"
-								class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded text-sm transition-colors"
-								title="Edit User">
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-							</svg>
-						</button>
-						<button hx-delete="/api/v1/users/id/%s" 
-								hx-confirm="Are you sure you want to delete this user?"
-								hx-target="closest tr"
-								hx-swap="outerHTML"
-								class="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm transition-colors"
-								title="Delete User">
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-							</svg>
-						</button>
+					<td class="px-6 py-4 whitespace-nowrap text-sm">
+						<div class="flex items-center space-x-2">
+							<button hx-get="/users/%s/edit" 
+									hx-target="#main-content"
+									hx-push-url="/users/%s/edit"
+									class="nav-page bg-blue-600 hover:bg-blue-700 text-white p-2 rounded text-sm transition-colors"
+									title="Edit User">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+								</svg>
+							</button>
+							<button hx-delete="/api/v1/users/id/%s" 
+									hx-confirm="Are you sure you want to delete this user?"
+									hx-target="closest tr"
+									hx-swap="outerHTML"
+									class="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm transition-colors"
+									title="Delete User">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+								</svg>
+							</button>
+						</div>
 					</td>
 				</tr>`,
-				user.ID, user.Username, user.Email, statusClass, statusText, user.ID, user.ID)
+				user.ID, user.ID, user.Username, user.Email, user.Email, statusClass, statusText, user.ID, user.ID, user.ID)
 		}
 
 		// If no users, show empty state
@@ -222,14 +229,14 @@ func CreateUsersHandler() lokstra.HandlerFunc {
 							   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
 					</div>
 					<div class="overflow-x-auto">
-						<table class="min-w-full bg-gray-700 rounded-lg">
+						<table class="min-w-full bg-gray-700 rounded-lg table-fixed">
 							<thead class="bg-gray-600">
 								<tr>
-									<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
-									<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Username</th>
-									<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Email</th>
-									<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-									<th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+									<th class="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
+									<th class="w-1/5 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Username</th>
+									<th class="w-1/4 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Email</th>
+									<th class="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+									<th class="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-gray-600">
@@ -245,6 +252,11 @@ func CreateUsersHandler() lokstra.HandlerFunc {
 			HTML:        content,
 			Title:       "User Management",
 			CurrentPage: "users",
+			// Page-specific embedded JavaScript
+			EmbeddedScripts: []string{
+				"table-enhancements",
+				"navigation-enhancements",
+			},
 			// Page-specific styles for enhanced user table
 			CustomCSS: `
 				.user-table-container {
@@ -370,11 +382,9 @@ func getUsersFromAPI(c *lokstra.Context) ([]User, error) {
 	return apiResp.Data.Data, nil
 }
 
-// CreateSmartRolesHandler creates a smart handler for roles page that works with both full page and HTMX requests
-func CreateSmartRolesHandler() lokstra.HandlerFunc {
-	config := RolesLayout
-
-	return SmartPageHandler(func(c *lokstra.Context) (string, error) {
+// CreateRolesHandler creates a handler for roles page that works consistently with both full page and HTMX requests
+func CreateRolesHandler() lokstra.HandlerFunc {
+	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
 		content := `
 			<div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
 				<div class="p-6 border-b border-gray-700 flex justify-between items-center">
@@ -413,15 +423,37 @@ func CreateSmartRolesHandler() lokstra.HandlerFunc {
 				</div>
 			</div>
 		`
-		return content, nil
-	}, config)
+
+		return &PageContent{
+			HTML:        content,
+			Title:       "Roles & Permissions",
+			CurrentPage: "roles",
+			// Page-specific styles for role cards
+			CustomCSS: `
+				.role-card {
+					transition: all 0.3s ease;
+				}
+				
+				.role-card:hover {
+					transform: translateY(-2px);
+					box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+				}
+				
+				.role-actions button {
+					transition: all 0.2s ease;
+				}
+				
+				.role-actions button:hover {
+					transform: scale(1.05);
+				}
+			`,
+		}, nil
+	})
 }
 
-// CreateSmartSettingsHandler creates a smart handler for settings page that works with both full page and HTMX requests
-func CreateSmartSettingsHandler() lokstra.HandlerFunc {
-	config := SettingsLayout
-
-	return SmartPageHandler(func(c *lokstra.Context) (string, error) {
+// CreateSettingsHandler creates a handler for settings page that works consistently with both full page and HTMX requests
+func CreateSettingsHandler() lokstra.HandlerFunc {
+	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
 		content := `
 			<div class="space-y-6">
 				<div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
@@ -472,14 +504,42 @@ func CreateSmartSettingsHandler() lokstra.HandlerFunc {
 				</div>
 			</div>
 		`
-		return content, nil
-	}, config)
+
+		return &PageContent{
+			HTML:        content,
+			Title:       "Settings",
+			CurrentPage: "settings",
+			// Page-specific styles for settings forms
+			CustomCSS: `
+				.settings-section {
+					transition: all 0.3s ease;
+				}
+				
+				.settings-section:hover {
+					transform: translateY(-1px);
+					box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+				}
+				
+				.settings-input:focus {
+					transform: scale(1.02);
+					transition: transform 0.2s ease;
+				}
+				
+				.checkbox-custom {
+					transition: all 0.2s ease;
+				}
+				
+				.checkbox-custom:hover {
+					transform: scale(1.1);
+				}
+			`,
+		}, nil
+	})
 }
 
-// CreateUserFormPageHandler creates handler for user create/edit form
-// Uses the new SmartPageHandler layout utility system
+// CreateUserFormPageHandler creates handler for user create/edit form using modern layout system
 func CreateUserFormPageHandler() lokstra.HandlerFunc {
-	return SmartPageHandler(func(c *lokstra.Context) (string, error) {
+	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
 		userID := c.GetPathParam("id")
 		isEdit := userID != ""
 
@@ -572,7 +632,9 @@ func CreateUserFormPageHandler() lokstra.HandlerFunc {
 						<button type="button" 
 								hx-get="/users" 
 								hx-target="#main-content"
-								class="px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 transition-colors">
+								hx-push-url="/users"
+								hx-indicator="#loading-indicator"
+								class="nav-page px-4 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 transition-colors">
 							Cancel
 						</button>
 						<button type="submit" 
@@ -583,8 +645,67 @@ func CreateUserFormPageHandler() lokstra.HandlerFunc {
 				</form>
 				<div id="form-result" class="p-6 pt-0"></div>
 			</div>`
-		return content, nil
-	}, UserFormLayout)
+
+		return &PageContent{
+			HTML:        content,
+			Title:       title,
+			CurrentPage: "user_form",
+			// Page-specific embedded JavaScript
+			EmbeddedScripts: []string{
+				"user-form-validation",
+				"navigation-enhancements",
+			},
+			// External scripts (if needed)
+			Scripts: []string{
+				"https://cdn.jsdelivr.net/npm/validator@13.7.0/validator.min.js",
+			},
+			// Page-specific styles for enhanced form UX
+			CustomCSS: `
+				.user-form-container {
+					background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+					border-radius: 12px;
+					box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+				}
+				
+				.form-field {
+					transition: all 0.3s ease;
+				}
+				
+				.form-field:focus-within {
+					transform: translateY(-1px);
+					box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+				}
+				
+				.form-input:focus {
+					transform: scale(1.02);
+					transition: transform 0.2s ease;
+				}
+				
+				.form-button {
+					transition: all 0.3s ease;
+				}
+				
+				.form-button:hover {
+					transform: translateY(-1px);
+					box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+				}
+				
+				.validation-feedback {
+					animation: fadeIn 0.3s ease;
+				}
+				
+				.field-error input {
+					border-color: #ef4444;
+					box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+				}
+				
+				@keyframes fadeIn {
+					from { opacity: 0; transform: translateY(-10px); }
+					to { opacity: 1; transform: translateY(0); }
+				}
+			`,
+		}, nil
+	})
 }
 
 // Helper function to get selected attribute for select options

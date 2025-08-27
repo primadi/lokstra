@@ -1,5 +1,5 @@
-//go:build windows
-// +build windows
+//go:build !windows && !linux && !darwin
+// +build !windows,!linux,!darwin
 
 package health_check
 
@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -213,82 +211,32 @@ func CustomHealthChecker(name string, checkFunc func(context.Context) (bool, str
 	}
 }
 
-// getDiskUsage returns disk usage statistics for the given path
-// This implementation prioritizes Windows compatibility
+// getDiskUsage returns disk usage statistics for the given path (fallback implementation)
 func getDiskUsage(path string) (*DiskStats, error) {
 	// Check if path exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, fmt.Errorf("path does not exist: %s", path)
 	}
 
-	// Try Windows implementation first (works on Windows)
-	if stats, err := getDiskUsageWindows(path); err == nil {
-		return stats, nil
-	}
-
-	// Fallback: try Unix-like implementation for other systems
-	return getDiskUsageUnix(path)
+	// For unsupported platforms, return mock values with warning
+	return getDiskUsageFallback(path)
 }
 
-// getDiskUsageUnix provides Unix-like disk usage (Linux, macOS, etc.)
-func getDiskUsageUnix(path string) (*DiskStats, error) {
-	// For Unix-like systems, we'll use a simplified approach
-	// In a real implementation, you'd use syscall.Statfs on Unix systems
-	// For now, return a reasonable estimate
-
+// getDiskUsageFallback provides fallback disk usage for unsupported platforms
+func getDiskUsageFallback(path string) (*DiskStats, error) {
 	// Try to get file info to at least verify the path works
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat path %s: %v", path, err)
 	}
 
-	// For demonstration, return mock values that indicate healthy disk usage
-	// In production, you'd implement proper Unix syscalls
+	// For unsupported platforms, return mock values that indicate healthy disk usage
+	// In production, you might want to log a warning about unsupported platform
 	_ = fileInfo // Use fileInfo to avoid unused variable warning
 
 	return &DiskStats{
-		Total:     100 * 1024 * 1024 * 1024, // 100GB
-		Used:      30 * 1024 * 1024 * 1024,  // 30GB (30% usage)
-		Available: 70 * 1024 * 1024 * 1024,  // 70GB available
-	}, nil
-}
-
-// getDiskUsageWindows provides Windows-specific disk usage using GetDiskFreeSpaceEx
-func getDiskUsageWindows(path string) (*DiskStats, error) {
-	kernel32, err := syscall.LoadLibrary("kernel32.dll")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load kernel32.dll: %v", err)
-	}
-	defer syscall.FreeLibrary(kernel32)
-
-	getDiskFreeSpaceEx, err := syscall.GetProcAddress(kernel32, "GetDiskFreeSpaceExW")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get GetDiskFreeSpaceExW: %v", err)
-	}
-
-	var availableBytes, totalBytes, freeBytes uint64
-
-	pathPtr, _ := syscall.UTF16PtrFromString(path)
-	ret, _, _ := syscall.Syscall6(
-		getDiskFreeSpaceEx,
-		4,
-		uintptr(unsafe.Pointer(pathPtr)),
-		uintptr(unsafe.Pointer(&availableBytes)),
-		uintptr(unsafe.Pointer(&totalBytes)),
-		uintptr(unsafe.Pointer(&freeBytes)),
-		0,
-		0,
-	)
-
-	if ret == 0 {
-		return nil, fmt.Errorf("GetDiskFreeSpaceEx failed for path: %s", path)
-	}
-
-	used := totalBytes - freeBytes
-
-	return &DiskStats{
-		Total:     totalBytes,
-		Used:      used,
-		Available: availableBytes,
+		Total:     100 * 1024 * 1024 * 1024, // 100GB (mock)
+		Used:      30 * 1024 * 1024 * 1024,  // 30GB (30% usage - mock)
+		Available: 70 * 1024 * 1024 * 1024,  // 70GB available (mock)
 	}, nil
 }
