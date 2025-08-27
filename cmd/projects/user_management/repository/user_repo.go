@@ -24,9 +24,9 @@ func (u *UserRepository) CreateUser(ctx context.Context, user *auth.User) error 
 
 	u.dbExecutor.Exec(ctx,
 		`INSERT INTO users (id, tenant_id, username, 
-		email, password_hash, is_active, metadata) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`, user.ID, user.TenantID, user.Username,
-		user.Email, user.PasswordHash, user.IsActive, user.Metadata)
+		email, full_name, password_hash, is_active, metadata) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, user.ID, user.TenantID, user.Username,
+		user.Email, user.FullName, user.PasswordHash, user.IsActive, user.Metadata)
 	return nil
 }
 
@@ -51,10 +51,10 @@ func (u *UserRepository) GetUserByName(ctx context.Context, tenantID string,
 	userName string) (*auth.User, error) {
 	var user auth.User
 	err := u.dbExecutor.QueryRow(ctx,
-		`SELECT id, tenant_id, username, email, is_active, metadata
+		`SELECT id, tenant_id, username, email, full_name, is_active, metadata
 		FROM users WHERE tenant_id=$1 AND username=$2`, tenantID, userName).
 		Scan(&user.ID, &user.TenantID, &user.Username,
-			&user.Email, &user.IsActive, &user.Metadata)
+			&user.Email, &user.FullName, &user.IsActive, &user.Metadata)
 
 	if err != nil {
 		return nil, err
@@ -68,10 +68,10 @@ func (u *UserRepository) GetUserByID(ctx context.Context, tenantID string,
 	userID string) (*auth.User, error) {
 	var user auth.User
 	err := u.dbExecutor.QueryRow(ctx,
-		`SELECT id, tenant_id, username, email, is_active, metadata
+		`SELECT id, tenant_id, username, email, full_name, is_active, metadata
 		FROM users WHERE tenant_id=$1 AND id=$2`, tenantID, userID).
 		Scan(&user.ID, &user.TenantID, &user.Username,
-			&user.Email, &user.IsActive, &user.Metadata)
+			&user.Email, &user.FullName, &user.IsActive, &user.Metadata)
 
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (u *UserRepository) GetUserByID(ctx context.Context, tenantID string,
 func (u *UserRepository) ListUsers(ctx context.Context, tenantID string) ([]*auth.User, error) {
 	var users []*auth.User
 	rows, err := u.dbExecutor.Query(ctx,
-		`SELECT id, tenant_id, username, email, is_active, metadata
+		`SELECT id, tenant_id, username, email, full_name, is_active, metadata
 		FROM users WHERE tenant_id=$1 ORDER BY username`, tenantID)
 
 	if err != nil {
@@ -95,7 +95,7 @@ func (u *UserRepository) ListUsers(ctx context.Context, tenantID string) ([]*aut
 	for rows.Next() {
 		var user auth.User
 		if err := rows.Scan(&user.ID, &user.TenantID, &user.Username,
-			&user.Email, &user.IsActive, &user.Metadata); err != nil {
+			&user.Email, &user.FullName, &user.IsActive, &user.Metadata); err != nil {
 			return nil, err
 		}
 		users = append(users, &user)
@@ -107,7 +107,7 @@ func (u *UserRepository) ListUsers(ctx context.Context, tenantID string) ([]*aut
 // ListUsersWithPagination returns paginated users with total count
 func (u *UserRepository) ListUsersWithPagination(ctx context.Context, tenantID string, page, pageSize int, filters map[string]string) ([]*auth.User, int, error) {
 	// Build dynamic query with filters
-	baseQuery := `SELECT id, tenant_id, username, email, is_active, metadata FROM users WHERE tenant_id=$1`
+	baseQuery := `SELECT id, tenant_id, username, email, full_name, is_active, metadata FROM users WHERE tenant_id=$1`
 	countQuery := `SELECT COUNT(*) FROM users WHERE tenant_id=$1`
 
 	var whereConditions []string
@@ -165,7 +165,7 @@ func (u *UserRepository) ListUsersWithPagination(ctx context.Context, tenantID s
 	for rows.Next() {
 		var user auth.User
 		if err := rows.Scan(&user.ID, &user.TenantID, &user.Username,
-			&user.Email, &user.IsActive, &user.Metadata); err != nil {
+			&user.Email, &user.FullName, &user.IsActive, &user.Metadata); err != nil {
 			return nil, 0, err
 		}
 		users = append(users, &user)
@@ -182,9 +182,9 @@ func (u *UserRepository) UpdateUser(ctx context.Context, user *auth.User) error 
 	}
 
 	res, err := u.dbExecutor.Exec(ctx,
-		`UPDATE users SET email=$1, password_hash=$2, 
-		is_active=$3, metadata=$4 WHERE tenant_id=$5 AND username=$6`,
-		user.Email, user.PasswordHash, user.IsActive, user.Metadata,
+		`UPDATE users SET email=$1, full_name=$2, password_hash=$3, 
+		is_active=$4, metadata=$5 WHERE tenant_id=$6 AND username=$7`,
+		user.Email, user.FullName, user.PasswordHash, user.IsActive, user.Metadata,
 		user.TenantID, user.Username)
 
 	if err != nil {

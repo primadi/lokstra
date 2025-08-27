@@ -84,21 +84,30 @@ func (f *Flow[T]) SetDbPool(regCtx registration.Context, name string) *Flow[T] {
 // -------------------
 
 func (f *Flow[T]) run(flowCtx *Context[T]) error {
+	var stepErr error
+
 	for _, step := range f.steps {
 		f.CurrentStepName = step.name
 		if err := step.action(flowCtx); err != nil {
-			flowCtx.releaseDb(err)
-
-			// Check if this is a handled error (response already set)
-			// If so, return nil to indicate successful HTTP handling
-			if _, isHandled := err.(HandledError); isHandled {
-				return nil
-			}
-
-			// Unhandled error - let it bubble up
-			return err
+			stepErr = err
+			break
 		}
 	}
+
+	// Always release database resources (commit if no error, rollback if error)
+	flowCtx.releaseDb(stepErr)
+
+	if stepErr != nil {
+		// Check if this is a handled error (response already set)
+		// If so, return nil to indicate successful HTTP handling
+		if _, isHandled := stepErr.(HandledError); isHandled {
+			return nil
+		}
+
+		// Unhandled error - let it bubble up
+		return stepErr
+	}
+
 	return nil
 }
 
@@ -107,6 +116,22 @@ func (f *Flow[T]) AsHandler() request.HandlerFunc {
 		var params T
 
 		err := reqCtx.BindAll(&params)
+		if err != nil {
+			return err
+		}
+		flowCtx := newContext(f, reqCtx)
+		flowCtx.Params = &params
+		return f.run(flowCtx)
+	}
+}
+
+// AsHandlerSmart creates a handler with smart content-type binding
+// Supports both JSON and form-urlencoded request bodies
+func (f *Flow[T]) AsHandlerSmart() request.HandlerFunc {
+	return func(reqCtx *request.Context) error {
+		var params T
+
+		err := reqCtx.BindAllSmart(&params)
 		if err != nil {
 			return err
 		}

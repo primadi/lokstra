@@ -42,6 +42,15 @@ func registerComponents(regCtx lokstra.RegistrationContext) {
 	regCtx.RegisterHandler("user.delete", handlers.CreateDeleteUserHandler())
 	regCtx.RegisterHandler("user.get_by_name", handlers.CreateGetUserByNameHandler())
 
+	// Register Smart UI handlers (automatically handle both full page and HTMX partial requests)
+	regCtx.RegisterHandler("ui.dashboard", handlers.CreateDashboardHandler())
+	regCtx.RegisterHandler("ui.users", handlers.CreateUsersHandler())
+	regCtx.RegisterHandler("ui.user_form", handlers.CreateUserFormPageHandler())
+	regCtx.RegisterHandler("ui.user_create", handlers.CreateUserSubmitHandler())
+	regCtx.RegisterHandler("ui.user_update", handlers.UpdateUserSubmitHandler())
+	regCtx.RegisterHandler("ui.roles", handlers.CreateSmartRolesHandler())
+	regCtx.RegisterHandler("ui.settings", handlers.CreateSmartSettingsHandler())
+
 	regCtx.RegisterHandler("auth.login", func(c *lokstra.Context) error {
 		return c.Ok(map[string]any{
 			"message": "Login endpoint - implementation in progress",

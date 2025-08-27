@@ -1,0 +1,61 @@
+// Test Smart Content-Type Binding
+// This test verifies that forms can submit as application/x-www-form-urlencoded
+// and be properly bound to the DTOs with smart binding
+
+POST http://localhost:8081/api/v1/users
+Content-Type: application/x-www-form-urlencoded
+
+username=testuser&email=test@example.com&password=password123&is_active=true
+
+###
+
+// Test with JSON content type (existing functionality)
+POST http://localhost:8081/api/v1/users
+Content-Type: application/json
+
+{
+  "username": "jsonuser",
+  "email": "json@example.com", 
+  "password": "password456",
+  "is_active": true
+}
+
+###
+
+// Test update user with form data
+PUT http://localhost:8081/api/v1/users/id/testuser
+Content-Type: application/x-www-form-urlencoded
+
+email=updated@example.com&password=newpassword123&is_active=false
+
+###
+
+// Test update user with JSON (existing functionality)
+PUT http://localhost:8081/api/v1/users/id/jsonuser
+Content-Type: application/json
+
+{
+  "email": "updated_json@example.com",
+  "password": "newpassword456",
+  "is_active": false
+}
+
+###
+
+// Test form submit from UI (simulating browser form post)
+POST http://localhost:8081/users/create
+Content-Type: application/x-www-form-urlencoded
+HX-Request: true
+HX-Target: #main-content
+
+username=formuser&email=form@example.com&password=formpass123&is_active=on
+
+###
+
+// Test edit form submit from UI 
+POST http://localhost:8081/users/update/formuser
+Content-Type: application/x-www-form-urlencoded
+HX-Request: true
+HX-Target: #main-content
+
+email=updated_form@example.com&password=newformpass&is_active=on

@@ -1,19 +1,22 @@
 package handlers
 
 type CreateUserRequestDTO struct {
-	Username string         `json:"username"`
-	Email    string         `json:"email"`
-	Password string         `json:"password"`
-	IsActive *bool          `json:"is_active,omitempty"`
-	Metadata map[string]any `json:"metadata,omitempty"`
+	Username string         `json:"username" form:"username"`
+	Email    string         `json:"email" form:"email"`
+	Password string         `json:"password" form:"password"`
+	FullName string         `json:"full_name" form:"full_name"`
+	IsActive *bool          `json:"is_active,omitempty" form:"is_active"`
+	Metadata map[string]any `json:"metadata,omitempty" form:"metadata"`
 }
 
 type UpdateUserRequestDTO struct {
 	ID       string         `path:"id"`
-	Email    string         `json:"email"`
-	Password string         `json:"password"`
-	IsActive *bool          `json:"is_active,omitempty"`
-	Metadata map[string]any `json:"metadata,omitempty"`
+	Username string         `json:"username" form:"username"`
+	Email    string         `json:"email" form:"email"`
+	Password string         `json:"password" form:"password"`
+	FullName string         `json:"full_name" form:"full_name"`
+	IsActive *bool          `json:"is_active,omitempty" form:"is_active"`
+	Metadata map[string]any `json:"metadata,omitempty" form:"metadata"`
 }
 
 type DeleteUserRequestDTO struct {

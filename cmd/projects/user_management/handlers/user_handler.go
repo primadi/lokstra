@@ -11,7 +11,7 @@ import (
 func CreateNewUserHandler() request.HandlerFunc {
 	return flow.NewFlow[CreateUserRequestDTO]("CreateNewUser").
 		AddValidateRequired("Username", "Email", "Password").
-		AddAction("create_user", createUserAction).AsHandler()
+		AddAction("create_user", createUserAction).AsHandlerSmart()
 }
 
 func CreateUpdateUserHandler() request.HandlerFunc {
@@ -27,13 +27,13 @@ func CreateUpdateUserHandler() request.HandlerFunc {
 				Rules: []flow.ValidationRule{flow.MinLength(8)}, // Optional field, validate only if provided
 			},
 		}).
-		AddAction("update_user", updateUserAction).AsHandler()
+		AddAction("update_user", updateUserAction).AsHandlerSmart()
 }
 
 func CreateDeleteUserHandler() request.HandlerFunc {
 	return flow.NewFlow[DeleteUserRequestDTO]("DeleteUser").
 		AddValidateRequired("UserID").
-		AddAction("delete_user", deleteUserAction).AsHandler()
+		AddAction("delete_user", deleteUserAction).AsHandlerSmart()
 }
 
 func CreateListUserHandler() request.HandlerFunc {

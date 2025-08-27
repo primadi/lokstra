@@ -98,3 +98,28 @@ func (r *Response) WriteRaw(contentType string, status int, data []byte) error {
 	r.RawData = data
 	return nil
 }
+
+// HTML renders HTML content with 200 status
+func (r *Response) HTML(status int, html string) error {
+	if r.Headers == nil {
+		r.Headers = make(http.Header)
+	}
+	r.Headers.Set("Content-Type", "text/html; charset=utf-8")
+	r.StatusCode = status
+	r.Success = status < 400
+	r.RawData = []byte(html)
+	return nil
+}
+
+// ErrorHTML renders HTML content with error status and message
+func (r *Response) ErrorHTML(status int, html string) error {
+	if r.Headers == nil {
+		r.Headers = make(http.Header)
+	}
+	r.Headers.Set("Content-Type", "text/html; charset=utf-8")
+	r.StatusCode = status
+	r.Success = false
+	r.Message = html
+	r.RawData = []byte(html)
+	return nil
+}

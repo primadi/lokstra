@@ -1,0 +1,67 @@
+### Test Smart Content-Type Binding with Full Name Field
+
+# 1. Test JSON Content-Type with full_name field
+POST http://localhost:8081/api/v1/users
+Content-Type: application/json
+
+{
+  "username": "json_user",
+  "email": "json@example.com",
+  "full_name": "JSON Test User Full Name",
+  "password": "password123",
+  "is_active": true
+}
+
+###
+
+# 2. Test Form Content-Type with full_name field  
+POST http://localhost:8081/api/v1/users
+Content-Type: application/x-www-form-urlencoded
+
+username=form_user&email=form@example.com&full_name=Form Test User Full Name&password=password123&is_active=true
+
+###
+
+# 3. Test Update with JSON
+PUT http://localhost:8081/api/v1/users/id/test-user-id
+Content-Type: application/json
+
+{
+  "email": "updated@example.com",
+  "full_name": "Updated Full Name via JSON",
+  "is_active": true
+}
+
+###
+
+# 4. Test Update with Form Data
+PUT http://localhost:8081/api/v1/users/id/test-user-id
+Content-Type: application/x-www-form-urlencoded
+
+email=form-updated@example.com&full_name=Updated Full Name via Form&is_active=true
+
+###
+
+# 5. Test UI Form Submission
+POST http://localhost:8081/users/create
+Content-Type: application/x-www-form-urlencoded
+
+username=ui_form_user&email=ui@example.com&full_name=UI Form User Full Name&password=password123&is_active=true
+
+###
+
+# 6. Test UI Update Form
+POST http://localhost:8081/users/update/test-user-id
+Content-Type: application/x-www-form-urlencoded
+
+email=ui-updated@example.com&full_name=UI Updated Full Name&is_active=true
+
+###
+
+# 7. Health Check
+GET http://localhost:8081/health
+
+###
+
+# 8. Get Users List
+GET http://localhost:8081/api/v1/users

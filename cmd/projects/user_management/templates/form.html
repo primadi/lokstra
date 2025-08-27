@@ -1,0 +1,166 @@
+{{define "form"}}
+<form {{if .HTMX.Endpoint}}hx-{{.HTMX.Method | default "post"}}="{{.HTMX.Endpoint}}"{{end}}
+      {{if .HTMX.Target}}hx-target="{{.HTMX.Target}}"{{end}}
+      {{if .HTMX.Swap}}hx-swap="{{.HTMX.Swap}}"{{end}}
+      {{if .Alpine.Data}}x-data="{{.Alpine.Data}}"{{end}}
+      class="{{.CSS.Container | default "space-y-6"}}">
+    
+    <!-- Form Title -->
+    {{if .Title}}
+    <div class="{{.CSS.Header | default "pb-4 border-b"}}">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">{{.Title}}</h3>
+        {{if .Description}}
+        <p class="mt-1 text-sm text-gray-600">{{.Description}}</p>
+        {{end}}
+    </div>
+    {{end}}
+    
+    <!-- Form Fields -->
+    <div class="{{.CSS.Grid | default "grid grid-cols-1 gap-6"}}">
+        {{range .Fields}}
+        <div class="{{.CSS.Container}}">
+            {{template "form_field" .}}
+        </div>
+        {{end}}
+    </div>
+    
+    <!-- Form Actions -->
+    {{if .Actions}}
+    <div class="{{.CSS.Actions | default "flex justify-end space-x-3 pt-6 border-t"}}">
+        {{range .Actions}}
+        <button type="{{.Type | default "button"}}" 
+                {{if .HTMX}}{{.HTMX | renderHTMXAttrs}}{{end}}
+                {{if .Alpine}}{{.Alpine | renderAlpineAttrs}}{{end}}
+                class="{{.CSS | default (printf "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-%s-600 hover:bg-%s-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-%s-500" .Style .Style .Style)}}">
+            {{if .Icon}}<i class="{{.Icon}} mr-2"></i>{{end}}
+            {{.Label}}
+        </button>
+        {{end}}
+    </div>
+    {{end}}
+</form>
+{{end}}
+
+{{define "form_field"}}
+<div class="{{.CSS.Wrapper}}">
+    {{if ne .Type "hidden"}}
+    <label for="{{.Name}}" class="{{.CSS.Label | default "block text-sm font-medium text-gray-700"}}">
+        {{.Label}}
+        {{if .Required}}<span class="text-red-500">*</span>{{end}}
+    </label>
+    {{end}}
+    
+    {{if eq .Type "text" "email" "password" "number" "tel" "url"}}
+        <input type="{{.Type}}" 
+               id="{{.Name}}" 
+               name="{{.Name}}" 
+               value="{{.Value}}"
+               {{if .Required}}required{{end}}
+               {{if .Readonly}}readonly{{end}}
+               {{if .Disabled}}disabled{{end}}
+               {{if .Placeholder}}placeholder="{{.Placeholder}}"{{end}}
+               {{if .Pattern}}pattern="{{.Pattern}}"{{end}}
+               {{if .Min}}min="{{.Min}}"{{end}}
+               {{if .Max}}max="{{.Max}}"{{end}}
+               {{if .Alpine}}{{.Alpine | renderAlpineAttrs}}{{end}}
+               class="{{.CSS.Input | default "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"}}">
+    
+    {{else if eq .Type "textarea"}}
+        <textarea id="{{.Name}}" 
+                  name="{{.Name}}" 
+                  {{if .Required}}required{{end}}
+                  {{if .Readonly}}readonly{{end}}
+                  {{if .Disabled}}disabled{{end}}
+                  {{if .Placeholder}}placeholder="{{.Placeholder}}"{{end}}
+                  {{if .Rows}}rows="{{.Rows}}"{{end}}
+                  {{if .Alpine}}{{.Alpine | renderAlpineAttrs}}{{end}}
+                  class="{{.CSS.Input | default "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"}}">{{.Value}}</textarea>
+    
+    {{else if eq .Type "select"}}
+        <select id="{{.Name}}" 
+                name="{{.Name}}" 
+                {{if .Required}}required{{end}}
+                {{if .Disabled}}disabled{{end}}
+                {{if .Multiple}}multiple{{end}}
+                {{if .Alpine}}{{.Alpine | renderAlpineAttrs}}{{end}}
+                class="{{.CSS.Input | default "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"}}">
+            {{if .Placeholder}}
+            <option value="">{{.Placeholder}}</option>
+            {{end}}
+            {{range .Options}}
+            <option value="{{.Value}}" {{if .Selected}}selected{{end}}>{{.Label}}</option>
+            {{end}}
+        </select>
+    
+    {{else if eq .Type "checkbox"}}
+        <div class="flex items-center">
+            <input type="checkbox" 
+                   id="{{.Name}}" 
+                   name="{{.Name}}" 
+                   value="{{.Value | default "1"}}"
+                   {{if .Checked}}checked{{end}}
+                   {{if .Required}}required{{end}}
+                   {{if .Disabled}}disabled{{end}}
+                   {{if .Alpine}}{{.Alpine | renderAlpineAttrs}}{{end}}
+                   class="{{.CSS.Input | default "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"}}">
+            <label for="{{.Name}}" class="ml-2 block text-sm text-gray-900">{{.Label}}</label>
+        </div>
+    
+    {{else if eq .Type "radio"}}
+        <div class="space-y-2">
+            {{range .Options}}
+            <div class="flex items-center">
+                <input type="radio" 
+                       id="{{$.Name}}_{{.Value}}" 
+                       name="{{$.Name}}" 
+                       value="{{.Value}}"
+                       {{if .Selected}}checked{{end}}
+                       {{if $.Required}}required{{end}}
+                       {{if $.Disabled}}disabled{{end}}
+                       {{if $.Alpine}}{{$.Alpine | renderAlpineAttrs}}{{end}}
+                       class="{{$.CSS.Input | default "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"}}">
+                <label for="{{$.Name}}_{{.Value}}" class="ml-2 block text-sm text-gray-900">{{.Label}}</label>
+            </div>
+            {{end}}
+        </div>
+    
+    {{else if eq .Type "file"}}
+        <input type="file" 
+               id="{{.Name}}" 
+               name="{{.Name}}" 
+               {{if .Required}}required{{end}}
+               {{if .Disabled}}disabled{{end}}
+               {{if .Accept}}accept="{{.Accept}}"{{end}}
+               {{if .Multiple}}multiple{{end}}
+               {{if .Alpine}}{{.Alpine | renderAlpineAttrs}}{{end}}
+               class="{{.CSS.Input | default "mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"}}">
+    
+    {{else if eq .Type "hidden"}}
+        <input type="hidden" id="{{.Name}}" name="{{.Name}}" value="{{.Value}}">
+    {{end}}
+    
+    {{if .Help}}
+    <p class="mt-2 text-sm text-gray-500">{{.Help}}</p>
+    {{end}}
+    
+    {{if .Error}}
+    <p class="mt-2 text-sm text-red-600">{{.Error}}</p>
+    {{end}}
+</div>
+{{end}}
+
+{{define "form_group"}}
+<fieldset class="{{.CSS.Container | default "border border-gray-200 rounded-md p-4"}}">
+    {{if .Legend}}
+    <legend class="{{.CSS.Legend | default "text-sm font-medium text-gray-900 px-2"}}">{{.Legend}}</legend>
+    {{end}}
+    
+    <div class="{{.CSS.Grid | default "grid grid-cols-1 gap-4 mt-4"}}">
+        {{range .Fields}}
+        <div class="{{.CSS.Container}}">
+            {{template "form_field" .}}
+        </div>
+        {{end}}
+    </div>
+</fieldset>
+{{end}}

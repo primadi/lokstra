@@ -1108,6 +1108,133 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": { "const": "lokstra.ui_renderer" }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "description": "UI Renderer service configuration for modern web UI generation",
+                "properties": {
+                  "template_dir": {
+                    "type": "string",
+                    "description": "Directory containing HTML templates",
+                    "default": "services/ui_renderer/templates",
+                    "examples": ["./templates", "services/ui_renderer/templates", "/app/templates"]
+                  },
+                  "theme": {
+                    "type": "string",
+                    "description": "Default UI theme",
+                    "enum": ["light", "dark", "auto"],
+                    "default": "light"
+                  },
+                  "preline_version": {
+                    "type": "string",
+                    "description": "Preline UI library version to use",
+                    "default": "2.0.0",
+                    "examples": ["2.0.0", "1.9.0", "latest"]
+                  },
+                  "tailwind_config": {
+                    "type": "object",
+                    "description": "Tailwind CSS configuration overrides",
+                    "properties": {
+                      "content": {
+                        "type": "array",
+                        "description": "Content paths for Tailwind to scan",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": ["./templates/**/*.html", "./static/**/*.js"]
+                      },
+                      "theme": {
+                        "type": "object",
+                        "description": "Theme configuration",
+                        "additionalProperties": true
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "htmx_config": {
+                    "type": "object",
+                    "description": "HTMX configuration options",
+                    "properties": {
+                      "version": {
+                        "type": "string",
+                        "description": "HTMX library version",
+                        "default": "1.9.0"
+                      },
+                      "global_config": {
+                        "type": "object",
+                        "description": "Global HTMX configuration",
+                        "properties": {
+                          "timeout": {
+                            "type": "integer",
+                            "description": "Default request timeout in milliseconds",
+                            "default": 0
+                          },
+                          "history_cache_size": {
+                            "type": "integer",
+                            "description": "Size of history cache",
+                            "default": 10
+                          }
+                        }
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "alpine_config": {
+                    "type": "object",
+                    "description": "Alpine.js configuration options",
+                    "properties": {
+                      "version": {
+                        "type": "string",
+                        "description": "Alpine.js library version",
+                        "default": "3.13.0"
+                      },
+                      "plugins": {
+                        "type": "array",
+                        "description": "Alpine.js plugins to load",
+                        "items": {
+                          "type": "string"
+                        },
+                        "examples": [["focus", "mask"], ["intersect", "persist"]]
+                      }
+                    },
+                    "additionalProperties": true
+                  },
+                  "cache_templates": {
+                    "type": "boolean",
+                    "description": "Whether to cache parsed templates",
+                    "default": true
+                  },
+                  "hot_reload": {
+                    "type": "boolean",
+                    "description": "Enable hot reload of templates in development",
+                    "default": false
+                  },
+                  "minify_output": {
+                    "type": "boolean",
+                    "description": "Whether to minify HTML output",
+                    "default": false
+                  },
+                  "component_dirs": {
+                    "type": "array",
+                    "description": "Additional directories to scan for components",
+                    "items": {
+                      "type": "string"
+                    },
+                    "examples": [["./components", "./widgets"], ["./shared/components"]]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
         }
       ],
       "additionalProperties": false

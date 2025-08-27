@@ -15,7 +15,7 @@ server:
     
 apps:
   - name: "user_management_api"
-    address: "${ENV:SERVER_PORT::8080}"
+    address: "${ENV:SERVER_PORT::8081}"
     listener_type: "default"
     router_engine_type: "default"
     
@@ -56,6 +56,43 @@ apps:
       - method: "GET"
         path: "/health"
         handler: "health.check"
+        
+      # UI Routes
+      - method: "GET"
+        path: "/"
+        handler: "ui.dashboard"
+        
+      - method: "GET"
+        path: "/dashboard"
+        handler: "ui.dashboard"
+        
+      - method: "GET"
+        path: "/users"
+        handler: "ui.users"
+        
+      - method: "GET"
+        path: "/users/new"
+        handler: "ui.user_form"
+        
+      - method: "POST"
+        path: "/users/create"
+        handler: "ui.user_create"
+        
+      - method: "GET"
+        path: "/users/:id/edit"
+        handler: "ui.user_form"
+        
+      - method: "POST"
+        path: "/users/update/:id"
+        handler: "ui.user_update"
+        
+      - method: "GET"
+        path: "/roles"
+        handler: "ui.roles"
+        
+      - method: "GET"
+        path: "/settings"
+        handler: "ui.settings"
         
     groups:
       - prefix: "/api/v1"

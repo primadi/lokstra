@@ -108,3 +108,13 @@ func (ctx *Context) GetRawResponseBody() ([]byte, error) {
 	}
 	return ctx.Response.RawData, nil
 }
+
+// HTML renders HTML content with the specified status code
+func (ctx *Context) HTML(status int, html string) error {
+	return ctx.Response.HTML(status, html)
+}
+
+// ErrorHTML renders HTML content with error status and message
+func (ctx *Context) ErrorHTML(status int, html string) error {
+	return ctx.Response.ErrorHTML(status, html)
+}

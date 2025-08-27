@@ -16,6 +16,43 @@ services:
       max_lifetime: "1h"
       ssl_mode: "disable" # ${ENV:DB_SSL_MODE:disable}
 
+  # UI Renderer Service - commented out for now, using direct HTML rendering
+  # - name: "ui_renderer"
+  #   type: "lokstra.ui_renderer"
+  #   config:
+  #     template_dir: "templates"
+  #     theme: "light"
+  #     cache_templates: false  # Development mode
+  #     hot_reload: true
+  #     minify_output: false
+  #     preline_version: "2.0.0"
+  #     htmx_config:
+  #       version: "1.9.0"
+  #       global_config:
+  #         timeout: 10000
+  #         history_cache_size: 15
+  #     alpine_config:
+  #       version: "3.13.0"
+  #       plugins:
+  #         - "focus"
+  #         - "mask"
+  #         - "intersect"
+  #         - "persist"
+  #     tailwind_config:
+  #       content:
+  #         - "./templates/**/*.html"
+  #         - "./static/**/*.js"
+  #       theme:
+  #         extend:
+  #           colors:
+  #             primary: "#3b82f6"
+  #             secondary: "#64748b"
+  #             success: "#10b981"
+  #             warning: "#f59e0b"
+  #             error: "#ef4444"
+  #     component_dirs:
+  #       - "./templates/components"
+
   # - name: "metrics"
   #   type: "lokstra.metrics"
   #   config:

@@ -24,6 +24,7 @@ type User struct {
 	TenantID     string              `json:"tenant_id"`
 	Username     string              `json:"username"`
 	Email        string              `json:"email"`
+	FullName     string              `json:"full_name"`
 	PasswordHash string              `json:"-"`
 	IsActive     bool                `json:"is_active"`
 	CreatedAt    customtype.DateTime `json:"created_at"`

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <meta name="description" content="{{.Description}}">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Preline UI -->
+    <link rel="stylesheet" href="https://preline.co/assets/css/main.min.css">
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    {{range .Styles}}
+    <link rel="stylesheet" href="{{.}}">
+    {{end}}
+</head>
+<body class="h-full" {{if .Meta.Alpine}}x-data="{{.Meta.Alpine}}"{{end}}>
+    <div class="min-h-full">
+        {{if eq .Layout "sidebar"}}
+            <!-- Sidebar Layout -->
+            <div class="flex h-screen bg-gray-100">
+                <!-- Sidebar -->
+                <div class="{{.Sidebar.Width | default "w-64"}} bg-white shadow-md {{if .Sidebar.Collapsible}}transition-all duration-300{{end}}">
+                    <!-- Logo -->
+                    {{if .Logo}}
+                    <div class="flex items-center justify-center h-16 border-b">
+                        <a href="{{.Logo.Link | default "/"}}">
+                            <img src="{{.Logo.Src}}" alt="{{.Logo.Alt}}" 
+                                 {{if .Logo.Width}}width="{{.Logo.Width}}"{{end}}
+                                 {{if .Logo.Height}}height="{{.Logo.Height}}"{{end}}
+                                 class="h-8 w-auto">
+                        </a>
+                    </div>
+                    {{end}}
+                    
+                    <!-- Navigation -->
+                    <nav class="mt-8">
+                        {{range .Menu.Items}}
+                        <a href="{{.URL}}" 
+                           class="{{if .Active}}bg-indigo-50 border-r-4 border-indigo-500 text-indigo-700{{else}}text-gray-600 hover:bg-gray-50 hover:text-gray-900{{end}} group flex items-center px-6 py-2 text-sm font-medium">
+                            {{if .Icon}}<i class="{{.Icon}} mr-3 h-5 w-5"></i>{{end}}
+                            {{.Label}}
+                            {{if .Badge}}
+                            <span class="ml-auto bg-{{.Badge.Color}}-100 text-{{.Badge.Color}}-600 py-0.5 px-2 rounded-full text-xs">
+                                {{.Badge.Text}}
+                            </span>
+                            {{end}}
+                        </a>
+                        {{end}}
+                    </nav>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <!-- Header -->
+                    {{if .Header}}
+                    <header class="{{if .Header.Sticky}}sticky top-0{{end}} bg-white shadow-sm border-b {{.Header.Height | default "h-16"}}">
+                        <div class="flex items-center justify-between px-6 py-4">
+                            <h1 class="text-2xl font-semibold text-gray-900">{{.Title}}</h1>
+                            <!-- Header actions would go here -->
+                        </div>
+                    </header>
+                    {{end}}
+                    
+                    <!-- Page Content -->
+                    <main class="flex-1 overflow-y-auto p-6">
+                        {{block "content" .}}{{end}}
+                    </main>
+                </div>
+            </div>
+        {{else if eq .Layout "topnav"}}
+            <!-- Top Navigation Layout -->
+            <nav class="bg-white shadow">
+                <!-- Navigation content -->
+            </nav>
+            <main class="container mx-auto px-4 py-8">
+                {{block "content" .}}{{end}}
+            </main>
+        {{else}}
+            <!-- Minimal Layout -->
+            <main class="container mx-auto px-4 py-8">
+                {{block "content" .}}{{end}}
+            </main>
+        {{end}}
+        
+        <!-- Footer -->
+        {{if .Footer}}
+        <footer class="bg-white border-t mt-auto">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                {{if .Footer.Columns}}
+                <div class="grid grid-cols-{{len .Footer.Columns}} gap-8">
+                    {{range .Footer.Columns}}
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">{{.Title}}</h3>
+                        <ul class="mt-4 space-y-4">
+                            {{range .Links}}
+                            <li><a href="{{.URL}}" class="text-base text-gray-500 hover:text-gray-900">{{.Label}}</a></li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+                {{if .Footer.Text}}
+                <div class="mt-8 border-t border-gray-200 pt-8">
+                    <p class="text-base text-gray-400 text-center">{{.Footer.Text}}</p>
+                </div>
+                {{end}}
+            </div>
+        </footer>
+        {{end}}
+    </div>
+    
+    <!-- Preline UI JS -->
+    <script src="https://preline.co/assets/js/main.min.js"></script>
+    
+    {{range .Scripts}}
+    <script src="{{.}}"></script>
+    {{end}}
+</body>
+</html>

@@ -1,6 +1,6 @@
 ### User Management API Tests
 ### Base URL
-@baseUrl = http://localhost:8080
+@baseUrl = http://localhost:8081
 @apiPath = /api/v1
 @contentType = application/json
 
