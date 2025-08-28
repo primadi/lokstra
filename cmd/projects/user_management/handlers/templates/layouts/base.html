@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {{.MetaTags | safeHTML}}
     <title>{{.Title}} - User Management</title>
     {{.Scripts | safeHTML}}
@@ -43,15 +45,9 @@
                 </div>
             </header>
             
-            <!-- Loading Indicator - Outside main content to prevent HTMX replacement -->
-            <div id="loading-indicator" class="htmx-indicator fixed top-4 right-4 z-50">
-                <div class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2">
-                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Loading...</span>
-                </div>
+            <!-- Modern Horizontal Loading Progress Bar -->
+            <div id="loading-indicator" class="w-full h-1 bg-gray-800 overflow-hidden opacity-0">
+                <div class="h-full bg-gradient-to-r from-blue-500 to-blue-600 transform -translate-x-full animate-pulse"></div>
             </div>
             
             <main class="p-6" id="main-content">

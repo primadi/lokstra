@@ -1,134 +1,149 @@
-# Template Structure Documentation
+# 📁 Template Structure Documentation
 
 ## Overview
+This project uses a well-organized template structure for better maintainability, scalability, and developer experience.
 
-Template HTML untuk User Management Application telah dipisahkan dari kode Go untuk memudahkan maintenance dan meningkatkan readability.
-
-## File Structure
+## Directory Structure
 
 ```
-handlers/
-├── templates/
-│   ├── base_layout.html      # Main layout template
-│   ├── meta_tags.html        # Meta tags template
-│   ├── scripts.html          # JavaScript loading template
-│   └── styles.html           # CSS/Styles loading template
-├── layout.go                 # Main layout handler (refactored)
-└── template_loader.go        # Template loading and rendering logic
+templates/
+├── layouts/          # Layout templates (base structure)
+│   ├── base.html        # Main layout with header, sidebar, content
+│   ├── sidebar.html     # Navigation sidebar component
+│   └── meta_tags.html   # HTML head meta tags
+├── pages/            # Page-specific templates
+│   ├── dashboard.html   # Dashboard page content
+│   ├── users.html       # User list page
+│   ├── user-form.html   # User create/edit form
+│   ├── roles.html       # Roles management page
+│   └── settings.html    # Settings page
+├── components/       # Reusable UI components
+│   ├── forms.html       # Form components (inputs, buttons, etc.)
+│   ├── tables.html      # Table components (data tables, pagination)
+│   └── common.html      # Common UI elements (alerts, modals, etc.)
+└── assets/           # Static assets and styling
+    ├── scripts.html     # JavaScript includes and inline scripts
+    ├── styles.html      # CSS includes and inline styles
+    └── page-styles/     # Page-specific CSS files
+        ├── users.css    # Styles specific to users page
+        └── user-form.css # Styles specific to user form
 ```
 
-## Template Files
+## Template Categories
 
-### 1. base_layout.html
-- Main HTML structure untuk full page layout
-- Menggunakan Go template syntax: `{{.FieldName}}`
-- Contains: HTML skeleton, header, sidebar, loading indicator, main content area
+### 1. **Layouts** (`layouts/`)
+Base structure templates that define the overall page layout.
 
-### 2. meta_tags.html
-- Template untuk meta tags
-- Includes: charset, viewport, dan page-specific meta tags
-- Supports dynamic meta tag injection via `{{.PageMetaTags}}`
+- **base.html**: Main HTML structure with head, body, sidebar, and content areas
+- **sidebar.html**: Navigation menu and sidebar component
+- **meta_tags.html**: HTML meta tags for SEO and responsive design
 
-### 3. scripts.html
-- Template untuk JavaScript loading
-- Includes: External CDN scripts, embedded scripts, page-specific scripts
-- Supports main page scripts dan embedded scripts dari assets
+### 2. **Pages** (`pages/`)
+Content templates for specific pages or routes.
 
-### 4. styles.html
-- Template untuk CSS loading
-- Includes: Main layout CSS, external stylesheets, custom CSS
-- Supports embedded CSS dari assets dan page-specific styles
+- **dashboard.html**: Main dashboard with statistics and overview
+- **users.html**: User listing with table and pagination
+- **user-form.html**: User creation and editing form
+- **roles.html**: Role management interface
+- **settings.html**: Application settings page
 
-## Key Features
+### 3. **Components** (`components/`)
+Reusable UI components that can be included in multiple pages.
 
-### Template Loading
-- Templates di-compile ke binary menggunakan `//go:embed`
-- Automatic initialization pada first use
-- Fallback ke legacy rendering jika template loading gagal
+- **forms.html**: Form elements (input fields, buttons, validation)
+- **tables.html**: Data table components with sorting and pagination
+- **common.html**: Common UI elements (alerts, modals, breadcrumbs)
 
-### Data Structure
+### 4. **Assets** (`assets/`)
+Static assets, scripts, and styling files.
+
+- **scripts.html**: JavaScript libraries and application scripts
+- **styles.html**: CSS frameworks and custom styles
+- **page-styles/**: Page-specific CSS files for fine-tuned styling
+
+## Usage Examples
+
+### Loading a Page Template
 ```go
-type TemplateData struct {
-    HTML            string                // Main content HTML
-    Title           string                // Page title
-    SidebarHTML     string                // Rendered sidebar HTML
-    MetaTags        string                // Rendered meta tags
-    Scripts         string                // Rendered scripts
-    Styles          string                // Rendered styles
-    PageMetaTags    map[string]string     // Page-specific meta tags
-    MainPageScripts []ScriptData          // Main page navigation scripts
-    ExternalScripts []string              // External script URLs
-    EmbeddedScripts []ScriptData          // Embedded scripts
-    MainLayoutCSS   string                // Main layout CSS content
-    ExternalStyles  []string              // External style URLs
-    CustomCSS       string                // Page-specific custom CSS
-}
+// Render a complete page
+content := renderPageContent("users", userData)
 ```
 
-### Backward Compatibility
-- Legacy `renderFullPageLegacy()` function sebagai fallback
-- Existing `PageContent` struct tetap unchanged
-- Existing handlers tidak perlu dimodifikasi
-
-## Usage
-
-### Template-based Rendering (New)
+### Using Components
 ```go
-// Template akan di-load secara otomatis
-html := RenderFullPage(pageContent)
+// Render a reusable component
+formComponent := renderComponent("forms", formData)
 ```
 
-### Fallback Rendering (Legacy)
+### Including Assets
 ```go
-// Fallback akan digunakan jika template loading gagal
-html := renderFullPageLegacy(pageContent)
+// Assets are automatically included in all pages
+// Page-specific styles are loaded based on currentPage
 ```
 
 ## Benefits
 
-1. **Separation of Concerns**: HTML template terpisah dari Go code
-2. **Maintainability**: Mudah edit HTML tanpa modify Go code
-3. **Readability**: Template HTML lebih mudah dibaca dan dimengerti
-4. **Binary Compilation**: Templates di-compile ke binary (no external files needed)
-5. **Error Resilience**: Automatic fallback jika template system gagal
-6. **Backward Compatibility**: Existing code tetap berfungsi tanpa perubahan
+### 1. **Clear Separation of Concerns**
+- Layout logic separated from content
+- Reusable components for consistency
+- Assets organized by type
 
-## Template Syntax
+### 2. **Easy Maintenance**
+- Find templates quickly by category
+- Modify layouts without touching pages
+- Update components once, affect all users
 
-### Basic Variables
-```html
-{{.Title}}          <!-- Page title -->
-{{.HTML}}           <!-- Main content -->
-{{.SidebarHTML}}    <!-- Sidebar content -->
-```
+### 3. **Scalability**
+- Add new pages without duplicating layout code
+- Create new components for common patterns
+- Organize assets logically
 
-### Conditional Rendering
-```html
-{{if .CustomCSS}}
-<style>
-    {{.CustomCSS}}
-</style>
-{{end}}
-```
+### 4. **Developer Experience**
+- Intuitive folder structure
+- Self-documenting organization
+- Faster development and debugging
 
-### Loops
-```html
-{{range .ExternalScripts}}
-<script src="{{.}}"></script>
-{{end}}
-```
+## File Naming Conventions
 
-### Nested Data
-```html
-{{range $name, $content := .PageMetaTags}}
-<meta name="{{$name}}" content="{{$content}}">
-{{end}}
-```
+### Templates
+- Use kebab-case: `user-form.html`, `meta-tags.html`
+- Descriptive names: `dashboard.html`, `settings.html`
+- Component names should be plural: `forms.html`, `tables.html`
 
-## Future Enhancements
+### CSS Files
+- Match the page name: `users.css` for `users.html`
+- Use kebab-case: `user-form.css`
 
-1. **Template Caching**: Add template caching untuk performance
-2. **Template Inheritance**: Support untuk template inheritance/extension
-3. **Component System**: Reusable template components
-4. **Hot Reload**: Development mode dengan template hot reload
-5. **Template Validation**: Compile-time validation untuk template syntax
+### Template Variables
+- Use camelCase in Go: `userData`, `pageTitle`
+- Use kebab-case in HTML: `data-user-id`, `class="user-form"`
+
+## Adding New Templates
+
+### New Page
+1. Create `templates/pages/new-page.html`
+2. Add CSS file: `templates/assets/page-styles/new-page.css`
+3. Update `template_loader.go` to include the new page
+4. Add route handler in appropriate handler file
+
+### New Component
+1. Create `templates/components/new-component.html`
+2. Update `template_loader.go` to load the component
+3. Use `renderComponent("new-component", data)` in pages
+
+### New Layout
+1. Create `templates/layouts/new-layout.html`
+2. Update `template_loader.go` if needed
+3. Reference in base layout or use directly
+
+## Migration Notes
+
+This structure replaces the old nested `handlers/templates/templates/` structure with a cleaner, more intuitive organization. All functionality remains the same, but maintenance and development are significantly improved.
+
+## Best Practices
+
+1. **Keep layouts minimal** - Focus on structure, not content
+2. **Make components reusable** - Avoid page-specific logic in components  
+3. **Use consistent naming** - Follow the established conventions
+4. **Document complex templates** - Add comments for complex logic
+5. **Test after changes** - Verify all pages still render correctly

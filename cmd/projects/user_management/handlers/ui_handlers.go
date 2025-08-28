@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -39,21 +38,8 @@ func getSidebarHTML(currentPage string) string {
 	// Get menu data based on current page
 	menuData := getMenuData(currentPage)
 
-	// Parse and execute template
-	tmpl, err := template.New("sidebar").Parse(sidebarTemplate)
-	if err != nil {
-		// Fallback to empty sidebar if template parsing fails
-		return `<div class="w-64 bg-gray-800 border-r border-gray-700">Template Error</div>`
-	}
-
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, menuData)
-	if err != nil {
-		// Fallback to empty sidebar if template execution fails
-		return `<div class="w-64 bg-gray-800 border-r border-gray-700">Execution Error</div>`
-	}
-
-	return buf.String()
+	// Use the modern template rendering function
+	return renderSidebar(menuData)
 }
 
 // Modern Handlers using PageHandler - consistent behavior across full page and HTMX loads
@@ -61,68 +47,60 @@ func getSidebarHTML(currentPage string) string {
 // CreateDashboardHandler creates a handler for dashboard that works consistently with both full page and HTMX requests
 func CreateDashboardHandler() lokstra.HandlerFunc {
 	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
-		content := `
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-				<div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-					<h3 class="text-lg font-semibold text-gray-100">Total Users</h3>
-					<p class="text-3xl font-bold text-blue-400 mt-2">142</p>
-				</div>
-				<div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-					<h3 class="text-lg font-semibold text-gray-100">Active Users</h3>
-					<p class="text-3xl font-bold text-green-400 mt-2">128</p>
-				</div>
-				<div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-					<h3 class="text-lg font-semibold text-gray-100">Inactive Users</h3>
-					<p class="text-3xl font-bold text-red-400 mt-2">14</p>
-				</div>
-			</div>
-			
-			<div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
-				<div class="p-6 border-b border-gray-700">
-					<h2 class="text-xl font-bold text-gray-100">Recent Users</h2>
-				</div>
-				<div class="p-6">
-					<div class="space-y-3">
-						<div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-							<div class="flex items-center space-x-3">
-								<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-									<span class="text-white text-sm font-medium">A</span>
-								</div>
-								<div>
-									<p class="text-gray-100 font-medium">admin</p>
-									<p class="text-gray-400 text-sm">admin@example.com</p>
-								</div>
-							</div>
-							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-600 text-green-100">Active</span>
-						</div>
-						<div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-							<div class="flex items-center space-x-3">
-								<div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-									<span class="text-white text-sm font-medium">U</span>
-								</div>
-								<div>
-									<p class="text-gray-100 font-medium">user1</p>
-									<p class="text-gray-400 text-sm">user1@example.com</p>
-								</div>
-							</div>
-							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-600 text-green-100">Active</span>
-						</div>
-						<div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-							<div class="flex items-center space-x-3">
-								<div class="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center">
-									<span class="text-white text-sm font-medium">U</span>
-								</div>
-								<div>
-									<p class="text-gray-100 font-medium">user2</p>
-									<p class="text-gray-400 text-sm">user2@example.com</p>
-								</div>
-							</div>
-							<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-600 text-red-100">Inactive</span>
-						</div>
-					</div>
-				</div>
-			</div>
-		`
+		// Prepare dashboard data
+		dashboardData := struct {
+			TotalUsers    int
+			ActiveUsers   int
+			InactiveUsers int
+			RecentUsers   []struct {
+				Username    string
+				Email       string
+				Initial     string
+				AvatarColor string
+				Status      string
+				StatusColor string
+			}
+		}{
+			TotalUsers:    142,
+			ActiveUsers:   128,
+			InactiveUsers: 14,
+			RecentUsers: []struct {
+				Username    string
+				Email       string
+				Initial     string
+				AvatarColor string
+				Status      string
+				StatusColor string
+			}{
+				{
+					Username:    "admin",
+					Email:       "admin@example.com",
+					Initial:     "A",
+					AvatarColor: "bg-blue-600",
+					Status:      "Active",
+					StatusColor: "bg-green-600 text-green-100",
+				},
+				{
+					Username:    "user1",
+					Email:       "user1@example.com",
+					Initial:     "U",
+					AvatarColor: "bg-green-600",
+					Status:      "Active",
+					StatusColor: "bg-green-600 text-green-100",
+				},
+				{
+					Username:    "user2",
+					Email:       "user2@example.com",
+					Initial:     "U",
+					AvatarColor: "bg-yellow-600",
+					Status:      "Inactive",
+					StatusColor: "bg-red-600 text-red-100",
+				},
+			},
+		}
+
+		// Render content using template
+		content := renderPageContent("dashboard", dashboardData)
 
 		return &PageContent{
 			HTML:        content,
@@ -142,111 +120,15 @@ func CreateUsersHandler() lokstra.HandlerFunc {
 			users = []User{}
 		}
 
-		// Generate table rows from actual user data
-		tableRows := ""
-		for _, user := range users {
-			statusClass := "bg-green-600 text-green-100"
-			statusText := "Active"
-			if !user.IsActive {
-				statusClass = "bg-red-600 text-red-100"
-				statusText = "Inactive"
-			}
-
-			tableRows += fmt.Sprintf(`
-				<tr class="hover:bg-gray-600">
-					<td class="px-6 py-4 text-sm text-gray-300">
-						<div class="truncate max-w-xs" title="%s">%s</div>
-					</td>
-					<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-100">%s</td>
-					<td class="px-6 py-4 text-sm text-gray-300">
-						<div class="truncate" title="%s">%s</div>
-					</td>
-					<td class="px-6 py-4 whitespace-nowrap">
-						<span class="px-2 py-1 text-xs font-semibold rounded-full %s">%s</span>
-					</td>
-					<td class="px-6 py-4 whitespace-nowrap text-sm">
-						<div class="flex items-center space-x-2">
-							<button hx-get="/users/%s/edit" 
-									hx-target="#main-content"
-									hx-push-url="/users/%s/edit"
-									class="nav-page bg-blue-600 hover:bg-blue-700 text-white p-2 rounded text-sm transition-colors"
-									title="Edit User">
-								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-								</svg>
-							</button>
-							<button hx-delete="/api/v1/users/id/%s" 
-									hx-confirm="Are you sure you want to delete this user?"
-									hx-target="closest tr"
-									hx-swap="outerHTML"
-									class="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm transition-colors"
-									title="Delete User">
-								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-								</svg>
-							</button>
-						</div>
-					</td>
-				</tr>`,
-				user.ID, user.ID, user.Username, user.Email, user.Email, statusClass, statusText, user.ID, user.ID, user.ID)
+		// Prepare users data for template
+		usersData := struct {
+			Users []User
+		}{
+			Users: users,
 		}
 
-		// If no users, show empty state
-		if len(users) == 0 {
-			tableRows = `
-				<tr>
-					<td colspan="5" class="px-6 py-8 text-center text-gray-400">
-						<div class="flex flex-col items-center">
-							<svg class="w-12 h-12 mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
-							</svg>
-							<p class="text-lg font-medium">No users found</p>
-							<p class="text-sm">Get started by creating your first user</p>
-						</div>
-					</td>
-				</tr>`
-		}
-
-		content := `
-			<div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
-				<div class="p-6 border-b border-gray-700 flex justify-between items-center">
-					<h2 class="text-xl font-bold text-gray-100">Users Management</h2>
-					<button hx-get="/users/new" 
-							hx-target="#main-content"
-							hx-push-url="/users/new"
-							hx-indicator="#loading-indicator"
-							hx-swap="innerHTML"
-							class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors inline-flex items-center">
-						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-						</svg>
-						Add New User
-					</button>
-				</div>
-				<div class="p-6">
-					<div class="mb-4">
-						<input type="text" placeholder="Search users..." 
-							   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-					</div>
-					<div class="overflow-x-auto">
-						<table class="min-w-full bg-gray-700 rounded-lg table-fixed">
-							<thead class="bg-gray-600">
-								<tr>
-									<th class="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
-									<th class="w-1/5 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Username</th>
-									<th class="w-1/4 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Email</th>
-									<th class="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-									<th class="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y divide-gray-600">
-								` + tableRows + `
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-		`
+		// Render content using template
+		content := renderPageContent("users", usersData)
 
 		return &PageContent{
 			HTML:        content,
@@ -257,36 +139,7 @@ func CreateUsersHandler() lokstra.HandlerFunc {
 				"table-enhancements",
 				"navigation-enhancements",
 			},
-			// Page-specific styles for enhanced user table
-			CustomCSS: `
-				.user-table-container {
-					position: relative;
-				}
-				
-				.user-row:hover {
-					background-color: rgba(75, 85, 99, 0.5);
-					transform: translateY(-1px);
-					transition: all 0.2s ease;
-				}
-				
-				.action-button {
-					transition: all 0.3s ease;
-				}
-				
-				.action-button:hover {
-					transform: scale(1.1);
-				}
-				
-				.delete-confirm {
-					animation: shake 0.5s ease-in-out;
-				}
-				
-				@keyframes shake {
-					0%, 100% { transform: translateX(0); }
-					25% { transform: translateX(-5px); }
-					75% { transform: translateX(5px); }
-				}
-			`,
+			// Note: Page-specific CSS is now automatically loaded via loadPageCSS
 		}, nil
 	})
 }

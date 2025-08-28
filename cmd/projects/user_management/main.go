@@ -11,22 +11,27 @@ import (
 )
 
 func main() {
-	// 1. Setup registration context
+	// 1. Initialize templates first
+	if err := handlers.InitializeTemplates(); err != nil {
+		panic(fmt.Sprintf("Failed to initialize templates: %v", err))
+	}
+
+	// 2. Setup registration context
 	regCtx := lokstra.NewGlobalRegistrationContext()
 
-	// 2. Register handlers
+	// 3. Register handlers
 	registerComponents(regCtx)
 
-	// 3. Load configuration
+	// 4. Load configuration
 	configPath := "config/"
 	if len(os.Args) > 1 {
 		configPath = os.Args[1]
 	}
 
-	// 4. Create server from config
+	// 5. Create server from config
 	server := newServerFromConfig(regCtx, configPath)
 
-	// 5. Start server and wait for shutdown signal
+	// 6. Start server and wait for shutdown signal
 	server.StartAndWaitForShutdown(5 * time.Second)
 }
 

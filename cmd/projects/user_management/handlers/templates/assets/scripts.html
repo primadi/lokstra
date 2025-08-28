@@ -1,0 +1,293 @@
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+    }
+</script>
+<script src="https://unpkg.com/htmx.org@1.9.0"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<!-- HTMX Best Practice Loading Indicator -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // HTMX Best Practice: Use CSS-based indicators with event listeners
+    const loadingIndicator = document.getElementById('loading-indicator');
+    
+    // Simple state tracking
+    let activeRequests = 0;
+    
+    function showLoading() {
+        activeRequests++;
+        if (loadingIndicator) {
+            loadingIndicator.classList.add('htmx-request');
+        }
+    }
+    
+    function hideLoading() {
+        activeRequests = Math.max(0, activeRequests - 1);
+        if (activeRequests === 0 && loadingIndicator) {
+            loadingIndicator.classList.remove('htmx-request');
+        }
+    }
+    
+    // HTMX Standard Event Listeners
+    document.body.addEventListener('htmx:beforeRequest', function(evt) {
+        showLoading();
+    });
+    
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        hideLoading();
+    });
+    
+    document.body.addEventListener('htmx:responseError', function(evt) {
+        hideLoading();
+    });
+    
+    document.body.addEventListener('htmx:sendError', function(evt) {
+        hideLoading();
+    });
+    
+    // Handle browser navigation
+    window.addEventListener('popstate', function() {
+        activeRequests = 0;
+        if (loadingIndicator) {
+            loadingIndicator.classList.remove('htmx-request');
+        }
+    });
+    
+    // Handle page visibility
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            activeRequests = 0;
+            if (loadingIndicator) {
+                loadingIndicator.classList.remove('htmx-request');
+            }
+        }
+    });
+    
+    // Safety cleanup every 5 seconds
+    setInterval(() => {
+        if (activeRequests > 0) {
+            activeRequests = 0;
+            if (loadingIndicator) {
+                loadingIndicator.classList.remove('htmx-request');
+            }
+        }
+    }, 5000);
+    
+    // ENHANCED UX: Active Menu Management 
+    function initializeEnhancedNavigation() {
+        let navLinks = document.querySelectorAll('.sidebar-nav-link');
+        let menuUpdateTimeout = null;
+        
+        // Function to check if navLinks are still valid in DOM
+        function validateNavLinks() {
+            let validCount = 0;
+            navLinks.forEach((link) => {
+                if (document.contains(link)) validCount++;
+            });
+            return validCount === navLinks.length;
+        }
+        
+        function updateActiveMenu() {
+            if (menuUpdateTimeout) {
+                clearTimeout(menuUpdateTimeout);
+            }
+            
+            menuUpdateTimeout = setTimeout(() => {
+                // Check if navLinks are still valid
+                const isValid = validateNavLinks();
+                if (!isValid) {
+                    // Re-query links if they're stale
+                    navLinks = document.querySelectorAll('.sidebar-nav-link');
+                }
+                
+                const currentPath = window.location.pathname;
+                
+                // Clear all active states
+                navLinks.forEach(link => {
+                    link.classList.remove('bg-blue-600', 'text-white', 'active', 'bg-gray-700');
+                    link.classList.add('text-gray-300');
+                    link.style.removeProperty('background-color');
+                    link.style.removeProperty('color');
+                });
+                
+                // Find best matching link
+                let bestMatch = null;
+                let bestMatchLength = 0;
+                
+                navLinks.forEach((link) => {
+                    try {
+                        const linkPath = new URL(link.href, window.location.origin).pathname;
+                        
+                        if (linkPath === currentPath) {
+                            if (linkPath.length > bestMatchLength) {
+                                bestMatch = link;
+                                bestMatchLength = linkPath.length;
+                            }
+                        } else if (currentPath.startsWith(linkPath) && linkPath !== '/' && linkPath.length > 1) {
+                            if (linkPath.length > bestMatchLength) {
+                                bestMatch = link;
+                                bestMatchLength = linkPath.length;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Invalid link URL:', link.href, e);
+                    }
+                });
+                
+                // Set active state
+                if (bestMatch) {
+                    setActiveMenu(bestMatch);
+                }
+                
+                menuUpdateTimeout = null;
+            }, 50);
+        }
+        
+        function setActiveMenu(menuElement) {
+            // Clean all others first
+            navLinks.forEach(link => {
+                if (link !== menuElement) {
+                    link.classList.remove('bg-blue-600', 'text-white', 'active', 'bg-gray-700');
+                    link.classList.add('text-gray-300');
+                    link.style.removeProperty('background-color');
+                    link.style.removeProperty('color');
+                }
+            });
+            
+            // Set active styling
+            menuElement.classList.remove('text-gray-300', 'text-gray-400', 'bg-gray-700');
+            menuElement.classList.add('bg-blue-600', 'text-white', 'active');
+            menuElement.style.backgroundColor = 'rgb(37 99 235)';
+            menuElement.style.color = 'rgb(255 255 255)';
+        }
+        
+        // Set initial active state
+        updateActiveMenu();
+        
+        // Handle navigation clicks
+        navLinks.forEach((link) => {
+            link.addEventListener('click', function(e) {
+                setActiveMenu(this);
+            });
+        });
+        
+        // Handle HTMX events
+        document.addEventListener('htmx:afterRequest', function(evt) {
+            setTimeout(updateActiveMenu, 100);
+        });
+        
+        // Handle browser navigation
+        window.addEventListener('popstate', function(evt) {
+            setTimeout(updateActiveMenu, 100);
+        });
+        
+        document.addEventListener('htmx:historyRestore', function(evt) {
+            setTimeout(updateActiveMenu, 100);
+        });
+    }
+    
+    // Initialize navigation
+    initializeEnhancedNavigation();
+});
+</script>
+
+<!-- HTMX Best Practice CSS - Simple and Reliable -->
+<style>
+    /* HTMX Standard Loading Indicator */
+    #loading-indicator {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        width: 100%;
+        height: 4px;
+        background-color: rgb(17 24 39); /* bg-gray-900 */
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Show when HTMX request is active */
+    #loading-indicator.htmx-request {
+        opacity: 1;
+    }
+    
+    #loading-indicator div {
+        height: 100%;
+        background: linear-gradient(90deg, 
+            rgb(59 130 246), /* blue-500 */
+            rgb(147 197 253), /* blue-300 */
+            rgb(37 99 235),  /* blue-600 */
+            rgb(29 78 216)   /* blue-700 */
+        );
+        background-size: 300% 100%;
+        animation: progress 2s infinite;
+        transform: translateX(-100%);
+        transition: transform 0.5s ease-out;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+    
+    /* Progress animation */
+    #loading-indicator.htmx-request div {
+        transform: translateX(100%);
+    }
+    
+    @keyframes progress {
+        0% { 
+            background-position: -300% 0; 
+        }
+        50% {
+            background-position: 0% 0;
+        }
+        100% { 
+            background-position: 300% 0; 
+        }
+    }
+    
+    /* Enhanced Navigation Styles */
+    .sidebar-nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        color: rgb(209 213 219); /* text-gray-300 */
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    
+    .sidebar-nav-link:hover {
+        background-color: rgb(55 65 81); /* bg-gray-700 */
+        color: rgb(243 244 246); /* text-gray-100 */
+    }
+    
+    .sidebar-nav-link.active,
+    .sidebar-nav-link.bg-blue-600 {
+        background-color: rgb(37 99 235) !important; /* bg-blue-600 */
+        color: rgb(255 255 255) !important; /* text-white */
+    }
+    
+    .sidebar-nav-link.active:hover,
+    .sidebar-nav-link.bg-blue-600:hover {
+        background-color: rgb(29 78 216) !important; /* bg-blue-700 */
+    }
+</style>
+
+{{range .MainPageScripts}}
+<script>
+// Embedded Script: {{.Name}}
+{{.Content | safeJS}}
+</script>
+{{end}}
+
+{{range .ExternalScripts}}
+<script src="{{.}}"></script>
+{{end}}
+
+{{range .EmbeddedScripts}}
+<script>
+// Embedded Script: {{.Name}}
+{{.Content | safeJS}}
+</script>
+{{end}}

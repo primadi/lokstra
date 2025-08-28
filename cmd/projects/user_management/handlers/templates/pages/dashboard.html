@@ -1,0 +1,38 @@
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-100">Total Users</h3>
+        <p class="text-3xl font-bold text-blue-400 mt-2" id="total-users">{{.TotalUsers}}</p>
+    </div>
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-100">Active Users</h3>
+        <p class="text-3xl font-bold text-green-400 mt-2" id="active-users">{{.ActiveUsers}}</p>
+    </div>
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-100">Inactive Users</h3>
+        <p class="text-3xl font-bold text-red-400 mt-2" id="inactive-users">{{.InactiveUsers}}</p>
+    </div>
+</div>
+
+<div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+    <div class="p-6 border-b border-gray-700">
+        <h2 class="text-xl font-bold text-gray-100">Recent Users</h2>
+    </div>
+    <div class="p-6">
+        <div class="space-y-3">
+            {{range .RecentUsers}}
+            <div class="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 {{.AvatarColor}} rounded-full flex items-center justify-center">
+                        <span class="text-white text-sm font-medium">{{.Initial}}</span>
+                    </div>
+                    <div>
+                        <p class="text-gray-100 font-medium">{{.Username}}</p>
+                        <p class="text-gray-400 text-sm">{{.Email}}</p>
+                    </div>
+                </div>
+                <span class="px-2 py-1 text-xs font-semibold rounded-full {{.StatusColor}}">{{.Status}}</span>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>

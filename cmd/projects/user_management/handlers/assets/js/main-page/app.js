@@ -4,8 +4,8 @@
 document.addEventListener("DOMContentLoaded", function () {
   console.log("🚀 Initializing User Management Application...");
 
-  // Initialize navigation system
-  initializeNavigation();
+  // Navigation system is now initialized in scripts.html
+  // No need to call it here as it's already handled
 
   console.log("✅ User Management Application initialized successfully");
 });

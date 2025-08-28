@@ -11,22 +11,8 @@ import (
 //go:embed js/user-form-validation.js
 var userFormValidationJS string
 
-//go:embed js/table-enhancements.js
-var tableEnhancementsJS string
-
-//go:embed js/navigation-enhancements.js
-var navigationEnhancementsJS string
-
-// Main page JavaScript components
-//
-//go:embed js/main-page/navigation.js
-var mainPageNavigationJS string
-
 //go:embed js/main-page/sidebar.js
 var mainPageSidebarJS string
-
-//go:embed js/main-page/emergency-cleanup.js
-var mainPageEmergencyCleanupJS string
 
 //go:embed js/main-page/app.js
 var mainPageAppJS string
@@ -38,13 +24,9 @@ var mainLayoutCSS string
 
 // JavaScript registry for easy access
 var EmbeddedScripts = map[string]string{
-	"user-form-validation":        userFormValidationJS,
-	"table-enhancements":          tableEnhancementsJS,
-	"navigation-enhancements":     navigationEnhancementsJS,
-	"main-page-navigation":        mainPageNavigationJS,
-	"main-page-sidebar":           mainPageSidebarJS,
-	"main-page-emergency-cleanup": mainPageEmergencyCleanupJS,
-	"main-page-app":               mainPageAppJS,
+	"user-form-validation": userFormValidationJS,
+	"main-page-sidebar":    mainPageSidebarJS,
+	"main-page-app":        mainPageAppJS,
 }
 
 // CSS registry for easy access
