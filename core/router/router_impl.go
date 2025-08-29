@@ -25,6 +25,17 @@ type RouterImpl struct {
 	r_engine serviceapi.RouterEngine
 }
 
+// RawHandleStripPrefix implements Router.
+func (r *RouterImpl) RawHandleStripPrefix(prefix string, handler http.Handler) Router {
+	return r.RawHandle(prefix, http.StripPrefix(prefix, handler))
+}
+
+// RawHandle implements Router.
+func (r *RouterImpl) RawHandle(prefix string, handler http.Handler) Router {
+	r.r_engine.RawHandle(prefix, handler)
+	return r
+}
+
 func NewListener(ctx registration.Context, config map[string]any) serviceapi.HttpListener {
 	return NewListenerWithEngine(ctx, "", config)
 }
@@ -175,6 +186,12 @@ func (r *RouterImpl) MountSPA(prefix string, fallbackFile string) Router {
 // MountStatic implements Router.
 func (r *RouterImpl) MountStatic(prefix string, folder http.Dir) Router {
 	r.r_engine.ServeStatic(prefix, folder)
+	return r
+}
+
+// MountStaticWithFallback implements Router.
+func (r *RouterImpl) MountStaticWithFallback(prefix string, sources ...any) Router {
+	r.r_engine.ServeStaticWithFallback(prefix, sources...)
 	return r
 }
 

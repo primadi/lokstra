@@ -17,6 +17,16 @@ import (
 // Mock implementations for testing
 type MockRegistrationContext struct{}
 
+// GetRawHandler implements registration.Context.
+func (m *MockRegistrationContext) GetRawHandler(name string) *registration.RawHandlerRegister {
+	panic("unimplemented")
+}
+
+// RegisterRawHandler implements registration.Context.
+func (m *MockRegistrationContext) RegisterRawHandler(name string, handler request.RawHandlerFunc) {
+	panic("unimplemented")
+}
+
 // RegisterMiddlewareFactoryWithPriority implements registration.Context.
 func (m *MockRegistrationContext) RegisterMiddlewareFactoryWithPriority(name string, middlewareFactory midware.Factory, priority int) error {
 	return nil
@@ -131,8 +141,23 @@ func (m *MockRouterEngine) HandleMethod(method request.HTTPMethod, path string, 
 	m.routes[string(method)][path] = handler
 }
 
+// RawHandle implements serviceapi.RouterEngine.
+func (m *MockRouterEngine) RawHandle(pattern string, handler http.Handler) {
+	panic("unimplemented")
+}
+
+// RawHandleFunc implements serviceapi.RouterEngine.
+func (m *MockRouterEngine) RawHandleFunc(pattern string, handlerFunc http.HandlerFunc) {
+	panic("unimplemented")
+}
+
 func (m *MockRouterEngine) ServeStatic(prefix string, folder http.Dir) {
 	m.staticMounts[prefix] = folder
+}
+
+// ServeStaticWithFallback implements serviceapi.RouterEngine.
+func (m *MockRouterEngine) ServeStaticWithFallback(prefix string, sources ...any) {
+	panic("unimplemented")
 }
 
 func (m *MockRouterEngine) ServeSPA(prefix string, fallbackFile string) {

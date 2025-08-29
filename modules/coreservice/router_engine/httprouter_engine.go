@@ -29,34 +29,43 @@ type HttpRouterEngine struct {
 	customRoutes map[string]map[string]http.Handler // method -> path -> handler
 }
 
-// ServeReverseProxy implements RouterEngine.
-func (h *HttpRouterEngine) ServeReverseProxy(prefix string, handler http.HandlerFunc) {
+func (h *HttpRouterEngine) getServeMux() serviceapi.RouterEngine {
 	if h.sm == nil {
 		sm, _ := NewServeMuxEngine(nil)
 		h.sm = sm.(serviceapi.RouterEngine)
 		h.hr.NotFound = h.sm
 	}
-	h.sm.ServeReverseProxy(prefix, handler)
+	return h.sm
+}
+
+// ServeReverseProxy implements RouterEngine.
+func (h *HttpRouterEngine) ServeReverseProxy(prefix string, handler http.HandlerFunc) {
+	h.getServeMux().ServeReverseProxy(prefix, handler)
 }
 
 // ServeSPA implements RouterEngine.
 func (h *HttpRouterEngine) ServeSPA(prefix string, indexFile string) {
-	if h.sm == nil {
-		sm, _ := NewServeMuxEngine(nil)
-		h.sm = sm.(serviceapi.RouterEngine)
-		h.hr.NotFound = h.sm
-	}
-	h.sm.ServeSPA(prefix, indexFile)
+	h.getServeMux().ServeSPA(prefix, indexFile)
+}
+
+// RawHandle implements RouterEngine.
+func (h *HttpRouterEngine) RawHandle(pattern string, handler http.Handler) {
+	h.getServeMux().RawHandle(pattern, handler)
+}
+
+// RawHandleFunc implements RouterEngine.
+func (h *HttpRouterEngine) RawHandleFunc(pattern string, handlerFunc http.HandlerFunc) {
+	h.getServeMux().RawHandleFunc(pattern, handlerFunc)
 }
 
 // ServeStatic implements RouterEngine.
 func (h *HttpRouterEngine) ServeStatic(prefix string, folder http.Dir) {
-	if h.sm == nil {
-		sm, _ := NewServeMuxEngine(nil)
-		h.sm = sm.(serviceapi.RouterEngine)
-		h.hr.NotFound = h.sm
-	}
-	h.sm.ServeStatic(prefix, folder)
+	h.getServeMux().ServeStatic(prefix, folder)
+}
+
+// ServeStaticWithFallback implements RouterEngine.
+func (h *HttpRouterEngine) ServeStaticWithFallback(prefix string, sources ...any) {
+	h.getServeMux().ServeStaticWithFallback(prefix, sources...)
 }
 
 // ServeHTTP implements RouterEngine.

@@ -5,12 +5,23 @@ import (
 
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 )
 
 // mockRegistrationContext implements registration.RegistrationContext for testing
 type mockRegistrationContext struct {
 	factories map[string]func(config any) (service.Service, error)
+}
+
+// GetRawHandler implements registration.Context.
+func (m *mockRegistrationContext) GetRawHandler(name string) *registration.RawHandlerRegister {
+	panic("unimplemented")
+}
+
+// RegisterRawHandler implements registration.Context.
+func (m *mockRegistrationContext) RegisterRawHandler(name string, handler request.RawHandlerFunc) {
+	panic("unimplemented")
 }
 
 // Implement all required methods for registration.RegistrationContext
@@ -94,6 +105,8 @@ func (m *mockRegistrationContext) RegisterModule(getModuleFunc func() registrati
 func (m *mockRegistrationContext) NewPermissionContextFromConfig(settings map[string]any, permission map[string]any) registration.Context {
 	return m
 }
+
+var _ registration.Context = (*mockRegistrationContext)(nil)
 
 func TestModule_Register(t *testing.T) {
 	module := GetModule()

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/web_render"
 )
 
 // Shared HTTP client for internal API calls to prevent connection buildup
@@ -44,9 +45,15 @@ func getSidebarHTML(currentPage string) string {
 
 // Modern Handlers using PageHandler - consistent behavior across full page and HTMX loads
 
+// Global mainLayout untuk user_management
+var mainLayout = web_render.NewMainLayoutPageWithLoader(
+	"base.html",
+	web_render.NewTemplateLoader("handlers/templates"),
+)
+
 // CreateDashboardHandler creates a handler for dashboard that works consistently with both full page and HTMX requests
 func CreateDashboardHandler() lokstra.HandlerFunc {
-	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
+	return func(c *lokstra.Context) error {
 		// Prepare dashboard data
 		dashboardData := struct {
 			TotalUsers    int
@@ -99,15 +106,19 @@ func CreateDashboardHandler() lokstra.HandlerFunc {
 			},
 		}
 
-		// Render content using template
-		content := renderPageContent("dashboard", dashboardData)
+		// Gunakan global mainLayout
+		pageContent := mainLayout.RenderPage(
+			c,
+			"dashboard", // template name
+			dashboardData,
+			&web_render.PageOptions{
+				Title:       "Dashboard",
+				CurrentPage: "dashboard",
+			},
+		)
 
-		return &PageContent{
-			HTML:        content,
-			Title:       "Dashboard",
-			CurrentPage: "dashboard",
-		}, nil
-	})
+		return c.HTMX(200, pageContent.HTML)
+	}
 }
 
 // CreateUsersHandler creates a handler for users page with page-specific assets that work consistently in both full page and HTMX requests

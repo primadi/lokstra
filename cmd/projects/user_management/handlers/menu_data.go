@@ -1,31 +1,15 @@
 package handlers
 
-// MenuItem represents a single menu item in the sidebar
-type MenuItem struct {
-	ID         string     `json:"id"` // id unik untuk menu
-	Title      string     `json:"title"`
-	URL        string     `json:"url"`
-	Icon       string     `json:"icon"`
-	IconRule   bool       `json:"icon_rule"`
-	CSSClass   string     `json:"css_class"`
-	IsDropdown bool       `json:"is_dropdown"`
-	IsOpen     bool       `json:"is_open"`
-	SubItems   []MenuItem `json:"sub_items,omitempty"`
-}
-
-// SidebarData contains all data needed for sidebar rendering
-type SidebarData struct {
-	MenuItems []MenuItem `json:"menu_items"`
-}
+import "github.com/primadi/lokstra/web_render"
 
 // getMenuData returns the menu configuration based on current page
-func getMenuData(currentPage string) SidebarData {
+func getMenuData(currentPage string) web_render.SidebarComponentData {
 	// Base CSS classes
 	defaultClass := "flex items-center p-3 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
 	activeClass := "flex items-center p-3 text-gray-300 rounded-lg bg-gray-700 border border-gray-600"
 	activeSubClass := "bg-gray-700"
 
-	menuItems := []MenuItem{
+	menuItems := []web_render.SidebarMenuItem{
 		// Dashboard - Heroicons: squares-2x2
 		{
 			ID:         "menu-dashboard",
@@ -46,7 +30,7 @@ func getMenuData(currentPage string) SidebarData {
 			CSSClass:   "",
 			IsDropdown: true,
 			IsOpen:     false,
-			SubItems: []MenuItem{
+			SubItems: []web_render.SidebarMenuItem{
 				{
 					ID:       "menu-all-users",
 					Title:    "All Users",
@@ -83,7 +67,7 @@ func getMenuData(currentPage string) SidebarData {
 			CSSClass:   "",
 			IsDropdown: true,
 			IsOpen:     false,
-			SubItems: []MenuItem{
+			SubItems: []web_render.SidebarMenuItem{
 				{
 					ID:       "menu-user-reports",
 					Title:    "User Reports",
@@ -169,7 +153,5 @@ func getMenuData(currentPage string) SidebarData {
 		}
 	}
 
-	return SidebarData{
-		MenuItems: menuItems,
-	}
+	return web_render.NewSidebarComponent(menuItems)
 }

@@ -15,7 +15,15 @@ type RouterEngine interface {
 	HandleMethod(method request.HTTPMethod, path string, handler http.Handler)
 
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
+
+	RawHandle(pattern string, handler http.Handler)
+	RawHandleFunc(pattern string, handlerFunc http.HandlerFunc)
+
 	ServeStatic(prefix string, folder http.Dir)
+
+	// Sources can be http.Dir, fs.FS, or embed.FS
+	ServeStaticWithFallback(prefix string, sources ...any)
+
 	ServeSPA(prefix string, indexFile string)
 	ServeReverseProxy(prefix string, handler http.HandlerFunc)
 }

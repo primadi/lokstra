@@ -1,0 +1,17 @@
+/* Framework disk assets style.css */
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f0f0f0;
+  margin: 0;
+  padding: 20px;
+}
+
+.framework-disk {
+  color: #333;
+  border: 2px solid #007acc;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #e7f3ff;
+}
+
+/* This CSS is from framework disk assets (medium priority) */

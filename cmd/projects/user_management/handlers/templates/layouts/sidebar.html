@@ -1,3 +1,4 @@
+{{ define "sidebar.html" }}
 <!-- Sidebar -->
 <div class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 border-r border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
      :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }">
@@ -32,12 +33,12 @@
                 <ul x-show="menuOpen" x-transition class="ml-6 mt-2 space-y-1">
                     {{range .SubItems}}
                     <li>
-                        <a href="{{.URL}}" 
-                           hx-get="{{.URL}}"
-                           hx-target="#main-content"
-                           hx-swap="innerHTML"
-                           hx-push-url="{{.URL}}"
-                           class="sidebar-nav-link flex items-center p-2 text-gray-400 rounded hover:bg-gray-700 hover:text-gray-300 transition-colors {{.CSSClass}}">>
+                                <a id="{{.ID}}" href="{{.URL}}" 
+                                    hx-get="{{.URL}}"
+                                    hx-target="#main-content"
+                                    hx-swap="innerHTML"
+                                    hx-push-url="{{.URL}}"
+                                    class="sidebar-nav-link flex items-center p-2 text-gray-400 rounded hover:bg-gray-700 hover:text-gray-300 transition-colors {{.CSSClass}}">>
                             <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                 <path {{if .IconRule}}fill-rule="evenodd" {{end}}d="{{.Icon}}"{{if .IconRule}} clip-rule="evenodd"{{end}}></path>
                             </svg>
@@ -50,12 +51,12 @@
             {{else}}
             <!-- Single Menu Item -->
             <li>
-                <a href="{{.URL}}" 
-                   hx-get="{{.URL}}"
-                   hx-target="#main-content"
-                   hx-swap="innerHTML"
-                   hx-push-url="{{.URL}}"
-                   class="sidebar-nav-link {{.CSSClass}}">>
+                     <a id="{{.ID}}" href="{{.URL}}" 
+                         hx-get="{{.URL}}"
+                         hx-target="#main-content"
+                         hx-swap="innerHTML"
+                         hx-push-url="{{.URL}}"
+                         class="sidebar-nav-link {{.CSSClass}}">>
                     <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
                         <path {{if .IconRule}}fill-rule="evenodd" {{end}}d="{{.Icon}}"{{if .IconRule}} clip-rule="evenodd"{{end}}></path>
                     </svg>
@@ -67,3 +68,4 @@
         </ul>
     </nav>
 </div>
+{{ end }}

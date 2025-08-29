@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -126,6 +127,16 @@ func (m *ServeMuxEngine) ServeSPA(prefix string, indexFile string) {
 	}
 }
 
+// RawHandle implements RouterEngine.
+func (m *ServeMuxEngine) RawHandle(pattern string, handler http.Handler) {
+	m.mux.Handle(pattern, handler)
+}
+
+// RawHandleFunc implements RouterEngine.
+func (m *ServeMuxEngine) RawHandleFunc(pattern string, handlerFunc http.HandlerFunc) {
+	m.mux.HandleFunc(pattern, handlerFunc)
+}
+
 // ServeStatic implements RouterEngine.
 func (m *ServeMuxEngine) ServeStatic(prefix string, folder http.Dir) {
 	cleanPrefixStr := cleanPrefix(prefix)
@@ -136,6 +147,28 @@ func (m *ServeMuxEngine) ServeStatic(prefix string, folder http.Dir) {
 		m.mux.Handle("/", fs)
 	} else {
 		m.mux.Handle(cleanPrefixStr+"/", fs)
+	}
+}
+
+// ServeStaticWithFallback implements RouterEngine.
+func (m *ServeMuxEngine) ServeStaticWithFallback(prefix string, sources ...any) {
+	cleanPrefixStr := cleanPrefix(prefix)
+
+	staticServe, err := router.NewStaticFallback(sources...)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	handler := staticServe.Handler()
+	// Strip prefix before passing to fallback handler
+	if cleanPrefixStr != "/" {
+		handler = http.StripPrefix(cleanPrefixStr, handler)
+	}
+
+	if cleanPrefixStr == "/" {
+		m.mux.Handle("/", handler)
+	} else {
+		m.mux.Handle(cleanPrefixStr+"/", handler)
 	}
 }
 

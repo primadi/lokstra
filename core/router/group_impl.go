@@ -19,6 +19,23 @@ type GroupImpl struct {
 	mwLocked bool
 }
 
+// RawHandleStripPrefix implements Router.
+func (g *GroupImpl) RawHandleStripPrefix(prefix string, handler http.Handler) Router {
+	return g.RawHandle(prefix, http.StripPrefix(prefix, handler))
+}
+
+// RawHandle implements Router.
+func (g *GroupImpl) RawHandle(prefix string, handler http.Handler) Router {
+	g.parent.r_engine.RawHandle(prefix, handler)
+	return g
+}
+
+// MountStaticWithFallback implements Router.
+func (g *GroupImpl) MountStaticWithFallback(prefix string, sources ...any) Router {
+	g.parent.r_engine.ServeStaticWithFallback(prefix, sources...)
+	return g
+}
+
 // GetMeta implements Router.
 func (g *GroupImpl) GetMeta() *RouterMeta {
 	return g.meta

@@ -21,6 +21,8 @@ type mwMeta struct {
 }
 
 var handlers = make(map[string]*request.HandlerRegister)
+var rawHandlers = make(map[string]*request.RawHandlerRegister)
+
 var serviceFactories = make(map[string]service.ServiceFactory)
 var serviceInstances = make(map[string]service.Service)
 var mwMetas = make(map[string]*mwMeta)
@@ -81,6 +83,11 @@ func (c *ContextImpl) RegisterModule(getModuleFunc func() Module) error {
 // GetHandler implements Context.
 func (c *ContextImpl) GetHandler(name string) *request.HandlerRegister {
 	return handlers[name]
+}
+
+// GetRawHandler implements Context.
+func (c *ContextImpl) GetRawHandler(name string) *request.RawHandlerRegister {
+	return rawHandlers[name]
 }
 
 // GetService implements Context.
@@ -205,6 +212,27 @@ func (c *ContextImpl) RegisterHandler(name string, handler any) {
 	}
 
 	handlers[name] = info
+}
+
+// RegisterRawHandler implements Context.
+func (c *ContextImpl) RegisterRawHandler(name string, handlerFunc request.RawHandlerFunc) {
+	if !c.permission.IsAllowedRegisterHandler() {
+		panic("registering handler '" + name + "' is not allowed")
+	}
+
+	if handlerFunc == nil {
+		panic("handler cannot be nil")
+	}
+	if name == "" {
+		panic("handler name cannot be empty")
+	}
+
+	info := &request.RawHandlerRegister{
+		Name:        name,
+		HandlerFunc: handlerFunc,
+	}
+
+	rawHandlers[name] = info
 }
 
 // RegisterService implements Context.

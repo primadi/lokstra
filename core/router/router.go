@@ -24,7 +24,13 @@ type Router interface {
 	WithOverrideMiddleware(enable bool) Router
 	WithPrefix(prefix string) Router
 
+	RawHandle(prefix string, handler http.Handler) Router
+	RawHandleStripPrefix(prefix string, handler http.Handler) Router
+
 	MountStatic(prefix string, folder http.Dir) Router
+	// sources can be http.Dir, string, or fs.FS
+	MountStaticWithFallback(prefix string, sources ...any) Router
+
 	MountSPA(prefix string, fallbackFile string) Router
 	MountReverseProxy(prefix string, target string, overrideMiddleware bool, mw ...any) Router
 	MountRpcService(path string, service any, overrideMiddleware bool, mw ...any) Router

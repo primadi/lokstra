@@ -10,6 +10,7 @@ import (
 )
 
 type HandlerRegister = request.HandlerRegister
+type RawHandlerRegister = request.RawHandlerRegister
 
 var ErrServiceNotFound = errors.New("service not found")
 var ErrServiceTypeInvalid = errors.New("service type is invalid")
@@ -40,6 +41,9 @@ type Context interface {
 	// Handler registration and retrieval
 	GetHandler(name string) *HandlerRegister
 	RegisterHandler(name string, handler any)
+
+	GetRawHandler(name string) *RawHandlerRegister
+	RegisterRawHandler(name string, handler request.RawHandlerFunc)
 
 	// Middleware registration and retrieval
 
