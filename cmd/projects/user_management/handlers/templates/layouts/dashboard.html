@@ -1,4 +1,4 @@
-{{/* dashboard.html for user management */}}
+{{ define "dashboard.html" }}
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
         <h3 class="text-lg font-semibold text-gray-100">Total Users</h3>
@@ -79,9 +79,9 @@
     </button>
     
     <button class="nav-page bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-lg transition-colors"
-            hx-get="/users/create" 
+            hx-get="/users/new" 
             hx-target="#main-content"
-            hx-push-url="/users/create"
+            hx-push-url="/users/new"
             hx-indicator="#loading-indicator">
         <div class="text-center">
             <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,3 +91,4 @@
         </div>
     </button>
 </div>
+{{ end }}

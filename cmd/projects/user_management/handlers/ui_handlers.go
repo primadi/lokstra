@@ -53,72 +53,38 @@ var mainLayout = web_render.NewMainLayoutPageWithLoader(
 
 // CreateDashboardHandler creates a handler for dashboard that works consistently with both full page and HTMX requests
 func CreateDashboardHandler() lokstra.HandlerFunc {
-	return func(c *lokstra.Context) error {
-		// Prepare dashboard data
-		dashboardData := struct {
-			TotalUsers    int
-			ActiveUsers   int
-			InactiveUsers int
-			RecentUsers   []struct {
-				Username    string
-				Email       string
-				Initial     string
-				AvatarColor string
-				Status      string
-				StatusColor string
-			}
-		}{
-			TotalUsers:    142,
-			ActiveUsers:   128,
-			InactiveUsers: 14,
-			RecentUsers: []struct {
-				Username    string
-				Email       string
-				Initial     string
-				AvatarColor string
-				Status      string
-				StatusColor string
-			}{
-				{
-					Username:    "admin",
-					Email:       "admin@example.com",
-					Initial:     "A",
-					AvatarColor: "bg-blue-600",
-					Status:      "Active",
-					StatusColor: "bg-green-600 text-green-100",
-				},
-				{
-					Username:    "user1",
-					Email:       "user1@example.com",
-					Initial:     "U",
-					AvatarColor: "bg-green-600",
-					Status:      "Active",
-					StatusColor: "bg-green-600 text-green-100",
-				},
-				{
-					Username:    "user2",
-					Email:       "user2@example.com",
-					Initial:     "U",
-					AvatarColor: "bg-yellow-600",
-					Status:      "Inactive",
-					StatusColor: "bg-red-600 text-red-100",
-				},
-			},
-		}
+	return PageHandler(func(c *lokstra.Context) (*PageContent, error) {
+		// Simple test content first
+		content := `<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-100">Total Users</h3>
+        <p class="text-3xl font-bold text-blue-400 mt-2">142</p>
+    </div>
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-100">Active Users</h3>
+        <p class="text-3xl font-bold text-green-400 mt-2">128</p>
+    </div>
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-100">Inactive Users</h3>
+        <p class="text-3xl font-bold text-red-400 mt-2">14</p>
+    </div>
+</div>
 
-		// Gunakan global mainLayout
-		pageContent := mainLayout.RenderPage(
-			c,
-			"dashboard", // template name
-			dashboardData,
-			&web_render.PageOptions{
-				Title:       "Dashboard",
-				CurrentPage: "dashboard",
-			},
-		)
+<div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+    <div class="p-6 border-b border-gray-700">
+        <h2 class="text-xl font-bold text-gray-100">Test Dashboard</h2>
+    </div>
+    <div class="p-6">
+        <p class="text-gray-300">Dashboard is working with static content!</p>
+    </div>
+</div>`
 
-		return c.HTMX(200, pageContent.HTML)
-	}
+		return &PageContent{
+			HTML:        content,
+			Title:       "Dashboard",
+			CurrentPage: "dashboard",
+		}, nil
+	})
 }
 
 // CreateUsersHandler creates a handler for users page with page-specific assets that work consistently in both full page and HTMX requests
