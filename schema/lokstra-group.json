@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://lokstra.dev/schema/group-include.json",
-  "title": "Lokstra Group Include Configuration Schema",
-  "description": "JSON Schema for Lokstra group include files loaded via load_from",
+  "$id": "https://lokstra.dev/schema/group.json",
+  "title": "Lokstra Group Configuration Schema",
+  "description": "JSON Schema for Lokstra group configuration files loaded via load_from",
   "type": "object",
   "properties": {
     "routes": {
