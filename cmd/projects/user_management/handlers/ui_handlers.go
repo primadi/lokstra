@@ -618,7 +618,7 @@ func CreateUserSubmitHandler() lokstra.HandlerFunc {
 
 		// Validate required fields
 		if username == "" || email == "" || fullName == "" || password == "" {
-			return c.HTML(200, `<div class="bg-red-600 text-white p-3 rounded mb-4">All fields are required</div>`)
+			return c.HTML(`<div class="bg-red-600 text-white p-3 rounded mb-4">All fields are required</div>`)
 		}
 
 		// Create request payload
@@ -639,20 +639,20 @@ func CreateUserSubmitHandler() lokstra.HandlerFunc {
 		// Make API request
 		req, err := http.NewRequestWithContext(ctx, "POST", "http://localhost:8081/api/v1/users", bytes.NewBuffer(payloadJSON))
 		if err != nil {
-			return c.HTML(200, `<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to create request</div>`)
+			return c.HTML(`<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to create request</div>`)
 		}
 
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := internalAPIClient.Do(req)
 		if err != nil {
-			return c.HTML(200, `<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to call API</div>`)
+			return c.HTML(`<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to call API</div>`)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode == 200 {
 			// Success - redirect to users list with HTMX
-			return c.HTML(200, `
+			return c.HTML(`
 				<div class="bg-green-600 text-white p-3 rounded mb-4">User created successfully!</div>
 				<script>
 					setTimeout(function() {
@@ -662,7 +662,7 @@ func CreateUserSubmitHandler() lokstra.HandlerFunc {
 			`)
 		} else {
 			// Error response
-			return c.HTML(200, `<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to create user. Please check your input.</div>`)
+			return c.HTML(`<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to create user. Please check your input.</div>`)
 		}
 	}
 }
@@ -675,11 +675,11 @@ func UpdateUserSubmitHandler() lokstra.HandlerFunc {
 		err := updateHandler(c)
 
 		if err != nil {
-			return c.HTML(200, `<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to update user: `+err.Error()+`</div>`)
+			return c.HTML(`<div class="bg-red-600 text-white p-3 rounded mb-4">Failed to update user: ` + err.Error() + `</div>`)
 		}
 
 		// Success - redirect to users list with HTMX
-		return c.HTML(200, `
+		return c.HTML(`
 			<div class="bg-green-600 text-white p-3 rounded mb-4">User updated successfully!</div>
 			<script>
 				setTimeout(function() {

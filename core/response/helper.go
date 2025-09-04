@@ -100,13 +100,13 @@ func (r *Response) WriteRaw(contentType string, status int, data []byte) error {
 }
 
 // HTML renders HTML content with 200 status
-func (r *Response) HTML(status int, html string) error {
+func (r *Response) HTML(html string) error {
 	if r.Headers == nil {
 		r.Headers = make(http.Header)
 	}
 	r.Headers.Set("Content-Type", "text/html; charset=utf-8")
-	r.StatusCode = status
-	r.Success = status < 400
+	r.StatusCode = http.StatusOK
+	r.Success = true
 	r.RawData = []byte(html)
 	return nil
 }
