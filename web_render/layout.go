@@ -224,9 +224,9 @@ func PageHandler(contentFunc PageContentFunc, renderTemplate func(*PageContent) 
 		isHTMXRequest := c.GetHeader("HX-Request") == "true"
 		if isHTMXRequest {
 			html := RenderPartialContent(pageContent)
-			return c.HTML(200, html)
+			return c.HTML(html)
 		}
 		fullPageHTML := RenderFullPage(pageContent, renderTemplate)
-		return c.HTML(200, fullPageHTML)
+		return c.HTML(fullPageHTML)
 	}
 }

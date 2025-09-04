@@ -117,11 +117,11 @@ func PageHandler(contentFunc PageContentFunc) lokstra.HandlerFunc {
 		if isHTMXRequest {
 			// Return content WITH page-specific assets for consistency
 			html := RenderPartialContent(pageContent)
-			return c.HTML(200, html)
+			return c.HTML(html)
 		}
 
 		// Return full page for direct access
 		fullPageHTML := RenderFullPage(pageContent)
-		return c.HTML(200, fullPageHTML)
+		return c.HTML(fullPageHTML)
 	}
 }
