@@ -93,7 +93,8 @@ func (h *HttpRouterEngine) HandleMethod(method request.HTTPMethod, path string, 
 		}
 	}()
 
-	h.hr.Handle(methodStr, path, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	convertedPath := ConvertToHttpRouterParamPath(path)
+	h.hr.Handle(methodStr, convertedPath, func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Set path parameters in request context
 		for _, p := range ps {
 			r.SetPathValue(p.Key, p.Value)
