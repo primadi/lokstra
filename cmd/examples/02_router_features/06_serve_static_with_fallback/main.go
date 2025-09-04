@@ -10,6 +10,9 @@ import (
 //go:embed framework_assets/*
 var frameworkAssets embed.FS
 
+//go:embed project/static/*
+var projectStatic embed.FS
+
 // This example demonstrates how to serve static files with fallback in Lokstra:
 // 1. Serving files from multiple sources with fallback priority
 // 2. Project assets override framework assets
@@ -18,20 +21,15 @@ func main() {
 	ctx := lokstra.NewGlobalRegistrationContext()
 	app := lokstra.NewApp(ctx, "static-fallback-app", ":8080")
 
-	// Create sub-filesystem for framework_assets
-	// frameworkSubFS, err := fs.Sub(frameworkAssets, "framework_assets")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
 	// Serve static files with fallback:
 	// 1. First try project/assets (project-specific overrides)
 	// 2. Then try project/static (main project assets)
 	// 3. Finally try frameworkAssets embed.FS (framework default assets)
 	app.MountStaticWithFallback("/static",
 		http.Dir("./project/assets"), // Project overrides (highest priority)
-		http.Dir("./project/static"), // Project assets
-		frameworkAssets,              // Framework default assets (lowest priority)
+		// http.Dir("./project/static"), // Project assets
+		projectStatic,   // Project assets (dengan sub-filesystem)
+		frameworkAssets, // Framework default assets (lowest priority)
 	)
 
 	// Alternative: Using string paths instead of http.Dir

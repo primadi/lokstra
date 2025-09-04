@@ -29,7 +29,7 @@ func NewContext(w http.ResponseWriter, r *http.Request) (*Context, func()) {
 	return &Context{
 		Context:  ctx,
 		Response: resp,
-		Writer:   w,
+		Writer:   response.NewResponseWriterWrapper(w),
 		Request:  req,
 	}, cancel
 }
