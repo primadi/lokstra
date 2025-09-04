@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
@@ -155,7 +154,7 @@ func (r *RouterMeta) handle(method request.HTTPMethod, path string, handler any,
 	}
 
 	r.Routes = append(r.Routes, &RouteMeta{
-		Path:               r.cleanPrefix(path),
+		Path:               path,
 		Method:             method,
 		Handler:            handlerInfo,
 		OverrideMiddleware: overrideMiddleware,
@@ -180,17 +179,6 @@ func (r *RouterMeta) UseMiddleware(middleware any) *RouterMeta {
 
 	r.Middleware = append(r.Middleware, mw)
 	return r
-}
-
-func (r *RouterMeta) cleanPrefix(prefix string) string {
-	if prefix == "/" || prefix == "" {
-		return r.Prefix
-	}
-
-	if r.Prefix == "/" {
-		return "/" + strings.Trim(prefix, "/")
-	}
-	return r.Prefix + "/" + strings.Trim(prefix, "/")
 }
 
 func (r *RouterMeta) MountReverseProxy(prefix string, target string,

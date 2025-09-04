@@ -106,14 +106,14 @@ func (g *GroupImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 // Handle implements Router.
 func (g *GroupImpl) Handle(method request.HTTPMethod, path string, handler any, mw ...any) Router {
 	g.mwLocked = true
-	g.meta.Handle(method, path, handler, mw...)
+	g.meta.Handle(method, g.cleanPrefix(path), handler, mw...)
 	return g
 }
 
 // HandleOverrideMiddleware implements Router.
 func (g *GroupImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string, handler any, mw ...any) Router {
 	g.mwLocked = true
-	g.meta.HandleWithOverrideMiddleware(method, path, handler, mw...)
+	g.meta.HandleWithOverrideMiddleware(method, g.cleanPrefix(path), handler, mw...)
 	return g
 }
 
@@ -132,20 +132,26 @@ func (g *GroupImpl) MountReverseProxy(prefix string, target string,
 
 // MountSPA implements Router.
 func (g *GroupImpl) MountSPA(prefix string, fallbackFile string) Router {
-	g.parent.r_engine.ServeSPA(g.cleanPrefix(prefix), fallbackFile)
+	g.parent.r_engine.ServeSPA(prefix, fallbackFile)
 	return g
 }
 
 // MountStatic implements Router.
 func (g *GroupImpl) MountStatic(prefix string, folder http.Dir) Router {
-	g.parent.r_engine.ServeStatic(g.cleanPrefix(prefix), folder)
+	g.parent.r_engine.ServeStatic(prefix, folder)
 	return g
 }
 
 // MountRpcService implements Router.
 func (g *GroupImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
 	g.mwLocked = true
-	cleanPath := g.cleanPrefix(path) + "/:method"
+
+	cleanPath := g.cleanPrefix(path)
+	if strings.HasSuffix(cleanPath, "/") {
+		cleanPath += ":method"
+	} else {
+		cleanPath += "/:method"
+	}
 
 	rpcMeta := &service.RpcServiceMeta{
 		MethodParam: "method",
@@ -246,8 +252,18 @@ func (g *GroupImpl) cleanPrefix(prefix string) string {
 		return g.meta.Prefix
 	}
 
-	if g.meta.Prefix == "/" {
-		return "/" + strings.Trim(prefix, "/")
+	cleaned := strings.Trim(prefix, "/")
+
+	var result string
+	if strings.HasSuffix(g.meta.Prefix, "/") {
+		result = g.meta.Prefix + cleaned
+	} else {
+		result = g.meta.Prefix + "/" + cleaned
 	}
-	return g.meta.Prefix + "/" + strings.Trim(prefix, "/")
+
+	if strings.HasSuffix(prefix, "/") {
+		result += "/"
+	}
+
+	return result
 }

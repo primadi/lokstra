@@ -23,6 +23,10 @@ func createApp2(ctx lokstra.RegistrationContext, addr string) *lokstra.App {
 		return ctx.Ok("App2 Pong from anonymous handler")
 	})
 
+	app2.Group("/admin").GET("/ping", func(ctx *lokstra.Context) error {
+		return ctx.Ok("App2 Admin Pong")
+	})
+
 	return app2
 }
 
