@@ -152,7 +152,7 @@ func (r *RouterImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 func (r *RouterImpl) Handle(method request.HTTPMethod, path string, handler any,
 	mw ...any) Router {
 	r.mwLocked = true
-	r.meta.Handle(method, path, handler, mw...)
+	r.meta.Handle(method, r.cleanPrefix(path), handler, mw...)
 	return r
 }
 
@@ -160,7 +160,7 @@ func (r *RouterImpl) Handle(method request.HTTPMethod, path string, handler any,
 func (r *RouterImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string,
 	handler any, mw ...any) Router {
 	r.mwLocked = true
-	r.meta.HandleWithOverrideMiddleware(method, path, handler, mw...)
+	r.meta.HandleWithOverrideMiddleware(method, r.cleanPrefix(path), handler, mw...)
 	return r
 }
 
@@ -199,7 +199,13 @@ func (r *RouterImpl) MountStaticWithFallback(prefix string, sources ...any) Rout
 func (r *RouterImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
 	r.mwLocked = true
 
-	cleanPath := r.cleanPrefix(path) + "/:method"
+	cleanPath := r.cleanPrefix(path)
+	if strings.HasSuffix(cleanPath, "/") {
+		cleanPath += ":method"
+	} else {
+		cleanPath += "/:method"
+	}
+
 	rpcMeta := &service.RpcServiceMeta{
 		MethodParam: "method",
 	}
@@ -304,10 +310,20 @@ func (r *RouterImpl) cleanPrefix(prefix string) string {
 		return r.meta.Prefix
 	}
 
-	if r.meta.Prefix == "/" {
-		return "/" + strings.Trim(prefix, "/")
+	cleaned := strings.Trim(prefix, "/")
+
+	var result string
+	if strings.HasSuffix(r.meta.Prefix, "/") {
+		result = r.meta.Prefix + cleaned
+	} else {
+		result = r.meta.Prefix + "/" + cleaned
 	}
-	return r.meta.Prefix + "/" + strings.Trim(prefix, "/")
+
+	if strings.HasSuffix(prefix, "/") {
+		result += "/"
+	}
+
+	return result
 }
 
 func (r *RouterImpl) handleRouteMeta(route *RouteMeta, mwParent []*midware.Execution) {
