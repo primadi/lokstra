@@ -41,7 +41,7 @@ func ConvertToHttpRouterParamPath(path string) string {
 		}
 		return ":" + match[1] // {id} -> :id
 	})
-	if strings.HasSuffix(path, "/") {
+	if path != "/" && strings.HasSuffix(path, "/") {
 		converted += "*filepath"
 	}
 
