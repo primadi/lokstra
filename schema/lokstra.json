@@ -46,11 +46,19 @@
           "description": "Global settings for the server",
           "properties": {
             "log_level": {
-              "type": "string",
-              "enum": ["trace", "debug", "info", "warn", "error", 
-                "fatal", "panic", "${LOG_LEVEL:info}" , 
-                "${ENV:LOG_LEVEL:info}" ],
-              "description": "Global log level"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["trace", "debug", "info", "warn", "error", "fatal", "panic"]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\$\\{[A-Z_][A-Z0-9_]*:(trace|debug|info|warn|error|fatal|panic)\\}$"
+                }
+              ],
+              "default": "info",
+              "description": "Global log level - supports standard levels (trace, debug, info, warn, error, fatal, panic) or environment variable format ${VAR_NAME:default_level}",
+              "examples": ["info", "debug", "${LOG_LEVEL:info}", "${ENV_LOG_LEVEL:warn}", "${APP_LOG_LEVEL:error}"]
             },
             "log_format": {
               "type": "string",
@@ -675,10 +683,19 @@
                 "description": "Logger configuration",
                 "properties": {
                   "level": {
-                    "type": "string",
-                    "description": "Log level",
-                    "enum": ["debug", "info", "warn", "error", "fatal", "panic", "disabled"],
-                    "default": "info"
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": ["trace", "debug", "info", "warn", "error", "fatal", "panic"]
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^\\$\\{[A-Z_][A-Z0-9_]*:(trace|debug|info|warn|error|fatal|panic)\\}$"
+                      }
+                    ],
+                    "default": "info",
+                    "description": "Log level - supports standard levels (trace, debug, info, warn, error, fatal, panic) or environment variable format ${VAR_NAME:default_level}",
+                    "examples": ["info", "debug", "${LOG_LEVEL:info}", "${ENV_LOG_LEVEL:warn}", "${APP_LOG_LEVEL:error}"]
                   },
                   "format": {
                     "type": "string",

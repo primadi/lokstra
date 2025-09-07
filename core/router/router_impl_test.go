@@ -592,19 +592,11 @@ func TestRouterImpl_ServeHTTP(t *testing.T) {
 	r.ServeHTTP(w, req)
 }
 
-func TestRouterImpl_LockMiddleware(t *testing.T) {
-	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, map[string]any{})
-
-	// Should not panic
-	r.LockMiddleware()
-}
-
 func TestRouterImpl_OverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 	r := router.NewRouter(ctx, map[string]any{})
 
-	result := r.OverrideMiddleware()
+	result := r.WithOverrideMiddleware(true)
 
 	if result == nil {
 		t.Error("Expected router to be returned, got nil")

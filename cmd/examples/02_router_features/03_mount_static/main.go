@@ -20,7 +20,8 @@ func main() {
 
 	// Mount static files with custom prefix
 	// Serve files from ./assets directory at /assets/* routes
-	app.MountStatic("/assets", http.Dir("./assets"))
+	// app.MountStatic("/assets", http.Dir("./assets"))
+	app.Group("/assets").MountStatic("/", http.Dir("./assets"))
 
 	// Mount files from public directory
 	// Serve files from ./public directory at /public/* routes
@@ -58,9 +59,6 @@ func main() {
 		})
 	})
 
-	// Create sample directories and files
-	createSampleFiles()
-
 	lokstra.Logger.Infof("Static files server started on :8080")
 	lokstra.Logger.Infof("Static file endpoints:")
 	lokstra.Logger.Infof("  /static/*      - Files from ./static directory")
@@ -76,20 +74,4 @@ func main() {
 	lokstra.Logger.Infof("  http://localhost:8080/public/index.html")
 
 	app.Start()
-}
-
-// createSampleFiles creates sample static files for demonstration
-func createSampleFiles() {
-	// This would typically be done outside the application
-	// but for demo purposes, we'll create sample files programmatically
-	lokstra.Logger.Infof("Creating sample static files...")
-
-	// Create directories
-	dirs := []string{"./static", "./assets", "./public"}
-	for _, dir := range dirs {
-		// In a real application, these directories would already exist
-		lokstra.Logger.Infof("Directory %s should exist with sample files", dir)
-	}
-
-	lokstra.Logger.Infof("Sample files setup complete")
 }

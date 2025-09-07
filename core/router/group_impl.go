@@ -1,38 +1,44 @@
 package router
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/core/service"
 
 	"github.com/valyala/fasthttp"
 )
 
 type GroupImpl struct {
-	parent   *RouterImpl
-	meta     *RouterMeta
-	mwLocked bool
+	parent *RouterImpl
+	meta   *RouterMeta
 }
 
 // RawHandleStripPrefix implements Router.
 func (g *GroupImpl) RawHandleStripPrefix(prefix string, handler http.Handler) Router {
-	return g.RawHandle(prefix, http.StripPrefix(prefix, handler))
+	g.meta.RawHandles = append(g.meta.RawHandles, &RawHandleMeta{
+		Prefix:  g.cleanPrefix(prefix),
+		Handler: handler,
+		Strip:   true,
+	})
+	return g
 }
 
 // RawHandle implements Router.
 func (g *GroupImpl) RawHandle(prefix string, handler http.Handler) Router {
-	g.parent.r_engine.RawHandle(prefix, handler)
+	g.meta.RawHandles = append(g.meta.RawHandles, &RawHandleMeta{
+		Prefix:  g.cleanPrefix(prefix),
+		Handler: handler,
+		Strip:   false,
+	})
 	return g
 }
 
 // MountStaticWithFallback implements Router.
 func (g *GroupImpl) MountStaticWithFallback(prefix string, sources ...any) Router {
-	g.parent.r_engine.ServeStaticWithFallback(prefix, sources...)
+	g.meta.MountStaticWithFallback(g.cleanPrefix(prefix), sources...)
 	return g
 }
 
@@ -80,8 +86,6 @@ func (g *GroupImpl) GetMiddleware() []*midware.Execution {
 
 // Group implements Router.
 func (g *GroupImpl) Group(prefix string, mw ...any) Router {
-	g.mwLocked = true
-
 	rm := NewRouterMeta()
 	rm.Prefix = g.cleanPrefix(prefix)
 
@@ -105,88 +109,44 @@ func (g *GroupImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 
 // Handle implements Router.
 func (g *GroupImpl) Handle(method request.HTTPMethod, path string, handler any, mw ...any) Router {
-	g.mwLocked = true
 	g.meta.Handle(method, g.cleanPrefix(path), handler, mw...)
 	return g
 }
 
 // HandleOverrideMiddleware implements Router.
 func (g *GroupImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string, handler any, mw ...any) Router {
-	g.mwLocked = true
 	g.meta.HandleWithOverrideMiddleware(method, g.cleanPrefix(path), handler, mw...)
 	return g
-}
-
-// LockMiddleware implements Router.
-func (g *GroupImpl) LockMiddleware() {
-	g.mwLocked = true
 }
 
 // MountReverseProxy implements Router.
 func (g *GroupImpl) MountReverseProxy(prefix string, target string,
 	overrideMiddleware bool, mw ...any) Router {
-	g.mwLocked = true
-	g.meta.MountReverseProxy(prefix, target, overrideMiddleware, mw...)
+	g.meta.MountReverseProxy(g.cleanPrefix(prefix), target, overrideMiddleware, mw...)
 	return g
 }
 
 // MountSPA implements Router.
 func (g *GroupImpl) MountSPA(prefix string, fallbackFile string) Router {
-	g.parent.r_engine.ServeSPA(prefix, fallbackFile)
+	g.meta.MountSPA(g.cleanPrefix(prefix), fallbackFile)
 	return g
 }
 
 // MountStatic implements Router.
 func (g *GroupImpl) MountStatic(prefix string, folder http.Dir) Router {
-	g.parent.r_engine.ServeStatic(prefix, folder)
+	g.meta.MountStatic(g.cleanPrefix(prefix), folder)
 	return g
 }
 
 // MountRpcService implements Router.
 func (g *GroupImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
-	g.mwLocked = true
-
-	cleanPath := g.cleanPrefix(path)
-	if strings.HasSuffix(cleanPath, "/") {
-		cleanPath += ":method"
-	} else {
-		cleanPath += "/:method"
-	}
-
-	rpcMeta := &service.RpcServiceMeta{
-		MethodParam: "method",
-	}
-	switch s := svc.(type) {
-	case string:
-		rpcMeta.ServiceName = s
-	case *service.RpcServiceMeta:
-		rpcMeta = s
-	case service.Service:
-		rpcMeta.ServiceInst = s
-	default:
-		fmt.Printf("Service type: %T\n", svc)
-		panic("Invalid service type, must be a string, *RpcServiceMeta, or iface.Service")
-	}
-
-	handlerMeta := &request.HandlerMeta{
-		HandlerFunc: func(ctx *request.Context) error {
-			return ctx.ErrorInternal("RpcService not yet resolved")
-		},
-		Extension: rpcMeta,
-	}
-
-	if overrideMiddleware {
-		g.meta.HandleWithOverrideMiddleware("POST", cleanPath, handlerMeta, mw...)
-	} else {
-		g.meta.Handle("POST", cleanPath, handlerMeta, mw...)
-	}
+	g.meta.MountRpcService(g.cleanPrefix(path), svc, overrideMiddleware, mw...)
 	return g
 }
 
 // OverrideMiddleware implements Router.
-func (g *GroupImpl) OverrideMiddleware() Router {
-	g.meta.OverrideMiddleware = true
-	return g
+func (g *GroupImpl) OverrideMiddleware() bool {
+	return g.meta.OverrideMiddleware
 }
 
 // PATCH implements Router.
@@ -225,7 +185,38 @@ func (g *GroupImpl) Use(mw any) Router {
 	return g
 }
 
-// WithOverrideMiddleware implements Router.
+// AddRouter implements Router.
+func (g *GroupImpl) AddRouter(other Router) Router {
+	otherMeta := other.GetMeta()
+
+	// Merge all routes
+	g.meta.Routes = append(g.meta.Routes, otherMeta.Routes...)
+
+	// Merge all groups
+	g.meta.Groups = append(g.meta.Groups, otherMeta.Groups...)
+
+	// Merge static mounts
+	g.meta.StaticMounts = append(g.meta.StaticMounts, otherMeta.StaticMounts...)
+	g.meta.StaticWithFallbackMounts = append(g.meta.StaticWithFallbackMounts, otherMeta.StaticWithFallbackMounts...)
+
+	// Merge SPA mounts
+	g.meta.SPAMounts = append(g.meta.SPAMounts, otherMeta.SPAMounts...)
+
+	// Merge reverse proxies
+	g.meta.ReverseProxies = append(g.meta.ReverseProxies, otherMeta.ReverseProxies...)
+
+	// Merge raw handles
+	g.meta.RawHandles = append(g.meta.RawHandles, otherMeta.RawHandles...)
+
+	// Merge RPC handles
+	g.meta.RPCHandles = append(g.meta.RPCHandles, otherMeta.RPCHandles...)
+
+	// Middleware: TIDAK di-merge secara otomatis untuk menghindari efek samping
+	// Middleware dari router lain tetap melekat pada route/group asalnya
+	// Jika ingin merge middleware, gunakan Use() secara eksplisit setelah AddRouter()
+
+	return g
+} // WithOverrideMiddleware implements Router.
 func (g *GroupImpl) WithOverrideMiddleware(enable bool) Router {
 	g.meta.OverrideMiddleware = enable
 	return g
