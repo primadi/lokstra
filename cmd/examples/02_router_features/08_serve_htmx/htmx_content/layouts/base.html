@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}} - Custom Lokstra</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/custom.css">
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script src="/static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.addEventListener('htmx:configRequest', function(evt) {
+                evt.detail.headers['LS-Layout'] = 'base.html';
+            });
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">🚀 Custom Lokstra HTMX</div>
+                <nav>
+                    <ul>
+                        <li><a href="/" hx-get="/" hx-target="main" hx-push-url="true">Home</a></li>
+                        <li><a href="/about" hx-get="/about" hx-target="main" hx-push-url="true">About</a></li>
+                        <li><a href="/products" hx-get="/products" hx-target="main" hx-push-url="true">Products</a></li>
+                        <li><a href="/contact" hx-get="/contact" hx-target="main" hx-push-url="true">Contact</a></li>
+                        <li><a href="/admin" hx-get="/admin" hx-target="main" hx-push-url="true">Admin</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        {{template "page" .}}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Custom Lokstra HTMX Demo. Local files override embedded files!</p>
+        </div>
+    </footer>
+
+    <div class="htmx-indicator" style="position: fixed; top: 10px; right: 10px; background: #28a745; color: white; padding: 10px; border-radius: 4px; z-index: 1000;">
+        Loading... <div class="spinner"></div>
+    </div>
+</body>
+</html>

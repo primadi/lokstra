@@ -35,6 +35,11 @@ type StaticDirMeta struct {
 	Sources []fs.FS
 }
 
+type HTMXPageMeta struct {
+	Prefix  string
+	Sources []fs.FS
+}
+
 type ReverseProxyMeta struct {
 	Prefix             string
 	Target             string
@@ -60,6 +65,7 @@ type RouterMeta struct {
 	RawHandles   []*RawHandleMeta
 	RPCHandles   []*RPCServiceMeta
 	StaticMounts []*StaticDirMeta
+	HTMXPages    []*HTMXPageMeta
 
 	Groups []*RouterMeta
 }
@@ -207,6 +213,14 @@ func (r *RouterMeta) MountStatic(prefix string, spa bool, sources ...fs.FS) *Rou
 	return r
 }
 
+func (r *RouterMeta) MountHtmx(prefix string, sources ...fs.FS) *RouterMeta {
+	r.HTMXPages = append(r.HTMXPages, &HTMXPageMeta{
+		Prefix:  prefix,
+		Sources: sources,
+	})
+	return r
+}
+
 func (r *RouterMeta) RawHandle(prefix string, handler http.Handler, stripPrefix bool) *RouterMeta {
 	r.RawHandles = append(r.RawHandles, &RawHandleMeta{
 		Prefix:  prefix,
@@ -338,9 +352,14 @@ func (r *RouterMeta) dumpAllRoutes(prefixContext string, groupPath string) {
 		fmt.Printf("%s\n", overrideStatus)
 	}
 
-	// Static with fallback mounts
+	// Static mounts
 	for _, staticFb := range r.StaticMounts {
 		fmt.Printf("[STATIC] %s -> %d sources\n", staticFb.Prefix, len(staticFb.Sources))
+	}
+
+	// HTMX mounts
+	for _, htmx := range r.HTMXPages {
+		fmt.Printf("[HTMX] %s -> %d sources\n", htmx.Prefix, len(htmx.Sources))
 	}
 
 	// Reverse proxies

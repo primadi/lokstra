@@ -158,8 +158,9 @@ func (m *MockRouterEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS
 	panic("unimplemented")
 }
 
-func (m *MockRouterEngine) ServeSPA(prefix string, fallbackFile string) {
-	m.spaMounts[prefix] = fallbackFile
+// ServeHtmxPage implements serviceapi.RouterEngine.
+func (m *MockRouterEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS) {
+	panic("unimplemented")
 }
 
 func (m *MockRouterEngine) ServeReverseProxy(prefix string, handler http.HandlerFunc) {

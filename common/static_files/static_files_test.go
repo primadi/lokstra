@@ -1,4 +1,4 @@
-package router_test
+package static_files_test
 
 import (
 	"net/http/httptest"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/common/static_files"
 )
 
 func TestStaticFallback_RawHandler_SPA_Mode(t *testing.T) {
@@ -34,7 +34,7 @@ func TestStaticFallback_RawHandler_SPA_Mode(t *testing.T) {
 	}
 
 	// Create StaticFallback with SPA mode enabled
-	fallback := router.NewStaticFallback(mockFS)
+	fallback := static_files.New(mockFS)
 	handler := fallback.RawHandler(true) // SPA mode = true
 
 	tests := []struct {
@@ -166,7 +166,7 @@ func TestStaticFallback_SPA_vs_Static_Mode(t *testing.T) {
 		"about.html": {Data: []byte("<html>About</html>")},
 	}
 
-	fallback := router.NewStaticFallback(mockFS)
+	fallback := static_files.New(mockFS)
 
 	tests := []struct {
 		name        string
@@ -237,7 +237,7 @@ func TestStaticFallback_MultipleSources_SPA(t *testing.T) {
 		"api/data.json":      {Data: []byte(`{"source": "fallback"}`)},
 	}
 
-	fallback := router.NewStaticFallback(primaryFS, fallbackFS)
+	fallback := static_files.New(primaryFS, fallbackFS)
 	handler := fallback.RawHandler(true) // SPA mode
 
 	tests := []struct {

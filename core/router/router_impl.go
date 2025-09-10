@@ -199,6 +199,12 @@ func (r *RouterImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Rout
 	return r
 }
 
+// MountHtmx implements Router.
+func (r *RouterImpl) MountHtmx(prefix string, sources ...fs.FS) Router {
+	r.meta.MountHtmx(prefix, sources...)
+	return r
+}
+
 // MountRpcService implements Router.
 func (r *RouterImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
 	r.meta.MountRpcService(path, svc, overrideMiddleware, mw...)
@@ -336,13 +342,8 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 		r.handleRouteMeta(route, mwh)
 	}
 
-	for _, rp := range router.ReverseProxies {
-		handler := composeReverseProxyMw(rp, mwh)
-		r.r_engine.ServeReverseProxy(rp.Prefix, handler)
-	}
-
-	for _, sdf := range router.StaticMounts {
-		r.r_engine.ServeStatic(sdf.Prefix, sdf.Spa, sdf.Sources...)
+	for _, gr := range router.Groups {
+		r.buildRouter(gr, mwh)
 	}
 
 	for _, rh := range router.RawHandles {
@@ -390,8 +391,17 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 		}
 	}
 
-	for _, gr := range router.Groups {
-		r.buildRouter(gr, mwh)
+	for _, rp := range router.ReverseProxies {
+		handler := composeReverseProxyMw(rp, mwh)
+		r.r_engine.ServeReverseProxy(rp.Prefix, handler)
+	}
+
+	for _, sdf := range router.StaticMounts {
+		r.r_engine.ServeStatic(sdf.Prefix, sdf.Spa, sdf.Sources...)
+	}
+
+	for _, htmx := range router.HTMXPages {
+		r.r_engine.ServeHtmxPage(r.r_engine, htmx.Prefix, htmx.Sources...)
 	}
 }
 

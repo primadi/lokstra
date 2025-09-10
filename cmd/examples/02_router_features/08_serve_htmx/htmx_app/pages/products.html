@@ -1,0 +1,91 @@
+<!-- layout: base.html -->
+<div class="page-content fade-in">
+    <h1>{{.title}}</h1>
+    
+    <div class="card-grid">
+        {{range .products}}
+        <div class="card product-item">
+            <h3>{{.name}}</h3>
+            <div class="product-price">${{.price}}</div>
+            <p>High-quality product designed to meet your needs.</p>
+            <button 
+                class="btn" 
+                hx-get="/api/products/{{.id}}" 
+                hx-target="#product-details-{{.id}}"
+                hx-swap="innerHTML">
+                View Details
+                <span class="htmx-indicator">
+                    <div class="spinner"></div>
+                </span>
+            </button>
+            <div id="product-details-{{.id}}" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 4px; display: none;">
+                <!-- Product details will be loaded here -->
+            </div>
+        </div>
+        {{end}}
+    </div>
+    
+    <div class="card">
+        <h3>🛍️ Why Choose Our Products?</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+            <div>
+                <h4>✨ Premium Quality</h4>
+                <p>All our products are made with the highest quality materials and craftsmanship.</p>
+            </div>
+            <div>
+                <h4>🚚 Fast Shipping</h4>
+                <p>Free shipping on orders over $50. Most orders arrive within 2-3 business days.</p>
+            </div>
+            <div>
+                <h4>🔒 Secure Payment</h4>
+                <p>Your payment information is always secure with our encrypted checkout process.</p>
+            </div>
+            <div>
+                <h4>↩️ Easy Returns</h4>
+                <p>Not satisfied? Return any item within 30 days for a full refund.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>📊 Product Comparison</h3>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Product</th>
+                        <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Price</th>
+                        <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Rating</th>
+                        <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Features</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .products}}
+                    <tr>
+                        <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">{{.name}}</td>
+                        <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">${{.price}}</td>
+                        <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">⭐⭐⭐⭐⭐</td>
+                        <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">Premium, Durable, Warranty</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="/contact" class="btn" hx-get="/contact" hx-target="main" hx-push-url="true">
+            Questions? Contact Us
+        </a>
+    </div>
+</div>
+
+<script>
+// Show/hide product details when loaded
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.successful && evt.target.id && evt.target.id.startsWith('product-details-')) {
+        evt.target.style.display = 'block';
+        evt.target.classList.add('fade-in');
+    }
+});
+</script>

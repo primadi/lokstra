@@ -33,6 +33,12 @@ func (g *GroupImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Route
 	return g
 }
 
+// MountHtmx implements Router.
+func (g *GroupImpl) MountHtmx(prefix string, sources ...fs.FS) Router {
+	g.meta.MountHtmx(g.cleanPrefix(prefix), sources...)
+	return g
+}
+
 // GetMeta implements Router.
 func (g *GroupImpl) GetMeta() *RouterMeta {
 	return g.meta

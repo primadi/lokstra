@@ -44,6 +44,16 @@ type Router interface {
 	// MountStatic serves static files from multiple sources at the specified prefix, using the first available file
 	MountStatic(prefix string, spa bool, sources ...fs.FS) Router
 
+	// MountHtmx serves HTMX pages with layout support at the specified prefix, using the provided sources
+	// Assume sources has:
+	//   - "/static" for static assets (CSS, JS, images)
+	//   - "/layouts" for HTML layout templates
+	//   - "/pages" for HTML page templates
+	//
+	// All Request paths will be treated as page requests, except those starting with /static/
+	// which will be treated as static asset requests.
+	MountHtmx(prefix string, sources ...fs.FS) Router
+
 	// MountReverseProxy mounts a reverse proxy at the specified prefix, targeting the given URL, with optional middleware and override option
 	MountReverseProxy(prefix string, target string, overrideMiddleware bool, mw ...any) Router
 	// MountRpcService mounts an RPC service at the specified path, with optional middleware and override option

@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/common/static_files"
 )
 
 //go:embed static/*
@@ -24,7 +24,7 @@ func main() {
 	// Create separate fs.FS from disk directory
 	fsdataFS := os.DirFS("./fsdata")
 
-	fallback := router.NewStaticFallback(
+	fallback := static_files.New(
 		os.DirFS("./priority01"), // 1st priority: disk custom files
 		os.DirFS("./default"),    // 2nd priority: disk default files
 	).
@@ -40,7 +40,7 @@ func main() {
 	app.GET("/", func(ctx *lokstra.Context) error {
 		return ctx.Ok(map[string]interface{}{
 			"message":     "RawHandle Test with Complete Fallback Chain",
-			"description": "Demonstrates all NewStaticFallback source types",
+			"description": "Demonstrates all Static Files source types",
 			"fallback_priority": []string{
 				"1. ./priority01/* (http.Dir - disk)",
 				"2. ./default/* (http.Dir - disk)",

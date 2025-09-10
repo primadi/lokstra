@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -105,9 +105,28 @@ func (m *ServeMuxEngine) RawHandleFunc(pattern string, handlerFunc http.HandlerF
 func (m *ServeMuxEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS) {
 	cleanPrefixStr := cleanPrefix(prefix)
 
-	staticServe := router.NewStaticFallback(sources...)
+	staticServe := static_files.New(sources...)
 
 	handler := staticServe.RawHandler(spa)
+	// Strip prefix before passing to fallback handler
+	if cleanPrefixStr != "/" {
+		handler = http.StripPrefix(cleanPrefixStr, handler)
+	}
+
+	if cleanPrefixStr == "/" {
+		m.mux.Handle("/", handler)
+	} else {
+		m.mux.Handle(cleanPrefixStr+"/", handler)
+	}
+}
+
+// ServeHtmxPage implements serviceapi.RouterEngine.
+func (m *ServeMuxEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS) {
+	cleanPrefixStr := cleanPrefix(prefix)
+
+	staticServe := static_files.New(sources...)
+
+	handler := staticServe.HtmxPageHandler(pageDataRouter)
 	// Strip prefix before passing to fallback handler
 	if cleanPrefixStr != "/" {
 		handler = http.StripPrefix(cleanPrefixStr, handler)
