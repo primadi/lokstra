@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/web_render"
 )
 
 // Shared HTTP client for internal API calls to prevent connection buildup
@@ -46,10 +45,10 @@ func getSidebarHTML(currentPage string) string {
 // Modern Handlers using PageHandler - consistent behavior across full page and HTMX loads
 
 // Global mainLayout untuk user_management
-var mainLayout = web_render.NewMainLayoutPageWithLoader(
-	"base.html",
-	web_render.NewTemplateLoader("handlers/templates"),
-)
+// var mainLayout = web_render.NewMainLayoutPageWithLoader(
+// 	"base.html",
+// 	web_render.NewTemplateLoader("handlers/templates"),
+// )
 
 // CreateDashboardHandler creates a handler for dashboard that works consistently with both full page and HTMX requests
 func CreateDashboardHandler() lokstra.HandlerFunc {

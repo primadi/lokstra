@@ -27,9 +27,9 @@ func (g *GroupImpl) RawHandle(prefix string, stripPrefix bool, handler http.Hand
 	return g
 }
 
-// MountStaticWithFallback implements Router.
-func (g *GroupImpl) MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) Router {
-	g.meta.MountStaticWithFallback(g.cleanPrefix(prefix), spa, sources...)
+// MountStatic implements Router.
+func (g *GroupImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Router {
+	g.meta.MountStatic(g.cleanPrefix(prefix), spa, sources...)
 	return g
 }
 
@@ -100,13 +100,13 @@ func (g *GroupImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 
 // Handle implements Router.
 func (g *GroupImpl) Handle(method request.HTTPMethod, path string, handler any, mw ...any) Router {
-	g.meta.Handle(method, g.cleanPrefix(path), handler, mw...)
+	g.meta.Handle(method, g.cleanPrefix(path), handler, false, mw...)
 	return g
 }
 
 // HandleOverrideMiddleware implements Router.
 func (g *GroupImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string, handler any, mw ...any) Router {
-	g.meta.HandleWithOverrideMiddleware(method, g.cleanPrefix(path), handler, mw...)
+	g.meta.Handle(method, g.cleanPrefix(path), handler, true, mw...)
 	return g
 }
 
@@ -114,18 +114,6 @@ func (g *GroupImpl) HandleOverrideMiddleware(method request.HTTPMethod, path str
 func (g *GroupImpl) MountReverseProxy(prefix string, target string,
 	overrideMiddleware bool, mw ...any) Router {
 	g.meta.MountReverseProxy(g.cleanPrefix(prefix), target, overrideMiddleware, mw...)
-	return g
-}
-
-// MountSPA implements Router.
-func (g *GroupImpl) MountSPA(prefix string, fallbackFile string) Router {
-	g.meta.MountSPA(g.cleanPrefix(prefix), fallbackFile)
-	return g
-}
-
-// MountStatic implements Router.
-func (g *GroupImpl) MountStatic(prefix string, folder http.Dir) Router {
-	g.meta.MountStatic(g.cleanPrefix(prefix), folder)
 	return g
 }
 
@@ -188,10 +176,6 @@ func (g *GroupImpl) AddRouter(other Router) Router {
 
 	// Merge static mounts
 	g.meta.StaticMounts = append(g.meta.StaticMounts, otherMeta.StaticMounts...)
-	g.meta.StaticWithFallbackMounts = append(g.meta.StaticWithFallbackMounts, otherMeta.StaticWithFallbackMounts...)
-
-	// Merge SPA mounts
-	g.meta.SPAMounts = append(g.meta.SPAMounts, otherMeta.SPAMounts...)
 
 	// Merge reverse proxies
 	g.meta.ReverseProxies = append(g.meta.ReverseProxies, otherMeta.ReverseProxies...)

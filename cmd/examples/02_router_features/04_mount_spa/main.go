@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/primadi/lokstra"
 )
 
@@ -59,7 +61,7 @@ func main() {
 	// Mount SPA - this should be the LAST route definition
 	// All unmatched routes will fallback to serving the SPA's index.html
 	// This enables client-side routing to work properly
-	app.MountSPA("/", "./spa/index.html")
+	app.MountStatic("/", true, os.DirFS("./spa"))
 
 	// Create sample SPA files
 	createSampleSPA()

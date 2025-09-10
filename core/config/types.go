@@ -13,13 +13,9 @@ type ServerConfig struct {
 }
 
 type MountStaticConfig struct {
-	Prefix string `yaml:"prefix"`
-	Folder string `yaml:"folder"`
-}
-
-type MountSPAConfig struct {
-	Prefix       string `yaml:"prefix"`
-	FallbackFile string `yaml:"fallback_file"`
+	Prefix string   `yaml:"prefix"`
+	Spa    bool     `yaml:"spa,omitempty"`
+	Folder []string `yaml:"folder"`
 }
 
 type MountReverseProxyConfig struct {
@@ -43,7 +39,6 @@ type GroupConfig struct {
 	OverrideMiddleware bool               `yaml:"override_middleware,omitempty"`
 
 	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
-	MountSpa          []MountSPAConfig          `yaml:"mount_spa,omitempty"`
 	MountReverseProxy []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
 	MountRpcService   []MountRpcServiceConfig   `yaml:"mount_rpc_service,omitempty"`
 }
@@ -61,7 +56,6 @@ type AppConfig struct {
 
 	Settings          map[string]any            `yaml:"setting,omitempty"`
 	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
-	MountSPA          []MountSPAConfig          `yaml:"mount_spa,omitempty"`
 	MountReverseProxy []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
 }
 

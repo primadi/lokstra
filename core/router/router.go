@@ -41,14 +41,9 @@ type Router interface {
 	// RawHandle registers a standard http.Handler for the given path prefix
 	RawHandle(prefix string, stripPrefix bool, handler http.Handler) Router
 
-	// MountStatic serves static files from the given folder at the specified prefix
-	MountStatic(prefix string, folder http.Dir) Router
-	// MountStaticWithFallback serves static files from multiple sources at the specified prefix, using the first available file
-	// sources can be http.Dir, string, or fs.FS
-	MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) Router
+	// MountStatic serves static files from multiple sources at the specified prefix, using the first available file
+	MountStatic(prefix string, spa bool, sources ...fs.FS) Router
 
-	// MountSPA serves a Single Page Application at the specified prefix, using the fallbackFile for unmatched routes
-	MountSPA(prefix string, fallbackFile string) Router
 	// MountReverseProxy mounts a reverse proxy at the specified prefix, targeting the given URL, with optional middleware and override option
 	MountReverseProxy(prefix string, target string, overrideMiddleware bool, mw ...any) Router
 	// MountRpcService mounts an RPC service at the specified path, with optional middleware and override option

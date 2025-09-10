@@ -115,10 +115,6 @@ func (r *RouterImpl) AddRouter(other Router) Router {
 
 	// Merge static mounts
 	r.meta.StaticMounts = append(r.meta.StaticMounts, otherMeta.StaticMounts...)
-	r.meta.StaticWithFallbackMounts = append(r.meta.StaticWithFallbackMounts, otherMeta.StaticWithFallbackMounts...)
-
-	// Merge SPA mounts
-	r.meta.SPAMounts = append(r.meta.SPAMounts, otherMeta.SPAMounts...)
 
 	// Merge reverse proxies
 	r.meta.ReverseProxies = append(r.meta.ReverseProxies, otherMeta.ReverseProxies...)
@@ -179,14 +175,14 @@ func (r *RouterImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 // Handle implements Router.
 func (r *RouterImpl) Handle(method request.HTTPMethod, path string, handler any,
 	mw ...any) Router {
-	r.meta.Handle(method, r.cleanPrefix(path), handler, mw...)
+	r.meta.Handle(method, r.cleanPrefix(path), handler, false, mw...)
 	return r
 }
 
 // HandleOverrideMiddleware implements Router.
 func (r *RouterImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string,
 	handler any, mw ...any) Router {
-	r.meta.HandleWithOverrideMiddleware(method, r.cleanPrefix(path), handler, mw...)
+	r.meta.Handle(method, r.cleanPrefix(path), handler, true, mw...)
 	return r
 }
 
@@ -197,21 +193,9 @@ func (r *RouterImpl) MountReverseProxy(prefix string, target string,
 	return r
 }
 
-// MountSPA implements Router.
-func (r *RouterImpl) MountSPA(prefix string, fallbackFile string) Router {
-	r.meta.MountSPA(prefix, fallbackFile)
-	return r
-}
-
 // MountStatic implements Router.
-func (r *RouterImpl) MountStatic(prefix string, folder http.Dir) Router {
-	r.meta.MountStatic(prefix, folder)
-	return r
-}
-
-// MountStaticWithFallback implements Router.
-func (r *RouterImpl) MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) Router {
-	r.meta.MountStaticWithFallback(prefix, spa, sources...)
+func (r *RouterImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Router {
+	r.meta.MountStatic(prefix, spa, sources...)
 	return r
 }
 
@@ -357,16 +341,8 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 		r.r_engine.ServeReverseProxy(rp.Prefix, handler)
 	}
 
-	for _, spa := range router.SPAMounts {
-		r.r_engine.ServeSPA(spa.Prefix, spa.FallbackFile)
-	}
-
-	for _, sd := range router.StaticMounts {
-		r.r_engine.ServeStatic(sd.Prefix, sd.Folder)
-	}
-
-	for _, sdf := range router.StaticWithFallbackMounts {
-		r.r_engine.ServeStaticWithFallback(sdf.Prefix, sdf.Spa, sdf.Sources...)
+	for _, sdf := range router.StaticMounts {
+		r.r_engine.ServeStatic(sdf.Prefix, sdf.Spa, sdf.Sources...)
 	}
 
 	for _, rh := range router.RawHandles {
@@ -408,7 +384,7 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 		}
 
 		if rpc.OverrideMiddleware {
-			r.meta.HandleWithOverrideMiddleware("POST", cleanPath, handlerMeta, rpc.Middleware...)
+			r.meta.Handle("POST", cleanPath, handlerMeta, true, rpc.Middleware...)
 		} else {
 			r.Handle("POST", cleanPath, handlerMeta, rpc.Middleware...)
 		}

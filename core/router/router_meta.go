@@ -30,19 +30,9 @@ type RawHandleMeta struct {
 }
 
 type StaticDirMeta struct {
-	Prefix string
-	Folder http.Dir
-}
-
-type StaticDirMetaWithFallback struct {
 	Prefix  string
 	Spa     bool
 	Sources []fs.FS
-}
-
-type SPADirMeta struct {
-	Prefix       string
-	FallbackFile string
 }
 
 type ReverseProxyMeta struct {
@@ -65,13 +55,11 @@ type RouterMeta struct {
 
 	Routes         []*RouteMeta
 	Middleware     []*midware.Execution
-	StaticMounts   []*StaticDirMeta
-	SPAMounts      []*SPADirMeta
 	ReverseProxies []*ReverseProxyMeta
 
-	RawHandles               []*RawHandleMeta
-	RPCHandles               []*RPCServiceMeta
-	StaticWithFallbackMounts []*StaticDirMetaWithFallback
+	RawHandles   []*RawHandleMeta
+	RPCHandles   []*RPCServiceMeta
+	StaticMounts []*StaticDirMeta
 
 	Groups []*RouterMeta
 }
@@ -82,14 +70,12 @@ func NewRouterMeta() *RouterMeta {
 		OverrideMiddleware: false,
 		Routes:             []*RouteMeta{},
 		Middleware:         []*midware.Execution{},
-		StaticMounts:       []*StaticDirMeta{},
-		SPAMounts:          []*SPADirMeta{},
 		ReverseProxies:     []*ReverseProxyMeta{},
 		Groups:             []*RouterMeta{},
 
-		RawHandles:               []*RawHandleMeta{},
-		RPCHandles:               []*RPCServiceMeta{},
-		StaticWithFallbackMounts: []*StaticDirMetaWithFallback{},
+		RawHandles:   []*RawHandleMeta{},
+		RPCHandles:   []*RPCServiceMeta{},
+		StaticMounts: []*StaticDirMeta{},
 	}
 }
 
@@ -106,16 +92,7 @@ func (r *RouterMeta) RecurseAllHandler(callback func(rt *RouteMeta)) {
 	}
 }
 
-func (r *RouterMeta) Handle(method request.HTTPMethod, path string, handler any, middleware ...any) *RouterMeta {
-	return r.handle(method, path, handler, false, middleware...)
-}
-
-func (r *RouterMeta) HandleWithOverrideMiddleware(method request.HTTPMethod, path string, handler any,
-	middleware ...any) *RouterMeta {
-	return r.handle(method, path, handler, true, middleware...)
-}
-
-func (r *RouterMeta) handle(method request.HTTPMethod, path string, handler any,
+func (r *RouterMeta) Handle(method request.HTTPMethod, path string, handler any,
 	overrideMiddleware bool, middleware ...any) *RouterMeta {
 	var handlerInfo *request.HandlerMeta
 
@@ -209,22 +186,6 @@ func (r *RouterMeta) UseMiddleware(middleware any) *RouterMeta {
 	return r
 }
 
-func (r *RouterMeta) MountStatic(prefix string, folder http.Dir) *RouterMeta {
-	r.StaticMounts = append(r.StaticMounts, &StaticDirMeta{
-		Prefix: prefix,
-		Folder: folder,
-	})
-	return r
-}
-
-func (r *RouterMeta) MountSPA(prefix string, fallbackFile string) *RouterMeta {
-	r.SPAMounts = append(r.SPAMounts, &SPADirMeta{
-		Prefix:       prefix,
-		FallbackFile: fallbackFile,
-	})
-	return r
-}
-
 func (r *RouterMeta) MountReverseProxy(prefix string, target string,
 	overrideMiddleware bool, middleware ...any) *RouterMeta {
 	mwp := anyArraytoMiddleware(middleware)
@@ -237,8 +198,8 @@ func (r *RouterMeta) MountReverseProxy(prefix string, target string,
 	return r
 }
 
-func (r *RouterMeta) MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) *RouterMeta {
-	r.StaticWithFallbackMounts = append(r.StaticWithFallbackMounts, &StaticDirMetaWithFallback{
+func (r *RouterMeta) MountStatic(prefix string, spa bool, sources ...fs.FS) *RouterMeta {
+	r.StaticMounts = append(r.StaticMounts, &StaticDirMeta{
 		Prefix:  prefix,
 		Spa:     spa,
 		Sources: sources,
@@ -377,19 +338,9 @@ func (r *RouterMeta) dumpAllRoutes(prefixContext string, groupPath string) {
 		fmt.Printf("%s\n", overrideStatus)
 	}
 
-	// Static mounts
-	for _, static := range r.StaticMounts {
-		fmt.Printf("[STATIC] %s -> %s\n", static.Prefix, static.Folder)
-	}
-
 	// Static with fallback mounts
-	for _, staticFb := range r.StaticWithFallbackMounts {
-		fmt.Printf("[STATIC_FB] %s -> %d sources\n", staticFb.Prefix, len(staticFb.Sources))
-	}
-
-	// SPA mounts
-	for _, spa := range r.SPAMounts {
-		fmt.Printf("[SPA] %s -> fallback: %s\n", spa.Prefix, spa.FallbackFile)
+	for _, staticFb := range r.StaticMounts {
+		fmt.Printf("[STATIC] %s -> %d sources\n", staticFb.Prefix, len(staticFb.Sources))
 	}
 
 	// Reverse proxies

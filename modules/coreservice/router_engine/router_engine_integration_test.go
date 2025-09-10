@@ -81,8 +81,9 @@ func TestRouterEngineInterface(t *testing.T) {
 			defer backend.Close()
 
 			// Test all interface methods
-			engine.ServeStatic("/static", http.Dir(tempDir))
-			engine.ServeSPA("/app", indexFile)
+			tempFS := os.DirFS(tempDir)
+			engine.ServeStatic("/static", false, tempFS)
+			engine.ServeStatic("/app", true, tempFS)
 
 			proxyHandler := func(w http.ResponseWriter, r *http.Request) {
 				// Simple proxy simulation
@@ -281,7 +282,7 @@ func TestRouterEngineStaticFileHandling(t *testing.T) {
 
 	for _, engineTest := range engines {
 		t.Run(engineTest.name, func(t *testing.T) {
-			engineTest.engine.ServeStatic("/assets", http.Dir(tempDir))
+			engineTest.engine.ServeStatic("/assets", false, os.DirFS(tempDir))
 
 			tests := []struct {
 				name           string
@@ -370,7 +371,7 @@ func TestRouterEngineSPAHandling(t *testing.T) {
 
 	for _, engineTest := range engines {
 		t.Run(engineTest.name, func(t *testing.T) {
-			engineTest.engine.ServeSPA("/app", indexFile)
+			engineTest.engine.ServeStatic("/app", true, os.DirFS(tempDir))
 
 			tests := []struct {
 				name           string
@@ -606,8 +607,9 @@ func TestRouterEngineComplexIntegration(t *testing.T) {
 				w.Write([]byte(`{"created": true, "data": "` + escapedBody + `"}`))
 			}))
 
-			engineTest.engine.ServeStatic("/assets", http.Dir(tempDir))
-			engineTest.engine.ServeSPA("/app", indexFile)
+			tempFS := os.DirFS(tempDir)
+			engineTest.engine.ServeStatic("/assets", false, tempFS)
+			engineTest.engine.ServeStatic("/app", true, tempFS)
 
 			proxyHandler3 := func(w http.ResponseWriter, r *http.Request) {
 				// Simple proxy simulation for external service

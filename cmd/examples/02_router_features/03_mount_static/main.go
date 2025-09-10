@@ -1,7 +1,7 @@
 package main
 
 import (
-	"net/http"
+	"os"
 
 	"github.com/primadi/lokstra"
 )
@@ -16,16 +16,16 @@ func main() {
 
 	// Mount static files from a directory
 	// This will serve files from ./static directory at /static/* routes
-	app.MountStatic("/static", http.Dir("./static"))
+	app.MountStatic("/static", false, os.DirFS("./static"))
 
 	// Mount static files with custom prefix
 	// Serve files from ./assets directory at /assets/* routes
 	// app.MountStatic("/assets", http.Dir("./assets"))
-	app.Group("/assets").MountStatic("/", http.Dir("./assets"))
+	app.Group("/assets").MountStatic("/", false, os.DirFS("./assets"))
 
 	// Mount files from public directory
 	// Serve files from ./public directory at /public/* routes
-	app.MountStatic("/public", http.Dir("./public"))
+	app.MountStatic("/public", false, os.DirFS("./public"))
 
 	// API routes (these should be defined before conflicting static routes)
 	app.GET("/api/info", func(ctx *lokstra.Context) error {

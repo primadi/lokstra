@@ -20,11 +20,6 @@ type RouterEngine interface {
 	RawHandle(pattern string, handler http.Handler)
 	RawHandleFunc(pattern string, handlerFunc http.HandlerFunc)
 
-	ServeStatic(prefix string, folder http.Dir)
-
-	// Sources can be http.Dir, fs.FS, or embed.FS
-	ServeStaticWithFallback(prefix string, spa bool, sources ...fs.FS)
-
-	ServeSPA(prefix string, indexFile string)
+	ServeStatic(prefix string, spa bool, sources ...fs.FS)
 	ServeReverseProxy(prefix string, handler http.HandlerFunc)
 }

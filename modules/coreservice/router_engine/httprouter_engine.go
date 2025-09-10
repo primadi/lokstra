@@ -44,11 +44,6 @@ func (h *HttpRouterEngine) ServeReverseProxy(prefix string, handler http.Handler
 	h.getServeMux().ServeReverseProxy(prefix, handler)
 }
 
-// ServeSPA implements RouterEngine.
-func (h *HttpRouterEngine) ServeSPA(prefix string, indexFile string) {
-	h.getServeMux().ServeSPA(prefix, indexFile)
-}
-
 // RawHandle implements RouterEngine.
 func (h *HttpRouterEngine) RawHandle(pattern string, handler http.Handler) {
 	h.getServeMux().RawHandle(pattern, handler)
@@ -60,13 +55,8 @@ func (h *HttpRouterEngine) RawHandleFunc(pattern string, handlerFunc http.Handle
 }
 
 // ServeStatic implements RouterEngine.
-func (h *HttpRouterEngine) ServeStatic(prefix string, folder http.Dir) {
-	h.getServeMux().ServeStatic(prefix, folder)
-}
-
-// ServeStaticWithFallback implements RouterEngine.
-func (h *HttpRouterEngine) ServeStaticWithFallback(prefix string, spa bool, sources ...fs.FS) {
-	h.getServeMux().ServeStaticWithFallback(prefix, spa, sources...)
+func (h *HttpRouterEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS) {
+	h.getServeMux().ServeStatic(prefix, spa, sources...)
 }
 
 // ServeHTTP implements RouterEngine.

@@ -395,7 +395,7 @@ func TestServeMuxEngine_ServeStatic(t *testing.T) {
 	}
 
 	// Test ServeStatic
-	router.ServeStatic("/static", http.Dir(tempDir))
+	router.ServeStatic("/static", false, os.DirFS(tempDir))
 
 	tests := []struct {
 		name           string
@@ -473,7 +473,7 @@ func TestServeMuxEngine_ServeSPA(t *testing.T) {
 	}
 
 	// Test ServeSPA
-	router.ServeSPA("/app", indexFile)
+	router.ServeStatic("/app", true, os.DirFS(tempDir))
 
 	tests := []struct {
 		name           string
@@ -774,8 +774,9 @@ func TestServeMuxEngine_Integration(t *testing.T) {
 		w.Write([]byte(`{"created": true, "data": "` + escapedBody + `"}`))
 	}))
 
-	router.ServeStatic("/assets", http.Dir(tempDir))
-	router.ServeSPA("/app", indexFile)
+	tempFs := os.DirFS(tempDir)
+	router.ServeStatic("/assets", false, tempFs)
+	router.ServeStatic("/app", true, tempFs)
 
 	proxyHandler2 := func(w http.ResponseWriter, r *http.Request) {
 		// Simple proxy simulation

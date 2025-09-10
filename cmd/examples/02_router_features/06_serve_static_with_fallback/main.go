@@ -28,14 +28,14 @@ func main() {
 	// 3. Finally try frameworkAssets embed.FS (framework default assets)
 	subProjectStatic, _ := fs.Sub(projectStatic, "project/static")
 	subFrameworkAssets, _ := fs.Sub(frameworkAssets, "framework_assets")
-	app.MountStaticWithFallback("/static", false,
+	app.MountStatic("/static", false,
 		os.DirFS("./project/assets"), // Project overrides (highest priority)
 		subProjectStatic,             // Project assets
 		subFrameworkAssets,           // Framework default assets (lowest priority)
 	)
 
 	// Alternative: Using string paths instead of http.Dir
-	app.MountStaticWithFallback("/assets", false,
+	app.MountStatic("/assets", false,
 		os.DirFS("./project/assets"),   // Project overrides
 		os.DirFS("./framework/assets"), // Framework assets
 		subFrameworkAssets,             // Embedded fallback

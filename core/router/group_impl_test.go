@@ -1,7 +1,7 @@
 package router_test
 
 import (
-	"net/http"
+	"os"
 	"testing"
 
 	"github.com/primadi/lokstra/core/request"
@@ -331,7 +331,7 @@ func TestGroupImpl_MountStatic(t *testing.T) {
 	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
-	result := group.MountStatic("/static", http.Dir("./public"))
+	result := group.MountStatic("/static", false, os.DirFS("./public"))
 
 	if result == nil {
 		t.Error("Expected group to be returned, got nil")
@@ -343,7 +343,7 @@ func TestGroupImpl_MountSPA(t *testing.T) {
 	r := router.NewRouter(ctx, map[string]any{})
 	group := r.Group("/api")
 
-	result := group.MountSPA("/app", "index.html")
+	result := group.MountStatic("/app", true, os.DirFS("./"))
 
 	if result == nil {
 		t.Error("Expected group to be returned, got nil")

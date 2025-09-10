@@ -32,6 +32,19 @@ func (sf *StaticFallback) Handler(spa bool) request.HandlerFunc {
 	}
 }
 
+func openFileAndStats(s fs.FS, path string) (fs.File, fs.FileInfo, error) {
+	f, err := s.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	stat, err := f.Stat()
+	if err != nil {
+		f.Close()
+		return nil, nil, err
+	}
+	return f, stat, nil
+}
+
 func (sf *StaticFallback) RawHandler(spa bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -41,22 +54,15 @@ func (sf *StaticFallback) RawHandler(spa bool) http.Handler {
 			path = path[1:]
 		}
 
-		if path == "" || strings.HasSuffix(path, "/") {
+		if path == "" {
 			path = path + "index.html"
 		}
 
 		// Try each source in order
 		for i, s := range sf.Sources {
-			f, err := s.Open(path)
+			f, stat, err := openFileAndStats(s, path)
 			if err != nil {
 				continue
-			}
-
-			stat, err := f.Stat()
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				f.Close()
-				return
 			}
 
 			if stat.IsDir() {
@@ -75,19 +81,19 @@ func (sf *StaticFallback) RawHandler(spa bool) http.Handler {
 			}
 
 			if rs, ok := f.(io.ReadSeeker); ok {
+				f.Close()
 				fmt.Printf("[DEBUG] Serving %s from FS source %d\n", path, i)
 				http.ServeContent(w, r, path, stat.ModTime(), rs)
 			} else {
+				f.Close()
 				http.Error(w, "File does not support seeking", http.StatusInternalServerError)
 			}
-			f.Close()
 			return
 		}
 
-		// Not found in any source
-		if spa && filepath.Ext(path) == ".html" {
-			// Special handling for SPA: fallback to index.html if HTML file not found
-			fmt.Printf("[DEBUG] File %s not found, fallback ke index.html\n", path)
+		// Not found in any source - SPA fallback to /index.html
+		if spa && filepath.Ext(path) == "" {
+			fmt.Printf("[DEBUG] SPA fallback: %s not found, load /index.html\n", path)
 			r2 := *r
 			r2.URL.Path = "/index.html"
 			sf.RawHandler(false).ServeHTTP(w, &r2)

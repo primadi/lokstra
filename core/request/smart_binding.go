@@ -7,11 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	jsoniter "github.com/json-iterator/go"
 )
-
-var formBodyDecoder = jsoniter.Config{TagKey: "form"}.Froze()
 
 // BindBodySmart intelligently binds request body based on Content-Type header
 // Supports both application/json and application/x-www-form-urlencoded

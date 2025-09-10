@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
-	"os"
-	"path"
-	"strings"
 
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
@@ -94,40 +91,6 @@ func (m *ServeMuxEngine) ServeReverseProxy(prefix string, handler http.HandlerFu
 	}
 }
 
-// ServeSPA implements RouterEngine.
-func (m *ServeMuxEngine) ServeSPA(prefix string, indexFile string) {
-	rootDir := path.Dir(indexFile)
-
-	spaHandler := func(w http.ResponseWriter, r *http.Request) {
-		requestPath := strings.TrimPrefix(r.URL.Path, prefix)
-		if requestPath == "" || requestPath == "/" {
-			http.ServeFile(w, r, indexFile)
-			return
-		}
-
-		fullPath := path.Join(rootDir, requestPath)
-		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
-			// Serve the static file directly
-			http.ServeFile(w, r, fullPath)
-			return
-		}
-
-		if strings.Contains(path.Base(requestPath), ".") {
-			http.NotFound(w, r)
-			return
-		}
-
-		http.ServeFile(w, r, indexFile)
-	}
-
-	// Register both exact prefix and sub-paths for SPA routing
-	cleanPrefixStr := cleanPrefix(prefix)
-	m.mux.HandleFunc(cleanPrefixStr, spaHandler)
-	if cleanPrefixStr != "/" {
-		m.mux.HandleFunc(cleanPrefixStr+"/", spaHandler)
-	}
-}
-
 // RawHandle implements RouterEngine.
 func (m *ServeMuxEngine) RawHandle(pattern string, handler http.Handler) {
 	m.mux.Handle(pattern, handler)
@@ -139,20 +102,7 @@ func (m *ServeMuxEngine) RawHandleFunc(pattern string, handlerFunc http.HandlerF
 }
 
 // ServeStatic implements RouterEngine.
-func (m *ServeMuxEngine) ServeStatic(prefix string, folder http.Dir) {
-	cleanPrefixStr := cleanPrefix(prefix)
-	fs := http.StripPrefix(cleanPrefixStr, http.FileServer(folder))
-
-	// For static file serving, we need trailing slash pattern to match sub-paths
-	if cleanPrefixStr == "/" {
-		m.mux.Handle("/", fs)
-	} else {
-		m.mux.Handle(cleanPrefixStr+"/", fs)
-	}
-}
-
-// ServeStaticWithFallback implements RouterEngine.
-func (m *ServeMuxEngine) ServeStaticWithFallback(prefix string, spa bool, sources ...fs.FS) {
+func (m *ServeMuxEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS) {
 	cleanPrefixStr := cleanPrefix(prefix)
 
 	staticServe := router.NewStaticFallback(sources...)
