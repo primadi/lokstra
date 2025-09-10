@@ -1,6 +1,7 @@
 package router
 
 import (
+	"io/fs"
 	"net/http"
 	"strings"
 
@@ -16,29 +17,19 @@ type GroupImpl struct {
 	meta   *RouterMeta
 }
 
-// RawHandleStripPrefix implements Router.
-func (g *GroupImpl) RawHandleStripPrefix(prefix string, handler http.Handler) Router {
-	g.meta.RawHandles = append(g.meta.RawHandles, &RawHandleMeta{
-		Prefix:  g.cleanPrefix(prefix),
-		Handler: handler,
-		Strip:   true,
-	})
-	return g
-}
-
 // RawHandle implements Router.
-func (g *GroupImpl) RawHandle(prefix string, handler http.Handler) Router {
+func (g *GroupImpl) RawHandle(prefix string, stripPrefix bool, handler http.Handler) Router {
 	g.meta.RawHandles = append(g.meta.RawHandles, &RawHandleMeta{
 		Prefix:  g.cleanPrefix(prefix),
 		Handler: handler,
-		Strip:   false,
+		Strip:   stripPrefix,
 	})
 	return g
 }
 
 // MountStaticWithFallback implements Router.
-func (g *GroupImpl) MountStaticWithFallback(prefix string, sources ...any) Router {
-	g.meta.MountStaticWithFallback(g.cleanPrefix(prefix), sources...)
+func (g *GroupImpl) MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) Router {
+	g.meta.MountStaticWithFallback(g.cleanPrefix(prefix), spa, sources...)
 	return g
 }
 

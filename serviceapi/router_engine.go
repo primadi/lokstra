@@ -1,6 +1,7 @@
 package serviceapi
 
 import (
+	"io/fs"
 	"net/http"
 
 	"github.com/primadi/lokstra/core/request"
@@ -22,7 +23,7 @@ type RouterEngine interface {
 	ServeStatic(prefix string, folder http.Dir)
 
 	// Sources can be http.Dir, fs.FS, or embed.FS
-	ServeStaticWithFallback(prefix string, sources ...any)
+	ServeStaticWithFallback(prefix string, spa bool, sources ...fs.FS)
 
 	ServeSPA(prefix string, indexFile string)
 	ServeReverseProxy(prefix string, handler http.HandlerFunc)

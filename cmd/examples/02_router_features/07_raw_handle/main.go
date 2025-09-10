@@ -18,25 +18,23 @@ func main() {
 	app := lokstra.NewApp(ctx, "test-app", ":8080")
 
 	// Test 1: Direct file server
-	app.RawHandleStripPrefix("/files/", http.FileServer(http.Dir("./files")))
+	app.RawHandle("/files/", true, http.FileServer(http.Dir("./files")))
 
 	// Test 2: StaticFallback with embed.FS and fs.FS (complete fallback chain)
 	// Create separate fs.FS from disk directory
 	fsdataFS := os.DirFS("./fsdata")
 
-	fallback, err := router.NewStaticFallback(
-		http.Dir("./priority01"), // 1st priority: disk custom files
-		http.Dir("./default"),    // 2nd priority: disk default files
-		staticFiles,              // 3rd priority: embed.FS (auto-processed with subFirstDir)
-		fsdataFS,                 // 4th priority: fs.FS from separate disk dir (processed as-is, no subFirstDir)
-	)
-	if err != nil {
-		panic(err)
-	}
-	app.RawHandleStripPrefix("/assets/", fallback.Handler())
+	fallback := router.NewStaticFallback(
+		os.DirFS("./priority01"), // 1st priority: disk custom files
+		os.DirFS("./default"),    // 2nd priority: disk default files
+	).
+		WithEmbedFS(staticFiles, "static").
+		WithSourceFS(fsdataFS)
+
+	app.RawHandle("/assets/", true, fallback.RawHandler(false))
 
 	// Test 3: Direct embed.FS server
-	app.RawHandleStripPrefix("/embed/", http.FileServer(http.FS(staticFiles)))
+	app.RawHandle("/embed/", true, http.FileServer(http.FS(staticFiles)))
 
 	// Simple info endpoint
 	app.GET("/", func(ctx *lokstra.Context) error {

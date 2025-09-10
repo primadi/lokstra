@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"io/fs"
 	"mime"
 	"net/http"
 	"slices"
@@ -24,22 +25,12 @@ type RouterImpl struct {
 	r_engine serviceapi.RouterEngine
 }
 
-// RawHandleStripPrefix implements Router.
-func (r *RouterImpl) RawHandleStripPrefix(prefix string, handler http.Handler) Router {
-	r.meta.RawHandles = append(r.meta.RawHandles, &RawHandleMeta{
-		Prefix:  prefix,
-		Handler: http.StripPrefix(prefix, handler),
-		Strip:   true,
-	})
-	return r
-}
-
 // RawHandle implements Router.
-func (r *RouterImpl) RawHandle(prefix string, handler http.Handler) Router {
+func (r *RouterImpl) RawHandle(prefix string, stripPrefix bool, handler http.Handler) Router {
 	r.meta.RawHandles = append(r.meta.RawHandles, &RawHandleMeta{
 		Prefix:  prefix,
 		Handler: handler,
-		Strip:   false,
+		Strip:   stripPrefix,
 	})
 	return r
 }
@@ -219,8 +210,8 @@ func (r *RouterImpl) MountStatic(prefix string, folder http.Dir) Router {
 }
 
 // MountStaticWithFallback implements Router.
-func (r *RouterImpl) MountStaticWithFallback(prefix string, sources ...any) Router {
-	r.meta.MountStaticWithFallback(prefix, sources...)
+func (r *RouterImpl) MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) Router {
+	r.meta.MountStaticWithFallback(prefix, spa, sources...)
 	return r
 }
 
@@ -375,7 +366,7 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 	}
 
 	for _, sdf := range router.StaticWithFallbackMounts {
-		r.r_engine.ServeStaticWithFallback(sdf.Prefix, sdf.Sources...)
+		r.r_engine.ServeStaticWithFallback(sdf.Prefix, sdf.Spa, sdf.Sources...)
 	}
 
 	for _, rh := range router.RawHandles {

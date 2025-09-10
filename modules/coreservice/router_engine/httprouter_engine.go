@@ -1,6 +1,7 @@
 package router_engine
 
 import (
+	"io/fs"
 	"net/http"
 	"strings"
 
@@ -64,8 +65,8 @@ func (h *HttpRouterEngine) ServeStatic(prefix string, folder http.Dir) {
 }
 
 // ServeStaticWithFallback implements RouterEngine.
-func (h *HttpRouterEngine) ServeStaticWithFallback(prefix string, sources ...any) {
-	h.getServeMux().ServeStaticWithFallback(prefix, sources...)
+func (h *HttpRouterEngine) ServeStaticWithFallback(prefix string, spa bool, sources ...fs.FS) {
+	h.getServeMux().ServeStaticWithFallback(prefix, spa, sources...)
 }
 
 // ServeHTTP implements RouterEngine.

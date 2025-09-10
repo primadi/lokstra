@@ -2,6 +2,7 @@ package router_engine
 
 import (
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"path"
@@ -151,15 +152,12 @@ func (m *ServeMuxEngine) ServeStatic(prefix string, folder http.Dir) {
 }
 
 // ServeStaticWithFallback implements RouterEngine.
-func (m *ServeMuxEngine) ServeStaticWithFallback(prefix string, sources ...any) {
+func (m *ServeMuxEngine) ServeStaticWithFallback(prefix string, spa bool, sources ...fs.FS) {
 	cleanPrefixStr := cleanPrefix(prefix)
 
-	staticServe, err := router.NewStaticFallback(sources...)
-	if err != nil {
-		panic(err.Error())
-	}
+	staticServe := router.NewStaticFallback(sources...)
 
-	handler := staticServe.Handler()
+	handler := staticServe.RawHandler(spa)
 	// Strip prefix before passing to fallback handler
 	if cleanPrefixStr != "/" {
 		handler = http.StripPrefix(cleanPrefixStr, handler)

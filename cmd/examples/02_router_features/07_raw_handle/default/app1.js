@@ -1,1 +1,1 @@
-console.log("Custom app2.js override");
+console.log("from default: Custom app2.js override")

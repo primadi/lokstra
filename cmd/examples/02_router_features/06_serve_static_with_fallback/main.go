@@ -2,7 +2,8 @@ package main
 
 import (
 	"embed"
-	"net/http"
+	"io/fs"
+	"os"
 
 	"github.com/primadi/lokstra"
 )
@@ -25,18 +26,19 @@ func main() {
 	// 1. First try project/assets (project-specific overrides)
 	// 2. Then try project/static (main project assets)
 	// 3. Finally try frameworkAssets embed.FS (framework default assets)
-	app.MountStaticWithFallback("/static",
-		http.Dir("./project/assets"), // Project overrides (highest priority)
-		// http.Dir("./project/static"), // Project assets
-		projectStatic,   // Project assets (dengan sub-filesystem)
-		frameworkAssets, // Framework default assets (lowest priority)
+	subProjectStatic, _ := fs.Sub(projectStatic, "project/static")
+	subFrameworkAssets, _ := fs.Sub(frameworkAssets, "framework_assets")
+	app.MountStaticWithFallback("/static", false,
+		os.DirFS("./project/assets"), // Project overrides (highest priority)
+		subProjectStatic,             // Project assets
+		subFrameworkAssets,           // Framework default assets (lowest priority)
 	)
 
 	// Alternative: Using string paths instead of http.Dir
-	app.MountStaticWithFallback("/assets",
-		"./project/assets",   // Project overrides
-		"./framework/assets", // Framework assets
-		frameworkAssets,      // Embedded fallback
+	app.MountStaticWithFallback("/assets", false,
+		os.DirFS("./project/assets"),   // Project overrides
+		os.DirFS("./framework/assets"), // Framework assets
+		subFrameworkAssets,             // Embedded fallback
 	)
 
 	// API routes

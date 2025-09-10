@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -156,7 +157,7 @@ func (m *MockRouterEngine) ServeStatic(prefix string, folder http.Dir) {
 }
 
 // ServeStaticWithFallback implements serviceapi.RouterEngine.
-func (m *MockRouterEngine) ServeStaticWithFallback(prefix string, sources ...any) {
+func (m *MockRouterEngine) ServeStaticWithFallback(prefix string, spa bool, sources ...fs.FS) {
 	panic("unimplemented")
 }
 

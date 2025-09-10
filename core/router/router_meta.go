@@ -3,6 +3,7 @@ package router
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"reflect"
 	"strings"
@@ -35,7 +36,8 @@ type StaticDirMeta struct {
 
 type StaticDirMetaWithFallback struct {
 	Prefix  string
-	Sources []any
+	Spa     bool
+	Sources []fs.FS
 }
 
 type SPADirMeta struct {
@@ -235,9 +237,10 @@ func (r *RouterMeta) MountReverseProxy(prefix string, target string,
 	return r
 }
 
-func (r *RouterMeta) MountStaticWithFallback(prefix string, sources ...any) *RouterMeta {
+func (r *RouterMeta) MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) *RouterMeta {
 	r.StaticWithFallbackMounts = append(r.StaticWithFallbackMounts, &StaticDirMetaWithFallback{
 		Prefix:  prefix,
+		Spa:     spa,
 		Sources: sources,
 	})
 	return r

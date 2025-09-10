@@ -1,6 +1,7 @@
 package router
 
 import (
+	"io/fs"
 	"net/http"
 
 	"github.com/primadi/lokstra/core/midware"
@@ -38,15 +39,13 @@ type Router interface {
 	WithPrefix(prefix string) Router
 
 	// RawHandle registers a standard http.Handler for the given path prefix
-	RawHandle(prefix string, handler http.Handler) Router
-	// RawHandleStripPrefix registers a standard http.Handler for the given path prefix, stripping the prefix from the request URL
-	RawHandleStripPrefix(prefix string, handler http.Handler) Router
+	RawHandle(prefix string, stripPrefix bool, handler http.Handler) Router
 
 	// MountStatic serves static files from the given folder at the specified prefix
 	MountStatic(prefix string, folder http.Dir) Router
 	// MountStaticWithFallback serves static files from multiple sources at the specified prefix, using the first available file
 	// sources can be http.Dir, string, or fs.FS
-	MountStaticWithFallback(prefix string, sources ...any) Router
+	MountStaticWithFallback(prefix string, spa bool, sources ...fs.FS) Router
 
 	// MountSPA serves a Single Page Application at the specified prefix, using the fallbackFile for unmatched routes
 	MountSPA(prefix string, fallbackFile string) Router
