@@ -1,19 +1,19 @@
 {
-  "yaml.schemas": {
-    "./schema/lokstra.json": [
-      "**/configs/**/*.yaml",
-      "**/config/**/*.yaml", 
-      "lokstra.yaml",
-      "server.yaml",
-      "**/lokstra/**/*.yaml"
-    ],
-    "./schema/group-include.json": [
-      "**/*group*.yaml",
-      "**/*include*.yaml",
-      "**/group-*.yaml",
-      "**/include-*.yaml"
-    ]
-  },
+  // "yaml.schemas": {
+  //   "./schema/lokstra.json": [
+  //     "**/configs/**/*.yaml",
+  //     "**/config/**/*.yaml", 
+  //     "lokstra.yaml",
+  //     "server.yaml",
+  //     "**/lokstra/**/*.yaml"
+  //   ],
+  //   "./schema/group-include.json": [
+  //     "**/*group*.yaml",
+  //     "**/*include*.yaml",
+  //     "**/group-*.yaml",
+  //     "**/include-*.yaml"
+  //   ]
+  // },
   "yaml.format.enable": true,
   "yaml.validate": true,
   "yaml.completion": true,
