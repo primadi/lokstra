@@ -10,7 +10,7 @@ import (
 const HTTP_ROUTER_PREFIX string = "lokstra.http_router."
 
 // RouterEngine defines the interface for a router engine that can handle HTTP methods,
-// serve static files, single-page applications (SPA), and reverse proxies.
+// serve static files, HTMX Page, and reverse proxies.
 type RouterEngine interface {
 	// HandleMethod registers a handler for a specific HTTP method and path.
 	HandleMethod(method request.HTTPMethod, path string, handler http.Handler)
@@ -28,8 +28,5 @@ type RouterEngine interface {
 	//   - "/pages" for HTML page templates
 	//
 	// All Request paths will be treated as page requests,
-	// except those starting with staticFolders list
-	// which will be treated as static asset requests.
-	ServeHtmxPage(pageDataRouter http.Handler, prefix string,
-		staticFolders []string, sources ...fs.FS)
+	ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS)
 }

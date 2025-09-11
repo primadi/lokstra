@@ -62,7 +62,7 @@ func (sf *StaticFiles) RawHandler(spa bool) http.Handler {
 		}
 
 		// Try each source in order
-		for i, s := range sf.Sources {
+		for _, s := range sf.Sources {
 			f, stat, err := openFileAndStats(s, path)
 			if err != nil {
 				continue
@@ -78,7 +78,7 @@ func (sf *StaticFiles) RawHandler(spa bool) http.Handler {
 			}
 
 			if rs, ok := f.(io.ReadSeeker); ok {
-				fmt.Printf("[DEBUG] Serving %s from FS source %d\n", path, i)
+				// fmt.Printf("[DEBUG] Serving %s from FS source %d\n", path, i)
 				http.ServeContent(w, r, path, stat.ModTime(), rs)
 				f.Close()
 			} else {
@@ -90,7 +90,7 @@ func (sf *StaticFiles) RawHandler(spa bool) http.Handler {
 
 		// Not found in any source - SPA fallback to /index.html
 		if spa && filepath.Ext(path) == "" {
-			fmt.Printf("[DEBUG] SPA fallback: %s not found, load /index.html\n", path)
+			// fmt.Printf("[DEBUG] SPA fallback: %s not found, load /index.html\n", path)
 			r2 := *r
 			r2.URL.Path = "/index.html"
 			sf.RawHandler(false).ServeHTTP(w, &r2)
@@ -149,32 +149,15 @@ func (sf *StaticFiles) WithEmbedFS(fsys embed.FS, subFS string) *StaticFiles {
 var layoutRegex = regexp.MustCompile(`<!--\s*layout:\s*([a-zA-Z0-9_\-./]+)\s*-->`)
 
 // Assume sf.Sources has:
-//   - "/static" for static assets (CSS, JS, images)
 //   - "/layouts" for HTML layout templates
 //   - "/pages" for HTML page templates
 //
-// All Request paths will be treated as page requests, except those starting with /static/
-// which will be treated as static asset requests.
-func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler,
-	staticFolders []string) http.Handler {
-	normalizeStaticFolders := make([]string, 0, len(staticFolders))
-	for _, f := range staticFolders {
-		f = "/" + strings.Trim(f, "/") + "/"
-		normalizeStaticFolders = append(normalizeStaticFolders, f)
-	}
-
+// All Request paths will be treated as page requests
+func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
-		// 1. Serve static assets directly
-		for _, folder := range normalizeStaticFolders {
-			if strings.HasPrefix(path, folder) {
-				sf.RawHandler(false).ServeHTTP(w, r)
-				return
-			}
-		}
-
-		// 2. Normalize path ke .html page
+		// 1. Normalize path ke .html page
 		pagePath := strings.TrimPrefix(path, "/")
 		if pagePath == "" {
 			pagePath = "index.html"
@@ -183,21 +166,24 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler,
 		}
 		pagePath = "pages/" + pagePath
 
-		// 3. Load page file
+		// 2. Load page file
 		pageContent, err := sf.ReadFile(pagePath)
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
 
-		// 4. Extract layout name
+		// 3. Extract layout name
 		layoutName := "base.html" // default layout
 		if m := layoutRegex.FindSubmatch(pageContent); len(m) > 1 {
 			layoutName = string(m[1])
 		}
+		w.Header().Set("LS-Layout", layoutName)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
 		layoutPath := "layouts/" + layoutName
 
-		// 5. Fetch page-data via internal call
+		// 4. Fetch page-data via internal call
 		var data map[string]any
 		var dataPath string
 		if path == "/" || path == "" {
@@ -237,45 +223,73 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler,
 			return
 		}
 
-		// 6. Cek if partial render (HTMX) or full render (normal)
+		// 5. Cek if partial render (HTMX) or full render (normal)
 		isPartial := r.Header.Get("HX-Request") == "true" &&
 			r.Header.Get("LS-Layout") == layoutName
 
 		tmpl := template.New("")
 
 		if isPartial {
-			// Partial render → only page template
+			// 6. Partial render → only page template
 			_, err = tmpl.Parse(string(pageContent))
 			if err != nil {
 				http.Error(w, fmt.Sprintf("template parse error: %v", err), http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("HX-Partial", "true")
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			_ = tmpl.Execute(w, data)
 			return
 		}
 
-		// Full render → load layout + page
+		// 7. Full render → load layout + page
 		layoutContent, err := sf.ReadFile(layoutPath)
 		if err != nil {
 			http.Error(w, "layout not found: "+layoutPath, http.StatusInternalServerError)
 			return
 		}
 
-		// Define layout & page templates
-		_, err = tmpl.Parse(string(layoutContent))
+		meta := fmt.Sprintf(`<meta name="ls-layout" content="%s">`, layoutName)
+
+		layoutSwitcherScript := meta + `<script>
+// This script is automatically injected by Lokstra HTMX Mount.
+// It ensures correct layout switching and full reload if layout changes.
+document.addEventListener("DOMContentLoaded", function () {
+	// Inject LS-Layout header for every htmx request
+	document.body.addEventListener("htmx:configRequest", function (evt) {
+		var layoutMeta = document.querySelector('meta[name="ls-layout"]')
+		var layoutName = layoutMeta ? layoutMeta.content : "base.html"
+		evt.detail.headers["LS-Layout"] = layoutName
+	})
+
+	document.body.addEventListener("htmx:beforeSwap", function (evt) {
+		var layoutMeta = document.querySelector('meta[name="ls-layout"]')
+		var currentLayout = layoutMeta ? layoutMeta.content : "base.html"
+		var responseLayout = evt.detail.xhr.getResponseHeader("LS-Layout")
+		if (responseLayout && responseLayout !== currentLayout) {
+			evt.preventDefault()
+			window.location.href =
+				evt.detail.pathInfo.finalRequestPath || window.location.pathname
+		}
+	})
+})
+</script>`
+		layoutContentStr := strings.Replace(string(layoutContent), "</head>",
+			layoutSwitcherScript+"\n</head>", 1)
+
+		// 8. Define layout & page templates
+		_, err = tmpl.Parse(layoutContentStr)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("layout parse error: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("layout parse error: %v", err),
+				http.StatusInternalServerError)
 			return
 		}
 		_, err = tmpl.New("page").Parse(string(pageContent))
 		if err != nil {
-			http.Error(w, fmt.Sprintf("page parse error: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("page parse error: %v", err),
+				http.StatusInternalServerError)
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = tmpl.Execute(w, data)
 	})
 }

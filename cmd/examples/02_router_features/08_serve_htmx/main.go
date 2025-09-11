@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"os"
 	"time"
 
 	"github.com/primadi/lokstra"
@@ -32,12 +33,14 @@ func main() {
 		WithSourceDir("./htmx_content").          // Project overrides (highest priority)
 		WithEmbedFS(projectHtmx, "project/htmx"). // Project static files (middle priority)
 		WithEmbedFS(htmxAppAssets, "htmx_app")    // Embedded static files (lowest priority)
-	app.MountHtmx("/", []string{"/static/"}, sf.Sources...)
+	app.MountHtmx("/", sf.Sources...)
 
 	sfAdmin := static_files.New().
 		WithSourceDir("./admin_htmx").         // Admin-specific overrides
 		WithEmbedFS(htmxAppAssets, "htmx_app") // Fallback to main HTMX app
-	app.MountHtmx("/admin", []string{"/static/"}, sfAdmin.Sources...)
+	app.MountHtmx("/admin", sfAdmin.Sources...)
+
+	app.MountStatic("/static/", false, os.DirFS("./static")) // Serve static files from ./static directory
 
 	// Page Data API endpoints - these provide dynamic data for HTMX pages
 	// The HTMX handler will call these internally via /page-data/* routes

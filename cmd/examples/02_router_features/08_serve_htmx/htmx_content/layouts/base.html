@@ -8,13 +8,6 @@
     <link rel="stylesheet" href="/static/custom.css">
     <script src="https://unpkg.com/htmx.org@1.9.6"></script>
     <script src="/static/app.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.body.addEventListener('htmx:configRequest', function(evt) {
-                evt.detail.headers['LS-Layout'] = 'base.html';
-            });
-        });
-    </script>
 </head>
 <body>
     <header>

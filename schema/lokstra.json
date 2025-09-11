@@ -1358,15 +1358,6 @@
           "description": "URL prefix to serve HTMX application from (e.g., '/', '/app', '/admin')",
           "pattern": "^/.*"
         },
-         "static_folders": {
-          "type": "array",
-          "description": "List of local folder paths for static asset (in order of priority)",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 0,
-          "examples": [["./static"], ["./static", "./components"]]
-        },
         "sources": {
           "type": "array",
           "description": "List of local folder paths for HTMX content (in order of priority)",
