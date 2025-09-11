@@ -2,12 +2,10 @@ package router_engine
 
 import (
 	"fmt"
+	"io/fs"
 	"net/http"
-	"os"
-	"path"
-	"strings"
 
-	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -93,40 +91,6 @@ func (m *ServeMuxEngine) ServeReverseProxy(prefix string, handler http.HandlerFu
 	}
 }
 
-// ServeSPA implements RouterEngine.
-func (m *ServeMuxEngine) ServeSPA(prefix string, indexFile string) {
-	rootDir := path.Dir(indexFile)
-
-	spaHandler := func(w http.ResponseWriter, r *http.Request) {
-		requestPath := strings.TrimPrefix(r.URL.Path, prefix)
-		if requestPath == "" || requestPath == "/" {
-			http.ServeFile(w, r, indexFile)
-			return
-		}
-
-		fullPath := path.Join(rootDir, requestPath)
-		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
-			// Serve the static file directly
-			http.ServeFile(w, r, fullPath)
-			return
-		}
-
-		if strings.Contains(path.Base(requestPath), ".") {
-			http.NotFound(w, r)
-			return
-		}
-
-		http.ServeFile(w, r, indexFile)
-	}
-
-	// Register both exact prefix and sub-paths for SPA routing
-	cleanPrefixStr := cleanPrefix(prefix)
-	m.mux.HandleFunc(cleanPrefixStr, spaHandler)
-	if cleanPrefixStr != "/" {
-		m.mux.HandleFunc(cleanPrefixStr+"/", spaHandler)
-	}
-}
-
 // RawHandle implements RouterEngine.
 func (m *ServeMuxEngine) RawHandle(pattern string, handler http.Handler) {
 	m.mux.Handle(pattern, handler)
@@ -138,28 +102,31 @@ func (m *ServeMuxEngine) RawHandleFunc(pattern string, handlerFunc http.HandlerF
 }
 
 // ServeStatic implements RouterEngine.
-func (m *ServeMuxEngine) ServeStatic(prefix string, folder http.Dir) {
+func (m *ServeMuxEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS) {
 	cleanPrefixStr := cleanPrefix(prefix)
-	fs := http.StripPrefix(cleanPrefixStr, http.FileServer(folder))
 
-	// For static file serving, we need trailing slash pattern to match sub-paths
+	staticServe := static_files.New(sources...)
+
+	handler := staticServe.RawHandler(spa)
+	// Strip prefix before passing to fallback handler
+	if cleanPrefixStr != "/" {
+		handler = http.StripPrefix(cleanPrefixStr, handler)
+	}
+
 	if cleanPrefixStr == "/" {
-		m.mux.Handle("/", fs)
+		m.mux.Handle("/", handler)
 	} else {
-		m.mux.Handle(cleanPrefixStr+"/", fs)
+		m.mux.Handle(cleanPrefixStr+"/", handler)
 	}
 }
 
-// ServeStaticWithFallback implements RouterEngine.
-func (m *ServeMuxEngine) ServeStaticWithFallback(prefix string, sources ...any) {
+// ServeHtmxPage implements serviceapi.RouterEngine.
+func (m *ServeMuxEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS) {
 	cleanPrefixStr := cleanPrefix(prefix)
 
-	staticServe, err := router.NewStaticFallback(sources...)
-	if err != nil {
-		panic(err.Error())
-	}
+	staticServe := static_files.New(sources...)
 
-	handler := staticServe.Handler()
+	handler := staticServe.HtmxPageHandler(pageDataRouter)
 	// Strip prefix before passing to fallback handler
 	if cleanPrefixStr != "/" {
 		handler = http.StripPrefix(cleanPrefixStr, handler)

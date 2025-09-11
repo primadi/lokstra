@@ -1,0 +1,60 @@
+<!-- layout: base.html -->
+<div class="page-content fade-in">
+    <h1>{{.title}}</h1>
+    <p>{{.description}}</p>
+    
+    <div class="card-grid">
+        <div class="card">
+            <h3>👥 Our Team</h3>
+            {{range .team}}
+            <div class="product-item">
+                <strong>{{.name}}</strong> - {{.role}}
+            </div>
+            {{end}}
+        </div>
+        
+        <div class="card">
+            <h3>🎯 Our Mission</h3>
+            <p>We're dedicated to building amazing web applications with modern technologies like HTMX and Go.</p>
+            <p>Our team combines years of experience in web development with cutting-edge tools to deliver exceptional user experiences.</p>
+        </div>
+        
+        <div class="card">
+            <h3>🏢 Company Values</h3>
+            <ul>
+                <li><strong>Innovation:</strong> Always exploring new technologies</li>
+                <li><strong>Quality:</strong> Delivering robust, tested solutions</li>
+                <li><strong>Collaboration:</strong> Working together to achieve goals</li>
+                <li><strong>Growth:</strong> Continuous learning and improvement</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>📈 Company Stats</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; text-align: center;">
+            <div>
+                <h2 style="color: #667eea; margin: 0;">50+</h2>
+                <p>Projects Completed</p>
+            </div>
+            <div>
+                <h2 style="color: #667eea; margin: 0;">100+</h2>
+                <p>Happy Clients</p>
+            </div>
+            <div>
+                <h2 style="color: #667eea; margin: 0;">5+</h2>
+                <p>Years Experience</p>
+            </div>
+            <div>
+                <h2 style="color: #667eea; margin: 0;">24/7</h2>
+                <p>Support Available</p>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="/contact" class="btn" hx-get="/contact" hx-target="main" hx-push-url="true">
+            Get in Touch with Us
+        </a>
+    </div>
+</div>

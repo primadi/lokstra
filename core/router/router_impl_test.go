@@ -1,8 +1,10 @@
 package router_test
 
 import (
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -151,17 +153,14 @@ func (m *MockRouterEngine) RawHandleFunc(pattern string, handlerFunc http.Handle
 	panic("unimplemented")
 }
 
-func (m *MockRouterEngine) ServeStatic(prefix string, folder http.Dir) {
-	m.staticMounts[prefix] = folder
-}
-
-// ServeStaticWithFallback implements serviceapi.RouterEngine.
-func (m *MockRouterEngine) ServeStaticWithFallback(prefix string, sources ...any) {
+// ServeStatic implements serviceapi.RouterEngine.
+func (m *MockRouterEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS) {
 	panic("unimplemented")
 }
 
-func (m *MockRouterEngine) ServeSPA(prefix string, fallbackFile string) {
-	m.spaMounts[prefix] = fallbackFile
+// ServeHtmxPage implements serviceapi.RouterEngine.
+func (m *MockRouterEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS) {
+	panic("unimplemented")
 }
 
 func (m *MockRouterEngine) ServeReverseProxy(prefix string, handler http.HandlerFunc) {
@@ -552,7 +551,7 @@ func TestRouterImpl_MountStatic(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 	r := router.NewRouter(ctx, map[string]any{})
 
-	result := r.MountStatic("/static", http.Dir("./public"))
+	result := r.MountStatic("/static", false, os.DirFS("./public"))
 
 	if result == nil {
 		t.Error("Expected router to be returned, got nil")
@@ -563,7 +562,7 @@ func TestRouterImpl_MountSPA(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 	r := router.NewRouter(ctx, map[string]any{})
 
-	result := r.MountSPA("/app", "index.html")
+	result := r.MountStatic("/app", true, os.DirFS("./"))
 
 	if result == nil {
 		t.Error("Expected router to be returned, got nil")
@@ -592,19 +591,11 @@ func TestRouterImpl_ServeHTTP(t *testing.T) {
 	r.ServeHTTP(w, req)
 }
 
-func TestRouterImpl_LockMiddleware(t *testing.T) {
-	ctx := &MockRegistrationContext{}
-	r := router.NewRouter(ctx, map[string]any{})
-
-	// Should not panic
-	r.LockMiddleware()
-}
-
 func TestRouterImpl_OverrideMiddleware(t *testing.T) {
 	ctx := &MockRegistrationContext{}
 	r := router.NewRouter(ctx, map[string]any{})
 
-	result := r.OverrideMiddleware()
+	result := r.WithOverrideMiddleware(true)
 
 	if result == nil {
 		t.Error("Expected router to be returned, got nil")

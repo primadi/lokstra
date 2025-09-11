@@ -1,6 +1,7 @@
 package serviceapi
 
 import (
+	"io/fs"
 	"net/http"
 
 	"github.com/primadi/lokstra/core/request"
@@ -19,11 +20,15 @@ type RouterEngine interface {
 	RawHandle(pattern string, handler http.Handler)
 	RawHandleFunc(pattern string, handlerFunc http.HandlerFunc)
 
-	ServeStatic(prefix string, folder http.Dir)
-
-	// Sources can be http.Dir, fs.FS, or embed.FS
-	ServeStaticWithFallback(prefix string, sources ...any)
-
-	ServeSPA(prefix string, indexFile string)
+	ServeStatic(prefix string, spa bool, sources ...fs.FS)
 	ServeReverseProxy(prefix string, handler http.HandlerFunc)
+
+	// Assume sources has:
+	//   - "/static" for static assets (CSS, JS, images)
+	//   - "/layouts" for HTML layout templates
+	//   - "/pages" for HTML page templates
+	//
+	// All Request paths will be treated as page requests, except those starting with /static/
+	// which will be treated as static asset requests.
+	ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS)
 }

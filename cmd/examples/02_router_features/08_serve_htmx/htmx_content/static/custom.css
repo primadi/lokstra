@@ -1,0 +1,13 @@
+/* Custom project styles - overrides embedded styles */
+.page-content {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-left: 4px solid #667eea;
+}
+
+.card {
+  border-left: 3px solid #28a745;
+}
+
+h1 {
+  color: #2c5aa0;
+}

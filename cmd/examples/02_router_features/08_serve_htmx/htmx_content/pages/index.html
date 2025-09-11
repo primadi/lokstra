@@ -1,0 +1,45 @@
+<div class="hero-section">
+    <h1>Welcome to {{.title}}</h1>
+    <p class="subtitle">{{.subtitle}}</p>
+    <p class="description">{{.description}}</p>
+    
+    <div class="custom-override-notice">
+        <p><strong>🎯 Local Override Active!</strong> This page is served from <code>htmx_content/pages/index.html</code></p>
+        <p>Fallback chain: htmx_content → project/htmx → htmx_app (embedded)</p>
+    </div>
+    
+    <div class="quick-actions">
+        <button class="btn primary" hx-get="/page-data/featured-products" hx-target="#dynamic-content">
+            Load Featured Products
+        </button>
+        <button class="btn secondary" hx-get="/page-data/latest-news" hx-target="#dynamic-content">
+            Load Latest News
+        </button>
+        <button class="btn" hx-get="/page-data/stats" hx-target="#dynamic-content">
+            Load Statistics
+        </button>
+    </div>
+    
+    <div id="dynamic-content" class="dynamic-section">
+        <p class="placeholder">Click a button above to load dynamic content!</p>
+    </div>
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <h3>🚀 Fast Performance</h3>
+        <p>Built with Go for lightning-fast response times and minimal resource usage.</p>
+    </div>
+    <div class="feature-card">
+        <h3>🔧 Flexible Routing</h3>
+        <p>Powerful routing system with middleware support and fallback chains.</p>
+    </div>
+    <div class="feature-card">
+        <h3>🎨 HTMX Integration</h3>
+        <p>Seamless HTMX support for modern, dynamic web applications.</p>
+    </div>
+    <div class="feature-card">
+        <h3>📁 Multi-layer FS</h3>
+        <p>Project files override embedded defaults for maximum customization.</p>
+    </div>
+</div>

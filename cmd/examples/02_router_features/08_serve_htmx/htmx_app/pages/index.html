@@ -1,0 +1,50 @@
+<!-- layout: base.html -->
+<div class="page-content fade-in">
+    <h1>{{.title}}</h1>
+    <p>{{.message}}</p>
+    
+    <div class="card-grid">
+        <div class="card">
+            <h3>🚀 HTMX Features</h3>
+            <ul>
+                {{range .features}}
+                <li>{{.}}</li>
+                {{end}}
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h3>📊 Server Info</h3>
+            <p><strong>Timestamp:</strong> {{.timestamp}}</p>
+            <p><strong>Framework:</strong> Lokstra</p>
+            <p><strong>Template Engine:</strong> Go Templates</p>
+        </div>
+        
+        <div class="card">
+            <h3>🎯 Quick Actions</h3>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <a href="/about" class="btn" hx-get="/about" hx-target="main" hx-push-url="true">Learn More</a>
+                <a href="/products" class="btn btn-secondary" hx-get="/products" hx-target="main" hx-push-url="true">View Products</a>
+                <a href="/contact" class="btn btn-success" hx-get="/contact" hx-target="main" hx-push-url="true">Get in Touch</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>🔄 Dynamic Content Demo</h3>
+        <p>Click the button below to fetch dynamic content via HTMX:</p>
+        <button 
+            class="btn" 
+            hx-get="/api/products/1" 
+            hx-target="#dynamic-content"
+            hx-swap="innerHTML">
+            Load Product Info
+            <span class="htmx-indicator">
+                <div class="spinner"></div>
+            </span>
+        </button>
+        <div id="dynamic-content" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+            <p>Dynamic content will appear here...</p>
+        </div>
+    </div>
+</div>

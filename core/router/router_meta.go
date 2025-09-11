@@ -3,8 +3,10 @@ package router
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
@@ -21,14 +23,21 @@ type RouteMeta struct {
 	Middleware         []*midware.Execution
 }
 
-type StaticDirMeta struct {
-	Prefix string
-	Folder http.Dir
+type RawHandleMeta struct {
+	Prefix  string
+	Handler http.Handler
+	Strip   bool
 }
 
-type SPADirMeta struct {
-	Prefix       string
-	FallbackFile string
+type StaticDirMeta struct {
+	Prefix  string
+	Spa     bool
+	Sources []fs.FS
+}
+
+type HTMXPageMeta struct {
+	Prefix  string
+	Sources []fs.FS
 }
 
 type ReverseProxyMeta struct {
@@ -38,16 +47,27 @@ type ReverseProxyMeta struct {
 	Middleware         []*midware.Execution
 }
 
+type RPCServiceMeta struct {
+	Path               string
+	Service            any
+	OverrideMiddleware bool
+	Middleware         []any
+}
+
 type RouterMeta struct {
 	Prefix             string
 	OverrideMiddleware bool
 
-	Routes     []*RouteMeta
-	Middleware []*midware.Execution
-	// StaticMounts   []*StaticDirMeta
-	// SPAMounts      []*SPADirMeta
+	Routes         []*RouteMeta
+	Middleware     []*midware.Execution
 	ReverseProxies []*ReverseProxyMeta
-	Groups         []*RouterMeta
+
+	RawHandles   []*RawHandleMeta
+	RPCHandles   []*RPCServiceMeta
+	StaticMounts []*StaticDirMeta
+	HTMXPages    []*HTMXPageMeta
+
+	Groups []*RouterMeta
 }
 
 func NewRouterMeta() *RouterMeta {
@@ -56,17 +76,17 @@ func NewRouterMeta() *RouterMeta {
 		OverrideMiddleware: false,
 		Routes:             []*RouteMeta{},
 		Middleware:         []*midware.Execution{},
-		// StaticMounts:       []*StaticDirMeta{},
-		// SPAMounts:          []*SPADirMeta{},
-		ReverseProxies: []*ReverseProxyMeta{},
-		Groups:         []*RouterMeta{},
+		ReverseProxies:     []*ReverseProxyMeta{},
+		Groups:             []*RouterMeta{},
+
+		RawHandles:   []*RawHandleMeta{},
+		RPCHandles:   []*RPCServiceMeta{},
+		StaticMounts: []*StaticDirMeta{},
 	}
 }
 
 func (r *RouterMeta) DumpRoutes() {
-	r.RecurseAllHandler(func(rt *RouteMeta) {
-		fmt.Printf("[ROUTE] %s %s\n", rt.Method, rt.Path)
-	})
+	r.dumpAllRoutes("", "")
 }
 
 func (r *RouterMeta) RecurseAllHandler(callback func(rt *RouteMeta)) {
@@ -78,16 +98,7 @@ func (r *RouterMeta) RecurseAllHandler(callback func(rt *RouteMeta)) {
 	}
 }
 
-func (r *RouterMeta) Handle(method request.HTTPMethod, path string, handler any, middleware ...any) *RouterMeta {
-	return r.handle(method, path, handler, false, middleware...)
-}
-
-func (r *RouterMeta) HandleWithOverrideMiddleware(method request.HTTPMethod, path string, handler any,
-	middleware ...any) *RouterMeta {
-	return r.handle(method, path, handler, true, middleware...)
-}
-
-func (r *RouterMeta) handle(method request.HTTPMethod, path string, handler any,
+func (r *RouterMeta) Handle(method request.HTTPMethod, path string, handler any,
 	overrideMiddleware bool, middleware ...any) *RouterMeta {
 	var handlerInfo *request.HandlerMeta
 
@@ -193,6 +204,43 @@ func (r *RouterMeta) MountReverseProxy(prefix string, target string,
 	return r
 }
 
+func (r *RouterMeta) MountStatic(prefix string, spa bool, sources ...fs.FS) *RouterMeta {
+	r.StaticMounts = append(r.StaticMounts, &StaticDirMeta{
+		Prefix:  prefix,
+		Spa:     spa,
+		Sources: sources,
+	})
+	return r
+}
+
+func (r *RouterMeta) MountHtmx(prefix string, sources ...fs.FS) *RouterMeta {
+	r.HTMXPages = append(r.HTMXPages, &HTMXPageMeta{
+		Prefix:  prefix,
+		Sources: sources,
+	})
+	return r
+}
+
+func (r *RouterMeta) RawHandle(prefix string, handler http.Handler, stripPrefix bool) *RouterMeta {
+	r.RawHandles = append(r.RawHandles, &RawHandleMeta{
+		Prefix:  prefix,
+		Handler: handler,
+		Strip:   stripPrefix,
+	})
+	return r
+}
+
+func (r *RouterMeta) MountRpcService(path string, service any,
+	overrideMiddleware bool, middleware ...any) *RouterMeta {
+	r.RPCHandles = append(r.RPCHandles, &RPCServiceMeta{
+		Path:               path,
+		Service:            service,
+		OverrideMiddleware: overrideMiddleware,
+		Middleware:         middleware,
+	})
+	return r
+}
+
 func ResolveAllNamed(ctx registration.Context, r *RouterMeta) {
 	for i, route := range r.Routes {
 		if rpcServiceMeta, ok := route.Handler.Extension.(*service.RpcServiceMeta); ok {
@@ -268,4 +316,126 @@ func getOrCreateService[T any](ctx registration.Context,
 	}
 	var zero T
 	return zero, errors.New("service type mismatch: " + serviceName)
+}
+
+func (r *RouterMeta) dumpAllRoutes(prefixContext string, groupPath string) {
+	currentPrefix := prefixContext + r.Prefix
+	if currentPrefix != "/" && strings.HasSuffix(currentPrefix, "/") {
+		currentPrefix = strings.TrimSuffix(currentPrefix, "/")
+	}
+
+	// Regular routes
+	for _, route := range r.Routes {
+		handlerName := "anonymous"
+		if route.Handler != nil && route.Handler.Name != "" {
+			handlerName = route.Handler.Name
+		}
+
+		middlewareNames := make([]string, 0, len(route.Middleware))
+		for _, mw := range route.Middleware {
+			if mw.Name != "" {
+				middlewareNames = append(middlewareNames, mw.Name)
+			} else {
+				middlewareNames = append(middlewareNames, "anonymous")
+			}
+		}
+
+		overrideStatus := ""
+		if route.OverrideMiddleware {
+			overrideStatus = " [OVERRIDE_MW]"
+		}
+
+		fmt.Printf("[ROUTE] %s %s -> %s", route.Method, route.Path, handlerName)
+		if len(middlewareNames) > 0 {
+			fmt.Printf(" | MW: [%s]", strings.Join(middlewareNames, ", "))
+		}
+		fmt.Printf("%s\n", overrideStatus)
+	}
+
+	// Static mounts
+	for _, staticFb := range r.StaticMounts {
+		fmt.Printf("[STATIC] %s -> %d sources\n", staticFb.Prefix, len(staticFb.Sources))
+	}
+
+	// HTMX mounts
+	for _, htmx := range r.HTMXPages {
+		fmt.Printf("[HTMX] %s -> %d sources\n", htmx.Prefix, len(htmx.Sources))
+	}
+
+	// Reverse proxies
+	for _, rp := range r.ReverseProxies {
+		middlewareNames := make([]string, 0, len(rp.Middleware))
+		for _, mw := range rp.Middleware {
+			if mw.Name != "" {
+				middlewareNames = append(middlewareNames, mw.Name)
+			} else {
+				middlewareNames = append(middlewareNames, "anonymous")
+			}
+		}
+
+		overrideStatus := ""
+		if rp.OverrideMiddleware {
+			overrideStatus = " [OVERRIDE_MW]"
+		}
+
+		fmt.Printf("[PROXY] %s -> %s", rp.Prefix, rp.Target)
+		if len(middlewareNames) > 0 {
+			fmt.Printf(" | MW: [%s]", strings.Join(middlewareNames, ", "))
+		}
+		fmt.Printf("%s\n", overrideStatus)
+	}
+
+	// RPC services
+	for _, rpc := range r.RPCHandles {
+		serviceName := "unknown"
+		switch s := rpc.Service.(type) {
+		case string:
+			serviceName = s
+		case *service.RpcServiceMeta:
+			if s.ServiceName != "" {
+				serviceName = s.ServiceName
+			}
+		}
+
+		middlewareNames := make([]string, 0, len(rpc.Middleware))
+		for _, mw := range rpc.Middleware {
+			switch m := mw.(type) {
+			case string:
+				middlewareNames = append(middlewareNames, m)
+			case *midware.Execution:
+				if m.Name != "" {
+					middlewareNames = append(middlewareNames, m.Name)
+				} else {
+					middlewareNames = append(middlewareNames, "anonymous")
+				}
+			default:
+				middlewareNames = append(middlewareNames, "anonymous")
+			}
+		}
+
+		overrideStatus := ""
+		if rpc.OverrideMiddleware {
+			overrideStatus = " [OVERRIDE_MW]"
+		}
+
+		fmt.Printf("[RPC] POST %s/:method -> %s", rpc.Path, serviceName)
+		if len(middlewareNames) > 0 {
+			fmt.Printf(" | MW: [%s]", strings.Join(middlewareNames, ", "))
+		}
+		fmt.Printf("%s\n", overrideStatus)
+	}
+
+	// Raw handles
+	for _, raw := range r.RawHandles {
+		stripInfo := ""
+		if raw.Strip {
+			stripInfo = " [STRIP_PREFIX]"
+		}
+		fmt.Printf("[RAW] %s -> http.Handler%s\n", raw.Prefix, stripInfo)
+	}
+
+	// Recurse into groups
+	for _, group := range r.Groups {
+		group.dumpAllRoutes(currentPrefix, groupPath+group.Prefix)
+	}
 }

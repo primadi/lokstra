@@ -45,7 +45,7 @@ func TestComposeMiddleware_ErrorHandling(t *testing.T) {
 		},
 		{
 			name:                    "middleware_returns_error",
-			middlewareSetStatusCode: 200,
+			middlewareSetStatusCode: 500,
 			middlewareReturnsError:  true,
 			expectInnerCall:         false,
 			expectError:             true,
@@ -67,17 +67,20 @@ func TestComposeMiddleware_ErrorHandling(t *testing.T) {
 			// Create middleware that sets status or returns error
 			testMiddleware := func(next request.HandlerFunc) request.HandlerFunc {
 				return func(ctx *request.Context) error {
-					// Set status code if specified
-					if tt.middlewareSetStatusCode != 0 {
-						ctx.StatusCode = tt.middlewareSetStatusCode
-					}
-
-					// Return error if specified
+					var err error
+					// Pre-processing: Return error immediately if specified
 					if tt.middlewareReturnsError {
-						return errors.New("middleware error")
+						err = errors.New("middleware error")
+					}
+					if tt.middlewareSetStatusCode != 200 {
+						ctx.StatusCode = tt.middlewareSetStatusCode
+						err = errors.New("middleware set status code")
 					}
 
-					// Call next handler
+					if ctx.ShouldStopMiddlewareChain(err) {
+						return err
+					}
+					// Call next middleware/handler only if no pre-processing errors
 					return next(ctx)
 				}
 			}
@@ -143,13 +146,10 @@ func TestComposeMiddleware_MultipleMiddleware(t *testing.T) {
 	middleware2 := func(next request.HandlerFunc) request.HandlerFunc {
 		return func(ctx *request.Context) error {
 			callOrder = append(callOrder, "mw2_before")
-			// This middleware sets error status
+			// This middleware sets error status and should stop chain
 			ctx.StatusCode = 400
-			err := next(ctx)
-			if !ctx.ShouldStopMiddlewareChain(err) {
-				callOrder = append(callOrder, "mw2_after")
-			}
-			return err
+			// Don't call next when setting error status - stop the chain
+			return errors.New("middleware2 set error status")
 		}
 	}
 

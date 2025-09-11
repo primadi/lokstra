@@ -53,7 +53,7 @@ groups:
 
 mount_static:
   - prefix: /uploads
-    folder: ./uploads
+    folder: [./uploads]
 
 mount_rpc_service:
   - base_path: /rpc
@@ -109,9 +109,6 @@ apps:
           - method: GET
             path: /info
             handler: info.Handler
-        mount_spa:
-          - prefix: /dashboard
-            fallback_file: index.html
         mount_reverse_proxy:
           - prefix: /proxy
             target: http://backend.example.com
@@ -253,7 +250,7 @@ modules:
 	// Test mount configurations
 	require.Len(t, apiV1Group.MountStatic, 1)
 	assert.Equal(t, "/uploads", apiV1Group.MountStatic[0].Prefix)
-	assert.Equal(t, "./uploads", apiV1Group.MountStatic[0].Folder)
+	assert.Equal(t, "./uploads", apiV1Group.MountStatic[0].Folder[0])
 
 	require.Len(t, apiV1Group.MountRpcService, 1)
 	assert.Equal(t, "/rpc", apiV1Group.MountRpcService[0].BasePath)
@@ -264,10 +261,6 @@ modules:
 	assert.Equal(t, "/api/v2", apiV2Group.Prefix)
 	require.Len(t, apiV2Group.Routes, 1)
 	assert.Equal(t, "/info", apiV2Group.Routes[0].Path)
-
-	require.Len(t, apiV2Group.MountSpa, 1)
-	assert.Equal(t, "/dashboard", apiV2Group.MountSpa[0].Prefix)
-	assert.Equal(t, "index.html", apiV2Group.MountSpa[0].FallbackFile)
 
 	require.Len(t, apiV2Group.MountReverseProxy, 1)
 	assert.Equal(t, "/proxy", apiV2Group.MountReverseProxy[0].Prefix)

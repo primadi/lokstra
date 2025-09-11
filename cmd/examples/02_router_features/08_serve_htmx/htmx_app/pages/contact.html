@@ -1,0 +1,102 @@
+<!-- layout: base.html -->
+<div class="page-content fade-in">
+    <h1>{{.title}}</h1>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <div class="card">
+            <h3>📞 Get in Touch</h3>
+            <p><strong>Email:</strong> {{.email}}</p>
+            <p><strong>Phone:</strong> {{.phone}}</p>
+            <p><strong>Address:</strong> {{.address}}</p>
+            
+            <h4 style="margin-top: 1.5rem;">Business Hours</h4>
+            <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
+            <p>Saturday: 10:00 AM - 4:00 PM</p>
+            <p>Sunday: Closed</p>
+        </div>
+        
+        <div class="card">
+            <h3>✉️ Send us a Message</h3>
+            <form id="contact-form" hx-post="/api/contact" hx-target="#form-response" hx-swap="innerHTML">
+                <div class="form-group">
+                    <label for="name">Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">Message *</label>
+                    <textarea id="message" name="message" rows="5" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn">
+                    Send Message
+                    <span class="htmx-indicator">
+                        <div class="spinner"></div>
+                    </span>
+                </button>
+            </form>
+            
+            <div id="form-response" style="margin-top: 1rem;">
+                <!-- Response will appear here -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>🗺️ Find Us</h3>
+        <div style="background: #f8f9fa; padding: 2rem; border-radius: 8px; text-align: center;">
+            <p style="color: #666; margin: 0;">Interactive map would be embedded here</p>
+            <p style="color: #666; margin: 0; font-size: 0.9rem;">{{.address}}</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>❓ Frequently Asked Questions</h3>
+        <div style="display: grid; gap: 1rem;">
+            <div>
+                <h4>How quickly do you respond to messages?</h4>
+                <p>We typically respond to all inquiries within 24 hours during business days.</p>
+            </div>
+            <div>
+                <h4>Do you offer consultation services?</h4>
+                <p>Yes! We offer free 30-minute consultations to discuss your project requirements.</p>
+            </div>
+            <div>
+                <h4>What's the best way to reach you for urgent matters?</h4>
+                <p>For urgent matters, please call us directly at {{.phone}} during business hours.</p>
+            </div>
+            <div>
+                <h4>Do you work with international clients?</h4>
+                <p>Absolutely! We work with clients worldwide and accommodate different time zones.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle contact form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const contactForm = document.getElementById('contact-form');
+    if (contactForm) {
+        contactForm.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.successful) {
+                // Clear form after successful submission
+                this.reset();
+                
+                // Show success message in the response area
+                const responseDiv = document.getElementById('form-response');
+                responseDiv.innerHTML = '<div class="message success">Thank you for your message! We\'ll get back to you soon.</div>';
+            } else {
+                // Show error message
+                const responseDiv = document.getElementById('form-response');
+                responseDiv.innerHTML = '<div class="message error">Sorry, there was an error sending your message. Please try again.</div>';
+            }
+        });
+    }
+});
+</script>

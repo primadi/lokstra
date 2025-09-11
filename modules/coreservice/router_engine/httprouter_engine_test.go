@@ -213,7 +213,7 @@ func TestHttpRouterEngine_ServeStatic(t *testing.T) {
 	}
 
 	// Test ServeStatic
-	router.ServeStatic("/static", http.Dir(tempDir))
+	router.ServeStatic("/static", false, os.DirFS(tempDir))
 
 	// Test request to static file
 	req := httptest.NewRequest(http.MethodGet, "/static/test.txt", nil)
@@ -255,7 +255,7 @@ func TestHttpRouterEngine_ServeSPA(t *testing.T) {
 	}
 
 	// Test ServeSPA
-	router.ServeSPA("/app", indexFile)
+	router.ServeStatic("/app", true, os.DirFS(tempDir))
 
 	tests := []struct {
 		name           string
@@ -352,7 +352,7 @@ func TestHttpRouterEngine_NotFoundFallback(t *testing.T) {
 
 	// Add a static file route (which creates the servemux fallback)
 	tempDir := t.TempDir()
-	router.ServeStatic("/static", http.Dir(tempDir))
+	router.ServeStatic("/static", false, os.DirFS(tempDir))
 
 	// Add a regular route
 	router.HandleMethod(http.MethodGet, "/api/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -440,8 +440,9 @@ func TestHttpRouterEngine_Integration(t *testing.T) {
 		w.Write([]byte("Created: " + string(body)))
 	}))
 
-	router.ServeStatic("/assets", http.Dir(tempDir))
-	router.ServeSPA("/app", indexFile)
+	tempFS := os.DirFS(tempDir)
+	router.ServeStatic("/assets", false, tempFS)
+	router.ServeStatic("/app", true, tempFS)
 
 	proxyHandler2 := func(w http.ResponseWriter, r *http.Request) {
 		// Simple proxy simulation

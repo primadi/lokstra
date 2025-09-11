@@ -2,7 +2,8 @@ package config
 
 import (
 	"fmt"
-	"net/http"
+	"io/fs"
+	"os"
 	"plugin"
 
 	"github.com/primadi/lokstra/common/utils"
@@ -163,11 +164,19 @@ func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps 
 		}
 
 		for _, static := range ac.MountStatic {
-			app.MountStatic(static.Prefix, http.Dir(static.Folder))
+			tmpFS := make([]fs.FS, 0, len(static.Folder))
+			for _, folder := range static.Folder {
+				tmpFS = append(tmpFS, os.DirFS(folder))
+			}
+			app.MountStatic(static.Prefix, static.Spa, tmpFS...)
 		}
 
-		for _, spa := range ac.MountSPA {
-			app.MountSPA(spa.Prefix, spa.FallbackFile)
+		for _, htmx := range ac.MountHtmx {
+			tmpFS := make([]fs.FS, 0, len(htmx.Folder))
+			for _, folder := range htmx.Folder {
+				tmpFS = append(tmpFS, os.DirFS(folder))
+			}
+			app.MountHtmx(htmx.Prefix, tmpFS...)
 		}
 
 		for _, proxy := range ac.MountReverseProxy {
@@ -208,11 +217,19 @@ func buildGroup(regCtx registration.Context, parent router.Router, group GroupCo
 	}
 
 	for _, static := range group.MountStatic {
-		gr.MountStatic(static.Prefix, http.Dir(static.Folder))
+		tmpFS := make([]fs.FS, 0, len(static.Folder))
+		for _, folder := range static.Folder {
+			tmpFS = append(tmpFS, os.DirFS(folder))
+		}
+		gr.MountStatic(static.Prefix, static.Spa, tmpFS...)
 	}
 
-	for _, spa := range group.MountSpa {
-		gr.MountSPA(spa.Prefix, spa.FallbackFile)
+	for _, htmx := range group.MountHtmx {
+		tmpFS := make([]fs.FS, 0, len(htmx.Folder))
+		for _, folder := range htmx.Folder {
+			tmpFS = append(tmpFS, os.DirFS(folder))
+		}
+		gr.MountHtmx(htmx.Prefix, tmpFS...)
 	}
 
 	for _, proxy := range group.MountReverseProxy {
