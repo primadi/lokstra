@@ -34,8 +34,8 @@ func (g *GroupImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Route
 }
 
 // MountHtmx implements Router.
-func (g *GroupImpl) MountHtmx(prefix string, staticFolders []string, sources ...fs.FS) Router {
-	g.meta.MountHtmx(g.cleanPrefix(prefix), staticFolders, sources...)
+func (g *GroupImpl) MountHtmx(prefix string, sources ...fs.FS) Router {
+	g.meta.MountHtmx(g.cleanPrefix(prefix), sources...)
 	return g
 }
 
