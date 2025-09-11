@@ -106,6 +106,6 @@ apps:
 
         mount_static:
           - prefix: "/static"
-            folder: "./static"
+            folder: ["./static"]
           - prefix: "/assets"
-            folder: "./assets"
+            folder: ["./assets"]

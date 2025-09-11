@@ -18,6 +18,11 @@ type MountStaticConfig struct {
 	Folder []string `yaml:"folder"`
 }
 
+type MountHtmxConfig struct {
+	Prefix string   `yaml:"prefix"`
+	Folder []string `yaml:"folder"`
+}
+
 type MountReverseProxyConfig struct {
 	Prefix string `yaml:"prefix"`
 	Target string `yaml:"target"`
@@ -38,7 +43,9 @@ type GroupConfig struct {
 	Middleware         []MiddlewareConfig `yaml:"-"`
 	OverrideMiddleware bool               `yaml:"override_middleware,omitempty"`
 
-	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
+	MountStatic []MountStaticConfig `yaml:"mount_static,omitempty"`
+	MountHtmx   []MountHtmxConfig   `yaml:"mount_htmx,omitempty"`
+
 	MountReverseProxy []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
 	MountRpcService   []MountRpcServiceConfig   `yaml:"mount_rpc_service,omitempty"`
 }
@@ -54,9 +61,12 @@ type AppConfig struct {
 	MiddlewareRaw any                `yaml:"middleware"`
 	Middleware    []MiddlewareConfig `yaml:"-"`
 
-	Settings          map[string]any            `yaml:"setting,omitempty"`
-	MountStatic       []MountStaticConfig       `yaml:"mount_static,omitempty"`
+	Settings    map[string]any      `yaml:"setting,omitempty"`
+	MountStatic []MountStaticConfig `yaml:"mount_static,omitempty"`
+	MountHtmx   []MountHtmxConfig   `yaml:"mount_htmx,omitempty"`
+
 	MountReverseProxy []MountReverseProxyConfig `yaml:"mount_reverse_proxy,omitempty"`
+	MountRpcService   []MountRpcServiceConfig   `yaml:"mount_rpc_service,omitempty"`
 }
 
 type MiddlewareConfig struct {

@@ -290,6 +290,8 @@ func expandGroupIncludes(baseDir string, groups *[]GroupConfig) error {
 			group.Groups = append(group.Groups, external.Groups...)
 
 			group.MountStatic = append(group.MountStatic, external.MountStatic...)
+			group.MountHtmx = append(group.MountHtmx, external.MountHtmx...)
+
 			group.MountReverseProxy = append(group.MountReverseProxy, external.MountReverseProxy...)
 			group.MountRpcService = append(group.MountRpcService, external.MountRpcService...)
 		}

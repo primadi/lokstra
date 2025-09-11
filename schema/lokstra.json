@@ -153,11 +153,11 @@
             "$ref": "#/definitions/MountStaticConfig"
           }
         },
-        "mount_spa": {
+        "mount_htmx": {
           "type": "array",
-          "description": "Single Page Application mount points",
+          "description": "HTMX Application mount points",
           "items": {
-            "$ref": "#/definitions/MountSPAConfig"
+            "$ref": "#/definitions/MountHtmxConfig"
           }
         },
         "mount_reverse_proxy": {
@@ -216,11 +216,11 @@
             "$ref": "#/definitions/MountStaticConfig"
           }
         },
-        "mount_spa": {
+        "mount_htmx": {
           "type": "array",
-          "description": "SPA mount points for this group",
+          "description": "HTMX application mount points for this group",
           "items": {
-            "$ref": "#/definitions/MountSPAConfig"
+            "$ref": "#/definitions/MountHtmxConfig"
           }
         },
         "mount_reverse_proxy": {
@@ -1331,26 +1331,41 @@
           "description": "URL prefix to serve static files from (e.g., '/static', '/assets')",
           "pattern": "^/.*"
         },
+        "spa": {
+          "type": "boolean",
+          "description": "Enable Single Page Application mode with fallback to index.html",
+          "default": false
+        },
         "folder": {
-          "type": "string",
-          "description": "Local folder path to serve files from (e.g., './static', './public')"
+          "type": "array",
+          "description": "List of local folder paths to serve files from (in order of priority)",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "examples": [["./static"], ["./public", "./assets"], ["./htmx_content/static", "./htmx_app/static"]]
         }
       },
       "additionalProperties": false
     },
-    "MountSPAConfig": {
+    "MountHtmxConfig": {
       "type": "object",
-      "description": "Single Page Application serving configuration",
-      "required": ["prefix", "fallback_file"],
+      "description": "HTMX application mount configuration",
+      "required": ["prefix", "folder"],
       "properties": {
         "prefix": {
           "type": "string",
-          "description": "URL prefix for SPA routes (typically '/')",
+          "description": "URL prefix to serve HTMX application from (e.g., '/', '/app', '/admin')",
           "pattern": "^/.*"
         },
-        "fallback_file": {
-          "type": "string",
-          "description": "Fallback HTML file for client-side routing (e.g., './dist/index.html')"
+        "folder": {
+          "type": "array",
+          "description": "List of local folder paths for HTMX content (in order of priority)",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "examples": [["./htmx_content"], ["./admin_htmx", "./htmx_content"], ["./project/htmx", "./htmx_content", "./htmx_app"]]
         }
       },
       "additionalProperties": false
