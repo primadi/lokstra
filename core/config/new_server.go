@@ -172,11 +172,11 @@ func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps 
 		}
 
 		for _, htmx := range ac.MountHtmx {
-			tmpFS := make([]fs.FS, 0, len(htmx.Folder))
-			for _, folder := range htmx.Folder {
+			tmpFS := make([]fs.FS, 0, len(htmx.Sources))
+			for _, folder := range htmx.Sources {
 				tmpFS = append(tmpFS, os.DirFS(folder))
 			}
-			app.MountHtmx(htmx.Prefix, tmpFS...)
+			app.MountHtmx(htmx.Prefix, htmx.StaticFolders, tmpFS...)
 		}
 
 		for _, proxy := range ac.MountReverseProxy {
@@ -225,11 +225,11 @@ func buildGroup(regCtx registration.Context, parent router.Router, group GroupCo
 	}
 
 	for _, htmx := range group.MountHtmx {
-		tmpFS := make([]fs.FS, 0, len(htmx.Folder))
-		for _, folder := range htmx.Folder {
+		tmpFS := make([]fs.FS, 0, len(htmx.Sources))
+		for _, folder := range htmx.Sources {
 			tmpFS = append(tmpFS, os.DirFS(folder))
 		}
-		gr.MountHtmx(htmx.Prefix, tmpFS...)
+		gr.MountHtmx(htmx.Prefix, htmx.StaticFolders, tmpFS...)
 	}
 
 	for _, proxy := range group.MountReverseProxy {

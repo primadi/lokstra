@@ -155,14 +155,23 @@ var layoutRegex = regexp.MustCompile(`<!--\s*layout:\s*([a-zA-Z0-9_\-./]+)\s*-->
 //
 // All Request paths will be treated as page requests, except those starting with /static/
 // which will be treated as static asset requests.
-func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler) http.Handler {
+func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler,
+	staticFolders []string) http.Handler {
+	normalizeStaticFolders := make([]string, 0, len(staticFolders))
+	for _, f := range staticFolders {
+		f = "/" + strings.Trim(f, "/") + "/"
+		normalizeStaticFolders = append(normalizeStaticFolders, f)
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
-		// 1. Serve static assets langsung
-		if strings.HasPrefix(path, "/static/") {
-			sf.RawHandler(false).ServeHTTP(w, r)
-			return
+		// 1. Serve static assets directly
+		for _, folder := range normalizeStaticFolders {
+			if strings.HasPrefix(path, folder) {
+				sf.RawHandler(false).ServeHTTP(w, r)
+				return
+			}
 		}
 
 		// 2. Normalize path ke .html page

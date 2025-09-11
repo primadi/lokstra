@@ -159,7 +159,8 @@ func (m *MockRouterEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS
 }
 
 // ServeHtmxPage implements serviceapi.RouterEngine.
-func (m *MockRouterEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS) {
+func (m *MockRouterEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string,
+	staticFolders []string, sources ...fs.FS) {
 	panic("unimplemented")
 }
 

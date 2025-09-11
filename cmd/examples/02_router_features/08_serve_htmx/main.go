@@ -25,34 +25,19 @@ func main() {
 
 	// Mount HTMX pages with layout support:
 	// Sources should contain:
-	//   - "/static" for static assets (CSS, JS, images)
 	//   - "/layouts" for HTML layout templates
 	//   - "/pages" for HTML page templates
-
-	// subProjectHtmx, _ := fs.Sub(projectHtmx, "project/htmx")
-	// subHtmxApp, _ := fs.Sub(htmxAppAssets, "htmx_app")
-	// app.MountHtmx("/",
-	// 	os.DirFS("./htmx_content"), // Project overrides (highest priority)
-	// 	subProjectHtmx,             // Project HTMX content
-	// 	subHtmxApp,                 // Embedded HTMX app (lowest priority)
-	// )
 
 	sf := static_files.New().
 		WithSourceDir("./htmx_content").          // Project overrides (highest priority)
 		WithEmbedFS(projectHtmx, "project/htmx"). // Project static files (middle priority)
 		WithEmbedFS(htmxAppAssets, "htmx_app")    // Embedded static files (lowest priority)
-	app.MountHtmx("/", sf.Sources...)
-
-	// Alternative mount for admin section
-	// app.MountHtmx("/admin",
-	// 	os.DirFS("./admin_htmx"), // Admin-specific content
-	// 	subHtmxApp,               // Fallback to main HTMX app
-	// )
+	app.MountHtmx("/", []string{"/static/"}, sf.Sources...)
 
 	sfAdmin := static_files.New().
 		WithSourceDir("./admin_htmx").         // Admin-specific overrides
 		WithEmbedFS(htmxAppAssets, "htmx_app") // Fallback to main HTMX app
-	app.MountHtmx("/admin", sfAdmin.Sources...)
+	app.MountHtmx("/admin", []string{"/static/"}, sfAdmin.Sources...)
 
 	// Page Data API endpoints - these provide dynamic data for HTMX pages
 	// The HTMX handler will call these internally via /page-data/* routes

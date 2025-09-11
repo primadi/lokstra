@@ -200,8 +200,8 @@ func (r *RouterImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Rout
 }
 
 // MountHtmx implements Router.
-func (r *RouterImpl) MountHtmx(prefix string, sources ...fs.FS) Router {
-	r.meta.MountHtmx(prefix, sources...)
+func (r *RouterImpl) MountHtmx(prefix string, staticFolders []string, sources ...fs.FS) Router {
+	r.meta.MountHtmx(prefix, staticFolders, sources...)
 	return r
 }
 
@@ -401,7 +401,7 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 	}
 
 	for _, htmx := range router.HTMXPages {
-		r.r_engine.ServeHtmxPage(r.r_engine, htmx.Prefix, htmx.Sources...)
+		r.r_engine.ServeHtmxPage(r.r_engine, htmx.Prefix, htmx.StaticFolders, htmx.Sources...)
 	}
 }
 
