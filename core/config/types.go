@@ -19,8 +19,9 @@ type MountStaticConfig struct {
 }
 
 type MountHtmxConfig struct {
-	Prefix string   `yaml:"prefix"`
-	Folder []string `yaml:"folder"`
+	Prefix        string   `yaml:"prefix"`
+	StaticFolders []string `yaml:"static_folders"`
+	Sources       []string `yaml:"sources"`
 }
 
 type MountReverseProxyConfig struct {

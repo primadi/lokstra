@@ -36,8 +36,9 @@ type StaticDirMeta struct {
 }
 
 type HTMXPageMeta struct {
-	Prefix  string
-	Sources []fs.FS
+	Prefix        string
+	StaticFolders []string
+	Sources       []fs.FS
 }
 
 type ReverseProxyMeta struct {
@@ -213,10 +214,12 @@ func (r *RouterMeta) MountStatic(prefix string, spa bool, sources ...fs.FS) *Rou
 	return r
 }
 
-func (r *RouterMeta) MountHtmx(prefix string, sources ...fs.FS) *RouterMeta {
+func (r *RouterMeta) MountHtmx(prefix string, staticFolders []string,
+	sources ...fs.FS) *RouterMeta {
 	r.HTMXPages = append(r.HTMXPages, &HTMXPageMeta{
-		Prefix:  prefix,
-		Sources: sources,
+		Prefix:        prefix,
+		StaticFolders: staticFolders,
+		Sources:       sources,
 	})
 	return r
 }

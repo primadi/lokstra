@@ -24,11 +24,12 @@ type RouterEngine interface {
 	ServeReverseProxy(prefix string, handler http.HandlerFunc)
 
 	// Assume sources has:
-	//   - "/static" for static assets (CSS, JS, images)
 	//   - "/layouts" for HTML layout templates
 	//   - "/pages" for HTML page templates
 	//
-	// All Request paths will be treated as page requests, except those starting with /static/
+	// All Request paths will be treated as page requests,
+	// except those starting with staticFolders list
 	// which will be treated as static asset requests.
-	ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS)
+	ServeHtmxPage(pageDataRouter http.Handler, prefix string,
+		staticFolders []string, sources ...fs.FS)
 }

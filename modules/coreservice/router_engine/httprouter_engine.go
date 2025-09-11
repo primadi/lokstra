@@ -54,8 +54,9 @@ func (h *HttpRouterEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS
 }
 
 // ServeHtmxPage implements serviceapi.RouterEngine.
-func (h *HttpRouterEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS) {
-	h.getServeMux().ServeHtmxPage(pageDataRouter, prefix, sources...)
+func (h *HttpRouterEngine) ServeHtmxPage(pageDataRouter http.Handler, prefix string,
+	staticFolders []string, sources ...fs.FS) {
+	h.getServeMux().ServeHtmxPage(pageDataRouter, prefix, staticFolders, sources...)
 }
 
 // ServeHTTP implements RouterEngine.
