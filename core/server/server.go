@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -89,42 +90,45 @@ func (s *Server) Start() error {
 }
 
 // Shutdown gracefully stops all registered apps.
-func (s *Server) Shutdown(shutdownTimeout time.Duration) {
+func (s *Server) Shutdown(shutdownTimeout time.Duration) error {
+	var errs []error
 	for _, app := range s.apps {
 		if err := app.Shutdown(shutdownTimeout); err != nil {
 			fmt.Printf("Failed to shutdown app '%s': %v\n", app.GetName(), err)
+			errs = append(errs, fmt.Errorf("app '%s': %w", app.GetName(), err))
 		} else {
 			fmt.Printf("App '%s' has been gracefully shutdown.\n", app.GetName())
 		}
 	}
 	fmt.Println("Server has been gracefully shutdown.")
-}
-
-// WaitForShutdown listens for OS signals and gracefully shuts down the server.
-func (s *Server) WaitForShutdown(shutdownTimeout time.Duration) {
-	// Listen for OS signals to gracefully shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-
-	// waith for shutdown signal
-	<-stop
-	fmt.Println("Received shutdown signal...")
-
-	// Call shutdown with the specified timeout
-	s.Shutdown(shutdownTimeout)
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
 }
 
 // StartAndWaitForShutdown starts the server and waits for shutdown signal.
 func (s *Server) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
-	// Start async
+	// Run server in background
+	errCh := make(chan error, 1)
 	go func() {
 		if err := s.Start(); err != nil {
-			fmt.Printf("Server start error: %v\n", err)
-			os.Exit(1)
+			errCh <- err
 		}
 	}()
 
-	// Wait for signal
-	s.WaitForShutdown(shutdownTimeout)
-	return nil
+	// Wait for signal or server error
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case sig := <-stop:
+		fmt.Println("Received shutdown signal:", sig)
+		if err := s.Shutdown(shutdownTimeout); err != nil {
+			return fmt.Errorf("shutdown error: %w", err)
+		}
+		return nil
+	case err := <-errCh:
+		return fmt.Errorf("server error: %w", err)
+	}
 }

@@ -129,6 +129,7 @@ func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler
 		ReadTimeout:  s.readTimeout,
 		WriteTimeout: s.writeTimeout,
 		IdleTimeout:  s.idleTimeout,
+		Addr:         addr,
 	}
 	s.running = true
 	s.mu.Unlock()

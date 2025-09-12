@@ -43,10 +43,11 @@ func main() {
 	app.MountStatic("/static/", false, os.DirFS("./static")) // Serve static files from ./static directory
 
 	// Page Data API endpoints - these provide dynamic data for HTMX pages
+
+	pageData := app.Group("/page-data")
 	// The HTMX handler will call these internally via /page-data/* routes
-	app.GET("/page-data", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]any{
-			"title":     "Home Page",
+	pageData.GET("/", func(ctx *lokstra.Context) error {
+		return ctx.HtmxPageData("Home Page", "", map[string]any{
 			"message":   "Welcome to Lokstra HTMX Demo",
 			"timestamp": time.Now(),
 			"features": []string{
@@ -54,40 +55,45 @@ func main() {
 				"Static asset fallback",
 				"Partial rendering support",
 				"Template-based rendering",
-			},
-		})
+			}})
 	})
 
-	app.GET("/page-data/about", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]any{
-			"title":       "About Us",
-			"description": "This is the about page with dynamic content",
-			"team": []map[string]string{
-				{"name": "Alice", "role": "Developer"},
-				{"name": "Bob", "role": "Designer"},
-				{"name": "Charlie", "role": "Product Manager"},
-			},
-		})
+	pageData.GET("/about", func(ctx *lokstra.Context) error {
+		return ctx.HtmxPageData("About Us",
+			"This is the about page with dynamic content",
+			map[string]any{
+				"team": []map[string]string{
+					{"name": "Alice", "role": "Developer"},
+					{"name": "Bob", "role": "Designer"},
+					{"name": "Charlie", "role": "Product Manager"},
+				}})
 	})
 
-	app.GET("/page-data/products", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]any{
-			"title": "Our Products",
-			"products": []map[string]any{
-				{"id": 1, "name": "Widget A", "price": 29.99},
-				{"id": 2, "name": "Widget B", "price": 39.99},
-				{"id": 3, "name": "Widget C", "price": 49.99},
-			},
-		})
+	pageData.GET("/products", func(ctx *lokstra.Context) error {
+		return ctx.HtmxPageData("Our Products", "",
+			map[string]any{
+				"products": []map[string]any{
+					{"id": 1, "name": "Widget A", "price": 29.99},
+					{"id": 2, "name": "Widget B", "price": 39.99},
+					{"id": 3, "name": "Widget C", "price": 49.99},
+				}})
 	})
 
-	app.GET("/page-data/contact", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]any{
-			"title":   "Contact Us",
-			"email":   "contact@example.com",
-			"phone":   "+1-555-0123",
-			"address": "123 Main St, City, State 12345",
-		})
+	pageData.GET("/contact", func(ctx *lokstra.Context) error {
+		return ctx.HtmxPageData("Contact Us", "",
+			map[string]any{
+				"email":   "contact@example.com",
+				"phone":   "+1-555-0123",
+				"address": "123 Main St, City, State 12345",
+			})
+	})
+
+	adminPageData := pageData.Group("/admin")
+	// Admin-specific page data
+	adminPageData.GET("/", func(ctx *lokstra.Context) error {
+		return ctx.HtmxPageData("Admin Dashboard",
+			"Welcome to the admin section", nil,
+		)
 	})
 
 	// API endpoints for HTMX interactions
@@ -190,5 +196,5 @@ func main() {
 	lokstra.Logger.Infof("  http://localhost:8080/contact")
 	lokstra.Logger.Infof("  http://localhost:8080/static/style.css")
 
-	app.Start()
+	app.StartAndWaitForShutdown(30 * time.Second)
 }

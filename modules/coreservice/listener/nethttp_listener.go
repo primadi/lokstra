@@ -63,6 +63,7 @@ func (n *NetHttpListener) ListenAndServe(addr string, handler http.Handler) erro
 	n.mu.Lock()
 	n.server = &http.Server{
 		Handler: wrappedHandler,
+		Addr:    addr,
 	}
 	n.running = true
 	n.mu.Unlock()
