@@ -1,6 +1,6 @@
 module github.com/primadi/lokstra
 
-go 1.25.1
+go 1.25
 
 require (
 	github.com/json-iterator/go v1.1.12
