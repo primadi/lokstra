@@ -127,7 +127,7 @@ func (m *ServeMuxEngine) ServeHtmxPage(pageDataRouter http.Handler,
 
 	staticServe := static_files.New(sources...)
 
-	handler := staticServe.HtmxPageHandler(pageDataRouter)
+	handler := staticServe.HtmxPageHandler(pageDataRouter, prefix)
 	// Strip prefix before passing to fallback handler
 	if cleanPrefixStr != "/" {
 		handler = http.StripPrefix(cleanPrefixStr, handler)
@@ -136,6 +136,7 @@ func (m *ServeMuxEngine) ServeHtmxPage(pageDataRouter http.Handler,
 	if cleanPrefixStr == "/" {
 		m.mux.Handle("/", handler)
 	} else {
+		m.mux.Handle(cleanPrefixStr, handler)
 		m.mux.Handle(cleanPrefixStr+"/", handler)
 	}
 }

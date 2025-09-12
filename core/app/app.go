@@ -3,6 +3,9 @@ package app
 import (
 	"fmt"
 	"maps"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/primadi/lokstra/core/registration"
@@ -65,6 +68,31 @@ func (a *App) Start() error {
 	rImp := a.Router.(*router.RouterImpl)
 	rImp.BuildRouter()
 	return a.listener.ListenAndServe(a.addr, a.Router)
+}
+
+// StartAndWaitForShutdown starts the app and waits for interrupt/terminate signal, then gracefully shuts down.
+func (a *App) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- a.Start()
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case sig := <-sigCh:
+		// Received shutdown signal
+		fmt.Println("Received signal:", sig)
+		shutdownErr := a.Shutdown(shutdownTimeout)
+		if shutdownErr != nil {
+			return shutdownErr
+		}
+		return nil
+	case err := <-errCh:
+		// Server exited with error
+		return err
+	}
 }
 
 func (a *App) Shutdown(shutdownTimeout time.Duration) error {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/primadi/lokstra/common/json"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/response"
 )
 
 type StaticFiles struct {
@@ -147,14 +148,16 @@ func (sf *StaticFiles) WithEmbedFS(fsys embed.FS, subFS string) *StaticFiles {
 
 // regex to detect layout directive in HTML comments
 var layoutRegex = regexp.MustCompile(`<!--\s*layout:\s*([a-zA-Z0-9_\-./]+)\s*-->`)
+var titleRegex = regexp.MustCompile(`(?i)<title>.*?</title>`)
 
 // Assume sf.Sources has:
 //   - "/layouts" for HTML layout templates
 //   - "/pages" for HTML page templates
 //
 // All Request paths will be treated as page requests
-func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler) http.Handler {
+func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// fmt.Printf("[DEBUG] Request: %s %s\n", r.Method, r.URL.Path)
 		path := r.URL.Path
 
 		// 1. Normalize path ke .html page
@@ -178,19 +181,22 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler) http.Handler
 		if m := layoutRegex.FindSubmatch(pageContent); len(m) > 1 {
 			layoutName = string(m[1])
 		}
-		w.Header().Set("LS-Layout", layoutName)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("LS-Layout", layoutName)
 
 		layoutPath := "layouts/" + layoutName
 
 		// 4. Fetch page-data via internal call
 		var data map[string]any
 		var dataPath string
-		if path == "/" || path == "" {
-			dataPath = "/page-data"
-		} else {
+
+		cleanPrefix := "/" + strings.Trim(prefix, "/")
+		if cleanPrefix == "/" {
 			dataPath = "/page-data" + path
+		} else {
+			dataPath = "/page-data" + cleanPrefix + path
 		}
+		dataPath, _ = strings.CutSuffix(dataPath, "/")
 		req := httptest.NewRequest(http.MethodGet, dataPath, nil)
 		req.Header = r.Header.Clone()
 		req.URL.RawQuery = r.URL.RawQuery
@@ -203,17 +209,22 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler) http.Handler
 		case http.StatusOK:
 			body, _ := io.ReadAll(res.Body)
 
-			var pageData struct {
-				Code string         `json:"code"`
-				Data map[string]any `json:"data"`
+			var responseData struct {
+				Code string            `json:"code"`
+				Data response.PageData `json:"data"`
 			}
 
-			if err := json.Unmarshal(body, &pageData); err != nil {
+			if err := json.Unmarshal(body, &responseData); err != nil {
 				// Handle error
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			data = pageData.Data
+			data = responseData.Data.Data
+			if data == nil {
+				data = map[string]any{}
+			}
+			data["ls-title"] = responseData.Data.Title
+			data["ls-description"] = responseData.Data.Description
 		case http.StatusNotFound:
 			data = map[string]any{}
 		default:
@@ -223,20 +234,32 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler) http.Handler
 			return
 		}
 
-		// 5. Cek if partial render (HTMX) or full render (normal)
+		// 5. Check if partial render (HTMX) or full render (normal)
 		isPartial := r.Header.Get("HX-Request") == "true" &&
 			r.Header.Get("LS-Layout") == layoutName
+
+		// 6. Set pageTitle and pageDesc variables for template
+		var pageTitle, pageDesc string
+		if title, ok := data["ls-title"].(string); ok {
+			pageTitle = title
+			// fmt.Printf("[DEBUG] PageTitle from data: %s\n", pageTitle)
+		}
+		if desc, ok := data["ls-description"].(string); ok {
+			pageDesc = desc
+		}
 
 		tmpl := template.New("")
 
 		if isPartial {
-			// 6. Partial render → only page template
+			// Partial render → only page template
 			_, err = tmpl.Parse(string(pageContent))
 			if err != nil {
 				http.Error(w, fmt.Sprintf("template parse error: %v", err), http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("HX-Partial", "true")
+			w.Header().Set("LS-Title", pageTitle)
+			w.Header().Set("LS-Description", pageDesc)
 			_ = tmpl.Execute(w, data)
 			return
 		}
@@ -248,36 +271,89 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler) http.Handler
 			return
 		}
 
-		meta := fmt.Sprintf(`<meta name="ls-layout" content="%s">`, layoutName)
+		strLayoutContent := string(layoutContent)
 
-		layoutSwitcherScript := meta + `<script>
-// This script is automatically injected by Lokstra HTMX Mount.
-// It ensures correct layout switching and full reload if layout changes.
-document.addEventListener("DOMContentLoaded", function () {
-	// Inject LS-Layout header for every htmx request
-	document.body.addEventListener("htmx:configRequest", function (evt) {
-		var layoutMeta = document.querySelector('meta[name="ls-layout"]')
-		var layoutName = layoutMeta ? layoutMeta.content : "base.html"
-		evt.detail.headers["LS-Layout"] = layoutName
-	})
+		var metaElements string
+		var titleElement string
 
-	document.body.addEventListener("htmx:beforeSwap", function (evt) {
-		var layoutMeta = document.querySelector('meta[name="ls-layout"]')
-		var currentLayout = layoutMeta ? layoutMeta.content : "base.html"
-		var responseLayout = evt.detail.xhr.getResponseHeader("LS-Layout")
-		if (responseLayout && responseLayout !== currentLayout) {
-			evt.preventDefault()
-			window.location.href =
-				evt.detail.pathInfo.finalRequestPath || window.location.pathname
+		if pageTitle != "" {
+			// Always prioritize title injection at the very beginning
+			if titleRegex.MatchString(strLayoutContent) {
+				// Replace existing title
+				strLayoutContent = titleRegex.ReplaceAllString(strLayoutContent, "")
+			}
+			titleElement = fmt.Sprintf(`<title>%s</title>`, pageTitle) + "\n"
+		} else if !titleRegex.MatchString(strLayoutContent) {
+			// Add default title if no pageTitle and no existing title
+			titleElement = `<title>Lokstra App</title>` + "\n"
 		}
-	})
-})
-</script>`
-		layoutContentStr := strings.Replace(string(layoutContent), "</head>",
-			layoutSwitcherScript+"\n</head>", 1)
+
+		if pageDesc != "" {
+			metaElements += fmt.Sprintf(`<meta name="description" content="%s">`, pageDesc) + "\n"
+		}
+		metaElements += fmt.Sprintf(`<meta name="ls-layout" content="%s">`, layoutName) + "\n"
+
+		layoutSwitcherScript := `<script>
+			// This script is automatically injected by Lokstra HTMX Mount.
+			document.addEventListener("DOMContentLoaded", function () {
+				// Inject LS-Layout header for every htmx request
+				document.body.addEventListener("htmx:configRequest", function (evt) {
+					var layoutMeta = document.querySelector('meta[name="ls-layout"]')
+					var layoutName = layoutMeta ? layoutMeta.content : "base.html"
+					evt.detail.headers["LS-Layout"] = layoutName
+				})
+
+				// Handle layout changes by full page reload, if layout differs
+				document.body.addEventListener("htmx:beforeSwap", function (evt) {
+					var layoutMeta = document.querySelector('meta[name="ls-layout"]')
+					var currentLayout = layoutMeta ? layoutMeta.content : "base.html"
+					var responseLayout = evt.detail.xhr.getResponseHeader("LS-Layout")
+					if (responseLayout && responseLayout !== currentLayout) {
+						evt.preventDefault()
+						window.location.href = evt.detail.pathInfo.finalRequestPath || 
+							window.location.pathname
+					}
+				})
+
+				document.body.addEventListener("htmx:afterSwap", function () {
+					var xhr = window.event.detail.xhr
+					var titleMeta = xhr.getResponseHeader("LS-Title")
+					var descMeta =  xhr.getResponseHeader("LS-Description")
+
+					if (titleMeta) {
+						document.title = titleMeta;
+					}
+					if (descMeta) {
+						// update or replace meta[name="description"] in <head>
+						var currentDescMeta = document.head.querySelector('meta[name="description"]')
+						if (currentDescMeta) {
+							currentDescMeta.content = descMeta
+						} else {
+							var newDescMeta = document.createElement('meta')
+							newDescMeta.name = "description"
+							newDescMeta.content = descMeta
+							document.head.appendChild(newDescMeta)
+						}
+					}
+				})
+			});
+		</script>`
+
+		// Inject title FIRST, then other meta elements
+		var headInjection string
+		if titleElement != "" {
+			headInjection = titleElement
+		}
+		headInjection += metaElements
+
+		strLayoutContent = strings.Replace(strLayoutContent, "<head>",
+			"<head>\n"+headInjection, 1)
+
+		strLayoutContent = strings.Replace(strLayoutContent, "</body>",
+			layoutSwitcherScript+"\n</body>", 1)
 
 		// 8. Define layout & page templates
-		_, err = tmpl.Parse(layoutContentStr)
+		_, err = tmpl.Parse(strLayoutContent)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("layout parse error: %v", err),
 				http.StatusInternalServerError)
@@ -290,6 +366,18 @@ document.addEventListener("DOMContentLoaded", function () {
 			return
 		}
 
-		_ = tmpl.Execute(w, data)
+		// Buffer the response to send it atomically with proper Content-Length
+		var buf strings.Builder
+		err = tmpl.Execute(&buf, data)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("template execute error: %v", err),
+				http.StatusInternalServerError)
+			return
+		}
+
+		// Send complete response at once
+		html := buf.String()
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(html)))
+		w.Write([]byte(html))
 	})
 }
