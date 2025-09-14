@@ -53,7 +53,7 @@ func NewServer(regCtx RegistrationContext, name string) *Server {
 }
 
 func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
-	svr, err := config.NewServerFromConfig(regCtx, cfg)
+	svr, err := config.LoadAllAndNewServer(regCtx, cfg)
 	if err != nil {
 		return nil, err
 	}
