@@ -141,13 +141,13 @@
             "$ref": "#/definitions/MountStaticConfig"
           }
         },
-        "mount_spa": {
+        "mount_htmx": {
           "type": "array",
-          "description": "SPA mount points for this group",
+          "description": "HTMX Application mount points",
           "items": {
-            "$ref": "#/definitions/MountSPAConfig"
+            "$ref": "#/definitions/MountHtmxConfig"
           }
-        },
+        },        
         "mount_reverse_proxy": {
           "type": "array",
           "description": "Reverse proxy mount points for this group",
