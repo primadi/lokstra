@@ -18,4 +18,7 @@ type HttpListener interface {
 	IsRunning() bool
 	// ActiveRequest returns the number of currently active requests.
 	ActiveRequest() int
+
+	// GetStartMessage returns a message indicating where the server is listening.
+	GetStartMessage(addr string) string
 }

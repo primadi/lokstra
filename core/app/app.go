@@ -24,6 +24,8 @@ type App struct {
 	listenerType      string
 	routingEngineType string
 	settings          map[string]any
+	merged            bool
+	mergedRoutes      []router.Router
 }
 
 func NewApp(ctx registration.Context, name string, addr string) *App {
@@ -64,14 +66,69 @@ func (a *App) GetAddr() string {
 }
 
 func (a *App) Start() error {
+	if a.merged {
+		return nil
+	}
+	if err := a.BuildRouter(); err != nil {
+		return err
+	}
+
+	return a.listener.ListenAndServe(a.addr, a.Router)
+}
+
+func (a *App) BuildRouter() error {
+	if a.merged {
+		return nil
+	}
+
 	router.ResolveAllNamed(a.ctx, a.Router.GetMeta())
 	rImp := a.Router.(*router.RouterImpl)
 	rImp.BuildRouter()
+	r_engine := rImp.GetEngine()
+	for _, or := range a.mergedRoutes {
+		router.ResolveAllNamed(a.ctx, or.GetMeta())
+		roImp := or.(*router.RouterImpl)
+		roImp.SetEngine(r_engine) // share the same routing engine
+		roImp.BuildRouter()
+	}
+
+	return nil
+}
+
+func (a *App) PrintStartMessage() {
+	if a.merged {
+		return
+	}
+	fmt.Println(a.listener.GetStartMessage(a.addr))
+	a.GetMeta().DumpRoutes()
+	for _, or := range a.mergedRoutes {
+		or.GetMeta().DumpRoutes()
+	}
+}
+
+func (a *App) ListenAndServe() error {
+	if a.merged {
+		return nil
+	}
+
 	return a.listener.ListenAndServe(a.addr, a.Router)
+}
+
+func (a *App) MergeOtherApp(otherApp *App) {
+	if a.merged || otherApp.merged {
+		return
+	}
+
+	otherApp.merged = true
+	a.mergedRoutes = append(a.mergedRoutes, otherApp.Router)
 }
 
 // StartAndWaitForShutdown starts the app and waits for interrupt/terminate signal, then gracefully shuts down.
 func (a *App) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
+	if a.merged {
+		return nil
+	}
+
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- a.Start()
@@ -113,4 +170,8 @@ func (a *App) GetSetting(key string) (any, bool) {
 
 func (a *App) SetSetting(key string, value any) {
 	a.settings[key] = value
+}
+
+func (a *App) IsMerged() bool {
+	return a.merged
 }

@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -40,6 +39,15 @@ func (n *NetHttpListener) IsRunning() bool {
 
 func (n *NetHttpListener) ActiveRequest() int {
 	return int(n.activeCount.Load())
+}
+
+func (n *NetHttpListener) GetStartMessage(addr string) string {
+	if strings.HasPrefix(addr, "unix:") {
+		return fmt.Sprintf("[NETHTTP] Listening on Unix socket %s",
+			strings.TrimPrefix(addr, "unix:"))
+	}
+
+	return fmt.Sprintf("[NETHTTP] Listening on TCP %s", addr)
 }
 
 func (n *NetHttpListener) ListenAndServe(addr string, handler http.Handler) error {
@@ -85,18 +93,18 @@ func (n *NetHttpListener) ListenAndServe(addr string, handler http.Handler) erro
 		if err != nil {
 			return fmt.Errorf("failed to listen on unix socket: %w", err)
 		}
-		fmt.Printf("[NETHTTP] Starting server on Unix socket %s\n", socketPath)
+		// fmt.Printf("[NETHTTP] Starting server on Unix socket %s\n", socketPath)
 	} else {
 		listener, err = net.Listen("tcp", addr)
 		if err != nil {
 			return fmt.Errorf("failed to listen on TCP address %s: %w", addr, err)
 		}
-		fmt.Printf("[NETHTTP] Starting server on TCP %s\n", addr)
+		// fmt.Printf("[NETHTTP] Starting server on TCP %s\n", addr)
 	}
 
-	if r, ok := handler.(router.Router); ok {
-		dumpRoutes(r)
-	}
+	// if r, ok := handler.(router.Router); ok {
+	// 	dumpRoutes(r)
+	// }
 
 	err = n.server.Serve(listener)
 

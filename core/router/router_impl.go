@@ -409,6 +409,14 @@ func (r *RouterImpl) BuildRouter() {
 	r.buildRouter(r.meta, nil)
 }
 
+func (r *RouterImpl) GetEngine() serviceapi.RouterEngine {
+	return r.r_engine
+}
+
+func (r *RouterImpl) SetEngine(engine serviceapi.RouterEngine) {
+	r.r_engine = engine
+}
+
 func composeMiddleware(mw []*midware.Execution,
 	finalHandler request.HandlerFunc) request.HandlerFunc {
 	// Update execution order based on order of addition
