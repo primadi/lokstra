@@ -14,33 +14,59 @@ import (
 	"github.com/primadi/lokstra/core/server"
 )
 
-func NewServerFromConfig(regCtx registration.Context, cfg *LokstraConfig) (*server.Server, error) {
-	// 1. Start Modules
-	if err := startModulesFromConfig(regCtx, cfg.Modules); err != nil {
-		return nil, fmt.Errorf("start modules: %w", err)
-	}
+// StartAllModules starts all modules defined in the configuration.
+func (cfg *LokstraConfig) StartAllModules(regCtx registration.Context) error {
+	modules := cfg.Modules
+	for _, mod := range modules {
+		// 1. Register the module itself if path is provided
+		if mod.Path != "" {
+			newCtx := regCtx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
+			if err := newCtx.RegisterCompiledModuleWithFuncName(mod.Path, mod.Entry); err != nil {
+				return fmt.Errorf("register module %s: %w", mod.Name, err)
+			}
+		}
 
-	// 2. Start Services
-	if err := startServicesInOrder(regCtx, cfg.Services); err != nil {
-		return nil, fmt.Errorf("start services: %w", err)
-	}
+		// 2. Check required services
+		for _, serviceName := range mod.RequiredServices {
+			if _, err := regCtx.GetService(serviceName); err != nil {
+				return fmt.Errorf("module %s requires service %s which is not available: %w", mod.Name, serviceName, err)
+			}
+		}
 
-	// 3. New Server
-	server := server.NewServer(regCtx, cfg.Server.Name)
-	for k, v := range cfg.Server.Settings {
-		server.SetSetting(k, v)
-	}
+		// 3. Create services defined in the module
+		for _, serviceConfig := range mod.CreateServices {
+			if err := createServiceFromConfig(regCtx, &serviceConfig); err != nil {
+				return fmt.Errorf("module %s failed to create service %s: %w", mod.Name, serviceConfig.Name, err)
+			}
+		}
 
-	// 4. New Apps
-	if err := newAppsFromConfig(regCtx, server, cfg.Apps); err != nil {
-		return nil, fmt.Errorf("start apps: %w", err)
-	}
+		// 4. Register service factories from the module
+		if mod.Path != "" && len(mod.RegisterServiceFactories) > 0 {
+			if err := callModuleMethods(mod.Path, mod.RegisterServiceFactories, regCtx, "service factory"); err != nil {
+				return fmt.Errorf("module %s failed to register service factories: %w", mod.Name, err)
+			}
+		}
 
-	return server, nil
+		// 5. Register handlers from the module
+		if mod.Path != "" && len(mod.RegisterHandlers) > 0 {
+			if err := callModuleMethods(mod.Path, mod.RegisterHandlers, regCtx, "handler"); err != nil {
+				return fmt.Errorf("module %s failed to register handlers: %w", mod.Name, err)
+			}
+		}
+
+		// 6. Register middleware from the module
+		if mod.Path != "" && len(mod.RegisterMiddleware) > 0 {
+			if err := callModuleMethods(mod.Path, mod.RegisterMiddleware, regCtx, "middleware"); err != nil {
+				return fmt.Errorf("module %s failed to register middleware: %w", mod.Name, err)
+			}
+		}
+	}
+	return nil
 }
 
-func startServicesInOrder(regCtx registration.Context,
-	services []*ServiceConfig) error {
+// StartAllServices starts all services defined in the configuration, respecting dependencies.
+func (cfg *LokstraConfig) StartAllServices(regCtx registration.Context) error {
+	services := cfg.Services
 	depMap := map[string][]string{}
 	inDegree := map[string]int{}
 	serviceMap := map[string]*ServiceConfig{}
@@ -90,55 +116,9 @@ func startServicesInOrder(regCtx registration.Context,
 	return nil
 }
 
-func startModulesFromConfig(regCtx registration.Context, modules []*ModuleConfig) error {
-	for _, mod := range modules {
-		// 1. Register the module itself if path is provided
-		if mod.Path != "" {
-			newCtx := regCtx.NewPermissionContextFromConfig(mod.Settings, mod.Permissions)
-			if err := newCtx.RegisterCompiledModuleWithFuncName(mod.Path, mod.Entry); err != nil {
-				return fmt.Errorf("register module %s: %w", mod.Name, err)
-			}
-		}
-
-		// 2. Check required services
-		for _, serviceName := range mod.RequiredServices {
-			if _, err := regCtx.GetService(serviceName); err != nil {
-				return fmt.Errorf("module %s requires service %s which is not available: %w", mod.Name, serviceName, err)
-			}
-		}
-
-		// 3. Create services defined in the module
-		for _, serviceConfig := range mod.CreateServices {
-			if err := createServiceFromConfig(regCtx, &serviceConfig); err != nil {
-				return fmt.Errorf("module %s failed to create service %s: %w", mod.Name, serviceConfig.Name, err)
-			}
-		}
-
-		// 4. Register service factories from the module
-		if mod.Path != "" && len(mod.RegisterServiceFactories) > 0 {
-			if err := callModuleMethods(mod.Path, mod.RegisterServiceFactories, regCtx, "service factory"); err != nil {
-				return fmt.Errorf("module %s failed to register service factories: %w", mod.Name, err)
-			}
-		}
-
-		// 5. Register handlers from the module
-		if mod.Path != "" && len(mod.RegisterHandlers) > 0 {
-			if err := callModuleMethods(mod.Path, mod.RegisterHandlers, regCtx, "handler"); err != nil {
-				return fmt.Errorf("module %s failed to register handlers: %w", mod.Name, err)
-			}
-		}
-
-		// 6. Register middleware from the module
-		if mod.Path != "" && len(mod.RegisterMiddleware) > 0 {
-			if err := callModuleMethods(mod.Path, mod.RegisterMiddleware, regCtx, "middleware"); err != nil {
-				return fmt.Errorf("module %s failed to register middleware: %w", mod.Name, err)
-			}
-		}
-	}
-	return nil
-}
-
-func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps []*AppConfig) error {
+// NewAllApps creates all applications defined in the configuration and adds them to the server.
+func (cfg *LokstraConfig) NewAllApps(regCtx registration.Context, server *server.Server) error {
+	apps := cfg.Apps
 	for _, ac := range apps {
 		app := app.NewAppCustom(regCtx, ac.Name, ac.Address,
 			ac.ListenerType, ac.RouterEngineType, ac.Settings)
@@ -191,6 +171,58 @@ func newAppsFromConfig(regCtx registration.Context, server *server.Server, apps 
 	}
 
 	return nil
+}
+
+// NewServer creates a new Server instance with the given context and name.
+func (cfg *LokstraConfig) NewServer(regCtx registration.Context) (*server.Server, error) {
+	server := server.NewServer(regCtx, cfg.Server.Name)
+	for k, v := range cfg.Server.Settings {
+		server.SetSetting(k, v)
+	}
+
+	return server, nil
+}
+
+// NewServerFromConfig start all modules, start all services, new all apps, and
+// creates a new server instance from the provided configuration.
+func (cfg *LokstraConfig) NewServerFromConfig(regCtx registration.Context) (*server.Server, error) {
+	return cfg.loadAndStartAll(regCtx, nil)
+}
+
+// LoadConfigToServer loads configuration into an existing server instance,
+func (cfg *LokstraConfig) LoadConfigToServer(regCtx registration.Context,
+	server *server.Server) (*server.Server, error) {
+	return cfg.loadAndStartAll(regCtx, server)
+}
+
+func (cfg *LokstraConfig) loadAndStartAll(regCtx registration.Context,
+	server *server.Server) (*server.Server, error) {
+	if server == nil {
+		var err error
+		server, err = cfg.NewServer(regCtx)
+		if err != nil {
+			return nil, fmt.Errorf("create server: %w", err)
+		}
+	} else {
+		server.SetSettingsIfAbsent(cfg.Server.Settings)
+	}
+
+	// 1. Start Modules
+	if err := cfg.StartAllModules(regCtx); err != nil {
+		return nil, fmt.Errorf("start modules: %w", err)
+	}
+
+	// 2. Start Services
+	if err := cfg.StartAllServices(regCtx); err != nil {
+		return nil, fmt.Errorf("start services: %w", err)
+	}
+
+	// 3. New Apps
+	if err := cfg.NewAllApps(regCtx, server); err != nil {
+		return nil, fmt.Errorf("start apps: %w", err)
+	}
+
+	return server, nil
 }
 
 func buildGroup(regCtx registration.Context, parent router.Router, group GroupConfig) {

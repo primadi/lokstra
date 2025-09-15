@@ -59,10 +59,35 @@ func (s *Server) SetSetting(key string, value any) {
 	s.settings[key] = value
 }
 
+// SetSettingsIfAbsent sets multiple configuration settings, only if they are not already set.
+func (s *Server) SetSettingsIfAbsent(settings map[string]any) {
+	for key, value := range settings {
+		if _, exists := s.settings[key]; !exists {
+			s.settings[key] = value
+		}
+	}
+}
+
 // GetSetting retrieves a configuration setting by key.
 func (s *Server) GetSetting(key string) (any, bool) {
 	value, exists := s.settings[key]
 	return value, exists
+}
+
+func (s *Server) MergeAppsWithSameAddress() {
+	for i, app := range s.apps {
+		if app.IsMerged() {
+			continue
+		}
+		for j := i + 1; j < len(s.apps); j++ {
+			if s.apps[j].IsMerged() {
+				continue
+			}
+			if app.GetAddr() == s.apps[j].GetAddr() {
+				app.MergeOtherApp(s.apps[j])
+			}
+		}
+	}
 }
 
 // Start starts all registered apps concurrently.
@@ -70,6 +95,13 @@ func (s *Server) Start() error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, len(s.apps))
 
+	s.MergeAppsWithSameAddress()
+
+	for _, app := range s.apps {
+		app.PrintStartMessage()
+	}
+
+	// Start each app in its own goroutine
 	for _, ap := range s.apps {
 		wg.Add(1)
 		go func(a *app.App) {
@@ -131,4 +163,9 @@ func (s *Server) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
 	case err := <-errCh:
 		return fmt.Errorf("server error: %w", err)
 	}
+}
+
+// ListApps returns the list of registered applications.
+func (s *Server) ListApps() []*app.App {
+	return s.apps
 }

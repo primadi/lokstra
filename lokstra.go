@@ -48,17 +48,34 @@ func NewGlobalRegistrationContext() RegistrationContext {
 	return ctx
 }
 
+// NewServer creates a new Server instance with the given context and name.
 func NewServer(regCtx RegistrationContext, name string) *Server {
 	return server.NewServer(regCtx, name)
 }
 
+// NewServerFromConfig start all modules, start all services, new all apps, and
+// creates a new server instance from the provided configuration.
 func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
-	svr, err := config.NewServerFromConfig(regCtx, cfg)
+	svr, err := cfg.NewServerFromConfig(regCtx)
 	if err != nil {
 		return nil, err
 	}
+	loadSettingFromConfig(regCtx, svr, cfg)
+	return svr, nil
+}
 
-	// change log_level is exists on server settings
+// LoadConfigToServer loads the configuration into the provided server instance.
+func LoadConfigToServer(regCtx RegistrationContext, cfg *config.LokstraConfig, svr *server.Server) (*Server, error) {
+	svr, err := cfg.LoadConfigToServer(regCtx, svr)
+	if err != nil {
+		return nil, err
+	}
+	loadSettingFromConfig(regCtx, svr, cfg)
+	return svr, nil
+}
+
+func loadSettingFromConfig(regCtx RegistrationContext, svr *server.Server, cfg *config.LokstraConfig) (*Server, error) {
+	// change log_level if exists on server settings
 	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogLevel]; exists {
 		if LvlStr, ok := l.(string); ok {
 			if logLvl, ok := serviceapi.ParseLogLevelSafe(LvlStr); ok {
@@ -67,6 +84,7 @@ func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) 
 		}
 	}
 
+	// change log_format if exists on server settings
 	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogFormat]; exists {
 		if formatStr, ok := l.(string); ok {
 			Logger.SetFormat(formatStr)
@@ -93,12 +111,14 @@ func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) 
 		}
 	}
 
+	// Initialize default flow services from global settings
 	if loggerName, exists := cfg.Server.Settings["flow_logger"]; exists {
 		if loggerStr, ok := loggerName.(string); ok {
 			flow.SetDefaultLogger(regCtx, loggerStr)
 		}
 	}
 
+	// Initialize default flow dbschema from global settings
 	if dbSchemaName, exists := cfg.Server.Settings["flow_dbschema"]; exists {
 		if dbSchemaStr, ok := dbSchemaName.(string); ok {
 			flow.SetDefaultDbSchemaName(dbSchemaStr)
@@ -112,37 +132,37 @@ const CERT_FILE_KEY = listener.CERT_FILE_KEY
 const KEY_FILE_KEY = listener.KEY_FILE_KEY
 const CA_FILE_KEY = listener.CA_FILE_KEY
 
-func NewApp(ctx RegistrationContext, name string, addr string) *App {
-	return app.NewApp(ctx, name, addr)
+func NewApp(regCtx RegistrationContext, name string, addr string) *App {
+	return app.NewApp(regCtx, name, addr)
 }
 
-func NewAppCustom(ctx RegistrationContext, name string, addr string,
+func NewAppCustom(regCtx RegistrationContext, name string, addr string,
 	listenerType string, routerEngine string, settings map[string]any) *App {
-	return app.NewAppCustom(ctx, name, addr, listenerType, routerEngine, settings)
+	return app.NewAppCustom(regCtx, name, addr, listenerType, routerEngine, settings)
 }
 
-func NewAppSecure(ctx RegistrationContext, name string, addr string,
+func NewAppSecure(regCtx RegistrationContext, name string, addr string,
 	certFile string, keyFile string, caFile string) *App {
 	settings := map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 		CA_FILE_KEY:   caFile,
 	}
-	return app.NewAppCustom(ctx, name, addr, defaults.HTTP_LISTENER_SECURE_NETHTTP, "", settings)
+	return app.NewAppCustom(regCtx, name, addr, defaults.HTTP_LISTENER_SECURE_NETHTTP, "", settings)
 }
 
-func NewAppHttp3(ctx RegistrationContext, name string, addr string,
+func NewAppHttp3(regCtx RegistrationContext, name string, addr string,
 	certFile string, keyFile string, caFile string) *App {
 	settings := map[string]any{
 		CERT_FILE_KEY: certFile,
 		KEY_FILE_KEY:  keyFile,
 		CA_FILE_KEY:   caFile,
 	}
-	return app.NewAppCustom(ctx, name, addr, defaults.HTTP_LISTENER_HTTP3, "", settings)
+	return app.NewAppCustom(regCtx, name, addr, defaults.HTTP_LISTENER_HTTP3, "", settings)
 }
 
-func NewAppFastHTTP(ctx RegistrationContext, name string, addr string) *App {
-	return app.NewAppCustom(ctx, name, addr, defaults.HTTP_LISTENER_FASTHTTP, "", nil)
+func NewAppFastHTTP(regCtx RegistrationContext, name string, addr string) *App {
+	return app.NewAppCustom(regCtx, name, addr, defaults.HTTP_LISTENER_FASTHTTP, "", nil)
 }
 
 func NamedMiddleware(middlewareType string, config ...any) *midware.Execution {
@@ -155,8 +175,14 @@ func LoadConfigDir(dir string) (*config.LokstraConfig, error) {
 	return config.LoadConfigDir(dir)
 }
 
-func GetService[T service.Service](ctx RegistrationContext, serviceName string) (T, error) {
-	svc, err := ctx.GetService(serviceName)
+// LoadConfigFile loads the configuration from the specified file.
+// It returns a pointer to the LokstraConfig and an error if any.
+func LoadConfigFile(filePath string) (*config.LokstraConfig, error) {
+	return config.LoadConfigFile(filePath)
+}
+
+func GetService[T service.Service](regCtx RegistrationContext, serviceName string) (T, error) {
+	svc, err := regCtx.GetService(serviceName)
 	if err != nil {
 		var zero T
 		return zero, errors.New("service not found: " + serviceName)
@@ -168,11 +194,11 @@ func GetService[T service.Service](ctx RegistrationContext, serviceName string) 
 	return zero, errors.New("service type mismatch: " + serviceName)
 }
 
-func GetOrCreateService[T any](ctx RegistrationContext,
+func GetOrCreateService[T any](regCtx RegistrationContext,
 	serviceName string, factoryName string, config ...any) (T, error) {
-	svc, err := ctx.GetService(serviceName)
+	svc, err := regCtx.GetService(serviceName)
 	if err != nil {
-		svc, err = ctx.CreateService(factoryName, serviceName, config...)
+		svc, err = regCtx.CreateService(factoryName, serviceName, config...)
 		if err != nil {
 			var zero T
 			return zero, errors.New("failed to create service: " + err.Error())

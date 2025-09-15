@@ -14,7 +14,8 @@ func TestStartModulesFromConfig(t *testing.T) {
 
 	// Test case 1: Module with required service that doesn't exist
 	t.Run("RequiredServices_NotFound", func(t *testing.T) {
-		modules := []*ModuleConfig{
+		var cfg LokstraConfig
+		cfg.Modules = []*ModuleConfig{
 			{
 				Name:             "test-module",
 				Path:             "", // no plugin path
@@ -22,7 +23,7 @@ func TestStartModulesFromConfig(t *testing.T) {
 			},
 		}
 
-		err := startModulesFromConfig(regCtx, modules)
+		err := cfg.StartAllModules(regCtx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "requires service non-existent-service")
 	})
@@ -34,7 +35,8 @@ func TestStartModulesFromConfig(t *testing.T) {
 			return &mockService{name: "test-service-instance"}, nil
 		})
 
-		modules := []*ModuleConfig{
+		var cfg LokstraConfig
+		cfg.Modules = []*ModuleConfig{
 			{
 				Name: "test-module",
 				Path: "", // no plugin path
@@ -48,7 +50,7 @@ func TestStartModulesFromConfig(t *testing.T) {
 			},
 		}
 
-		err := startModulesFromConfig(regCtx, modules)
+		err := cfg.StartAllModules(regCtx)
 		require.NoError(t, err)
 
 		// Verify service was created
@@ -59,14 +61,15 @@ func TestStartModulesFromConfig(t *testing.T) {
 
 	// Test case 3: Empty module should succeed
 	t.Run("EmptyModule", func(t *testing.T) {
-		modules := []*ModuleConfig{
+		var cfg LokstraConfig
+		cfg.Modules = []*ModuleConfig{
 			{
 				Name: "empty-module",
 				Path: "", // no plugin path, no other configurations
 			},
 		}
 
-		err := startModulesFromConfig(regCtx, modules)
+		err := cfg.StartAllModules(regCtx)
 		assert.NoError(t, err) // Should succeed with empty module
 	})
 }

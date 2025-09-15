@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
@@ -120,7 +119,7 @@ func (s *Http3Listener) ListenAndServe(addr string, handler http.Handler) error 
 
 	var err error
 
-	fmt.Printf("[HTTP3] Starting TLS server at %s\n", addr)
+	// fmt.Printf("[HTTP3] Starting TLS server at %s\n", addr)
 
 	// Wrap with TLS
 	tlsConfig := &tls.Config{
@@ -141,9 +140,9 @@ func (s *Http3Listener) ListenAndServe(addr string, handler http.Handler) error 
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	}
 
-	if r, ok := handler.(router.Router); ok {
-		dumpRoutes(r)
-	}
+	// if r, ok := handler.(router.Router); ok {
+	// 	dumpRoutes(r)
+	// }
 
 	s.server = &http3.Server{
 		Addr:        addr,
@@ -196,6 +195,10 @@ func (s *Http3Listener) Shutdown(shutdownTimeout time.Duration) error {
 	}
 
 	return shutdownErr
+}
+
+func (s *Http3Listener) GetStartMessage(addr string) string {
+	return fmt.Sprintf("[HTTP3] Starting TLS server at %s\n", addr)
 }
 
 var _ serviceapi.HttpListener = (*Http3Listener)(nil)

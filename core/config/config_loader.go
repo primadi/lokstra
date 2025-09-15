@@ -10,6 +10,89 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// LoadConfigFile loads a single configuration file from the specified path.
+func LoadConfigFile(path string) (*LokstraConfig, error) {
+	baseDir := filepath.Dir(path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read file %s: %w", path, err)
+	}
+
+	cfg := &LokstraConfig{}
+	expanded := expandVariables(string(data))
+
+	var raw map[string]any
+	if err := yaml.Unmarshal([]byte(expanded), &raw); err != nil {
+		return nil, fmt.Errorf("unmarshal yaml %s: %w", path, err)
+	}
+
+	if err := mergePartialYaml(cfg, raw); err != nil {
+		return nil, fmt.Errorf("merge yaml %s: %w", path, err)
+	}
+
+	// Expand group includes
+	for i := range cfg.Apps {
+		if err := expandGroupIncludes(baseDir, &cfg.Apps[i].Groups); err != nil {
+			return nil, fmt.Errorf("expand group includes for app %s: %w", cfg.Apps[i].Name, err)
+		}
+	}
+
+	// Normalize middleware for apps, routes, and groups
+	for i, app := range cfg.Apps {
+		if app.MiddlewareRaw != nil {
+			mw, err := normalizeMiddlewareConfig(app.MiddlewareRaw)
+			if err != nil {
+				return nil, fmt.Errorf("normalize middleware for app %s: %w", app.Name, err)
+			}
+			cfg.Apps[i].Middleware = mw
+		}
+
+		// Normalize middleware for routes
+		for i, route := range app.Routes {
+			if route.MiddlewareRaw != nil {
+				mw, err := normalizeMiddlewareConfig(route.MiddlewareRaw)
+				if err != nil {
+					return nil, fmt.Errorf("normalize middleware for route %s in app %s: %w",
+						route.Path, app.Name, err)
+				}
+				app.Routes[i].Middleware = mw
+			}
+		}
+
+		// Normalize middleware for groups
+		if len(app.Groups) > 0 {
+			if err := loadGroupConfig(&app.Groups); err != nil {
+				return nil, fmt.Errorf("load group config for app %s: %w", app.Name, err)
+			}
+		}
+	}
+
+	if cfg.Server == nil {
+		cfg.Server = &ServerConfig{
+			Name:     "default",
+			Settings: map[string]any{},
+		}
+	}
+	if cfg.Server.Name == "" {
+		cfg.Server.Name = "default"
+	}
+	if cfg.Server.Settings == nil {
+		cfg.Server.Settings = map[string]any{}
+	}
+	if cfg.Apps == nil {
+		cfg.Apps = []*AppConfig{}
+	}
+	if cfg.Services == nil {
+		cfg.Services = []*ServiceConfig{}
+	}
+	if cfg.Modules == nil {
+		cfg.Modules = []*ModuleConfig{}
+	}
+
+	return cfg, nil
+}
+
+// LoadConfigDir loads all YAML configuration files from the specified directory.
 func LoadConfigDir(dir string) (*LokstraConfig, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

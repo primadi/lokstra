@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../../../../../schema/group-include.json
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra-group.json
 
 # This is an example of a group include file that can be loaded via load_from
 # in a group configuration. It contains routes, groups, and mount points that
@@ -8,39 +8,38 @@ routes:
   - method: GET
     path: /users
     handler: user.list
-  - method: POST
-    path: /users
-    handler: user.create
-  - method: GET
-    path: /users/:id
-    handler: user.get
-  - method: PUT
-    path: /users/:id
-    handler: user.update
-  - method: DELETE
-    path: /users/:id
-    handler: user.delete
+  # - method: POST
+  #   path: /users
+  #   handler: user.create
+  # - method: GET
+  #   path: /users/:id
+  #   handler: user.get
+  # - method: PUT
+  #   path: /users/:id
+  #   handler: user.update
+  # - method: DELETE
+  #   path: /users/:id
+  #   handler: user.delete
 
-groups:
-  - prefix: /admin
-    routes:
-      - method: GET
-        path: /stats
-        handler: admin.stats
-      - method: GET
-        path: /users
-        handler: admin.users
-    middleware:
-      - name: admin_auth
-        config:
-          role: admin
+# groups:
+#   - prefix: /admin
+#     routes:
+      # - method: GET
+      #   path: /stats
+      #   handler: admin.stats
+    #   - method: GET
+    #     path: /users
+    #     handler: admin.users
+    # middleware:
+    #   - name: admin_auth
+    #     config:
+    #       role: admin
 
 mount_static:
   - prefix: /uploads
-    folder: ./uploads
+    folder: [./uploads]
   - prefix: /docs
-    folder: ./documentation
-
-mount_spa:
+    folder: [./documentation]
   - prefix: /dashboard
-    fallback_file: ./frontend/dist/index.html
+    spa: true
+    folder: [./frontend/dist/index.html]

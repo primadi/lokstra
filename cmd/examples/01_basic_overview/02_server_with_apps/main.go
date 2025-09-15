@@ -35,7 +35,7 @@ func main() {
 	server := lokstra.NewServer(ctx, "my-server")
 
 	server.AddApp(createApp1(ctx, ":8080"))
-	server.AddApp(createApp2(ctx, ":8081"))
+	server.AddApp(createApp2(ctx, ":8080"))
 
 	// Register a named handler
 	ctx.RegisterHandler("ping1Handler", func(ctx *lokstra.Context) error {

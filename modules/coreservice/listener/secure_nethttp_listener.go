@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 )
@@ -144,13 +143,13 @@ func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler
 		if err != nil {
 			return fmt.Errorf("failed to listen on unix socket: %w", err)
 		}
-		fmt.Printf("[SECURE-HTTP] Starting TLS server on Unix socket %s\n", socketPath)
+		// fmt.Printf("[SECURE-HTTP] Starting TLS server on Unix socket %s\n", socketPath)
 	} else {
 		listener, err = net.Listen("tcp", addr)
 		if err != nil {
 			return fmt.Errorf("failed to listen on TCP %s: %w", addr, err)
 		}
-		fmt.Printf("[SECURE-HTTP] Starting TLS server at %s\n", addr)
+		// fmt.Printf("[SECURE-HTTP] Starting TLS server at %s\n", addr)
 	}
 
 	// Wrap with TLS
@@ -175,9 +174,9 @@ func (s *SecureNetHttpListener) ListenAndServe(addr string, handler http.Handler
 
 	tlsListener := tls.NewListener(listener, tlsConfig)
 
-	if r, ok := handler.(router.Router); ok {
-		dumpRoutes(r)
-	}
+	// if r, ok := handler.(router.Router); ok {
+	// 	dumpRoutes(r)
+	// }
 
 	err = s.server.Serve(tlsListener)
 
@@ -223,6 +222,15 @@ func (s *SecureNetHttpListener) Shutdown(shutdownTimeout time.Duration) error {
 	}
 
 	return shutdownErr
+}
+
+func (s *SecureNetHttpListener) GetStartMessage(addr string) string {
+	if strings.HasPrefix(addr, "unix:") {
+		return fmt.Sprintf("[SECURE-HTTP] Starting TLS server on Unix socket %s\n",
+			strings.TrimPrefix(addr, "unix:"))
+	}
+
+	return fmt.Sprintf("[SECURE-HTTP] Starting TLS server at %s\n", addr)
 }
 
 var _ serviceapi.HttpListener = (*SecureNetHttpListener)(nil)

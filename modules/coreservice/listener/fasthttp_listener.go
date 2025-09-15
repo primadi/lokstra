@@ -13,7 +13,6 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 
-	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
@@ -111,18 +110,18 @@ func (f *FastHttpListener) ListenAndServe(addr string, handler http.Handler) err
 		if err != nil {
 			return fmt.Errorf("failed to listen on unix socket: %w", err)
 		}
-		fmt.Printf("[FASTHTTP] Starting server on Unix socket %s\n", socketPath)
+		// fmt.Printf("[FASTHTTP] Starting server on Unix socket %s\n", socketPath)
 	} else {
 		listener, err = net.Listen("tcp", addr)
 		if err != nil {
 			return fmt.Errorf("failed to listen on TCP address %s: %w", addr, err)
 		}
-		fmt.Printf("[FASTHTTP] Starting server on TCP %s\n", addr)
+		// fmt.Printf("[FASTHTTP] Starting server on TCP %s\n", addr)
 	}
 
-	if r, ok := handler.(router.Router); ok {
-		dumpRoutes(r)
-	}
+	// if r, ok := handler.(router.Router); ok {
+	// 	dumpRoutes(r)
+	// }
 
 	err = f.server.Serve(listener)
 
@@ -166,6 +165,14 @@ func (f *FastHttpListener) Shutdown(shutdownTimeout time.Duration) error {
 	}
 
 	return shutdownErr
+}
+
+func (f *FastHttpListener) GetStartMessage(addr string) string {
+	if strings.HasPrefix(addr, "unix:") {
+		return fmt.Sprintf("[FASTHTTP] Starting server on Unix socket %s\n",
+			strings.TrimPrefix(addr, "unix:"))
+	}
+	return fmt.Sprintf("[FASTHTTP] Starting server at %s\n", addr)
 }
 
 var _ serviceapi.HttpListener = (*FastHttpListener)(nil)

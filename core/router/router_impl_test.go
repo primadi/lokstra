@@ -180,6 +180,11 @@ func (m *MockRouterEngine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type MockHttpListener struct{}
 
+// GetStartMessage implements serviceapi.HttpListener.
+func (m *MockHttpListener) GetStartMessage(addr string) string {
+	panic("unimplemented")
+}
+
 func (m *MockHttpListener) ListenAndServe(addr string, handler http.Handler) error { return nil }
 func (m *MockHttpListener) Shutdown(shutdownTimeout time.Duration) error           { return nil }
 func (m *MockHttpListener) IsRunning() bool                                        { return false }

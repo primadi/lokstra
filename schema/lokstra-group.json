@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://lokstra.dev/schema/group.json",
+  "$id": "https://lokstra.dev/schema/lokstra-group.json",
   "title": "Lokstra Group Configuration Schema",
   "description": "JSON Schema for Lokstra group configuration files loaded via load_from",
   "type": "object",
@@ -141,13 +141,13 @@
             "$ref": "#/definitions/MountStaticConfig"
           }
         },
-        "mount_spa": {
+        "mount_htmx": {
           "type": "array",
-          "description": "SPA mount points for this group",
+          "description": "HTMX Application mount points",
           "items": {
-            "$ref": "#/definitions/MountSPAConfig"
+            "$ref": "#/definitions/MountHtmxConfig"
           }
-        },
+        },        
         "mount_reverse_proxy": {
           "type": "array",
           "description": "Reverse proxy mount points for this group",
