@@ -470,7 +470,7 @@ func TestSecureNetHttpListener_ShutdownTimeout(t *testing.T) {
 
 	// Shutdown with short timeout
 	shutdownStart := time.Now()
-	err = listener.Shutdown(100 * time.Millisecond)
+	_ = listener.Shutdown(100 * time.Millisecond)
 	shutdownDuration := time.Since(shutdownStart)
 
 	// Should timeout or complete quickly since no real connections

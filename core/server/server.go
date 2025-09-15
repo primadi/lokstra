@@ -59,6 +59,15 @@ func (s *Server) SetSetting(key string, value any) {
 	s.settings[key] = value
 }
 
+// SetSettingsIfAbsent sets multiple configuration settings, only if they are not already set.
+func (s *Server) SetSettingsIfAbsent(settings map[string]any) {
+	for key, value := range settings {
+		if _, exists := s.settings[key]; !exists {
+			s.settings[key] = value
+		}
+	}
+}
+
 // GetSetting retrieves a configuration setting by key.
 func (s *Server) GetSetting(key string) (any, bool) {
 	value, exists := s.settings[key]

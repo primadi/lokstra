@@ -23,7 +23,7 @@ func TestStartModulesFromConfig(t *testing.T) {
 			},
 		}
 
-		err := cfg.StartModules(regCtx)
+		err := cfg.StartAllModules(regCtx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "requires service non-existent-service")
 	})
@@ -50,7 +50,7 @@ func TestStartModulesFromConfig(t *testing.T) {
 			},
 		}
 
-		err := cfg.StartModules(regCtx)
+		err := cfg.StartAllModules(regCtx)
 		require.NoError(t, err)
 
 		// Verify service was created
@@ -69,7 +69,7 @@ func TestStartModulesFromConfig(t *testing.T) {
 			},
 		}
 
-		err := cfg.StartModules(regCtx)
+		err := cfg.StartAllModules(regCtx)
 		assert.NoError(t, err) // Should succeed with empty module
 	})
 }

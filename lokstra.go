@@ -48,17 +48,34 @@ func NewGlobalRegistrationContext() RegistrationContext {
 	return ctx
 }
 
+// NewServer creates a new Server instance with the given context and name.
 func NewServer(regCtx RegistrationContext, name string) *Server {
 	return server.NewServer(regCtx, name)
 }
 
+// NewServerFromConfig start all modules, start all services, new all apps, and
+// creates a new server instance from the provided configuration.
 func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
-	svr, err := config.LoadAllAndNewServer(regCtx, cfg)
+	svr, err := cfg.NewServerFromConfig(regCtx)
 	if err != nil {
 		return nil, err
 	}
+	loadSettingFromConfig(regCtx, svr, cfg)
+	return svr, nil
+}
 
-	// change log_level is exists on server settings
+// LoadConfigToServer loads the configuration into the provided server instance.
+func LoadConfigToServer(regCtx RegistrationContext, cfg *config.LokstraConfig, svr *server.Server) (*Server, error) {
+	svr, err := cfg.LoadConfigToServer(regCtx, svr)
+	if err != nil {
+		return nil, err
+	}
+	loadSettingFromConfig(regCtx, svr, cfg)
+	return svr, nil
+}
+
+func loadSettingFromConfig(regCtx RegistrationContext, svr *server.Server, cfg *config.LokstraConfig) (*Server, error) {
+	// change log_level if exists on server settings
 	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogLevel]; exists {
 		if LvlStr, ok := l.(string); ok {
 			if logLvl, ok := serviceapi.ParseLogLevelSafe(LvlStr); ok {
@@ -67,6 +84,7 @@ func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) 
 		}
 	}
 
+	// change log_format if exists on server settings
 	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogFormat]; exists {
 		if formatStr, ok := l.(string); ok {
 			Logger.SetFormat(formatStr)
@@ -93,12 +111,14 @@ func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) 
 		}
 	}
 
+	// Initialize default flow services from global settings
 	if loggerName, exists := cfg.Server.Settings["flow_logger"]; exists {
 		if loggerStr, ok := loggerName.(string); ok {
 			flow.SetDefaultLogger(regCtx, loggerStr)
 		}
 	}
 
+	// Initialize default flow dbschema from global settings
 	if dbSchemaName, exists := cfg.Server.Settings["flow_dbschema"]; exists {
 		if dbSchemaStr, ok := dbSchemaName.(string); ok {
 			flow.SetDefaultDbSchemaName(dbSchemaStr)
@@ -153,6 +173,12 @@ func NamedMiddleware(middlewareType string, config ...any) *midware.Execution {
 // It returns a pointer to the LokstraConfig and an error if any.
 func LoadConfigDir(dir string) (*config.LokstraConfig, error) {
 	return config.LoadConfigDir(dir)
+}
+
+// LoadConfigFile loads the configuration from the specified file.
+// It returns a pointer to the LokstraConfig and an error if any.
+func LoadConfigFile(filePath string) (*config.LokstraConfig, error) {
+	return config.LoadConfigFile(filePath)
 }
 
 func GetService[T service.Service](ctx RegistrationContext, serviceName string) (T, error) {
