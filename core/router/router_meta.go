@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
@@ -37,6 +38,7 @@ type StaticDirMeta struct {
 
 type HTMXPageMeta struct {
 	Prefix  string
+	Script  *static_files.ScriptInjection
 	Sources []fs.FS
 }
 
@@ -213,9 +215,11 @@ func (r *RouterMeta) MountStatic(prefix string, spa bool, sources ...fs.FS) *Rou
 	return r
 }
 
-func (r *RouterMeta) MountHtmx(prefix string, sources ...fs.FS) *RouterMeta {
+func (r *RouterMeta) MountHtmx(prefix string, si *static_files.ScriptInjection,
+	sources ...fs.FS) *RouterMeta {
 	r.HTMXPages = append(r.HTMXPages, &HTMXPageMeta{
 		Prefix:  prefix,
+		Script:  si,
 		Sources: sources,
 	})
 	return r

@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
@@ -55,8 +56,8 @@ func (h *HttpRouterEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS
 
 // ServeHtmxPage implements serviceapi.RouterEngine.
 func (h *HttpRouterEngine) ServeHtmxPage(pageDataRouter http.Handler,
-	prefix string, sources ...fs.FS) {
-	h.getServeMux().ServeHtmxPage(pageDataRouter, prefix, sources...)
+	prefix string, si *static_files.ScriptInjection, sources ...fs.FS) {
+	h.getServeMux().ServeHtmxPage(pageDataRouter, prefix, si, sources...)
 }
 
 // ServeHTTP implements RouterEngine.

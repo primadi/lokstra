@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/request"
 )
 
@@ -28,5 +29,6 @@ type RouterEngine interface {
 	//   - "/pages" for HTML page templates
 	//
 	// All Request paths will be treated as page requests,
-	ServeHtmxPage(pageDataRouter http.Handler, prefix string, sources ...fs.FS)
+	ServeHtmxPage(pageDataRouter http.Handler, prefix string,
+		si *static_files.ScriptInjection, sources ...fs.FS)
 }

@@ -97,10 +97,6 @@ func (s *Server) Start() error {
 
 	s.MergeAppsWithSameAddress()
 
-	for _, app := range s.apps {
-		app.PrintStartMessage()
-	}
-
 	// Start each app in its own goroutine
 	for _, ap := range s.apps {
 		wg.Add(1)

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
@@ -160,7 +161,7 @@ func (m *MockRouterEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS
 
 // ServeHtmxPage implements serviceapi.RouterEngine.
 func (m *MockRouterEngine) ServeHtmxPage(pageDataRouter http.Handler,
-	prefix string, sources ...fs.FS) {
+	prefix string, si *static_files.ScriptInjection, sources ...fs.FS) {
 	panic("unimplemented")
 }
 
