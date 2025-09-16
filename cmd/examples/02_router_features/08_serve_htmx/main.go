@@ -33,12 +33,12 @@ func main() {
 		WithSourceDir("./htmx_content").          // Project overrides (highest priority)
 		WithEmbedFS(projectHtmx, "project/htmx"). // Project static files (middle priority)
 		WithEmbedFS(htmxAppAssets, "htmx_app")    // Embedded static files (lowest priority)
-	app.MountHtmx("/", sf.Sources...)
+	app.MountHtmx("/", nil, sf.Sources...)
 
 	sfAdmin := static_files.New().
 		WithSourceDir("./admin_htmx").         // Admin-specific overrides
 		WithEmbedFS(htmxAppAssets, "htmx_app") // Fallback to main HTMX app
-	app.MountHtmx("/admin", sfAdmin.Sources...)
+	app.MountHtmx("/admin", nil, sfAdmin.Sources...)
 
 	app.MountStatic("/static/", false, os.DirFS("./static")) // Serve static files from ./static directory
 

@@ -146,16 +146,41 @@ func (sf *StaticFiles) WithEmbedFS(fsys embed.FS, subFS string) *StaticFiles {
 	return sf
 }
 
-// regex to detect layout directive in HTML comments
+// regex to detect layout directive in HTML page comments
 var layoutRegex = regexp.MustCompile(`<!--\s*layout:\s*([a-zA-Z0-9_\-./]+)\s*-->`)
-var titleRegex = regexp.MustCompile(`(?i)<title>.*?</title>`)
+var titleRegex = regexp.MustCompile(`<!--\s*title:\s*([a-zA-Z0-9_\-./]+)\s*-->`)
+
+// regex to detect existing <title> tag in HTML layout
+var titleLayoutRegex = regexp.MustCompile(`(?i)<title>.*?</title>`)
+
+func getDirectiveContent(html string, regexFind *regexp.Regexp, defaultContent string) string {
+	matches := regexFind.FindStringSubmatch(html)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return defaultContent
+}
+
+func replaceOrGetInsertElement(html string, regexFind *regexp.Regexp, newElement string) string {
+	if regexFind.MatchString(html) {
+		// Replace existing element
+		regexFind.ReplaceAllString(html, newElement)
+		return ""
+	}
+
+	return newElement + "\n"
+}
 
 // Assume sf.Sources has:
 //   - "/layouts" for HTML layout templates
 //   - "/pages" for HTML page templates
 //
 // All Request paths will be treated as page requests
-func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix string) http.Handler {
+func (sf *StaticFiles) HtmxPageHandlerWithScriptInjection(pageDataRouter http.Handler,
+	prefix string, si *ScriptInjection) http.Handler {
+	if si == nil {
+		si = NewDefaultScriptInjection(true)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// fmt.Printf("[DEBUG] Request: %s %s\n", r.Method, r.URL.Path)
 		path := r.URL.Path
@@ -175,12 +200,11 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix strin
 			http.NotFound(w, r)
 			return
 		}
+		strPageContent := string(pageContent)
 
 		// 3. Extract layout name
-		layoutName := "base.html" // default layout
-		if m := layoutRegex.FindSubmatch(pageContent); len(m) > 1 {
-			layoutName = string(m[1])
-		}
+		layoutName := getDirectiveContent(strPageContent, layoutRegex, "base.html")
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("LS-Layout", layoutName)
 
@@ -205,6 +229,8 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix strin
 		res := rr.Result()
 		defer res.Body.Close()
 
+		var pageTitle, pageDesc string
+
 		switch res.StatusCode {
 		case http.StatusOK:
 			body, _ := io.ReadAll(res.Body)
@@ -223,8 +249,8 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix strin
 			if data == nil {
 				data = map[string]any{}
 			}
-			data["ls-title"] = responseData.Data.Title
-			data["ls-description"] = responseData.Data.Description
+			pageTitle = responseData.Data.Title
+			pageDesc = responseData.Data.Description
 		case http.StatusNotFound:
 			data = map[string]any{}
 		default:
@@ -239,20 +265,15 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix strin
 			r.Header.Get("LS-Layout") == layoutName
 
 		// 6. Set pageTitle and pageDesc variables for template
-		var pageTitle, pageDesc string
-		if title, ok := data["ls-title"].(string); ok {
-			pageTitle = title
-			// fmt.Printf("[DEBUG] PageTitle from data: %s\n", pageTitle)
-		}
-		if desc, ok := data["ls-description"].(string); ok {
-			pageDesc = desc
+		if pageTitle == "" {
+			pageTitle = getDirectiveContent(strPageContent, titleRegex, "Lokstra App")
 		}
 
 		tmpl := template.New("")
 
 		if isPartial {
 			// Partial render → only page template
-			_, err = tmpl.Parse(string(pageContent))
+			_, err = tmpl.Parse(strPageContent)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("template parse error: %v", err), http.StatusInternalServerError)
 				return
@@ -271,86 +292,18 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix strin
 			return
 		}
 
-		strLayoutContent := string(layoutContent)
+		strLayoutContent := si.LoadInjectionScripts(string(layoutContent))
 
-		var metaElements string
-		var titleElement string
-
-		if pageTitle != "" {
-			// Always prioritize title injection at the very beginning
-			if titleRegex.MatchString(strLayoutContent) {
-				// Replace existing title
-				strLayoutContent = titleRegex.ReplaceAllString(strLayoutContent, "")
-			}
-			titleElement = fmt.Sprintf(`<title>%s</title>`, pageTitle) + "\n"
-		} else if !titleRegex.MatchString(strLayoutContent) {
-			// Add default title if no pageTitle and no existing title
-			titleElement = `<title>Lokstra App</title>` + "\n"
-		}
+		headInjection := replaceOrGetInsertElement(strLayoutContent, titleLayoutRegex,
+			fmt.Sprintf(`<title>%s</title>`, pageTitle))
 
 		if pageDesc != "" {
-			metaElements += fmt.Sprintf(`<meta name="description" content="%s">`, pageDesc) + "\n"
+			headInjection += fmt.Sprintf(`<meta name="description" content="%s">`, pageDesc) + "\n"
 		}
-		metaElements += fmt.Sprintf(`<meta name="ls-layout" content="%s">`, layoutName) + "\n"
-
-		layoutSwitcherScript := `<script>
-			// This script is automatically injected by Lokstra HTMX Mount.
-			document.addEventListener("DOMContentLoaded", function () {
-				// Inject LS-Layout header for every htmx request
-				document.body.addEventListener("htmx:configRequest", function (evt) {
-					var layoutMeta = document.querySelector('meta[name="ls-layout"]')
-					var layoutName = layoutMeta ? layoutMeta.content : "base.html"
-					evt.detail.headers["LS-Layout"] = layoutName
-				})
-
-				// Handle layout changes by full page reload, if layout differs
-				document.body.addEventListener("htmx:beforeSwap", function (evt) {
-					var layoutMeta = document.querySelector('meta[name="ls-layout"]')
-					var currentLayout = layoutMeta ? layoutMeta.content : "base.html"
-					var responseLayout = evt.detail.xhr.getResponseHeader("LS-Layout")
-					if (responseLayout && responseLayout !== currentLayout) {
-						evt.preventDefault()
-						window.location.href = evt.detail.pathInfo.finalRequestPath || 
-							window.location.pathname
-					}
-				})
-
-				document.body.addEventListener("htmx:afterSwap", function () {
-					var xhr = window.event.detail.xhr
-					var titleMeta = xhr.getResponseHeader("LS-Title")
-					var descMeta =  xhr.getResponseHeader("LS-Description")
-
-					if (titleMeta) {
-						document.title = titleMeta;
-					}
-					if (descMeta) {
-						// update or replace meta[name="description"] in <head>
-						var currentDescMeta = document.head.querySelector('meta[name="description"]')
-						if (currentDescMeta) {
-							currentDescMeta.content = descMeta
-						} else {
-							var newDescMeta = document.createElement('meta')
-							newDescMeta.name = "description"
-							newDescMeta.content = descMeta
-							document.head.appendChild(newDescMeta)
-						}
-					}
-				})
-			});
-		</script>`
-
-		// Inject title FIRST, then other meta elements
-		var headInjection string
-		if titleElement != "" {
-			headInjection = titleElement
-		}
-		headInjection += metaElements
+		headInjection += fmt.Sprintf(`<meta name="ls-layout" content="%s">`, layoutName) + "\n"
 
 		strLayoutContent = strings.Replace(strLayoutContent, "<head>",
 			"<head>\n"+headInjection, 1)
-
-		strLayoutContent = strings.Replace(strLayoutContent, "</body>",
-			layoutSwitcherScript+"\n</body>", 1)
 
 		// 8. Define layout & page templates
 		_, err = tmpl.Parse(strLayoutContent)
@@ -359,7 +312,7 @@ func (sf *StaticFiles) HtmxPageHandler(pageDataRouter http.Handler, prefix strin
 				http.StatusInternalServerError)
 			return
 		}
-		_, err = tmpl.New("page").Parse(string(pageContent))
+		_, err = tmpl.New("page").Parse(strPageContent)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("page parse error: %v", err),
 				http.StatusInternalServerError)

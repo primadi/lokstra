@@ -73,7 +73,7 @@ func (a *App) Start() error {
 		return err
 	}
 
-	return a.listener.ListenAndServe(a.addr, a.Router)
+	return a.ListenAndServe()
 }
 
 func (a *App) BuildRouter() error {
@@ -110,6 +110,8 @@ func (a *App) ListenAndServe() error {
 	if a.merged {
 		return nil
 	}
+
+	a.PrintStartMessage()
 
 	return a.listener.ListenAndServe(a.addr, a.Router)
 }

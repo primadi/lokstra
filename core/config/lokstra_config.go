@@ -156,7 +156,7 @@ func (cfg *LokstraConfig) NewAllApps(regCtx registration.Context, server *server
 			for _, folder := range htmx.Sources {
 				tmpFS = append(tmpFS, os.DirFS(folder))
 			}
-			app.MountHtmx(htmx.Prefix, tmpFS...)
+			app.MountHtmx(htmx.Prefix, nil, tmpFS...)
 		}
 
 		for _, proxy := range ac.MountReverseProxy {
@@ -261,7 +261,7 @@ func buildGroup(regCtx registration.Context, parent router.Router, group GroupCo
 		for _, folder := range htmx.Sources {
 			tmpFS = append(tmpFS, os.DirFS(folder))
 		}
-		gr.MountHtmx(htmx.Prefix, tmpFS...)
+		gr.MountHtmx(htmx.Prefix, nil, tmpFS...)
 	}
 
 	for _, proxy := range group.MountReverseProxy {

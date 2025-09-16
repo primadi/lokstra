@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 
@@ -50,7 +51,7 @@ type Router interface {
 	//   - "/pages" for HTML page templates
 	//
 	// All Request paths will be treated as page requests,
-	MountHtmx(prefix string, sources ...fs.FS) Router
+	MountHtmx(prefix string, si *static_files.ScriptInjection, sources ...fs.FS) Router
 
 	// MountReverseProxy mounts a reverse proxy at the specified prefix, targeting the given URL, with optional middleware and override option
 	MountReverseProxy(prefix string, target string, overrideMiddleware bool, mw ...any) Router

@@ -122,12 +122,12 @@ func (m *ServeMuxEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS) 
 
 // ServeHtmxPage implements serviceapi.RouterEngine.
 func (m *ServeMuxEngine) ServeHtmxPage(pageDataRouter http.Handler,
-	prefix string, sources ...fs.FS) {
+	prefix string, si *static_files.ScriptInjection, sources ...fs.FS) {
 	cleanPrefixStr := cleanPrefix(prefix)
 
 	staticServe := static_files.New(sources...)
 
-	handler := staticServe.HtmxPageHandler(pageDataRouter, prefix)
+	handler := staticServe.HtmxPageHandlerWithScriptInjection(pageDataRouter, prefix, si)
 	// Strip prefix before passing to fallback handler
 	if cleanPrefixStr != "/" {
 		handler = http.StripPrefix(cleanPrefixStr, handler)

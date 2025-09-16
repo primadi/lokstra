@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
@@ -34,8 +35,9 @@ func (g *GroupImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Route
 }
 
 // MountHtmx implements Router.
-func (g *GroupImpl) MountHtmx(prefix string, sources ...fs.FS) Router {
-	g.meta.MountHtmx(g.cleanPrefix(prefix), sources...)
+func (g *GroupImpl) MountHtmx(prefix string, si *static_files.ScriptInjection,
+	sources ...fs.FS) Router {
+	g.meta.MountHtmx(g.cleanPrefix(prefix), si, sources...)
 	return g
 }
 

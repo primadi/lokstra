@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
@@ -200,8 +201,8 @@ func (r *RouterImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Rout
 }
 
 // MountHtmx implements Router.
-func (r *RouterImpl) MountHtmx(prefix string, sources ...fs.FS) Router {
-	r.meta.MountHtmx(prefix, sources...)
+func (r *RouterImpl) MountHtmx(prefix string, si *static_files.ScriptInjection, sources ...fs.FS) Router {
+	r.meta.MountHtmx(prefix, si, sources...)
 	return r
 }
 
@@ -401,7 +402,7 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 	}
 
 	for _, htmx := range router.HTMXPages {
-		r.r_engine.ServeHtmxPage(r.r_engine, htmx.Prefix, htmx.Sources...)
+		r.r_engine.ServeHtmxPage(r.r_engine, htmx.Prefix, htmx.Script, htmx.Sources...)
 	}
 }
 
