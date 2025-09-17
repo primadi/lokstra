@@ -37,6 +37,8 @@ type ServiceFactory = service.ServiceFactory
 
 var Logger serviceapi.Logger
 
+// NewGlobalRegistrationContext creates a new global registration context,
+// registers all default modules, and retrieves the default logger service.
 func NewGlobalRegistrationContext() RegistrationContext {
 	ctx := registration.NewGlobalContext()
 

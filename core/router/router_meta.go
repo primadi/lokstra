@@ -128,7 +128,7 @@ func (r *RouterMeta) Handle(method request.HTTPMethod, path string, handler any,
 
 			wrapped := func(ctx *request.Context) error {
 				paramPtr := reflect.New(paramType.Elem()).Interface()
-				if err := ctx.BindAll(paramPtr); err != nil {
+				if err := ctx.BindAllSmart(paramPtr); err != nil {
 					return ctx.ErrorBadRequest(err.Error())
 				}
 				out := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(paramPtr)})

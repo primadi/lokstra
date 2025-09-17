@@ -191,7 +191,7 @@ func (c *ContextImpl) RegisterHandler(name string, handler any) {
 
 			handlerFunc = func(ctx *request.Context) error {
 				paramPtr := reflect.New(paramType.Elem()).Interface()
-				if err := ctx.BindAll(paramPtr); err != nil {
+				if err := ctx.BindAllSmart(paramPtr); err != nil {
 					return ctx.ErrorBadRequest(err.Error())
 				}
 				out := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(paramPtr)})
