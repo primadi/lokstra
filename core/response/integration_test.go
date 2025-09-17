@@ -151,7 +151,7 @@ func TestResponse_JSONFormatterIntegration(t *testing.T) {
 			{"id": "1", "name": "Item 1"},
 			{"id": "2", "name": "Item 2"},
 		},
-		map[string]interface{}{
+		map[string]any{
 			"total":       2,
 			"page":        1,
 			"per_page":    10,

@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/midware"
 )
 
 // This example demonstrates various middleware usage patterns in Lokstra:
@@ -25,10 +27,14 @@ func main() {
 	app.Use("logging")
 	app.Use("request_id")
 
+	// Example usage of WrapStdMiddleware:
+	// The "stdMidware" middleware demonstrates how to wrap a standard net/http middleware
+	// for use with Lokstra routes. Use this when you want to reuse existing http.Handler middleware
+	// in your Lokstra application.
 	// Simple route without additional middleware
 	app.GET("/ping", func(ctx *lokstra.Context) error {
 		return ctx.Ok("Pong - global middleware applied")
-	})
+	}, "stdMidware")
 
 	// Route with specific middleware
 	app.GET("/protected", func(ctx *lokstra.Context) error {
@@ -153,6 +159,15 @@ func registerMiddlewares(ctx lokstra.RegistrationContext) {
 			return next(ctx)
 		}
 	})
+
+	stdMidware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Println("[STD-MID] Standard middleware before handler")
+			next.ServeHTTP(w, r)
+			fmt.Println("[STD-MID] Standard middleware after handler")
+		})
+	}
+	ctx.RegisterMiddlewareFunc("stdMidware", midware.WrapStdMiddleware(stdMidware))
 
 	// Admin check middleware
 	ctx.RegisterMiddlewareFunc("admin_check", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
