@@ -207,6 +207,7 @@ func (sf *StaticFiles) HtmxPageHandlerWithScriptInjection(pageDataRouter http.Ha
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("LS-Layout", layoutName)
+		w.Header().Set("Vary", "HX-Request")
 
 		layoutPath := "layouts/" + layoutName
 

@@ -1,164 +1,118 @@
 # Getting Started with Lokstra
 
-Lokstra apps can be started **by code** (imperative) or **by configuration** (declarative). This page shows both, plus graceful shutdown.
+Lokstra is a modern Go web framework that supports both imperative (code-based) and declarative (configuration-based) approaches for building web applications.
 
----
-
-## 1) Installation
+## Installation
 
 ```bash
 go get github.com/primadi/lokstra
 ```
 
----
+## Quick Start - Code Approach
 
-## 2) Start by Code
-
-### 2.1 Single App
+### Single Application
 
 ```go
 package main
 
 import (
-	"time"
-	"github.com/primadi/lokstra"
+    "github.com/primadi/lokstra"
 )
 
 func main() {
-	ctx := lokstra.NewGlobalContext()
+    // Create global registration context
+    regCtx := lokstra.NewGlobalRegistrationContext()
 
-	// Register handler (named or inline). Router is embedded on App.
-	// Preferred shorthand:
-	app := lokstra.NewApp(ctx, "demo-app", ":8080")
-	app.GET("/hello", func(c *lokstra.RequestContext) {
-		c.Ok(map[string]any{"message": "Hello, Lokstra!"})
-	})
-
-	// Equivalent long form (both are valid):
-	// app.Router.GET("/hello", ctx.GetHandler("hello"))
-
-	// Start the app
-	if err := app.Start(); err != nil {
-		panic(err)
-	}
+    // Create a new application
+    app := lokstra.NewApp(regCtx, "demo-app", ":8080")
+    
+    // Add routes
+    app.GET("/hello", func(ctx *lokstra.Context) error {
+        return ctx.Ok(map[string]any{
+            "message": "Hello, Lokstra!",
+        })
+    })
+    
+    // Start the application
+    if err := app.Start(); err != nil {
+        panic(err)
+    }
 }
 ```
 
-**Graceful shutdown (recommended in production):**
+### With Graceful Shutdown (Recommended)
 
 ```go
-if err := app.StartAndWaitForShutdown(30 * time.Second); err != nil {
-	panic(err)
-}
-```
-
-> **Note**: `App.Router` is an **embedded field**. You may call route methods via `app.GET(...)` / `app.POST(...)` or via `app.Router.GET(...)`. They are equivalent.
-
----
-
-### 2.2 Multiple Apps via Server
-
-```go
-package main
-
-import (
-	"time"
-	"github.com/primadi/lokstra"
-)
+import "time"
 
 func main() {
-	ctx := lokstra.NewGlobalContext()
-
-	server := lokstra.NewServer(ctx, "demo-server")
-
-	app1 := lokstra.NewApp(ctx, "app1", ":8080")
-	app1.GET("/a1", func(c *lokstra.RequestContext) { c.Ok("app1") })
-
-	app2 := lokstra.NewApp(ctx, "app2", ":8080") // same port → will be merged
-	app2.GET("/a2", func(c *lokstra.RequestContext) { c.Ok("app2") })
-
-	server.AddApp(app1).AddApp(app2)
-
-	// Start all apps
-	if err := server.Start(); err != nil {
-		panic(err)
-	}
-
-	// Or with graceful shutdown
-	// if err := server.StartAndWaitForShutdown(30 * time.Second); err != nil { panic(err) }
+    regCtx := lokstra.NewGlobalRegistrationContext()
+    app := lokstra.NewApp(regCtx, "demo-app", ":8080")
+    
+    app.GET("/hello", func(ctx *lokstra.Context) error {
+        return ctx.Ok("Hello, World!")
+    })
+    
+    // Start with graceful shutdown
+    if err := app.StartAndWaitForShutdown(30 * time.Second); err != nil {
+        panic(err)
+    }
 }
 ```
 
-> **Behavior on same port**: If two or more Apps specify the **same port**, Lokstra **merges** them into a single listener when running.
+## Multiple Applications with Server
 
----
-
-## 3) Start by Configuration
-
-Lokstra supports YAML-based configuration. You can load **a single file** or **an entire directory**.
-
-### 3.1 Load a single YAML file
+When you need to run multiple applications, use the Server:
 
 ```go
-package main
-
-import (
-	"fmt"
-	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/config"
-)
-
 func main() {
-	ctx := lokstra.NewGlobalContext()
+    regCtx := lokstra.NewGlobalRegistrationContext()
+    server := lokstra.NewServer(regCtx, "demo-server")
 
-	// Register named handlers used by config-defined routes (if any)
-	ctx.RegisterHandler("hello", func(c *lokstra.RequestContext) {
-		c.Ok(map[string]any{"message": "Hello from YAML route!"})
-	})
+    // Create multiple apps
+    app1 := lokstra.NewApp(regCtx, "api-app", ":8080")
+    app1.GET("/api/users", func(ctx *lokstra.Context) error {
+        return ctx.Ok("Users API")
+    })
 
-	cfg, err := config.LoadConfigFile("lokstra.yaml")
-	if err != nil { panic(fmt.Sprintf("Failed to load config: %v", err)) }
+    app2 := lokstra.NewApp(regCtx, "admin-app", ":8081")
+    app2.GET("/admin", func(ctx *lokstra.Context) error {
+        return ctx.Ok("Admin Panel")
+    })
 
-	server, err := lokstra.NewServerFromConfig(ctx, cfg)
-	if err != nil { panic(fmt.Sprintf("Failed to create server: %v", err)) }
+    // Add apps to server
+    server.AddApp(app1)
+    server.AddApp(app2)
 
-	if err := server.Start(); err != nil { panic(err) }
+    // Start all apps
+    if err := server.StartAndWaitForShutdown(30 * time.Second); err != nil {
+        panic(err)
+    }
 }
 ```
 
-### 3.2 Load a directory of YAML files
+### Port Merging
+
+If multiple apps use the same port, Lokstra automatically merges them:
 
 ```go
-package main
+app1 := lokstra.NewApp(regCtx, "app1", ":8080")
+app1.GET("/api", apiHandler)
 
-import (
-	"fmt"
-	"github.com/primadi/lokstra"
-)
+app2 := lokstra.NewApp(regCtx, "app2", ":8080") // Same port
+app2.GET("/admin", adminHandler)
 
-func main() {
-	ctx := lokstra.NewGlobalContext()
-
-	cfg, err := lokstra.LoadConfigDir("./configs")
-	if err != nil { panic(fmt.Sprintf("Failed to load config dir: %v", err)) }
-
-	server, err := lokstra.NewServerFromConfig(ctx, cfg)
-	if err != nil { panic(fmt.Sprintf("Failed to create server from config: %v", err)) }
-
-	if err := server.Start(); err != nil { panic(err) }
-}
+server.AddApp(app1).AddApp(app2)
+// Both apps will run on the same :8080 listener
 ```
 
-> **Notes**
->
-> * `lokstra.LoadConfigDir(dir)` loads **all `.yaml` files** in a directory (and merges them).
-> * To load **one** YAML file, prefer `config.LoadConfigFile(path)`.
-> * If multiple Apps share the **same port**, they will be **merged** at runtime.
-> * You can also run `server.StartAndWaitForShutdown(timeout)` for graceful shutdown.
+## Configuration Approach
 
----
+Lokstra supports YAML-based configuration for declarative application setup.
 
-## 4) Minimal `lokstra.yaml`
+### Basic Configuration File
+
+Create `lokstra.yaml`:
 
 ```yaml
 server:
@@ -166,45 +120,189 @@ server:
 
 apps:
   - name: demo-app
-    port: 8080
+    addr: ":8080"
     routes:
       - method: GET
         path: /hello
-        handler: hello   # must exist as a registered handler
+        handler: hello
+      - method: POST
+        path: /api/users
+        handler: createUser
 ```
 
-**Wiring the named handler in code (when starting from config):**
+### Loading Configuration
 
 ```go
-ctx.RegisterHandler("hello", func(c *lokstra.RequestContext) {
-    c.Ok(map[string]any{"message": "Hello from YAML!"})
-})
+func main() {
+    regCtx := lokstra.NewGlobalRegistrationContext()
+    
+    // Register handlers referenced in config
+    regCtx.RegisterHandler("hello", func(ctx *lokstra.Context) error {
+        return ctx.Ok("Hello from config!")
+    })
+    
+    regCtx.RegisterHandler("createUser", func(ctx *lokstra.Context) error {
+        return ctx.Ok("User created")
+    })
+    
+    // Load configuration
+    cfg, err := lokstra.LoadConfigDir("./configs")
+    if err != nil {
+        panic(err)
+    }
+    
+    // Create server from config
+    server, err := lokstra.NewServerFromConfig(regCtx, cfg)
+    if err != nil {
+        panic(err)
+    }
+    
+    if err := server.StartAndWaitForShutdown(30 * time.Second); err != nil {
+        panic(err)
+    }
+}
 ```
+
+### Loading Single File vs Directory
+
+```go
+// Load single file
+cfg, err := config.LoadConfigFile("lokstra.yaml")
+
+// Load entire directory (merges all .yaml files)
+cfg, err := lokstra.LoadConfigDir("./configs")
+```
+
+## Router Embedded Interface
+
+Lokstra apps have an embedded router, so these are equivalent:
+
+```go
+// Direct on app (shorthand)
+app.GET("/users", handler)
+app.POST("/users", handler)
+
+// Via router field (explicit)
+app.Router.GET("/users", handler)
+app.Router.POST("/users", handler)
+```
+
+## Working with AI Assistants and Copilot
+
+When working with AI assistants like GitHub Copilot, VS Code Copilot, or other AI agents, you can help them understand your Lokstra project by providing clear context.
+
+### Option 1: Add Comments in main.go
+
+Add descriptive comments at the top of your main function:
+
+```go
+// This project is built using Lokstra Framework
+// (https://github.com/primadi/lokstra).
+//
+// Lokstra documentation available at /docs/README.md
+// Core concepts: /docs/core-concepts.md
+// Configuration: /docs/configuration.md
+func main() {
+    regCtx := lokstra.NewGlobalRegistrationContext()
+    
+    // Create application using Lokstra framework
+    app := lokstra.NewApp(regCtx, "my-app", ":8080")
+    
+    // Add routes using Lokstra's handler pattern
+    app.GET("/health", func(ctx *lokstra.Context) error {
+        return ctx.Ok("Service is running")
+    })
+    
+    app.Start()
+}
+```
+
+### Option 2: Create Project README.md
+
+Add a README.md file in your project root:
+
+```markdown
+# My Lokstra Project
+
+This project uses the [Lokstra](https://github.com/primadi/lokstra) Go web framework.
+
+## Framework Documentation
+
+- [Framework Overview](./docs/README.md)
+- [Getting Started](./docs/getting-started.md) 
+- [Core Concepts](./docs/core-concepts.md)
+- [Built-in Services](./docs/built-in-services.md)
+- [Built-in Middleware](./docs/built-in-middleware.md)
+
+## Lokstra Key Features
+
+- Registration Context for dependency injection
+- Request binding with struct tags: `path:"id"`, `query:"page"`, `body:"name"`
+- Response helpers: `ctx.Ok()`, `ctx.ErrorBadRequest()`, etc.
+- Auto-bind smart handlers: `func handler(ctx *lokstra.Context, req *MyRequest) error`
+- YAML configuration support with schema validation
+- Built-in middleware: cors, recovery, request_logger, body_limit
+- Built-in services: database pools, caching, metrics, health checks
+
+## Running the Application
+
+```bash
+go run .
+```
+```
+
+### Option 3: Include Both Approaches
+
+For maximum AI assistant effectiveness, use both comments and README.md:
+
+**In your main.go:**
+```go
+// This application uses Lokstra framework for web development.
+// See README.md for project documentation and framework features.
+func main() {
+    // ... your Lokstra application code
+}
+```
+
+**In your README.md:**
+Include framework information and link to the docs folder.
+
+### AI Assistant Benefits
+
+With proper documentation, AI assistants can:
+
+✅ **Understand Lokstra patterns** - Request binding, response helpers, middleware  
+✅ **Suggest correct syntax** - Handler signatures, context methods, configuration  
+✅ **Provide better completions** - Service registration, route definitions  
+✅ **Help with debugging** - Common patterns and error handling  
+✅ **Generate boilerplate** - Handlers, middleware, configuration files  
+
+### Example AI-Friendly Project Structure
+
+```
+my-lokstra-project/
+├── README.md                 # Project overview with Lokstra info
+├── main.go                   # Main application with descriptive comments
+├── docs/                     # Copy of Lokstra documentation
+│   ├── README.md
+│   ├── getting-started.md
+│   └── ...
+├── configs/
+│   └── server.yaml           # YAML configuration
+├── handlers/
+│   └── user_handlers.go      # Handler functions
+└── go.mod
+```
+
+The comment approach is sufficient for basic AI assistance, but combining it with a README.md provides the most comprehensive context for AI agents to understand and help with your Lokstra project effectively.
+
+## Next Steps
+
+- [Core Concepts](./core-concepts.md) - Understanding Lokstra's architecture
+- [Routing](./routing.md) - Advanced routing features
+- [Configuration](./configuration.md) - Detailed YAML configuration
+- [Examples](./examples.md) - Complete example applications
 
 ---
 
-## 5) Graceful Shutdown
-
-Both App and Server support graceful shutdown:
-
-```go
-// App level
-a := lokstra.NewApp(ctx, "demo-app", ":8080")
-_ = a.StartAndWaitForShutdown(30 * time.Second)
-
-// Server level
-s := lokstra.NewServer(ctx, "demo-server")
-_ = s.StartAndWaitForShutdown(30 * time.Second)
-```
-
-The call waits up to the given timeout for the internal shutdown process to complete (e.g., finishing in-flight requests and closing listeners). Refer to the source for exact steps.
-
----
-
-## 6) Quick Recap
-
-* **By code**: `app.Start()` for one app; `server.Start()` for many apps.
-* **By config**: `config.LoadConfigFile` (single file) or `lokstra.LoadConfigDir` (folder) → `lokstra.NewServerFromConfig(ctx, cfg)` → `Start()`.
-* **Embedded Router**: `app.GET(...)` or `app.Router.GET(...)` are equivalent.
-* **Same-port merge**: Apps with the same port are merged.
-* **Graceful shutdown**: Use `StartAndWaitForShutdown(timeout)`.
+*For more examples, check the `/cmd/examples/` directory in the repository.*
