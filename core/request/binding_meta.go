@@ -31,6 +31,10 @@ func getOrBuildBindingMeta(t reflect.Type) *bindingMeta {
 		t = t.Elem()
 	}
 
+	if t.Kind() != reflect.Struct {
+		return &bindingMeta{Type: t, Fields: nil}
+	}
+
 	if bindMeta, ok := bindingMetaCache.Load(t); ok {
 		return bindMeta.(*bindingMeta)
 	}

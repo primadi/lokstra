@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/cmd/examples/01_basic_overview/04_server_rpc/hello_service"
+	"github.com/primadi/lokstra/cmd/examples-old/01_basic_overview/04_server_rpc/hello_service"
 )
 
 func main() {

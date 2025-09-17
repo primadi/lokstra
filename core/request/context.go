@@ -43,8 +43,22 @@ func (ctx *Context) GetPathParam(name string) string {
 	return ctx.Request.PathValue(name)
 }
 
+func (ctx *Context) GetPathParamWithDefault(name string, defaultValue string) string {
+	if value := ctx.Request.PathValue(name); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func (ctx *Context) GetQueryParam(name string) string {
 	return ctx.Request.URL.Query().Get(name)
+}
+
+func (ctx *Context) GetQueryParamWithDefault(name string, defaultValue string) string {
+	if value := ctx.Request.URL.Query().Get(name); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 // ShouldStopMiddlewareChain checks if middleware chain should stop due to error or HTTP error status.
@@ -68,6 +82,20 @@ func (ctx *Context) ShouldStopMiddlewareChain(err error) bool {
 
 func (ctx *Context) GetHeader(name string) string {
 	return ctx.Request.Header.Get(name)
+}
+
+func (ctx *Context) GetHeaderWithDefault(name, defaultValue string) string {
+	if value := ctx.Request.Header.Get(name); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func (ctx *Context) GetHeaders(name string) []string {
+	if hdr, ok := ctx.Request.Header[name]; ok {
+		return hdr
+	}
+	return nil
 }
 
 func (ctx *Context) IsHeaderContainValue(name, value string) bool {

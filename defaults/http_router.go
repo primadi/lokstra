@@ -18,5 +18,5 @@ func RegisterAllHTTPRouters(regCtx registration.Context) {
 		router_engine.NewServeMuxEngine)
 
 	regCtx.RegisterServiceFactory(serviceapi.HTTP_ROUTER_PREFIX+"default",
-		router_engine.NewHttpRouterEngine)
+		router_engine.NewServeMuxEngine)
 }

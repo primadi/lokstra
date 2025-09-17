@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/primadi/lokstra/cmd/examples/01_basic_overview/05_client_rpc/hello_service"
+	"github.com/primadi/lokstra/cmd/examples-old/01_basic_overview/05_client_rpc/hello_service"
 )
 
 // ============================

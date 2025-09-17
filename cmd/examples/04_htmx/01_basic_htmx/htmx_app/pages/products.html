@@ -1,0 +1,180 @@
+<!-- layout: base.html -->
+<div class="page-content">
+    <div class="page-header">
+        <h1>{{.title}}</h1>
+        <p class="page-description">{{.description}}</p>
+    </div>
+
+    <div class="products-summary">
+        <div class="summary-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{.total}}</span>
+                <span class="stat-label">Products Available</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">100%</span>
+                <span class="stat-label">Free & Open Source</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">24/7</span>
+                <span class="stat-label">Community Support</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="products-section">
+        <h2>Our Product Lineup</h2>
+        <div class="products-grid">
+            {{range .products}}
+            <div class="product-card">
+                <div class="product-header">
+                    <h3 class="product-name">{{.name}}</h3>
+                    <div class="product-price">{{.price}}</div>
+                </div>
+                
+                <p class="product-description">{{.description}}</p>
+                
+                <div class="product-features">
+                    <h4>Features:</h4>
+                    <ul class="features-list">
+                        {{range .features}}
+                        <li>{{.}}</li>
+                        {{end}}
+                    </ul>
+                </div>
+                
+                <div class="product-actions">
+                    <button class="btn btn-primary" 
+                            hx-get="/api/products/{{.id}}" 
+                            hx-target="#product-details-{{.id}}"
+                            hx-swap="innerHTML">
+                        View Details
+                    </button>
+                    
+                    <button class="btn btn-outline" 
+                            hx-get="/api/products/{{.id}}/demo" 
+                            hx-target="#product-demo-{{.id}}"
+                            hx-swap="innerHTML">
+                        Try Demo
+                    </button>
+                </div>
+                
+                <div id="product-details-{{.id}}" class="product-details">
+                    <!-- Product details will be loaded here -->
+                </div>
+                
+                <div id="product-demo-{{.id}}" class="product-demo">
+                    <!-- Product demo will be loaded here -->
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="product-showcase">
+        <h2>Featured Product Showcase</h2>
+        <div class="showcase-tabs">
+            <button class="tab-btn active" 
+                    hx-get="/api/showcase/framework" 
+                    hx-target="#showcase-content"
+                    onclick="setActiveTab(this)">
+                Framework
+            </button>
+            <button class="tab-btn" 
+                    hx-get="/api/showcase/components" 
+                    hx-target="#showcase-content"
+                    onclick="setActiveTab(this)">
+                Components
+            </button>
+            <button class="tab-btn" 
+                    hx-get="/api/showcase/tools" 
+                    hx-target="#showcase-content"
+                    onclick="setActiveTab(this)">
+                Tools
+            </button>
+        </div>
+        
+        <div id="showcase-content" class="showcase-content">
+            <div class="showcase-placeholder">
+                <p>👆 Click on the tabs above to explore our products!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="comparison-section">
+        <h2>Why Choose Our Products?</h2>
+        <div class="comparison-table">
+            <div class="comparison-row header">
+                <div class="comparison-cell">Feature</div>
+                <div class="comparison-cell">Our Products</div>
+                <div class="comparison-cell">Alternatives</div>
+            </div>
+            
+            <div class="comparison-row">
+                <div class="comparison-cell">Learning Curve</div>
+                <div class="comparison-cell">✅ Gentle</div>
+                <div class="comparison-cell">❌ Steep</div>
+            </div>
+            
+            <div class="comparison-row">
+                <div class="comparison-cell">Performance</div>
+                <div class="comparison-cell">✅ Fast</div>
+                <div class="comparison-cell">⚠️ Variable</div>
+            </div>
+            
+            <div class="comparison-row">
+                <div class="comparison-cell">Documentation</div>
+                <div class="comparison-cell">✅ Comprehensive</div>
+                <div class="comparison-cell">⚠️ Incomplete</div>
+            </div>
+            
+            <div class="comparison-row">
+                <div class="comparison-cell">Community</div>
+                <div class="comparison-cell">✅ Active</div>
+                <div class="comparison-cell">❌ Limited</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="download-section">
+        <h2>Get Started Today</h2>
+        <p>Ready to try our products? Get started in minutes!</p>
+        
+        <div class="download-options">
+            <div class="download-option">
+                <h3>Quick Start</h3>
+                <code class="code-block">go mod init myapp<br>go get github.com/primadi/lokstra</code>
+                <button class="btn btn-primary" 
+                        hx-get="/api/quick-start-guide" 
+                        hx-target="#quick-start-content">
+                    Show Quick Start Guide
+                </button>
+            </div>
+            
+            <div class="download-option">
+                <h3>Examples</h3>
+                <p>Explore our comprehensive examples</p>
+                <button class="btn btn-secondary" 
+                        hx-get="/api/examples-list" 
+                        hx-target="#examples-content">
+                    Browse Examples
+                </button>
+            </div>
+        </div>
+        
+        <div id="quick-start-content" class="dynamic-content"></div>
+        <div id="examples-content" class="dynamic-content"></div>
+    </div>
+</div>
+
+<script>
+function setActiveTab(clickedTab) {
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab-btn').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Add active class to clicked tab
+    clickedTab.classList.add('active');
+}
+</script>
