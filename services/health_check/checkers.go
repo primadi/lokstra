@@ -269,15 +269,12 @@ func getDiskUsageWindows(path string) (*DiskStats, error) {
 	var availableBytes, totalBytes, freeBytes uint64
 
 	pathPtr, _ := syscall.UTF16PtrFromString(path)
-	ret, _, _ := syscall.Syscall6(
+	ret, _, _ := syscall.SyscallN(
 		getDiskFreeSpaceEx,
-		4,
 		uintptr(unsafe.Pointer(pathPtr)),
 		uintptr(unsafe.Pointer(&availableBytes)),
 		uintptr(unsafe.Pointer(&totalBytes)),
 		uintptr(unsafe.Pointer(&freeBytes)),
-		0,
-		0,
 	)
 
 	if ret == 0 {

@@ -43,35 +43,25 @@ func GetModule() registration.Module {
 	return &Module{}
 }
 
+func GetService(regCtx registration.Context) serviceapi.HealthService {
+	svc, _ := registration.GetOrCreateService[serviceapi.HealthService](
+		regCtx, MODULE_NAME, MODULE_NAME+".default")
+	return svc
+}
+
 // registerHealthHandlers registers all health check HTTP endpoints
 func registerHealthHandlers(regCtx registration.Context) {
-	// Helper function to get health service
-	getHealthService := func() serviceapi.HealthService {
-		service, err := regCtx.GetService(MODULE_NAME + ".default")
-		if err != nil {
-			// Try to create if doesn't exist
-			service, err = regCtx.GetOrCreateService(MODULE_NAME, MODULE_NAME+".default", nil)
-			if err != nil {
-				return nil
-			}
-		}
-		if health, ok := service.(serviceapi.HealthService); ok {
-			return health
-		}
-		return nil
+	healthService := GetService(regCtx)
+	if healthService == nil {
+		// Health service is not available, skip registering handlers
+		return
 	}
 
 	// Main health check endpoint
 	regCtx.RegisterHandler("health", func(ctx *request.Context) error {
-		health := getHealthService()
-		if health == nil {
-			ctx.StatusCode = http.StatusServiceUnavailable
-			return ctx.ErrorInternal("Health service not available")
-		}
-
-		result := health.CheckHealthWithTimeout(30 * time.Second)
+		result := healthService.CheckHealthWithTimeout(30 * time.Second)
 		if result.Status == serviceapi.HealthStatusUnhealthy {
-			ctx.StatusCode = http.StatusServiceUnavailable
+			return ctx.ErrorServiceUnavailable(result)
 		}
 		return ctx.Ok(result)
 	})
@@ -87,27 +77,16 @@ func registerHealthHandlers(regCtx registration.Context) {
 
 	// Kubernetes readiness probe endpoint
 	regCtx.RegisterHandler("health.readiness", func(ctx *request.Context) error {
-		health := getHealthService()
-		if health == nil {
-			ctx.StatusCode = http.StatusServiceUnavailable
-			return ctx.Ok(map[string]any{
-				"status":     "not_ready",
-				"ready":      false,
-				"checked_at": time.Now(),
-				"error":      "Health service not available",
-			})
-		}
-
-		isReady := health.IsHealthy(context.Background())
+		isHealthy := healthService.IsHealthy(context.Background())
 		response := map[string]any{
 			"status":     "ready",
-			"ready":      isReady,
+			"ready":      isHealthy,
 			"checked_at": time.Now(),
 		}
 
-		if !isReady {
-			ctx.StatusCode = http.StatusServiceUnavailable
+		if !isHealthy {
 			response["status"] = "not_ready"
+			return ctx.ErrorServiceUnavailable(response)
 		}
 
 		return ctx.Ok(response)
@@ -115,13 +94,7 @@ func registerHealthHandlers(regCtx registration.Context) {
 
 	// Detailed health information endpoint
 	regCtx.RegisterHandler("health.detailed", func(ctx *request.Context) error {
-		health := getHealthService()
-		if health == nil {
-			ctx.StatusCode = http.StatusServiceUnavailable
-			return ctx.ErrorInternal("Health service not available")
-		}
-
-		result := health.CheckHealthWithTimeout(30 * time.Second)
+		result := healthService.CheckHealthWithTimeout(30 * time.Second)
 
 		response := map[string]any{
 			"status":     result.Status,
@@ -150,7 +123,7 @@ func registerHealthHandlers(regCtx registration.Context) {
 		}
 
 		if result.Status == serviceapi.HealthStatusUnhealthy {
-			ctx.StatusCode = http.StatusServiceUnavailable
+			return ctx.ErrorServiceUnavailable(response)
 		}
 
 		return ctx.Ok(response)
@@ -158,13 +131,7 @@ func registerHealthHandlers(regCtx registration.Context) {
 
 	// List all health checks endpoint
 	regCtx.RegisterHandler("health.list", func(ctx *request.Context) error {
-		health := getHealthService()
-		if health == nil {
-			ctx.StatusCode = http.StatusServiceUnavailable
-			return ctx.ErrorInternal("Health service not available")
-		}
-
-		checks := health.ListChecks()
+		checks := healthService.ListChecks()
 		return ctx.Ok(map[string]any{
 			"checks":     checks,
 			"count":      len(checks),
@@ -174,24 +141,18 @@ func registerHealthHandlers(regCtx registration.Context) {
 
 	// Individual health check endpoint
 	regCtx.RegisterHandler("health.check", func(ctx *request.Context) error {
-		health := getHealthService()
-		if health == nil {
-			ctx.StatusCode = http.StatusServiceUnavailable
-			return ctx.ErrorInternal("Health service not available")
-		}
-
 		checkName := ctx.GetPathParam("name")
 		if checkName == "" {
 			return ctx.ErrorBadRequest("check name is required")
 		}
 
-		check, exists := health.GetCheck(context.Background(), checkName)
+		check, exists := healthService.GetCheck(context.Background(), checkName)
 		if !exists {
 			return ctx.ErrorNotFound(fmt.Sprintf("health check '%s' not found", checkName))
 		}
 
 		if check.Status == serviceapi.HealthStatusUnhealthy {
-			ctx.StatusCode = http.StatusServiceUnavailable
+			return ctx.ErrorServiceUnavailable(check)
 		}
 
 		return ctx.Ok(check)
@@ -199,15 +160,7 @@ func registerHealthHandlers(regCtx registration.Context) {
 
 	// Prometheus metrics endpoint
 	regCtx.RegisterHandler("health.metrics", func(ctx *request.Context) error {
-		health := getHealthService()
-		if health == nil {
-			ctx.Writer.Header().Set("Content-Type", "text/plain")
-			ctx.Writer.WriteHeader(http.StatusServiceUnavailable)
-			_, err := ctx.Writer.Write([]byte("# Health service not available\n"))
-			return err
-		}
-
-		result := health.CheckHealthWithTimeout(30 * time.Second)
+		result := healthService.CheckHealthWithTimeout(30 * time.Second)
 
 		var metrics []string
 

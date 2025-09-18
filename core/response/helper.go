@@ -132,6 +132,16 @@ func (r *Response) ErrorInternal(msg string) error {
 	return nil
 }
 
+// ErrorInternal sends a structured 500 internal server error response
+func (r *Response) ErrorServiceUnavailable(data any) error {
+	r.StatusCode = http.StatusServiceUnavailable
+	r.ResponseCode = CodeServiceUnavailable
+	r.Success = false
+	r.Message = "Service is currently unavailable"
+	r.Data = data
+	return nil
+}
+
 // WriteRaw for custom raw responses
 func (r *Response) WriteRaw(contentType string, status int, data []byte) error {
 	if r.Headers == nil {

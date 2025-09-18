@@ -75,3 +75,11 @@ func GetModule() registration.Module {
 }
 
 var _ registration.Module = (*module)(nil)
+
+func GetService(regCtx registration.Context, name string) (serviceapi.Logger, error) {
+	svc, err := registration.GetService[serviceapi.Logger](regCtx, name)
+	if err != nil {
+		return nil, err
+	}
+	return svc, nil
+}

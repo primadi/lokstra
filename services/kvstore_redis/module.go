@@ -52,3 +52,11 @@ var _ registration.Module = (*module)(nil)
 func GetModule() registration.Module {
 	return &module{}
 }
+
+func GetService(regCtx registration.Context, name string) (*Service, error) {
+	svc, err := registration.GetService[*Service](regCtx, name)
+	if err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
