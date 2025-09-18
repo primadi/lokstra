@@ -1,105 +1,187 @@
-# Lokstra Examples Overview
+# Lokstra Examples - Progressive Learning Path
 
-This folder contains categorized, progressive examples demonstrating all features of the **Lokstra Framework**. Each directory is self-contained and executable, and also acts as a form of integration test.
+This directory contains comprehensive, progressive examples that follow the learning path outlined in the [Lokstra documentation](../../docs/README.md). Each example is self-contained, runnable, and builds upon concepts from previous examples.
 
-All examples are written in **Go**, with a clear separation of concepts to help developers explore and adopt Lokstra step by step.
-
----
-
-## 📘 1. `basic_overview/`
-
-Introductory examples, showing how Lokstra can scale from simple router usage to full server with YAML configuration.
-
-* `01_minimal_router_only/` – Just the router
-* `02_router_with_app/` – Adds App for port and middleware
-* `03_server_with_apps/` – Adds Server + multi App
-* `04_with_logger_service/` – Using LoggerService
-* `05_with_yaml_config/` – Using YAML-based configuration
+> 🎯 **Learning Objective**: Master Lokstra framework step-by-step, from basic concepts to production-ready applications.
 
 ---
 
-## 🚦 2. `router_features/`
+## 🚀 Learning Path Overview
 
-Advanced routing capabilities including grouping, mounting, and middleware layering.
+The examples are organized to match the documentation structure and provide hands-on experience with Lokstra's key features:
 
-* `01_group_and_nested_routes/`
-* `02_middleware_usage/`
-* `03_mount_static/`
-* `04_mount_spa/`
-* `05_mount_reverse_proxy/`
-
----
-
-## 🧑‍🏫 3. `best_practices/`
-
-Recommended patterns for better maintainability and developer experience.
-
-* `01_custom_request_context/`
-* `02_named_handlers/`
-* `03_split_config_files/`
+1. **Getting Started** → Foundation and basic concepts
+2. **Core Features** → Smart binding, HTMX, services, middleware  
+3. **Advanced Usage** → Configuration, customization, production patterns
+4. **Real-World Examples** → Complete applications and best practices
 
 ---
 
-## 🧩 4. `customization/`
+## 📘 01. Getting Started (`01_getting_started/`)
 
-How to override and extend core Lokstra behavior.
+Master the fundamentals of Lokstra applications based on [Getting Started Guide](../../docs/getting-started.md).
 
-* `01_custom_json_formatter/`
-* `02_custom_response_wrapper/`
-* `03_override_http_methods/`
-* `04_custom_router_engine/`
+* `01_minimal_app/` – Simplest possible Lokstra app
+* `02_smart_binding/` – Request binding with struct tags  
+* `03_structured_responses/` – Response helpers and method chaining
+* `04_multiple_apps/` – Server with multiple applications
+* `05_graceful_shutdown/` – Production-ready lifecycle management
 
----
-
-## 🧱 5. `service_lifecycle/`
-
-Covers service registration, hooks, and shutdown flows.
-
-* `01_register_named_service/`
-* `02_access_service/`
-* `03_hook_on_server_start/`
-* `04_shutdown_hook/`
+**Key Learning**: App creation, smart binding, structured responses, graceful shutdown.
 
 ---
 
-## 🏢 6. `business_services/`
+## 🏗️ 02. Core Concepts (`02_core_concepts/`)
 
-Examples of domain-driven, custom services containing business logic.
+Deep dive into Lokstra's architecture based on [Core Concepts](../../docs/core-concepts.md).
 
-* `01_ledger_service/`
-* `02_loan_service/`
-* `03_inventory_service/`
+* `01_registration_context/` – Dependency injection basics
+* `02_request_context/` – Working with request context
+* `03_type_safe_services/` – Service container and type safety
+* `04_handler_patterns/` – Different handler approaches
+* `05_error_handling/` – Proper error handling patterns
 
----
-
-## 🛠 7. `default_services/`
-
-Demonstrates built-in Lokstra services.
-
-* `01_logger/`
-* `02_dbpool/`
-* `03_redis/`
-* `04_jwt_auth/`
-* `05_email_sender/`
-* `06_metrics/`
-* `07_healthcheck/`
+**Key Learning**: Registration context, request context, services, handler patterns.
 
 ---
 
-## 🧰 8. `default_middleware/`
+## �️ 03. Routing & Middleware (`03_routing/`)
 
-Prebuilt middleware available in Lokstra.
+Advanced routing and middleware based on [Routing](../../docs/routing.md) and [Middleware](../../docs/middleware.md).
 
-* `01_recovery/`
-* `02_request_logger/`
-* `03_cors/`
-* `04_jwt_auth_middleware/`
-* `05_custom_middleware/`
+* `01_basic_routing/` – HTTP methods and path parameters
+* `02_route_groups/` – Route grouping and prefixes
+* `03_middleware_chain/` – Middleware pipeline and priorities
+* `04_static_files/` – Static file serving and SPA support
+* `05_custom_middleware/` – Creating custom middleware
 
----
-
-Each directory will include a minimal `main.go` and inline comments for clarity. You can run any example directly and inspect the behavior.
+**Key Learning**: Route organization, middleware pipeline, static serving.
 
 ---
 
-> **Tip**: Start with `basic_overview/` and work your way down. Lokstra is modular and grows with your needs.
+## � 04. HTMX Integration (`04_htmx/`)
+
+Modern web applications with HTMX based on [HTMX Integration](../../docs/htmx-integration.md).
+
+* `01_basic_htmx/` – HTMX page serving
+* `02_dynamic_content/` – HTMX with dynamic data
+* `03_forms_and_interactions/` – Interactive forms
+* `04_real_time_updates/` – Live content updates
+* `05_complete_webapp/` – Full HTMX application
+
+**Key Learning**: HTMX integration, dynamic content, interactive UIs.
+
+---
+
+## ⚙️ 05. Services & Configuration (`05_services/`)
+
+Service management and configuration based on [Services](../../docs/services.md) and [Configuration](../../docs/configuration.md).
+
+* `01_built_in_services/` – Using built-in services (Logger, DB, Redis)
+* `02_custom_services/` – Creating custom services
+* `03_service_factories/` – Service factories and configuration
+* `04_yaml_configuration/` – YAML-based app configuration
+* `05_environment_overrides/` – Environment-specific configs
+
+**Key Learning**: Service container, configuration system, environment management.
+
+---
+
+## 🔧 06. Built-in Features (`06_builtin/`)
+
+Comprehensive coverage of built-in services and middleware.
+
+* `01_database_pool/` – PostgreSQL connection pool
+* `02_redis_cache/` – Redis integration
+* `03_structured_logging/` – Advanced logging patterns
+* `04_metrics_monitoring/` – Prometheus metrics
+* `05_health_checks/` – Application health monitoring
+* `06_cors_security/` – CORS and security middleware
+
+**Key Learning**: Production services, observability, security.
+
+---
+
+## � 07. Advanced Patterns (`07_advanced/`)
+
+Advanced usage patterns and customization.
+
+* `01_request_validation/` – Custom validation rules
+* `02_response_customization/` – Custom response formats
+* `03_middleware_composition/` – Advanced middleware patterns
+* `04_testing_strategies/` – Testing Lokstra applications
+* `05_performance_optimization/` – Performance best practices
+
+**Key Learning**: Advanced patterns, testing, performance.
+
+---
+
+## 🏢 08. Real-World Examples (`08_real_world/`)
+
+Complete applications demonstrating production patterns.
+
+* `01_rest_api/` – Complete REST API with authentication
+* `02_htmx_dashboard/` – Interactive dashboard application
+* `03_microservice/` – Microservice with full observability
+* `04_multi_tenant_app/` – Multi-application deployment
+* `05_production_ready/` – Production deployment example
+
+**Key Learning**: Complete applications, production patterns, deployment.
+
+---
+
+## 🚀 Quick Start
+
+1. **Begin with `01_getting_started/01_minimal_app/`** to understand basics
+2. **Work through each section sequentially** for comprehensive learning
+3. **Run examples**: Each directory contains a runnable `main.go`
+4. **Read documentation**: Examples reference specific docs sections
+5. **Experiment**: Modify examples to understand behavior
+
+### Running Examples
+
+```bash
+# Navigate to any example directory
+cd 01_getting_started/01_minimal_app/
+
+# Run the example
+go run main.go
+
+# Test with curl
+curl http://localhost:8080/hello
+```
+
+### Prerequisites
+
+- Go 1.21+ installed
+- Basic understanding of Go and HTTP concepts
+- Familiarity with REST APIs (helpful but not required)
+
+---
+
+## 📚 Documentation Integration
+
+Each example includes:
+
+- **📖 Clear documentation** with learning objectives
+- **🔗 Links to relevant docs sections** for deeper understanding  
+- **💡 Inline comments** explaining Lokstra-specific concepts
+- **🧪 Test commands** to verify functionality
+- **🔄 Progressive complexity** building on previous examples
+
+---
+
+## 🤝 Contributing
+
+Help improve the learning experience:
+
+- **Add examples** for new features
+- **Improve documentation** and clarity
+- **Fix bugs** or outdated patterns
+- **Suggest improvements** to the learning path
+
+See [Contributing Guidelines](../../CONTRIBUTING.md) for more details.
+
+---
+
+*Start your Lokstra journey with `01_getting_started/01_minimal_app/` and build your way up to production-ready applications!*

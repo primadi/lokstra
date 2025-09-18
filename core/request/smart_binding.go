@@ -20,19 +20,71 @@ func (ctx *Context) BindBodySmart(v any) error {
 		return nil // No body to bind
 	}
 
-	contentType := ctx.Request.Header.Get("Content-Type")
+	contentType := ctx.GetHeader("Content-Type")
 
-	// Handle form-urlencoded content
+	// Handle form-urlencoded content by delegating to bindFormURLEncoded
 	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
 		return ctx.bindFormURLEncoded(v)
 	}
 
-	// Default to JSON binding (for application/json or unspecified)
+	// Default to JSON binding
 	return jsonBodyDecoder.Unmarshal(ctx.rawRequestBody, v)
 }
 
 // BindAllSmart binds path, query, header parameters and body with smart content-type detection
 func (ctx *Context) BindAllSmart(v any) error {
+	// If v is pointer to map[string]any, perform map-merge binding
+	t := reflect.TypeOf(v)
+	if t != nil && t.Kind() == reflect.Pointer {
+		elem := t.Elem()
+		if elem.Kind() == reflect.Map && elem.Key().Kind() == reflect.String {
+			// Prepare the map value
+			rvMap := reflect.ValueOf(v).Elem()
+			if !rvMap.IsValid() {
+				return nil
+			}
+			if rvMap.IsNil() {
+				rvMap.Set(reflect.MakeMap(rvMap.Type()))
+			}
+
+			// Merge query params
+			query := ctx.Request.URL.Query()
+			for k, vals := range query {
+				if len(vals) > 1 {
+					// store slice of strings
+					arr := make([]any, len(vals))
+					for i, vv := range vals {
+						arr[i] = vv
+					}
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(arr))
+				} else if len(vals) == 1 {
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(vals[0]))
+				}
+			}
+
+			// Merge headers (may override query)
+			for k, vals := range ctx.Request.Header {
+				if len(vals) > 1 {
+					arr := make([]any, len(vals))
+					for i, vv := range vals {
+						arr[i] = vv
+					}
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(arr))
+				} else if len(vals) == 1 {
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(vals[0]))
+				}
+			}
+
+			// Merge body (overrides previous keys) - reuse BindBodySmart for parsing
+			if err := ctx.BindBodySmart(v); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	}
+
+	// Default: struct-based binding (existing behavior)
 	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 	header := ctx.Request.Header
@@ -67,6 +119,28 @@ func (ctx *Context) bindFormURLEncoded(v any) error {
 	formData, err := url.ParseQuery(string(ctx.rawRequestBody))
 	if err != nil {
 		return err
+	}
+
+	// If v is pointer to map[string]any, fill the map and return
+	if t := reflect.TypeOf(v); t != nil && t.Kind() == reflect.Pointer {
+		if t.Elem().Kind() == reflect.Map && t.Elem().Key().Kind() == reflect.String {
+			rvMap := reflect.ValueOf(v).Elem()
+			if rvMap.IsNil() {
+				rvMap.Set(reflect.MakeMap(rvMap.Type()))
+			}
+			for k, vals := range formData {
+				if len(vals) > 1 {
+					arr := make([]any, len(vals))
+					for i, vv := range vals {
+						arr[i] = vv
+					}
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(arr))
+				} else if len(vals) == 1 {
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(vals[0]))
+				}
+			}
+			return nil
+		}
 	}
 
 	// Debug: log parsed form data

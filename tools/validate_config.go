@@ -33,7 +33,7 @@ func main() {
 		}
 
 		// Convert YAML to JSON for validation
-		var yamlContent interface{}
+		var yamlContent any
 		err = yaml.Unmarshal(yamlData, &yamlContent)
 		if err != nil {
 			fmt.Printf("  Error parsing YAML: %v\n", err)

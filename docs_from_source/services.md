@@ -21,6 +21,12 @@ type ServiceFactory = func(config any) (Service, error)
 
 type Service = any
 
+// Shutdownable is an optional interface that a service can implement to perform
+// graceful shutdown tasks, such as releasing resources or saving state.
+type Shutdownable interface {
+	Shutdown() error
+}
+
 func ErrUnsupportedConfig(config any) error {
 	return fmt.Errorf("unsupported config type: %T", config)
 }
@@ -37,6 +43,7 @@ func ErrServiceNotFound(serviceName string) error {
 Notes:
 - `Service` is an alias to `any` — services can be any Go value.
 - `ServiceFactory` standardizes construction from a `config` payload (any type).
+- Services implementing `Shutdownable` will be gracefully shut down when the server stops.
 - Error helpers for common failure modes are provided.
 
 RPC helper:
@@ -221,16 +228,21 @@ reg.RegisterServiceFactory("lokstra.http_listener.net_http",
 
 **Create a service instance** (named):
 ```go
-svc, err := reg.CreateService("lokstra.http_listener.net_http", "listener.main", map[string]any{{
+// Create new service, fail if already exists
+svc, err := reg.CreateService("lokstra.http_listener.net_http", "listener.main", false, map[string]any{
     "read_timeout":  "30s",
     "write_timeout": "30s",
-}})
+})
+
+// Create or replace existing service
+svc, err := reg.CreateService("lokstra.http_listener.net_http", "listener.main", true, config)
 ```
 
 **Get / GetOrCreate**:
 ```go
-inst, err := reg.GetService("listener.main")                      // returns service.Service
-inst2, err := reg.GetOrCreateService("factoryName", "svc.name")   // idempotent create
+inst, err := reg.GetService("listener.main")                                          // returns service.Service
+inst2, err := reg.GetOrCreateService("factoryName", "svc.name", config)              // idempotent create
+inst3, err := reg.GetOrCreateService("factoryName", "svc.name", param1, param2)      // multiple config params
 ```
 
 **Typed retrieval**:
@@ -276,7 +288,7 @@ type ServiceConfig struct {
 The loader will **topologically order** services by `depends_on` and create them in dependency order:
 ```go
 // in (cfg *LokstraConfig) StartAllServices(regCtx)
-if _, err := regCtx.CreateService(svc.Type, svc.Name, svc.Config); err != nil {{ /* ... */ }}
+if _, err := regCtx.CreateService(svc.Type, svc.Name, false, svc.Config); err != nil { /* ... */ }
 ```
 (Detects cycles and errors out.)
 
@@ -294,27 +306,57 @@ Use the provided helpers (from `core/service/service.go`) when writing factories
 
 Examples:
 ```go
-func NewRedisFactory(cfg any) (service.Service, error) {{
+func NewRedisFactory(cfg any) (service.Service, error) {
     m, ok := cfg.(map[string]any)
-    if !ok {{ return nil, service.ErrUnsupportedConfig(cfg) }}
+    if !ok { return nil, service.ErrUnsupportedConfig(cfg) }
 
     url, _ := m["url"].(string)
-    if url == "" {{ return nil, fmt.Errorf("missing 'url'") }}
+    if url == "" { return nil, fmt.Errorf("missing 'url'") }
 
     return myredis.New(url), nil // should satisfy serviceapi.Redis
-}}
+}
 
-func UseMetrics(reg registration.Context) error {{
+func UseMetrics(reg registration.Context) error {
     m, err := reg.GetService("metrics.main")
-    if err != nil {{ return service.ErrServiceNotFound("metrics.main") }}
+    if err != nil { return service.ErrServiceNotFound("metrics.main") }
 
     metrics, ok := m.(serviceapi.Metrics)
-    if !ok {{ return service.ErrInvalidServiceType("metrics.main", "serviceapi.Metrics") }}
+    if !ok { return service.ErrInvalidServiceType("metrics.main", "serviceapi.Metrics") }
 
     metrics.IncCounter("boot.success", nil)
     return nil
-}}
+}
 ```
+
+## Graceful Shutdown
+
+Services that need to perform cleanup when the application shuts down can implement the `service.Shutdownable` interface:
+
+```go
+type DatabaseService struct {
+    pool *pgxpool.Pool
+}
+
+func (d *DatabaseService) GetSetting(key string) any {
+    return nil
+}
+
+// Implement Shutdownable for graceful shutdown
+func (d *DatabaseService) Shutdown() error {
+    if d.pool != nil {
+        d.pool.Close()
+    }
+    return nil
+}
+```
+
+The registration context will automatically detect services implementing `Shutdownable` and call their `Shutdown()` methods in parallel when `ShutdownAllServices()` is called (typically during server shutdown). This allows services to:
+
+- Close database connections
+- Flush pending writes  
+- Release network resources
+- Save state to disk
+- Clean up temporary files
 
 ---
 

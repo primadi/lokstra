@@ -1,7 +1,6 @@
 package router
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -257,8 +256,8 @@ func ResolveAllNamed(ctx registration.Context, r *RouterMeta) {
 				}
 				r.Routes[i].Handler.Extension.(*service.RpcServiceMeta).ServiceInst = svc
 			}
-			rpcSvr, err := getOrCreateService[serviceapi.RpcServer](ctx, "rpc_server.default",
-				"rpc_service.rpc_server")
+			rpcSvr, err := registration.GetOrCreateService[serviceapi.RpcServer](ctx,
+				"rpc_server.default", "rpc_service.rpc_server")
 			if err != nil {
 				panic(fmt.Sprintf("Failed to get RPC server: %s", err.Error()))
 			}
@@ -303,23 +302,6 @@ func resolveMiddleware(ctx registration.Context, mw *midware.Execution) {
 		mw.MiddlewareFn = mwFactory(mw.Config)
 		mw.Priority = priority
 	}
-}
-
-func getOrCreateService[T any](ctx registration.Context,
-	serviceName string, factoryName string, config ...any) (T, error) {
-	svc, err := ctx.GetService(serviceName)
-	if err != nil {
-		svc, err = ctx.CreateService(factoryName, serviceName, config...)
-		if err != nil {
-			var zero T
-			return zero, errors.New("failed to create service: " + err.Error())
-		}
-	}
-	if typedSvc, ok := svc.(T); ok {
-		return typedSvc, nil
-	}
-	var zero T
-	return zero, errors.New("service type mismatch: " + serviceName)
 }
 
 func (r *RouterMeta) dumpAllRoutes(prefixContext string, groupPath string) {

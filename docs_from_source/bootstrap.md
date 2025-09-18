@@ -299,7 +299,7 @@ Add your own services in code:
 
 ```go
 reg.RegisterServiceFactory("my.db", func(cfg any) (service.Service, error) { /* ... */ })
-_, _ = reg.CreateService("my.db", "db.primary", map[string]any{"dsn":"postgres://..."})
+_, _ = reg.CreateService("my.db", "db.primary", false, map[string]any{"dsn":"postgres://..."})
 ```
 
 Or via YAML:

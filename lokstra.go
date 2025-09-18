@@ -1,8 +1,6 @@
 package lokstra
 
 import (
-	"errors"
-
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/flow"
@@ -39,6 +37,7 @@ var Logger serviceapi.Logger
 
 // NewGlobalRegistrationContext creates a new global registration context,
 // registers all default modules, and retrieves the default logger service.
+// this function must be called only once at the beginning of the application.
 func NewGlobalRegistrationContext() RegistrationContext {
 	ctx := registration.NewGlobalContext()
 
@@ -177,38 +176,31 @@ func LoadConfigDir(dir string) (*config.LokstraConfig, error) {
 	return config.LoadConfigDir(dir)
 }
 
-// LoadConfigFile loads the configuration from the specified file.
+// Loads the configuration from the specified file.
 // It returns a pointer to the LokstraConfig and an error if any.
 func LoadConfigFile(filePath string) (*config.LokstraConfig, error) {
 	return config.LoadConfigFile(filePath)
 }
 
+// Retrieves a service by name from service registry.
+//
+// Returns error:
+//   - nil on success
+//   - ErrServiceNotAllowed if accessing the service is not allowed.
+//   - ErrServiceNotFound if the service does not exist.
+//   - ErrServiceTypeInvalid if the service is not of the expected type.
 func GetService[T service.Service](regCtx RegistrationContext, serviceName string) (T, error) {
-	svc, err := regCtx.GetService(serviceName)
-	if err != nil {
-		var zero T
-		return zero, errors.New("service not found: " + serviceName)
-	}
-	if typedSvc, ok := svc.(T); ok {
-		return typedSvc, nil
-	}
-	var zero T
-	return zero, errors.New("service type mismatch: " + serviceName)
+	return registration.GetService[T](regCtx, serviceName)
 }
 
+// Retrieves a service by name if it exists, otherwise creates it using the specified factory
+// and configuration, and insert into service registry.
+//
+// Returns error:
+//   - nil on success
+//   - ErrServiceNotAllowed if accessing the service is not allowed.
+//   - ErrServiceFactoryNotFound if the specified factory does not exist
 func GetOrCreateService[T any](regCtx RegistrationContext,
 	serviceName string, factoryName string, config ...any) (T, error) {
-	svc, err := regCtx.GetService(serviceName)
-	if err != nil {
-		svc, err = regCtx.CreateService(factoryName, serviceName, config...)
-		if err != nil {
-			var zero T
-			return zero, errors.New("failed to create service: " + err.Error())
-		}
-	}
-	if typedSvc, ok := svc.(T); ok {
-		return typedSvc, nil
-	}
-	var zero T
-	return zero, errors.New("service type mismatch: " + serviceName)
+	return registration.GetOrCreateService[T](regCtx, serviceName, factoryName, config...)
 }

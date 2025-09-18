@@ -128,6 +128,14 @@ func (s *Server) Shutdown(shutdownTimeout time.Duration) error {
 			fmt.Printf("App '%s' has been gracefully shutdown.\n", app.GetName())
 		}
 	}
+
+	if err := s.ctx.ShutdownAllServices(); err != nil {
+		fmt.Printf("Failed to shutdown all services: %v\n", err)
+		errs = append(errs, fmt.Errorf("shutdown all services: %w", err))
+	} else {
+		fmt.Println("All services have been gracefully shutdown.")
+	}
+
 	fmt.Println("Server has been gracefully shutdown.")
 	if len(errs) > 0 {
 		return errors.Join(errs...)

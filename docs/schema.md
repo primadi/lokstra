@@ -598,7 +598,7 @@ func validateConfig(yamlFile string) error {
     }
     
     // Convert YAML to JSON
-    var yamlContent interface{}
+    var yamlContent any
     err = yaml.Unmarshal(yamlData, &yamlContent)
     if err != nil {
         return err

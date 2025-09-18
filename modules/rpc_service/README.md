@@ -111,7 +111,7 @@ func main() {
 1. **Encode**: Arguments → MessagePack
 2. **HTTP**: POST to `{baseURL}/getuser`
 3. **Decode**: Response → Go types
-4. **Type Conversion**: Interface{} → Concrete types
+4. **Type Conversion**: any → Concrete types
 
 ## Why Not Dynamic Implementation?
 
@@ -125,7 +125,7 @@ Go doesn't support dynamic interface implementation at runtime because:
 
 1. **Keep it simple**: One client struct per interface
 2. **Error handling**: Always check and wrap errors appropriately
-3. **Type safety**: Use concrete types, avoid interface{} when possible
+3. **Type safety**: Use concrete types, avoid any when possible
 4. **Testing**: Mock the RpcClient for unit tests
 
 ```go

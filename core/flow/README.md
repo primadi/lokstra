@@ -36,7 +36,7 @@ func CreateNewUserHandler() request.HandlerFunc {
 			}
 
 			// Return success response
-			return reqCtx.OkCreated(map[string]interface{}{
+			return reqCtx.OkCreated(map[string]any{
 				"message": "User created successfully",
 				"user":    user,
 			})
@@ -66,7 +66,7 @@ func CreateNewUserHandlerV2() request.HandlerFunc {
 		}).
 		AddStep("response", func(fctx *flow.Context, reqCtx *request.Context) error {
 			user := flow.GetTyped[auth.User](fctx, "created_user")
-			return reqCtx.OkCreated(map[string]interface{}{
+			return reqCtx.OkCreated(map[string]any{
 				"message": "User created successfully",
 				"user":    user,
 			})
@@ -237,7 +237,7 @@ func CreateUserHandler() request.HandlerFunc {
 				return reqCtx.ErrorBadRequest("Failed to create user: " + err.Error())
 			}
 			
-			return reqCtx.OkCreated(map[string]interface{}{
+			return reqCtx.OkCreated(map[string]any{
 				"message": "User created successfully",
 				"user":    user,
 			})
@@ -265,7 +265,7 @@ func GetUserHandler() request.HandlerFunc {
 				return reqCtx.ErrorNotFound("User not found")
 			}
 			
-			return reqCtx.Ok(map[string]interface{}{
+			return reqCtx.Ok(map[string]any{
 				"message": "User retrieved successfully",
 				"user":    user,
 			})
@@ -299,7 +299,7 @@ func UpdateUserHandler() request.HandlerFunc {
 				return reqCtx.ErrorBadRequest("Failed to update user: " + err.Error())
 			}
 			
-			return reqCtx.OkUpdated(map[string]interface{}{
+			return reqCtx.OkUpdated(map[string]any{
 				"message": "User updated successfully",
 				"user":    user,
 			})
@@ -326,7 +326,7 @@ func DeleteUserHandler() request.HandlerFunc {
 				return reqCtx.ErrorBadRequest("Failed to delete user: " + err.Error())
 			}
 			
-			return reqCtx.Ok(map[string]interface{}{
+			return reqCtx.Ok(map[string]any{
 				"message": "User deleted successfully",
 			})
 		}).
@@ -429,7 +429,7 @@ func CreateUserWithNotificationHandler() request.HandlerFunc {
         ).
         AddStep("response", func(fctx *flow.Context, reqCtx *request.Context) error {
             user := flow.GetTyped[auth.User](fctx, "created_user")
-            return reqCtx.OkCreated(map[string]interface{}{
+            return reqCtx.OkCreated(map[string]any{
                 "message": "User created and welcome email sent",
                 "user":    user,
             })

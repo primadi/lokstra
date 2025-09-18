@@ -47,19 +47,19 @@ func TestRequestTypes(t *testing.T) {
 	// Verify that important types are properly exported
 	type typeTest struct {
 		name     string
-		typeFunc func() interface{}
+		typeFunc func() any
 	}
 
 	tests := []typeTest{
 		{
 			name: "Context",
-			typeFunc: func() interface{} {
+			typeFunc: func() any {
 				return &request.Context{}
 			},
 		},
 		{
 			name: "HandlerRegister",
-			typeFunc: func() interface{} {
+			typeFunc: func() any {
 				return &request.HandlerRegister{}
 			},
 		},

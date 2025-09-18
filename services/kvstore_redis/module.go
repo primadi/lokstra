@@ -30,7 +30,7 @@ func (m *module) Register(regCtx registration.Context) error {
 		case map[string]string:
 			redisServiceName = cfg[REDIS_SERVICENAME_KEY]
 		default:
-			return nil, service.ErrUnsupportedConfig(config)
+			return nil, registration.ErrUnsupportedConfig(config)
 		}
 		rs, err := regCtx.GetService(redisServiceName)
 		if err != nil {
@@ -38,7 +38,7 @@ func (m *module) Register(regCtx registration.Context) error {
 		}
 		redisClient, ok := rs.(*redis.Client)
 		if !ok {
-			return nil, service.ErrInvalidServiceType(redisServiceName, "redis.Client")
+			return nil, registration.ErrInvalidServiceType(redisServiceName, "redis.Client")
 		}
 		return New(redisClient), nil
 	}

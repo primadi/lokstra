@@ -57,7 +57,7 @@ AddValidateRequest([]flow.FieldValidator{
 ### Custom Validation Rules
 ```go
 func StrongPassword() flow.ValidationRule {
-    return func(value interface{}) (bool, string) {
+    return func(value any) (bool, string) {
         password := value.(string)
         // Custom validation logic
         return hasUppercase && hasNumber, "must contain uppercase and number"

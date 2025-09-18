@@ -195,7 +195,7 @@ func (h *HandlerConfig) PrometheusMetricsHandler() request.HandlerFunc {
 }
 
 // RegisterHealthRoutes registers all health check routes with the provided registration context
-func RegisterHealthRoutes(regCtx interface{}, healthService serviceapi.HealthService) {
+func RegisterHealthRoutes(regCtx any, healthService serviceapi.HealthService) {
 	config := NewHandlerConfig(healthService)
 
 	// Standard health check endpoints for Kubernetes

@@ -152,7 +152,7 @@ func CreateUserHandler() request.HandlerFunc {
 ```go
 // Custom validation rule
 func StrongPassword() flow.ValidationRule {
-	return func(value interface{}) (bool, string) {
+	return func(value any) (bool, string) {
 		password, ok := value.(string)
 		if !ok {
 			return false, "must be a string"

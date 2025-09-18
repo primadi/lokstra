@@ -50,7 +50,7 @@ func registerHealthHandlers(regCtx registration.Context) {
 		service, err := regCtx.GetService(MODULE_NAME + ".default")
 		if err != nil {
 			// Try to create if doesn't exist
-			service, err = regCtx.CreateService(MODULE_NAME, MODULE_NAME+".default", nil)
+			service, err = regCtx.GetOrCreateService(MODULE_NAME, MODULE_NAME+".default", nil)
 			if err != nil {
 				return nil
 			}

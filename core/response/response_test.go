@@ -45,7 +45,7 @@ func TestResponse_WithMessage(t *testing.T) {
 
 func TestResponse_WithData(t *testing.T) {
 	r := response.NewResponse()
-	data := map[string]interface{}{"key": "value"}
+	data := map[string]any{"key": "value"}
 
 	result := r.WithData(data)
 
@@ -58,7 +58,7 @@ func TestResponse_WithData(t *testing.T) {
 	}
 
 	// Verify data content
-	dataMap, ok := r.Data.(map[string]interface{})
+	dataMap, ok := r.Data.(map[string]any)
 	if !ok {
 		t.Error("Expected data to be a map")
 	}
@@ -70,7 +70,7 @@ func TestResponse_WithData(t *testing.T) {
 
 func TestResponse_WithMeta(t *testing.T) {
 	r := response.NewResponse()
-	meta := map[string]interface{}{"total": 100, "page": 1}
+	meta := map[string]any{"total": 100, "page": 1}
 
 	result := r.WithMeta(meta)
 

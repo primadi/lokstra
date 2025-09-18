@@ -1,7 +1,6 @@
 package registration
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/primadi/lokstra/core/midware"
@@ -11,9 +10,6 @@ import (
 
 type HandlerRegister = request.HandlerRegister
 type RawHandlerRegister = request.RawHandlerRegister
-
-var ErrServiceNotFound = errors.New("service not found")
-var ErrServiceTypeInvalid = errors.New("service type is invalid")
 
 // Module defines the interface for a module in Lokstra.
 type Module interface {
@@ -27,10 +23,50 @@ type Module interface {
 // It must not be used after server.Start().
 type Context interface {
 	// Service creation and retrieval
-	RegisterService(serviceName string, service service.Service) error
+
+	// Registers a service with the given name into service registry.
+	//
+	// The service must be initialized before calling this function.
+	//
+	// Returns:
+	//   - nil on success
+	//   - ErrServiceAlreadyExists if a service with the same name already exists, and allowReplace is false
+	//   - ErrServiceIsNotAllowed if registering the service is not allowed
+	RegisterService(serviceName string, service service.Service, allowReplace bool) error
+
+	// Retrieves a service by name from service registry.
+	//
+	// Returns error:
+	//  - nil on success
+	//  - ErrServiceNotAllowed if accessing the service is not allowed.
+	//  - ErrServiceNotFound if the service does not exist.
 	GetService(serviceName string) (service.Service, error)
-	CreateService(factoryName, serviceName string, config ...any) (service.Service, error)
+
+	// Creates a service using the specified factory and configuration,
+	// and insert into service registry.
+	//
+	// Returns error:
+	//   - nil on success
+	//   - ErrServiceAlreadyExists if a service with the same name already exists, and allowReplace is false
+	//   - ErrServiceIsNotAllowed if registering the service is not allowed
+	//   - ErrServiceFactoryNotFound if the specified factory does not exist
+	CreateService(factoryName, serviceName string, allowReplace bool, config ...any) (service.Service, error)
+
+	// Retrieves a service by name if it exists, otherwise creates it using the specified factory
+	// and configuration, and insert into service registry.
+	//
+	// Returns error:
+	//  - nil on success
+	//  - ErrServiceNotAllowed if accessing the service is not allowed.
+	//  - ErrServiceFactoryNotFound if the specified factory does not exist
 	GetOrCreateService(factoryName, serviceName string, config ...any) (service.Service, error)
+
+	// Gracefully shutdown all services that implement service.Shutdownable interface.
+	// This function is called during server shutdown.
+	// Returns error:
+	//   - nil on success
+	//   - all errors from services that failed to shutdown, aggregated into one error using errors.Join (Go 1.20+)
+	ShutdownAllServices() error
 
 	// Service factory registration and retrieval
 	RegisterServiceFactory(factoryName string,
@@ -84,7 +120,7 @@ func GetServiceFromConfig[T service.Service](regCtx Context,
 	case map[string]string:
 		svcName = cfg[paramServiceName]
 	default:
-		return zero, service.ErrUnsupportedConfig(config)
+		return zero, ErrUnsupportedConfig(config)
 	}
 
 	if svcName == "" {
@@ -100,7 +136,7 @@ func GetServiceFromConfig[T service.Service](regCtx Context,
 		return typedSvc, nil
 	}
 
-	return zero, service.ErrInvalidServiceType(paramServiceName,
+	return zero, ErrInvalidServiceType(paramServiceName,
 		fmt.Sprintf("%T", (*T)(nil)))
 }
 

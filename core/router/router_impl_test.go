@@ -20,6 +20,11 @@ import (
 // Mock implementations for testing
 type MockRegistrationContext struct{}
 
+// ShutdownAllServices implements registration.Context.
+func (m *MockRegistrationContext) ShutdownAllServices() error {
+	panic("unimplemented")
+}
+
 // GetRawHandler implements registration.Context.
 func (m *MockRegistrationContext) GetRawHandler(name string) *registration.RawHandlerRegister {
 	panic("unimplemented")
@@ -77,7 +82,7 @@ func (m *MockRegistrationContext) RegisterModule(getModuleFunc func() registrati
 	return nil
 }
 
-func (m *MockRegistrationContext) CreateService(factoryName, serviceName string, config ...any) (service.Service, error) {
+func (m *MockRegistrationContext) CreateService(factoryName, serviceName string, allowReplace bool, config ...any) (service.Service, error) {
 	if factoryName == "" || factoryName == "default" {
 		return NewMockRouterEngine(), nil
 	}
@@ -88,13 +93,16 @@ func (m *MockRegistrationContext) GetOrCreateService(factoryName, serviceName st
 	if svc, err := m.GetService(serviceName); err == nil {
 		return svc, nil // Return existing service if found
 	}
-	return m.CreateService(factoryName, serviceName, config...)
+	return m.CreateService(factoryName, serviceName, true, config...)
 }
 
 func (m *MockRegistrationContext) GetValue(key string) (any, bool) { return nil, false }
 func (m *MockRegistrationContext) SetValue(key string, value any)  {}
 
-func (m *MockRegistrationContext) RegisterService(name string, svc service.Service) error { return nil }
+func (m *MockRegistrationContext) RegisterService(name string, svc service.Service,
+	errorIfExists bool) error {
+	return nil
+}
 func (m *MockRegistrationContext) GetService(serviceName string) (service.Service, error) {
 	return nil, nil
 }

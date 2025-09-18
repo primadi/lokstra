@@ -40,14 +40,14 @@ func (fctx *Context[T]) GetPagination() (*request.PaginationQuery, bool) {
 }
 
 // PaginatedOk returns a standardized paginated response using stored pagination context
-func (fctx *Context[T]) PaginatedOk(data interface{}, total int) error {
+func (fctx *Context[T]) PaginatedOk(data any, total int) error {
 	pagination, exists := fctx.GetPagination()
 	if !exists {
 		return fctx.ErrorInternal("Pagination context not found. Did you call AddPaginationQueryAction()?")
 	}
 
 	// Create filters map
-	filters := make(map[string]interface{})
+	filters := make(map[string]any)
 	if pagination.Filter != nil {
 		for k, v := range pagination.Filter {
 			filters[k] = v
@@ -64,9 +64,9 @@ func (fctx *Context[T]) PaginatedOk(data interface{}, total int) error {
 	hasPrev := pagination.Page > 1
 
 	// Create standardized response
-	response := map[string]interface{}{
+	response := map[string]any{
 		"data": data,
-		"pagination": map[string]interface{}{
+		"pagination": map[string]any{
 			"page":        pagination.Page,
 			"page_size":   pagination.PageSize,
 			"total":       total,
@@ -74,7 +74,7 @@ func (fctx *Context[T]) PaginatedOk(data interface{}, total int) error {
 			"has_next":    hasNext,
 			"has_prev":    hasPrev,
 		},
-		"filters": map[string]interface{}{
+		"filters": map[string]any{
 			"applied": filters,
 		},
 	}

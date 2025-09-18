@@ -240,7 +240,7 @@ func TestIntegration_HandlerFunctionWorkflow(t *testing.T) {
 		}
 
 		// Set response based on parsed request
-		ctx.WithMessage("Search completed").WithData(map[string]interface{}{
+		ctx.WithMessage("Search completed").WithData(map[string]any{
 			"query":    req.Query,
 			"category": req.Category,
 			"tags":     req.Tags,
@@ -275,9 +275,9 @@ func TestIntegration_HandlerFunctionWorkflow(t *testing.T) {
 		t.Fatal("Expected Data to be set")
 	}
 
-	data, ok := ctx.Data.(map[string]interface{})
+	data, ok := ctx.Data.(map[string]any)
 	if !ok {
-		t.Fatal("Expected Data to be map[string]interface{}")
+		t.Fatal("Expected Data to be map[string]any")
 	}
 
 	if data["query"] != "golang" {

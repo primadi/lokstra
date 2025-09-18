@@ -49,7 +49,7 @@ func (m *module) Register(regCtx registration.Context) error {
 				dsn = fmt.Sprintf("redis://%s%s/%d", auth, addr, db)
 			}
 		default:
-			return nil, service.ErrUnsupportedConfig(config)
+			return nil, registration.ErrUnsupportedConfig(config)
 		}
 		return NewDsn(dsn), nil
 	}

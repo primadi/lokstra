@@ -140,10 +140,10 @@ func (m *module) Description() string {
 	return "Metrics Service for Lokstra using Prometheus"
 }
 
-// parseBuckets converts interface{} to []float64 for histogram buckets
-func parseBuckets(bucketsInterface interface{}) ([]float64, error) {
+// parseBuckets converts any to []float64 for histogram buckets
+func parseBuckets(bucketsInterface any) ([]float64, error) {
 	switch v := bucketsInterface.(type) {
-	case []interface{}:
+	case []any:
 		buckets := make([]float64, len(v))
 		for i, bucket := range v {
 			switch b := bucket.(type) {
@@ -165,10 +165,10 @@ func parseBuckets(bucketsInterface interface{}) ([]float64, error) {
 	}
 }
 
-// parseLabels converts interface{} to map[string]string for constant labels
-func parseLabels(labelsInterface interface{}) (map[string]string, error) {
+// parseLabels converts any to map[string]string for constant labels
+func parseLabels(labelsInterface any) (map[string]string, error) {
 	switch v := labelsInterface.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		labels := make(map[string]string)
 		for key, value := range v {
 			if strValue, ok := value.(string); ok {

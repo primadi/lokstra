@@ -88,30 +88,38 @@ func (l *LoggerService) SetFormat(format string) {
 	// Get current level to maintain it
 	currentLevel := l.logger.GetLevel()
 
-	// Determine output writer (use current output, could be enhanced to track this)
-	writer := l.writer
+	// Determine the base writer (extract from ConsoleWriter if needed)
+	var baseWriter io.Writer
+	if cw, ok := l.writer.(zerolog.ConsoleWriter); ok {
+		baseWriter = cw.Out
+	} else {
+		baseWriter = l.writer
+	}
 
+	var writer io.Writer
 	// Configure format based on the new format
 	switch format {
 	case "text", "console":
 		// Use ConsoleWriter for human-readable output
 		consoleWriter := zerolog.ConsoleWriter{
-			Out:        writer,
+			Out:        baseWriter,
 			TimeFormat: time.RFC3339,
+			NoColor:    false, // Enable color for console format
 		}
 		writer = consoleWriter
 	case "json":
-		// Keep default JSON format with plain writer
-		// writer is already set to os.Stdout
+		// Use base writer for pure JSON output (no console formatting)
+		writer = baseWriter
 	default:
 		// Default to JSON format
-		// writer is already set to os.Stdout
+		writer = baseWriter
 	}
 
 	// Create new logger with the new format but same level
 	newLogger := zerolog.New(writer).Level(currentLevel).
 		With().Timestamp().Logger()
 	l.logger = &newLogger
+	l.writer = writer
 }
 
 // SetOutput implements serviceapi.Logger.

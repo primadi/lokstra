@@ -28,5 +28,5 @@ func RegisterAllServices(regCtx registration.Context) {
 	regCtx.RegisterModule(redis.GetModule)
 
 	// create default logger service
-	_, _ = regCtx.CreateService(logger.MODULE_NAME, "logger", "info")
+	_, _ = regCtx.CreateService(logger.MODULE_NAME, "logger", true, "info")
 }

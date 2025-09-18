@@ -85,7 +85,7 @@ func TestLoggerService_SetFormat(t *testing.T) {
 		output := buf.String()
 
 		// Verify JSON format (should contain JSON fields)
-		var jsonLog map[string]interface{}
+		var jsonLog map[string]any
 		lines := strings.Split(strings.TrimSpace(output), "\n")
 		if len(lines) > 0 {
 			err := json.Unmarshal([]byte(lines[0]), &jsonLog)
@@ -134,7 +134,7 @@ func TestLoggerService_SetFormat(t *testing.T) {
 		output := buf.String()
 
 		// Verify console format (should NOT be valid JSON)
-		var jsonLog map[string]interface{}
+		var jsonLog map[string]any
 		lines := strings.Split(strings.TrimSpace(output), "\n")
 		if len(lines) > 0 {
 			err := json.Unmarshal([]byte(lines[0]), &jsonLog)

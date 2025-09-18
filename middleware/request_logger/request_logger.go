@@ -98,9 +98,10 @@ func factory(config any) midware.Func {
 				}
 			}
 
-			// Check if logger is available, if not skip logging
+			// Check if logger is available
 			if logger == nil {
-				panic("Logger service not available for request_logger middleware")
+				// Skip logging if no logger service is available - fail silently
+				return next(ctx)
 			}
 
 			loggerWithFields := logger.WithFields(logFields)

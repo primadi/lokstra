@@ -14,12 +14,14 @@ Lokstra is not a platform, not a service mesh, and not a low-level network proxy
 | --------------------- | -------------------------------------------------------------- |
 | Backend structure     | Modular project layout, app/server separation                  |
 | Routing               | Fast and flexible routing engine with middleware at all levels |
-| Service registration  | Plug-and-play service modules with config and lifecycle hooks  |
-| Configuration         | YAML + ENV override support                                    |
-| Multi-tenancy         | Built-in tenant-aware service structure                        |
-| Deployment            | Monolith, multi-binary, and microservice friendly              |
-| Developer Experience  | Binding helpers, response helpers, context-aware middleware    |
-| Observability (basic) | Prometheus metrics, structured logger                          |
+| Request Binding       | Smart struct tag binding (`path:"id"`, `query:"page"`, `body:"name"`) |
+| Response System       | Structured JSON responses with method chaining                 |
+| Service registration  | Type-safe dependency injection with factory pattern           |
+| Configuration         | YAML schema validation with directory loading & ENV overrides |
+| HTMX Integration      | First-class HTMX support for modern web applications          |
+| Static Files          | Efficient static serving with SPA support                     |
+| Developer Experience  | Auto-bind handlers, context helpers, minimal boilerplate      |
+| Observability (basic) | Prometheus metrics, structured logging, health checks         |
 
 ---
 
@@ -32,7 +34,55 @@ Lokstra is not a platform, not a service mesh, and not a low-level network proxy
 | Operator framework    | No K8s controller/operator support at runtime (yet)            |
 | RPC framework         | Not a gRPC or internal RPC tool (planned as `lokstra-call`)    |
 | Web framework with UI | Lokstra is backend-only; frontend handled separately           |
-| JVM / GraalVM rival   | Lokstra targets native Go development, not Java replacement    |
+| Deployment platform  | Deployment modes achieved via Docker strategies, not framework |
+
+---
+
+## Key Differentiators
+
+What sets Lokstra apart from other Go web frameworks:
+
+### Smart Request Binding
+```go
+type UserRequest struct {
+    ID    string `path:"id"`           // From URL path
+    Token string `header:"Authorization"` // From HTTP headers  
+    Name  string `body:"name"`         // From request body
+    Page  int    `query:"page"`        // From query parameters
+}
+
+// Auto-bind smart pattern
+func getUserHandler(ctx *lokstra.Context, req *UserRequest) error {
+    // Request automatically bound - use data directly
+    return ctx.Ok(req)
+}
+```
+
+### HTMX-First Development
+- Built-in HTMX page serving with script injection
+- HTMX-aware response helpers and context methods
+- Seamless static file + dynamic content integration
+
+### Configuration as Code
+- YAML schema validation with IDE support
+- Directory-based config loading and merging
+- Environment variable overrides with type safety
+
+### Type-Safe Service Container
+```go
+// Type-safe service retrieval
+dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "db.main")
+logger, err := lokstra.GetOrCreateService[serviceapi.Logger](regCtx, "logger", "info")
+```
+
+### Structured Response System
+```go
+// Method-chained responses with consistent structure
+return ctx.Ok(data).
+    WithMessage("Custom success message").
+    WithHeader("X-Custom-Header", "value").
+    WithResponseCode("CUSTOM_CODE")
+```
 
 ---
 
@@ -42,20 +92,23 @@ Lokstra is suitable for:
 
 * Go developers building APIs, internal services, or microservices
 * Teams that want convention and structure without excessive abstraction
+* Modern web applications with HTMX for dynamic interfaces
+* Applications requiring smart request binding and structured responses
+* Projects using YAML-based configuration with schema validation
 * Lightweight deployments (Docker, VPS, Kubernetes)
-* Multi-tenant applications
-* Applications that grow over time from monolith → service split
+* Applications that grow over time from single app → multiple apps
 
 Lokstra is **not ideal** for:
 
 * Complex streaming workloads
 * Graph-heavy systems needing auto schema
-* Environments needing dynamic hot reload or live instrumentation (yet)
+* Applications requiring real-time bidirectional communication
+* Projects needing advanced distributed tracing out-of-the-box
 
 ---
 
 ## Summary
 
-> Lokstra is the Rails-inspired framework for Go backend services. It aims to combine the simplicity of Go with the structure of a real framework — without sacrificing control.
+> Lokstra is the Rails-inspired framework for Go backend services. It combines Go's simplicity with structured conventions, smart request binding, HTMX integration, and type-safe dependency injection — without sacrificing control or performance.
 
-Tagline: **Simple. Scalable. Structured.**
+Tagline: **Simple. Smart. Structured.**

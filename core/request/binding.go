@@ -89,6 +89,40 @@ func (ctx *Context) bindQueryField(fieldMeta bindingFieldMeta, rv reflect.Value,
 }
 
 func (ctx *Context) BindQuery(v any) error {
+	// If v is pointer to map[string]any, perform map-merge binding
+	t := reflect.TypeOf(v)
+	if t != nil && t.Kind() == reflect.Pointer {
+		elem := t.Elem()
+		if elem.Kind() == reflect.Map && elem.Key().Kind() == reflect.String {
+			// Prepare the map value
+			rvMap := reflect.ValueOf(v).Elem()
+			if !rvMap.IsValid() {
+				return nil
+			}
+			if rvMap.IsNil() {
+				rvMap.Set(reflect.MakeMap(rvMap.Type()))
+			}
+
+			// Merge query params
+			query := ctx.Request.URL.Query()
+			for k, vals := range query {
+				if len(vals) > 1 {
+					// store slice of strings
+					arr := make([]any, len(vals))
+					for i, vv := range vals {
+						arr[i] = vv
+					}
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(arr))
+				} else if len(vals) == 1 {
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(vals[0]))
+				}
+			}
+
+			return nil
+		}
+	}
+
+	// Default: struct-based binding (existing behavior)
 	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 	query := ctx.Request.URL.Query()
@@ -122,6 +156,38 @@ func (ctx *Context) bindHeaderField(fieldMeta bindingFieldMeta, rv reflect.Value
 }
 
 func (ctx *Context) BindHeader(v any) error {
+	// If v is pointer to map[string]any, perform map-merge binding
+	t := reflect.TypeOf(v)
+	if t != nil && t.Kind() == reflect.Pointer {
+		elem := t.Elem()
+		if elem.Kind() == reflect.Map && elem.Key().Kind() == reflect.String {
+			// Prepare the map value
+			rvMap := reflect.ValueOf(v).Elem()
+			if !rvMap.IsValid() {
+				return nil
+			}
+			if rvMap.IsNil() {
+				rvMap.Set(reflect.MakeMap(rvMap.Type()))
+			}
+
+			// Merge headers (may override query)
+			for k, vals := range ctx.Request.Header {
+				if len(vals) > 1 {
+					arr := make([]any, len(vals))
+					for i, vv := range vals {
+						arr[i] = vv
+					}
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(arr))
+				} else if len(vals) == 1 {
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(vals[0]))
+				}
+			}
+
+			return nil
+		}
+	}
+
+	// Default: struct-based binding (existing behavior)
 	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 	header := ctx.Request.Header
@@ -151,6 +217,58 @@ func (ctx *Context) BindBody(v any) error {
 }
 
 func (ctx *Context) BindAll(v any) error {
+	// If v is pointer to map[string]any, perform map-merge binding
+	t := reflect.TypeOf(v)
+	if t != nil && t.Kind() == reflect.Pointer {
+		elem := t.Elem()
+		if elem.Kind() == reflect.Map && elem.Key().Kind() == reflect.String {
+			// Prepare the map value
+			rvMap := reflect.ValueOf(v).Elem()
+			if !rvMap.IsValid() {
+				return nil
+			}
+			if rvMap.IsNil() {
+				rvMap.Set(reflect.MakeMap(rvMap.Type()))
+			}
+
+			// Merge query params
+			query := ctx.Request.URL.Query()
+			for k, vals := range query {
+				if len(vals) > 1 {
+					// store slice of strings
+					arr := make([]any, len(vals))
+					for i, vv := range vals {
+						arr[i] = vv
+					}
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(arr))
+				} else if len(vals) == 1 {
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(vals[0]))
+				}
+			}
+
+			// Merge headers (may override query)
+			for k, vals := range ctx.Request.Header {
+				if len(vals) > 1 {
+					arr := make([]any, len(vals))
+					for i, vv := range vals {
+						arr[i] = vv
+					}
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(arr))
+				} else if len(vals) == 1 {
+					rvMap.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(vals[0]))
+				}
+			}
+
+			// Merge body (overrides previous keys) - reuse BindBody for parsing
+			if err := ctx.BindBody(v); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	}
+
+	// Default: struct-based binding (existing behavior)
 	bindMeta := getOrBuildBindingMeta(reflect.TypeOf(v))
 	rv := reflect.ValueOf(v).Elem()
 	header := ctx.Request.Header
