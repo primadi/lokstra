@@ -14,6 +14,11 @@ type mockRegistrationContext struct {
 	factories map[string]func(config any) (service.Service, error)
 }
 
+// ShutdownAllServices implements registration.Context.
+func (m *mockRegistrationContext) ShutdownAllServices() error {
+	panic("unimplemented")
+}
+
 // GetRawHandler implements registration.Context.
 func (m *mockRegistrationContext) GetRawHandler(name string) *registration.RawHandlerRegister {
 	panic("unimplemented")

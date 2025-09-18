@@ -6,6 +6,7 @@ import (
 	"path"
 	"plugin"
 	"reflect"
+	"sync"
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/midware"
@@ -161,6 +162,40 @@ func (c *ContextImpl) GetOrCreateService(factoryName string, serviceName string,
 		return svc, nil // Return existing service if found
 	}
 	return c.CreateService(factoryName, serviceName, true, config...)
+}
+
+// ShutdownAllServices implements Context.
+func (c *ContextImpl) ShutdownAllServices() error {
+	// Parallel shutdown: run each Shutdown() in its own goroutine and collect errors.
+	// Parallel shutdown is faster for independent services. If services have
+	// dependencies, prefer serial shutdown in a defined order instead.
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errs []error
+
+	for name, svc := range serviceInstances {
+		if shutdownable, ok := svc.(service.Shutdownable); ok {
+			wg.Add(1)
+			go func(n string, s service.Shutdownable) {
+				defer wg.Done()
+				if err := s.Shutdown(); err != nil {
+					mu.Lock()
+					errs = append(errs, fmt.Errorf("%s: %w", n, err))
+					mu.Unlock()
+				}
+			}(name, shutdownable)
+		}
+	}
+
+	wg.Wait()
+
+	if len(errs) == 0 {
+		return nil
+	}
+
+	// Aggregate errors into one error using errors.Join (Go 1.20+)
+	return errors.Join(errs...)
 }
 
 // RegisterHandler implements Context.

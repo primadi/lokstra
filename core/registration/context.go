@@ -61,6 +61,13 @@ type Context interface {
 	//  - ErrServiceFactoryNotFound if the specified factory does not exist
 	GetOrCreateService(factoryName, serviceName string, config ...any) (service.Service, error)
 
+	// Gracefully shutdown all services that implement service.Shutdownable interface.
+	// This function is called during server shutdown.
+	// Returns error:
+	//   - nil on success
+	//   - all errors from services that failed to shutdown, aggregated into one error using errors.Join (Go 1.20+)
+	ShutdownAllServices() error
+
 	// Service factory registration and retrieval
 	RegisterServiceFactory(factoryName string,
 		serviceFactory func(config any) (service.Service, error))

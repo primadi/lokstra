@@ -20,6 +20,11 @@ import (
 // Mock implementations for testing
 type MockRegistrationContext struct{}
 
+// ShutdownAllServices implements registration.Context.
+func (m *MockRegistrationContext) ShutdownAllServices() error {
+	panic("unimplemented")
+}
+
 // GetRawHandler implements registration.Context.
 func (m *MockRegistrationContext) GetRawHandler(name string) *registration.RawHandlerRegister {
 	panic("unimplemented")

@@ -38,14 +38,14 @@ Lokstra provides comprehensive built-in services for common application needs:
 regCtx.RegisterModule(logger.GetModule)
 
 // Create logger with string config
-regCtx.CreateService("lokstra.logger", "app-logger", "info")
+regCtx.CreateService("lokstra.logger", "app-logger", false, "info")
 
 // Create logger with detailed config
 loggerConfig := map[string]any{
     "level":  "debug",
     "format": "json",
 }
-regCtx.CreateService("lokstra.logger", "debug-logger", loggerConfig)
+regCtx.CreateService("lokstra.logger", "debug-logger", false, loggerConfig)
 ```
 
 **Features:**
@@ -67,7 +67,7 @@ dbConfig := map[string]any{
     "user":     "postgres",
     "password": "password",
 }
-regCtx.CreateService("lokstra.dbpool_pg", "main-db", dbConfig)
+regCtx.CreateService("lokstra.dbpool_pg", "main-db", false, dbConfig)
 ```
 
 ### 3. **Redis Service** (`services/redis`)
@@ -80,7 +80,7 @@ redisConfig := map[string]any{
     "password": "",
     "db":       0,
 }
-regCtx.CreateService("lokstra.redis", "cache-redis", redisConfig)
+regCtx.CreateService("lokstra.redis", "cache-redis", false, redisConfig)
 ```
 
 ### 4. **KV Store Services**
@@ -88,25 +88,25 @@ In-memory and Redis-backed key-value stores:
 ```go
 // In-memory KV store
 regCtx.RegisterModule(kvstore_mem.GetModule)
-regCtx.CreateService("lokstra.kvstore_mem", "memory-store", nil)
+regCtx.CreateService("lokstra.kvstore_mem", "memory-store", false, nil)
 
 // Redis-backed KV store
 regCtx.RegisterModule(kvstore_redis.GetModule)
-regCtx.CreateService("lokstra.kvstore_redis", "persistent-store", redisConfig)
+regCtx.CreateService("lokstra.kvstore_redis", "persistent-store", false, redisConfig)
 ```
 
 ### 5. **Metrics Service** (`services/metrics`)
 Application metrics collection and reporting:
 ```go
 regCtx.RegisterModule(metrics.GetModule)
-regCtx.CreateService("lokstra.metrics", "app-metrics", nil)
+regCtx.CreateService("lokstra.metrics", "app-metrics", false, nil)
 ```
 
 ### 6. **Health Check Service** (`services/health_check`)
 Health monitoring and status reporting:
 ```go
 regCtx.RegisterModule(health_check.GetModule)
-regCtx.CreateService("lokstra.health_check", "app-health", nil)
+regCtx.CreateService("lokstra.health_check", "app-health", false, nil)
 ```
 
 ---
@@ -117,10 +117,10 @@ regCtx.CreateService("lokstra.health_check", "app-health", nil)
 Simple services often accept string configuration:
 ```go
 // Logger with level string
-regCtx.CreateService("lokstra.logger", "simple-logger", "info")
+regCtx.CreateService("lokstra.logger", "simple-logger", false, "info")
 
 // Database with connection string
-regCtx.CreateService("lokstra.dbpool_pg", "db", "postgres://user:pass@localhost/db")
+regCtx.CreateService("lokstra.dbpool_pg", "db", false, "postgres://user:pass@localhost/db")
 ```
 
 ### Map Configuration
@@ -135,7 +135,7 @@ config := map[string]any{
     "max_connections": 20,
     "ssl_mode":        "prefer",
 }
-regCtx.CreateService("lokstra.dbpool_pg", "main-db", config)
+regCtx.CreateService("lokstra.dbpool_pg", "main-db", false, config)
 ```
 
 ### Environment-based Configuration
@@ -312,7 +312,7 @@ services := []struct {
 }
 
 for _, svc := range services {
-    if _, err := regCtx.CreateService(svc.factory, svc.name, svc.config); err != nil {
+    if _, err := regCtx.CreateService(svc.factory, svc.name, false, svc.config); err != nil {
         log.Fatalf("Failed to create service %s: %v", svc.name, err)
     }
 }

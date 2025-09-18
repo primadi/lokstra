@@ -24,6 +24,22 @@ type Service interface {
 
 The `GetSetting` method allows services to expose configuration or internal state.
 
+### Optional Interfaces
+
+Services can implement optional interfaces for additional functionality:
+
+#### Shutdownable Interface
+
+Services that need to perform cleanup tasks when the application shuts down can implement the `service.Shutdownable` interface:
+
+```go
+type Shutdownable interface {
+    Shutdown() error
+}
+```
+
+Services implementing this interface will be gracefully shut down when the server stops, allowing them to release resources, close connections, or save state. The shutdown process runs in parallel for better performance.
+
 ## Service Registration
 
 ### Register Service Factories
@@ -65,7 +81,35 @@ Register service instances directly:
 
 ```go
 logger := &MyLogger{}
-regCtx.RegisterService("my-logger", logger)
+regCtx.RegisterService("my-logger", logger, false) // allowReplace = false
+```
+
+### Create Service Instances
+
+Create services from registered factories:
+
+```go
+// Create a new service instance (fails if already exists)
+dbPool, err := regCtx.CreateService("lokstra.dbpool_pg", "db.main", false, config)
+
+// Create or replace an existing service instance
+logger, err := regCtx.CreateService("lokstra.logger", "app-logger", true, "info")
+
+// Create multiple services with same factory
+cache1, err := regCtx.CreateService("lokstra.redis", "cache.session", false, "redis://localhost:6379/0")
+cache2, err := regCtx.CreateService("lokstra.redis", "cache.user", false, "redis://localhost:6379/1")
+```
+
+### Get or Create Service
+
+Get an existing service or create it if it doesn't exist:
+
+```go
+// Get existing service or create with factory
+dbPool, err := regCtx.GetOrCreateService("lokstra.dbpool_pg", "db.main", config)
+
+// Multiple config parameters
+service, err := regCtx.GetOrCreateService("my-factory", "my-service", param1, param2, param3)
 ```
 
 ## Service Retrieval
@@ -128,7 +172,7 @@ PostgreSQL connection pool with schema support:
 regCtx.RegisterModule(dbpool_pg.GetModule)
 
 // Create with DSN string
-dbPool, err := regCtx.CreateService("lokstra.dbpool_pg", "db.main", 
+dbPool, err := regCtx.CreateService("lokstra.dbpool_pg", "db.main", false,
     "postgres://user:pass@localhost/mydb")
 
 // Create with configuration map
@@ -141,7 +185,7 @@ config := map[string]any{
     "max_connections": 20,
     "min_connections": 5,
 }
-dbPool, err := regCtx.CreateService("lokstra.dbpool_pg", "db.main", config)
+dbPool, err := regCtx.CreateService("lokstra.dbpool_pg", "db.main", false, config)
 
 // Use the service
 db, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "db.main")
@@ -158,7 +202,7 @@ Structured logging with multiple output formats:
 regCtx.RegisterModule(logger.GetModule)
 
 // Create with log level
-logger, err := regCtx.CreateService("lokstra.logger", "app-logger", "info")
+logger, err := regCtx.CreateService("lokstra.logger", "app-logger", false, "info")
 
 // Create with configuration
 config := map[string]any{
@@ -166,7 +210,7 @@ config := map[string]any{
     "format": "json",
     "output": "stdout",
 }
-logger, err := regCtx.CreateService("lokstra.logger", "app-logger", config)
+logger, err := regCtx.CreateService("lokstra.logger", "app-logger", false, config)
 
 // Use the service
 log, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
@@ -183,7 +227,7 @@ Redis client with connection pooling:
 regCtx.RegisterModule(redis.GetModule)
 
 // Create with connection string
-redis, err := regCtx.CreateService("lokstra.redis", "cache", 
+redis, err := regCtx.CreateService("lokstra.redis", "cache", false,
     "redis://localhost:6379/0")
 
 // Use the service
@@ -199,11 +243,11 @@ In-memory and Redis-backed key-value stores:
 ```go
 // In-memory store
 regCtx.RegisterModule(kvstore_mem.GetModule)
-memStore, err := regCtx.CreateService("lokstra.kvstore_mem", "session-store", nil)
+memStore, err := regCtx.CreateService("lokstra.kvstore_mem", "session-store", false, nil)
 
 // Redis store
 regCtx.RegisterModule(kvstore_redis.GetModule)
-redisStore, err := regCtx.CreateService("lokstra.kvstore_redis", "user-cache", 
+redisStore, err := regCtx.CreateService("lokstra.kvstore_redis", "user-cache", false,
     "redis://localhost:6379/1")
 
 // Use the services
@@ -221,7 +265,7 @@ Application metrics collection:
 regCtx.RegisterModule(metrics.GetModule)
 
 // Create metrics service
-metrics, err := regCtx.CreateService("lokstra.metrics", "app-metrics", nil)
+metrics, err := regCtx.CreateService("lokstra.metrics", "app-metrics", false, nil)
 
 // Use the service
 m, err := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
@@ -238,7 +282,7 @@ Health monitoring for your application:
 regCtx.RegisterModule(health_check.GetModule)
 
 // Create health check service
-health, err := regCtx.CreateService("lokstra.health", "app-health", nil)
+health, err := regCtx.CreateService("lokstra.health", "app-health", false, nil)
 
 // Use the service
 hc, err := serviceapi.GetService[serviceapi.HealthCheck](regCtx, "app-health")
@@ -255,7 +299,7 @@ Services accept various configuration types:
 
 ```go
 // String configuration
-service, err := regCtx.CreateService("my-service", "instance", "simple-config")
+service, err := regCtx.CreateService("my-service", "instance", false, "simple-config")
 
 // Map configuration
 config := map[string]any{
@@ -263,7 +307,7 @@ config := map[string]any{
     "port": 8080,
     "ssl":  true,
 }
-service, err := regCtx.CreateService("my-service", "instance", config)
+service, err := regCtx.CreateService("my-service", "instance", false, config)
 
 // Struct configuration
 type MyConfig struct {
@@ -271,7 +315,7 @@ type MyConfig struct {
     Port int    `json:"port"`
 }
 config := MyConfig{Host: "localhost", Port: 8080}
-service, err := regCtx.CreateService("my-service", "instance", config)
+service, err := regCtx.CreateService("my-service", "instance", false, config)
 ```
 
 ### Configuration Helpers
@@ -311,6 +355,14 @@ func (e *EmailService) GetSetting(key string) any {
 
 func (e *EmailService) SendEmail(to, subject, body string) error {
     // Implementation here
+    return nil
+}
+
+// Implement the optional Shutdownable interface for graceful shutdown
+func (e *EmailService) Shutdown() error {
+    // Close SMTP connection pool
+    // Wait for pending emails to finish
+    // Clean up resources
     return nil
 }
 ```
@@ -635,13 +687,13 @@ func setupServices(regCtx registration.Context) error {
     defaults.RegisterAllServices(regCtx)
     
     // Create core services
-    _, err := regCtx.CreateService("lokstra.logger", "logger", "info")
+    _, err := regCtx.CreateService("lokstra.logger", "logger", false, "info")
     if err != nil {
         return err
     }
     
     // Create dependent services
-    _, err = regCtx.CreateService("lokstra.dbpool_pg", "db.main", dbConfig)
+    _, err = regCtx.CreateService("lokstra.dbpool_pg", "db.main", false, dbConfig)
     if err != nil {
         return err
     }

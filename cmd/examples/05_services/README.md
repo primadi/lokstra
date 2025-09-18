@@ -46,8 +46,8 @@ Services typically implement `GetSetting(key string) any` for configuration acce
 - **Direct Registration**: `RegisterService(name, instance)`
 
 ### 3. **Service Creation**
-- **Create Instance**: `CreateService(factoryName, serviceName, config)`
-- **Get or Create**: `GetOrCreateService(factoryName, serviceName, config)`
+- **Create Instance**: `CreateService(factoryName, serviceName, allowReplace, config...)`
+- **Get or Create**: `GetOrCreateService(factoryName, serviceName, config...)`
 - **Configuration**: Passed to factory functions as `any`
 
 ### 4. **Service Retrieval**
@@ -73,7 +73,7 @@ Lokstra provides several built-in services:
 regCtx.RegisterModule(logger.GetModule)
 
 // Create logger instance
-regCtx.CreateService("lokstra.logger", "app-logger", "info")
+regCtx.CreateService("lokstra.logger", "app-logger", false, "info")
 
 // Use type-safe retrieval
 logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")

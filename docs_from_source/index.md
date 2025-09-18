@@ -32,7 +32,7 @@ making it the **single source of truth** for developers and AI agents (e.g., Cop
   - `GetService(typeOrName)` to resolve a service.
   - `RegisterHandler(name, handler)` and `GetHandler(name)` for named HTTP handlers.
   - A **GlobalContext** is provided for most apps.
-- **Service (no lifecycle manager)** → Services are plain Go structs created/resolved via DI. Lokstra does not mandate start/stop hooks; your service factory is responsible for constructing ready-to-use instances.
+- **Service (optional lifecycle)** → Services are plain Go structs created/resolved via DI. Lokstra does not mandate lifecycle hooks for all services, but any service that implements `service.Shutdownable` will be gracefully shut down when the server stops. Service factories remain responsible for constructing ready-to-use instances.
 - **RequestContext** → See `core/request/context.go`. A handler receives `*RequestContext` which:
   - Embeds `context.Context` (from the incoming request).
   - Exposes `Writer http.ResponseWriter` and `Req *http.Request`.
