@@ -1,0 +1,216 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lokstra.dev/schema/internal-middleware.json",
+  "title": "Lokstra Internal Middleware Configuration Schema",
+  "description": "JSON Schema for Lokstra middleware configuration",
+  "type": "object",
+  "definitions": {
+    "MiddlewareConfig": {
+      "type": "object",
+      "description": "Middleware configuration",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the middleware",
+          "examples": ["auth", "cors", "logger", "recovery", "rate_limit"]
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this middleware is enabled",
+          "default": true
+        },
+        "config": {
+          "type": "object",
+          "description": "Middleware-specific configuration",
+          "additionalProperties": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "name": { "const": "recovery" }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "description": "Recovery middleware configuration",
+                "properties": {
+                  "enable_stack_trace": {
+                    "type": "boolean",
+                    "description": "Whether to include stack trace in error logs when panic occurs",
+                    "default": false,
+                    "examples": [true, false]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "name": { "const": "cors" }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "description": "CORS middleware configuration",
+                "properties": {
+                  "allow_origins": {
+                    "type": "array",
+                    "description": "List of allowed origins",
+                    "items": {
+                      "type": "string"
+                    },
+                    "examples": [["*"], ["http://localhost:3000", "https://app.example.com"]]
+                  },
+                  "allow_methods": {
+                    "type": "array",
+                    "description": "List of allowed HTTP methods",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                    "examples": [["GET", "POST"], ["GET", "POST", "PUT", "DELETE", "PATCH"]]
+                  },
+                  "allow_headers": {
+                    "type": "array",
+                    "description": "List of allowed headers",
+                    "items": {
+                      "type": "string"
+                    },
+                    "examples": [["Content-Type", "Authorization"], ["*"]]
+                  },
+                  "expose_headers": {
+                    "type": "array",
+                    "description": "List of headers exposed to the client",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "allow_credentials": {
+                    "type": "boolean",
+                    "description": "Whether to allow credentials",
+                    "default": false
+                  },
+                  "max_age": {
+                    "type": "integer",
+                    "description": "How long the browser can cache preflight requests (in seconds)",
+                    "default": 86400
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "name": { "const": "request_logger" }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "description": "Request logger middleware configuration",
+                "properties": {
+                  "include_request_body": {
+                    "type": "boolean",
+                    "description": "Whether to include request body in logs",
+                    "default": false
+                  },
+                  "include_response_body": {
+                    "type": "boolean",
+                    "description": "Whether to include response body in logs",
+                    "default": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "name": { "const": "body_limit" }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "description": "Body limit middleware configuration",
+                "properties": {
+                  "max_size": {
+                    "type": "integer",
+                    "description": "Maximum allowed body size in bytes",
+                    "minimum": 1,
+                    "examples": [1048576, 5242880, 10485760]
+                  },
+                  "status_code": {
+                    "type": "integer",
+                    "description": "HTTP status code to return when limit is exceeded",
+                    "minimum": 400,
+                    "maximum": 599,
+                    "default": 413
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Error message when body limit is exceeded",
+                    "default": "Request body too large"
+                  },
+                  "skip_on_path": {
+                    "type": "array",
+                    "description": "Paths to skip body limit check",
+                    "items": {
+                      "type": "string"
+                    },
+                    "examples": [["/upload/*", "/api/files/*"]]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "MiddlewareList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "description": "List of middleware configurations",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Middleware name (shorthand)"
+              },
+              {
+                "$ref": "#/definitions/MiddlewareConfig"
+              }
+            ]
+          }
+        },
+        {
+          "type": "string",
+          "description": "Single middleware name"
+        },
+        {
+          "$ref": "#/definitions/MiddlewareConfig"
+        }
+      ]
+    }
+  }
+}

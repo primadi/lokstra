@@ -94,10 +94,10 @@ middleware:
   - name: "cors"
     enabled: true
     config:
-      allowed_origins: ["*"]
-      allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-      allowed_headers: ["*"]
-      exposed_headers: ["Content-Length"]
+      allow_origins: ["*"]
+      allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allow_headers: ["*"]
+      expose_headers: ["Content-Length"]
       allow_credentials: false
       max_age: 86400
 ```

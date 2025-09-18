@@ -1,17 +1,17 @@
 # Body Limit Middleware
 
-Body limit middleware untuk membatasi ukuran request body dan mencegah serangan yang menggunakan payload besar untuk menghabiskan memori server.
+The body limit middleware restricts the maximum size of incoming request bodies, protecting your server from memory exhaustion and large payload attacks.
 
-## Fitur
+## Features
 
-- Membatasi ukuran request body berdasarkan konfigurasi
-- Mendukung pemeriksaan Content-Length header untuk deteksi awal
-- Konfigurasi pesan error dan status code yang dapat disesuaikan
-- Dukungan untuk skip paths menggunakan pattern matching
-- Opsi untuk skip payload besar alih-alih mengembalikan error
-- Convenience functions untuk size limit umum
+- Enforces request body size limit via configuration
+- Early detection using Content-Length header
+- Customizable error message and status code
+- Supports skip paths with pattern matching (`*`, `**`)
+- Option to skip large payloads instead of returning error
+- Convenience functions for common size limits
 
-## Konfigurasi
+## Configuration
 
 ```go
 type Config struct {
@@ -23,41 +23,32 @@ type Config struct {
 }
 ```
 
-### Parameter Konfigurasi
+### Configuration Parameters
 
-- `max_size` (int64): Ukuran maksimum request body dalam bytes
-  - Default: `10485760` (10MB)
-  - Contoh: `1048576` (1MB), `5242880` (5MB)
+- `max_size` (int64): Maximum allowed request body size in bytes  
+  Default: `10485760` (10MB)
+- `skip_large_payloads` (bool): If true, skips reading body exceeding the limit  
+  Default: `false`
+- `message` (string): Custom error message for oversized payloads  
+  Default: `"Request body too large"`
+- `status_code` (int): HTTP status code to return  
+  Default: `413` (Request Entity Too Large)
+- `skip_on_path` ([]string): Array of path patterns to skip limit check  
+  Default: `[]` (empty), supports wildcards: `*`, `**`
 
-- `skip_large_payloads` (bool): Jika true, skip pembacaan body yang melebihi limit
-  - Default: `false`
-  - `true`: Lanjutkan processing tanpa membaca body
-  - `false`: Return error ketika limit terlampaui
+## Usage
 
-- `message` (string): Pesan error custom untuk payload yang terlalu besar
-  - Default: `"Request body too large"`
-
-- `status_code` (int): HTTP status code yang dikembalikan
-  - Default: `413` (Request Entity Too Large)
-  - Rentang valid: 400-599
-
-- `skip_on_path` ([]string): Array pattern path yang akan di-skip dari pengecekan limit
-  - Default: `[]` (kosong)
-  - Mendukung wildcard patterns: `*`, `**`
-
-## Cara Penggunaan
-
-### 1. Penggunaan Dasar
+### 1. Basic Usage
 
 ```go
-// Menggunakan default 10MB limit
-router.Use(body_limit.GetModule().GetFactory()(nil))
+// Use default 10MB limit
+router.Use(body_limit.GetMidware(nil))
 
-// Atau menggunakan convenience function
+// Or use convenience function
 router.Use(body_limit.BodyLimit10MB())
 ```
 
-### 2. Konfigurasi dengan Map
+### 2. Configuration with Map
 
 ```yaml
 # config.yaml
@@ -66,83 +57,63 @@ middleware:
     config:
       max_size: 5242880      # 5MB
       status_code: 413
-      message: "Payload terlalu besar"
+      message: "Payload too large"
       skip_on_path:
-        - "/upload/*"        # Skip untuk semua upload paths
-        - "/webhook"          # Skip untuk webhook endpoint
-        - "/api/files/**"     # Skip untuk semua file operations
+        - "/upload/*"        # Skip all upload paths
+        - "/webhook"         # Skip webhook endpoint
+        - "/api/files/**"    # Skip all file operations
 ```
 
 ```go
-// Dalam kode
+// In code
 config := map[string]any{
     "max_size":     int64(5 * 1024 * 1024), // 5MB
     "status_code":  413,
     "message":      "Request body too large",
     "skip_on_path": []string{"/upload/*", "/webhook"},
 }
-router.Use(body_limit.GetModule().GetFactory()(config))
+router.Use("body_limit", config)
 ```
 
-### 3. Konfigurasi dengan Struct
+### 3. Configuration with Struct
 
 ```go
 config := &body_limit.Config{
     MaxSize:    1024 * 1024, // 1MB
     StatusCode: 400,
-    Message:    "File terlalu besar",
+    Message:    "File too large",
     SkipOnPath: []string{
         "/api/webhooks/*",     // Skip webhook endpoints
         "/upload/large/**",    // Skip large file uploads
     },
 }
-router.Use(body_limit.GetModule().GetFactory()(config))
+
+// Recommended for type safety
+router.Use(body_limit.GetMidware(config))
 ```
 
-## Pattern Matching untuk Skip Paths
+## Pattern Matching for Skip Paths
 
-Middleware mendukung berbagai pattern untuk `skip_on_path`:
+The middleware supports several patterns for `skip_on_path`:
 
-### 1. Exact Match
-```yaml
-skip_on_path:
-  - "/webhook"              # Hanya /webhook
-  - "/api/status"           # Hanya /api/status
-```
-
-### 2. Single Wildcard (*)
-```yaml
-skip_on_path:
-  - "/upload/*"             # /upload/image, /upload/file (tidak termasuk subdirectory)
-  - "/api/*/status"         # /api/v1/status, /api/v2/status
-```
-
-### 3. Double Wildcard (**)
-```yaml
-skip_on_path:
-  - "/static/**"            # Semua files dalam /static/ dan subdirectories
-  - "/api/**/upload"        # /api/v1/upload, /api/v1/files/upload, dll
-```
+- Exact match: `/webhook`, `/api/status`
+- Single wildcard (`*`): `/upload/*`, `/api/*/status`
+- Double wildcard (`**`): `/static/**`, `/api/**/upload`
 
 ## Convenience Functions
 
 ```go
-// Predefined size limits
 router.Use(body_limit.BodyLimit1MB())   // 1MB limit
 router.Use(body_limit.BodyLimit5MB())   // 5MB limit
 router.Use(body_limit.BodyLimit10MB())  // 10MB limit (default)
-router.Use(body_limit.BodyLimit50MB())  // 50MB limit (untuk file uploads)
-
-// Custom size
+router.Use(body_limit.BodyLimit50MB())  // 50MB limit (for file uploads)
 router.Use(body_limit.BodyLimit(2 * 1024 * 1024)) // 2MB
-
-// Skip large payloads instead of error
-router.Use(body_limit.BodyLimitWithSkip(1024 * 1024)) // 1MB dengan skip
+router.Use(body_limit.BodyLimitWithSkip(1024 * 1024)) // 1MB with skip
 ```
 
-## Contoh Response
+## Example Response
 
-### Ketika Limit Terlampaui
+When limit exceeded:
 ```json
 {
     "success": false,
@@ -154,20 +125,20 @@ router.Use(body_limit.BodyLimitWithSkip(1024 * 1024)) // 1MB dengan skip
 }
 ```
 
-### Error Log
+Error log:
 ```
 Request body too large (maxSize: 1048576, actual: 2097152)
 ```
 
 ## Testing
 
-Body limit middleware dilengkapi dengan comprehensive test suite:
+Body limit middleware includes a comprehensive test suite:
 
 ```bash
 go test ./middleware/body_limit -v
 ```
 
-Test mencakup:
+Tests cover:
 - Basic body limit enforcement
 - Content-Length header checking
 - Skip large payloads functionality

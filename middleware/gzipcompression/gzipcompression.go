@@ -24,6 +24,11 @@ func (g *GzipCompressionMiddleware) Register(regCtx registration.Context) error 
 	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
 }
 
+type Config struct {
+	MinSize int `json:"min_size" yaml:"min_size"`
+	Level   int `json:"level" yaml:"level"`
+}
+
 // Name implements registration.Module.
 func (g *GzipCompressionMiddleware) Name() string {
 	return NAME
@@ -31,32 +36,42 @@ func (g *GzipCompressionMiddleware) Name() string {
 
 // Factory implements iface.MiddlewareModule.
 func factory(config any) midware.Func {
-	minSize := DEFAULT_MIN_SIZE
-	level := DEFAULT_LEVEL
+	cfg := &Config{
+		MinSize: DEFAULT_MIN_SIZE,
+		Level:   DEFAULT_LEVEL,
+	}
 
-	switch cfg := config.(type) {
+	if config == nil {
+		config = cfg
+	}
+
+	switch c := config.(type) {
 	case map[string]any:
-		if v, ok := cfg[MIN_SIZE_KEY]; ok {
+		if v, ok := c[MIN_SIZE_KEY]; ok {
 			if size, ok := v.(int); ok && size > 0 {
-				minSize = size
+				cfg.MinSize = size
 			}
 		}
-		if v, ok := cfg[LEVEL_KEY]; ok {
+		if v, ok := c[LEVEL_KEY]; ok {
 			if lvl, ok := v.(int); ok && lvl >= 0 && lvl <= 9 {
-				level = lvl
+				cfg.Level = lvl
 			}
 		}
 	case []any:
-		if len(cfg) >= 1 {
-			if size, ok := cfg[0].(int); ok && size > 0 {
-				minSize = size
+		if len(c) >= 1 {
+			if size, ok := c[0].(int); ok && size > 0 {
+				cfg.MinSize = size
 			}
 		}
-		if len(cfg) >= 2 {
-			if lvl, ok := cfg[1].(int); ok && lvl >= 0 && lvl <= 9 {
-				level = lvl
+		if len(c) >= 2 {
+			if lvl, ok := c[1].(int); ok && lvl >= 0 && lvl <= 9 {
+				cfg.Level = lvl
 			}
 		}
+	case *Config:
+		*cfg = *c
+	case Config:
+		cfg = &c
 	}
 
 	return func(next request.HandlerFunc) request.HandlerFunc {
@@ -68,9 +83,9 @@ func factory(config any) midware.Func {
 
 			writer := &gzipResponseWriter{
 				ResponseWriter: ctx.Writer,
-				minSize:        minSize,
-				level:          level,
-				buffer:         make([]byte, 0, minSize),
+				minSize:        cfg.MinSize,
+				level:          cfg.Level,
+				buffer:         make([]byte, 0, cfg.MinSize),
 			}
 
 			ctx.Writer = writer
@@ -87,4 +102,14 @@ var _ registration.Module = (*GzipCompressionMiddleware)(nil)
 // return GzipCompressionMiddleware with name "lokstra.gzipcompression"
 func GetModule() registration.Module {
 	return &GzipCompressionMiddleware{}
+}
+
+// Preferred way to get gzipcompression middleware execution
+func GetMidware(cfg *Config) *midware.Execution {
+	return &midware.Execution{
+		Name:         NAME,
+		Config:       cfg,
+		MiddlewareFn: factory(cfg),
+		Priority:     20,
+	}
 }

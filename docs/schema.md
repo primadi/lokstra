@@ -276,20 +276,20 @@ middleware:
   - name: "cors"
     enabled: true               # boolean
     config:
-      allowed_origins:          # array of strings
+      allow_origins:          # array of strings
         - "*"
         - "https://app.example.com"
-      allowed_methods:          # array of HTTP methods
+      allow_methods:          # array of HTTP methods
         - "GET"
         - "POST" 
         - "PUT"
         - "DELETE"
         - "OPTIONS"
-      allowed_headers:          # array of strings
+      allow_headers:          # array of strings
         - "*"
         - "Content-Type"
         - "Authorization"
-      exposed_headers:          # array of strings
+      expos_headers:          # array of strings
         - "Content-Length"
       allow_credentials: false  # boolean
       max_age: 86400           # integer >= 0 (seconds)

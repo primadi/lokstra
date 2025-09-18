@@ -1,0 +1,192 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lokstra.dev/schema/internal-router.json",
+  "title": "Lokstra Internal Router Configuration Schema",
+  "description": "JSON Schema for Lokstra router, group, and mount configurations (shared definitions)",
+  "type": "object",
+  "definitions": {
+    "RouteConfig": {
+      "type": "object",
+      "description": "Individual route configuration",
+      "required": ["method", "path", "handler"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "HTTP method",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE", "CONNECT"]
+        },
+        "path": {
+          "type": "string",
+          "description": "Route path pattern (e.g., '/users/:id', '/health')"
+        },
+        "handler": {
+          "type": "string",
+          "description": "Handler name to execute for this route (e.g., 'user.profile', 'health.check')"
+        },
+        "override_middleware": {
+          "type": "boolean",
+          "description": "Whether to override parent middleware",
+          "default": false
+        },
+        "middleware": {
+          "$ref": "internal-middleware.json#/definitions/MiddlewareList"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GroupConfig": {
+      "type": "object",
+      "description": "Route group configuration with prefix and nested routes",
+      "required": ["prefix"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix for this group (e.g., '/api', '/v1')",
+          "pattern": "^/.*"
+        },
+        "groups": {
+          "type": "array",
+          "description": "Nested route groups",
+          "items": {
+            "$ref": "#/definitions/GroupConfig"
+          }
+        },
+        "routes": {
+          "type": "array",
+          "description": "Routes within this group",
+          "items": {
+            "$ref": "#/definitions/RouteConfig"
+          }
+        },
+        "load_from": {
+          "type": "array",
+          "description": "Load group configuration from external files",
+          "items": {
+            "type": "string"
+          }
+        },
+        "middleware": {
+          "$ref": "internal-middleware.json#/definitions/MiddlewareList"
+        },
+        "override_middleware": {
+          "type": "boolean",
+          "description": "Whether to override parent middleware",
+          "default": false
+        },
+        "mount_static": {
+          "type": "array",
+          "description": "Static file mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountStaticConfig"
+          }
+        },
+        "mount_htmx": {
+          "type": "array",
+          "description": "HTMX application mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountHtmxConfig"
+          }
+        },
+        "mount_reverse_proxy": {
+          "type": "array",
+          "description": "Reverse proxy mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountReverseProxyConfig"
+          }
+        },
+        "mount_rpc_service": {
+          "type": "array",
+          "description": "RPC service mount points for this group",
+          "items": {
+            "$ref": "#/definitions/MountRpcServiceConfig"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountStaticConfig": {
+      "type": "object",
+      "description": "Static file serving configuration",
+      "required": ["prefix", "folder"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix to serve static files from (e.g., '/static', '/assets')",
+          "pattern": "^/.*"
+        },
+        "spa": {
+          "type": "boolean",
+          "description": "Enable Single Page Application mode with fallback to index.html",
+          "default": false
+        },
+        "folder": {
+          "type": "array",
+          "description": "List of local folder paths to serve files from (in order of priority)",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "examples": [["./static"], ["./public", "./assets"], ["./htmx_content/static", "./htmx_app/static"]]
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountHtmxConfig": {
+      "type": "object",
+      "description": "HTMX application mount configuration",
+      "required": ["prefix", "sources"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix to serve HTMX application from (e.g., '/', '/app', '/admin')",
+          "pattern": "^/.*"
+        },
+        "sources": {
+          "type": "array",
+          "description": "List of local folder paths for HTMX content (in order of priority)",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "examples": [["./htmx_content"], ["./admin_htmx", "./htmx_content"], ["./project/htmx", "./htmx_content", "./htmx_app"]]
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountReverseProxyConfig": {
+      "type": "object",
+      "description": "Reverse proxy configuration",
+      "required": ["prefix", "target"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix to proxy (e.g., '/api', '/external')",
+          "pattern": "^/.*"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target URL to proxy requests to (e.g., 'http://localhost:3000', 'https://api.example.com')",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MountRpcServiceConfig": {
+      "type": "object",
+      "description": "RPC service mount configuration",
+      "required": ["base_path", "service_name"],
+      "properties": {
+        "base_path": {
+          "type": "string",
+          "description": "Base URL path for RPC endpoints (e.g., '/rpc', '/api/rpc')",
+          "pattern": "^/.*"
+        },
+        "service_name": {
+          "type": "string",
+          "description": "Name of the RPC service to mount"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -191,3 +191,11 @@ func GetModule() registration.Module {
 }
 
 var _ registration.Module = (*module)(nil)
+
+func GetService(regCtx registration.Context, name string) (*MetricsService, error) {
+	svc, err := registration.GetService[*MetricsService](regCtx, name)
+	if err != nil {
+		return nil, err
+	}
+	return svc, nil
+}

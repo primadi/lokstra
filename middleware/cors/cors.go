@@ -11,14 +11,14 @@ import (
 	"github.com/primadi/lokstra/core/request"
 )
 
-const NAME = "cors"
+const MODULE_NAME = "cors"
 
 // Config represents CORS middleware configuration
 type Config struct {
-	AllowedOrigins   []string `json:"allowed_origins" yaml:"allowed_origins"`
-	AllowedMethods   []string `json:"allowed_methods" yaml:"allowed_methods"`
-	AllowedHeaders   []string `json:"allowed_headers" yaml:"allowed_headers"`
-	ExposedHeaders   []string `json:"exposed_headers" yaml:"exposed_headers"`
+	AllowOrigins     []string `json:"allow_origins" yaml:"allow_origins"`
+	AllowMethods     []string `json:"allow_methods" yaml:"allow_methods"`
+	AllowHeaders     []string `json:"allow_headers" yaml:"allow_headers"`
+	ExposeHeaders    []string `json:"expose_headers" yaml:"expose_headers"`
 	AllowCredentials bool     `json:"allow_credentials" yaml:"allow_credentials"`
 	MaxAge           int      `json:"max_age" yaml:"max_age"`
 }
@@ -26,10 +26,10 @@ type Config struct {
 // getDefaultConfig returns default CORS configuration
 func getDefaultConfig() *Config {
 	return &Config{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
-		ExposedHeaders:   []string{},
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{},
 		AllowCredentials: false,
 		MaxAge:           86400, // 24 hours
 	}
@@ -44,12 +44,12 @@ func (c *CorsMiddleware) Description() string {
 
 // Register implements registration.Module.
 func (c *CorsMiddleware) Register(regCtx registration.Context) error {
-	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 30)
+	return regCtx.RegisterMiddlewareFactoryWithPriority(MODULE_NAME, factory, 30)
 }
 
 // Name implements registration.Module.
 func (c *CorsMiddleware) Name() string {
-	return NAME
+	return MODULE_NAME
 }
 
 func factory(config any) midware.Func {
@@ -70,7 +70,7 @@ func factory(config any) midware.Func {
 	default:
 		// For backward compatibility, treat as allowed_origins
 		if origins := parseOrigins(config); len(origins) > 0 {
-			cfg.AllowedOrigins = origins
+			cfg.AllowOrigins = origins
 		}
 	}
 
@@ -79,34 +79,34 @@ func factory(config any) midware.Func {
 			origin := ctx.GetHeader("Origin")
 
 			// Handle actual request
-			if origin != "" && matchOrigin(cfg.AllowedOrigins, origin) {
+			if origin != "" && matchOrigin(cfg.AllowOrigins, origin) {
 				ctx.WithHeader("Access-Control-Allow-Origin", origin)
 
 				if cfg.AllowCredentials {
 					ctx.WithHeader("Access-Control-Allow-Credentials", "true")
 				}
 
-				if len(cfg.ExposedHeaders) > 0 {
-					ctx.WithHeader("Access-Control-Expose-Headers", strings.Join(cfg.ExposedHeaders, ", "))
+				if len(cfg.ExposeHeaders) > 0 {
+					ctx.WithHeader("Access-Control-Expose-Headers", strings.Join(cfg.ExposeHeaders, ", "))
 				}
 			}
 
 			// Handle preflight request
 			if ctx.Request.Method == "OPTIONS" {
 				// Set allowed methods
-				if len(cfg.AllowedMethods) > 0 {
-					ctx.WithHeader("Access-Control-Allow-Methods", strings.Join(cfg.AllowedMethods, ", "))
+				if len(cfg.AllowMethods) > 0 {
+					ctx.WithHeader("Access-Control-Allow-Methods", strings.Join(cfg.AllowMethods, ", "))
 				}
 
 				// Set allowed headers
-				if len(cfg.AllowedHeaders) > 0 {
-					if slices.Contains(cfg.AllowedHeaders, "*") {
+				if len(cfg.AllowHeaders) > 0 {
+					if slices.Contains(cfg.AllowHeaders, "*") {
 						// If wildcard is allowed, echo back the requested headers
 						if reqHeaders := ctx.GetHeader("Access-Control-Request-Headers"); reqHeaders != "" {
 							ctx.WithHeader("Access-Control-Allow-Headers", reqHeaders)
 						}
 					} else {
-						ctx.WithHeader("Access-Control-Allow-Headers", strings.Join(cfg.AllowedHeaders, ", "))
+						ctx.WithHeader("Access-Control-Allow-Headers", strings.Join(cfg.AllowHeaders, ", "))
 					}
 				}
 
@@ -126,27 +126,27 @@ func factory(config any) midware.Func {
 
 // parseMapConfig parses map[string]any configuration into Config struct
 func parseMapConfig(cfg *Config, m map[string]any) {
-	if v, ok := m["allowed_origins"]; ok {
+	if v, ok := m["allow_origins"]; ok {
 		if origins := parseOrigins(v); len(origins) > 0 {
-			cfg.AllowedOrigins = origins
+			cfg.AllowOrigins = origins
 		}
 	}
 
-	if v, ok := m["allowed_methods"]; ok {
+	if v, ok := m["allow_methods"]; ok {
 		if methods := parseStringSlice(v); len(methods) > 0 {
-			cfg.AllowedMethods = methods
+			cfg.AllowMethods = methods
 		}
 	}
 
-	if v, ok := m["allowed_headers"]; ok {
+	if v, ok := m["allow_headers"]; ok {
 		if headers := parseStringSlice(v); len(headers) > 0 {
-			cfg.AllowedHeaders = headers
+			cfg.AllowHeaders = headers
 		}
 	}
 
-	if v, ok := m["exposed_headers"]; ok {
+	if v, ok := m["expose_headers"]; ok {
 		if headers := parseStringSlice(v); len(headers) > 0 {
-			cfg.ExposedHeaders = headers
+			cfg.ExposeHeaders = headers
 		}
 	}
 
@@ -205,4 +205,14 @@ var _ registration.Module = (*CorsMiddleware)(nil)
 // GetModule returns the CORS middleware module
 func GetModule() registration.Module {
 	return &CorsMiddleware{}
+}
+
+// Preferred way to get cors middleware execution
+func GetMidware(cfg *Config) *midware.Execution {
+	return &midware.Execution{
+		Name:         MODULE_NAME,
+		Config:       cfg,
+		MiddlewareFn: factory(cfg),
+		Priority:     25,
+	}
 }

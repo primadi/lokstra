@@ -1,16 +1,16 @@
 # Recovery Middleware
 
-Recovery middleware untuk menangani panic dan mencegah aplikasi crash. Middleware ini akan menangkap panic yang terjadi dalam handler dan mengembalikan response error yang sesuai.
+Recovery middleware for handling panics and preventing application crashes. This middleware catches panics that occur in handlers and returns appropriate error responses.
 
-## Fitur
+## Features
 
-- Menangkap panic dari handler
-- Mencatat error log dengan detail lengkap
-- Mengembalikan HTTP 500 Internal Server Error
-- Konfigurasi untuk mengaktifkan/nonaktifkan stack trace
-- Tetap menjaga request ID untuk tracing
+- Catches panics from handlers
+- Logs detailed error information
+- Returns HTTP 500 Internal Server Error
+- Configurable stack trace enable/disable
+- Maintains request ID for tracing
 
-## Konfigurasi
+## Configuration
 
 ```go
 type Config struct {
@@ -18,50 +18,53 @@ type Config struct {
 }
 ```
 
-### Parameter Konfigurasi
+### Configuration Parameters
 
-- `enable_stack_trace` (bool): Mengontrol apakah stack trace disertakan dalam log error
-  - Default: `true`
-  - `true`: Stack trace akan dicatat dalam log untuk debugging
-  - `false`: Hanya pesan panic yang dicatat, tanpa stack trace
+- `enable_stack_trace` (bool): Controls whether stack trace is included in error logs
+  - Default: `false`
+  - `true`: Stack trace will be logged for debugging
+  - `false`: Only panic message is logged, without stack trace
 
-## Cara Penggunaan
+## Usage
 
-### 1. Penggunaan Dasar (dengan stack trace)
+### 1. Basic Usage (with/without stack trace)
 
 ```go
-// Menggunakan konfigurasi default dengan stack trace aktif
-router.Use(recovery.GetModule().GetFactory()(nil))
+// enable stack trace : true/ false
+
+// 1. typed middleware:
+router.Use(recovery.GetMidware(enableStackTrace))
+
+// 2. use middleware by name, parameter by direct param:
+router.Use("recovery", enableStackTrace)
+
+// recommended to use the first form, because of typed middleware and typed parameter
 ```
 
-### 2. Dengan Konfigurasi Map
+### 2. With Map Configuration
 
 ```go
-// Mengaktifkan stack trace
+// Enable stack trace
 config := map[string]any{
     "enable_stack_trace": true,
 }
-router.Use(recovery.GetModule().GetFactory()(config))
-
-// Menonaktifkan stack trace untuk production
-config := map[string]any{
-    "enable_stack_trace": false,
-}
-router.Use(recovery.GetModule().GetFactory()(config))
+// middleware by name, config by map
+router.Use("recovery", config)
 ```
 
-### 3. Dengan Struct Config
+### 3. With Struct Config
 
 ```go
 config := &recovery.Config{
-    EnableStackTrace: false, // untuk production environment
+    EnableStackTrace: false, // for production environment
 }
-router.Use(recovery.GetModule().GetFactory()(config))
+// middleware by name, config by struct
+router.Use("recovery", config)
 ```
 
-## Contoh Response
+## Example Response
 
-Ketika terjadi panic, middleware akan mengembalikan response berikut:
+When a panic occurs, the middleware will return the following response:
 
 ```json
 {
@@ -73,7 +76,7 @@ Ketika terjadi panic, middleware akan mengembalikan response berikut:
 
 ## Log Output
 
-### Dengan Stack Trace Aktif (Development)
+### With Stack Trace Active (Development)
 
 ```json
 {
@@ -87,7 +90,7 @@ Ketika terjadi panic, middleware akan mengembalikan response berikut:
 }
 ```
 
-### Tanpa Stack Trace (Production)
+### Without Stack Trace (Production)
 
 ```json
 {
@@ -100,7 +103,7 @@ Ketika terjadi panic, middleware akan mengembalikan response berikut:
 }
 ```
 
-## Contoh Implementasi
+## Implementation Example
 
 ```go
 package main
@@ -111,27 +114,17 @@ import (
 )
 
 func main() {
-    regCtx := lokstra.NewRegistrationContext()
-    
-    // Register recovery middleware
-    recovery.GetModule().Register(regCtx)
+    regCtx := lokstra.NewGlobalRegistrationContext()
+
     
     // Create server
     server := lokstra.NewServer(regCtx, "my-app")
     
-    // Untuk development dengan stack trace
-    devConfig := map[string]any{
-        "enable_stack_trace": true,
-    }
-    server.Use(recovery.GetModule().GetFactory()(devConfig))
-    
-    // Untuk production tanpa stack trace
-    prodConfig := map[string]any{
-        "enable_stack_trace": false,
-    }
-    // server.Use(recovery.GetModule().GetFactory()(prodConfig))
-    
-    // Handler yang mungkin panic
+    // For development with stack trace
+    devConfig := os.Getenv("ENV") != "prod"
+    server.Use("recovery", devConfig)
+
+    // Handler that might panic
     server.GET("/test", func(ctx *lokstra.Context) error {
         panic("something went wrong!")
         return nil
@@ -147,13 +140,13 @@ func main() {
 
 ```go
 config := map[string]any{
-    "enable_stack_trace": os.Getenv("ENV") != "production",
+    "enable_stack_trace": os.Getenv("ENV") != "prod",
 }
 ```
 
 ### 2. Selective Stack Trace
 
-Untuk production, pertimbangkan untuk menonaktifkan stack trace untuk mengurangi ukuran log dan menghemat performa:
+For production, consider disabling stack trace to reduce log size and save performance:
 
 ```go
 // Production
@@ -169,23 +162,44 @@ config := map[string]any{
 
 ### 3. Monitoring Integration
 
-Recovery middleware bekerja dengan baik dengan sistem monitoring. Log error dapat diteruskan ke sistem seperti:
-- Sentry
-- Rollbar  
-- New Relic
-- CloudWatch
+Recovery middleware works well with monitoring systems. Error logs can be forwarded using a recovery hook:
+
+### Integration Example: Using `recovery.SetRecoverHook`
+
+You can forward errors to monitoring systems by setting a custom hook function:
+
+```go
+import (
+    "github.com/primadi/lokstra/middleware/recovery"
+    "github.com/getsentry/sentry-go"
+    "fmt"
+)
+
+func main() {
+    // Set a hook to forward errors to Sentry
+    recovery.SetRecoverHook(func(ctx *request.Context, err any, stack string) {
+        sentry.CaptureException(fmt.Errorf("%v\n%s", err, stack))
+    })
+    // ...existing code...
+}
+```
+
+You can use similar hooks for Rollbar, New Relic, CloudWatch, or any other monitoring system.
 
 ## Testing
 
-Recovery middleware dilengkapi dengan test suite yang komprehensif:
+Recovery middleware comes with a comprehensive test suite:
 
 ```bash
 go test ./middleware/recovery -v
 ```
 
-Test mencakup:
-- Parsing konfigurasi berbagai format
-- Recovery dari panic dengan stack trace
-- Recovery dari panic tanpa stack trace
-- Eksekusi normal tanpa panic
-- Edge cases konfigurasi
+Tests cover:
+- Configuration parsing in various formats
+- Recovery from panic with stack trace
+- Recovery from panic without stack trace
+- Normal execution without panic
+- Configuration edge cases
+- Custom recovery hook integration
+
+(See recovery_test.go for details.)

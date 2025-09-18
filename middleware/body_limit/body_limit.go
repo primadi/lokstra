@@ -33,8 +33,8 @@ type Config struct {
 }
 
 // DefaultConfig returns default configuration
-func DefaultConfig() Config {
-	return Config{
+func DefaultConfig() *Config {
+	return &Config{
 		MaxSize:           10 * 1024 * 1024, // 10MB default
 		SkipLargePayloads: false,
 		Message:           "Request body too large",
@@ -44,15 +44,16 @@ func DefaultConfig() Config {
 }
 
 // BodyLimitMiddleware creates a new body limit middleware with the given config
-func BodyLimitMiddleware(config Config) midware.Func {
+func BodyLimitMiddleware(config *Config) midware.Func {
+	defConfig := DefaultConfig()
 	if config.MaxSize <= 0 {
-		config.MaxSize = DefaultConfig().MaxSize
+		config.MaxSize = defConfig.MaxSize
 	}
 	if config.Message == "" {
-		config.Message = DefaultConfig().Message
+		config.Message = defConfig.Message
 	}
 	if config.StatusCode == 0 {
-		config.StatusCode = DefaultConfig().StatusCode
+		config.StatusCode = defConfig.StatusCode
 	}
 
 	return func(next request.HandlerFunc) request.HandlerFunc {
@@ -102,7 +103,7 @@ func BodyLimitMiddleware(config Config) midware.Func {
 type limitedReadCloser struct {
 	reader    io.ReadCloser
 	remaining int64
-	config    Config
+	config    *Config
 	ctx       *request.Context
 }
 
@@ -215,9 +216,9 @@ func factory(config any) midware.Func {
 				}
 			}
 		case *Config:
-			cfg = *c
-		case Config:
 			cfg = c
+		case Config:
+			cfg = &c
 		}
 	}
 

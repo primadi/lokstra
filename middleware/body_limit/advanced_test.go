@@ -11,14 +11,14 @@ import (
 func TestBodyLimit_SkipOnPath(t *testing.T) {
 	tests := []struct {
 		name       string
-		config     Config
+		config     *Config
 		path       string
 		bodySize   int
 		shouldSkip bool
 	}{
 		{
 			name: "Skip upload paths",
-			config: Config{
+			config: &Config{
 				MaxSize:    100,
 				SkipOnPath: []string{"/upload/*", "/api/files/*"},
 			},
@@ -28,7 +28,7 @@ func TestBodyLimit_SkipOnPath(t *testing.T) {
 		},
 		{
 			name: "Skip with wildcard pattern",
-			config: Config{
+			config: &Config{
 				MaxSize:    100,
 				SkipOnPath: []string{"/api/*/upload"},
 			},
@@ -38,7 +38,7 @@ func TestBodyLimit_SkipOnPath(t *testing.T) {
 		},
 		{
 			name: "Skip with double wildcard",
-			config: Config{
+			config: &Config{
 				MaxSize:    100,
 				SkipOnPath: []string{"/static/**"},
 			},
@@ -48,7 +48,7 @@ func TestBodyLimit_SkipOnPath(t *testing.T) {
 		},
 		{
 			name: "Don't skip normal paths",
-			config: Config{
+			config: &Config{
 				MaxSize:    100,
 				SkipOnPath: []string{"/upload/*"},
 			},
@@ -58,7 +58,7 @@ func TestBodyLimit_SkipOnPath(t *testing.T) {
 		},
 		{
 			name: "Exact path match",
-			config: Config{
+			config: &Config{
 				MaxSize:    100,
 				SkipOnPath: []string{"/webhook"},
 			},
