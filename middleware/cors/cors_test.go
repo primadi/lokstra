@@ -18,10 +18,10 @@ func TestConfig_Parsing(t *testing.T) {
 			name:   "nil config - use defaults",
 			config: nil,
 			expected: &Config{
-				AllowedOrigins:   []string{"*"},
-				AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-				AllowedHeaders:   []string{"*"},
-				ExposedHeaders:   []string{},
+				AllowOrigins:     []string{"*"},
+				AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+				AllowHeaders:     []string{"*"},
+				ExposeHeaders:    []string{},
 				AllowCredentials: false,
 				MaxAge:           86400,
 			},
@@ -29,18 +29,18 @@ func TestConfig_Parsing(t *testing.T) {
 		{
 			name: "map config with all settings",
 			config: map[string]any{
-				"allowed_origins":   []string{"http://localhost:3000", "https://app.example.com"},
-				"allowed_methods":   []string{"GET", "POST", "PUT"},
-				"allowed_headers":   []string{"Content-Type", "Authorization"},
+				"allow_origins":     []string{"http://localhost:3000", "https://app.example.com"},
+				"allow_methods":     []string{"GET", "POST", "PUT"},
+				"allow_headers":     []string{"Content-Type", "Authorization"},
 				"exposed_headers":   []string{"X-Total-Count", "X-Page-Count"},
 				"allow_credentials": true,
 				"max_age":           3600,
 			},
 			expected: &Config{
-				AllowedOrigins:   []string{"http://localhost:3000", "https://app.example.com"},
-				AllowedMethods:   []string{"GET", "POST", "PUT"},
-				AllowedHeaders:   []string{"Content-Type", "Authorization"},
-				ExposedHeaders:   []string{"X-Total-Count", "X-Page-Count"},
+				AllowOrigins:     []string{"http://localhost:3000", "https://app.example.com"},
+				AllowMethods:     []string{"GET", "POST", "PUT"},
+				AllowHeaders:     []string{"Content-Type", "Authorization"},
+				ExposeHeaders:    []string{"X-Total-Count", "X-Page-Count"},
 				AllowCredentials: true,
 				MaxAge:           3600,
 			},
@@ -48,15 +48,15 @@ func TestConfig_Parsing(t *testing.T) {
 		{
 			name: "map config with string methods",
 			config: map[string]any{
-				"allowed_origins": []string{"*"},
-				"allowed_methods": "GET,POST,PUT",
-				"allowed_headers": "Content-Type,Authorization",
+				"allow_origins": []string{"*"},
+				"allow_methods": "GET,POST,PUT",
+				"allow_headers": "Content-Type,Authorization",
 			},
 			expected: &Config{
-				AllowedOrigins:   []string{"*"},
-				AllowedMethods:   []string{"GET", "POST", "PUT"},
-				AllowedHeaders:   []string{"Content-Type", "Authorization"},
-				ExposedHeaders:   []string{},
+				AllowOrigins:     []string{"*"},
+				AllowMethods:     []string{"GET", "POST", "PUT"},
+				AllowHeaders:     []string{"Content-Type", "Authorization"},
+				ExposeHeaders:    []string{},
 				AllowCredentials: false,
 				MaxAge:           86400,
 			},
@@ -64,18 +64,18 @@ func TestConfig_Parsing(t *testing.T) {
 		{
 			name: "struct config",
 			config: &Config{
-				AllowedOrigins:   []string{"https://myapp.com"},
-				AllowedMethods:   []string{"GET", "POST"},
-				AllowedHeaders:   []string{"*"},
-				ExposedHeaders:   []string{"X-Custom-Header"},
+				AllowOrigins:     []string{"https://myapp.com"},
+				AllowMethods:     []string{"GET", "POST"},
+				AllowHeaders:     []string{"*"},
+				ExposeHeaders:    []string{"X-Custom-Header"},
 				AllowCredentials: true,
 				MaxAge:           7200,
 			},
 			expected: &Config{
-				AllowedOrigins:   []string{"https://myapp.com"},
-				AllowedMethods:   []string{"GET", "POST"},
-				AllowedHeaders:   []string{"*"},
-				ExposedHeaders:   []string{"X-Custom-Header"},
+				AllowOrigins:     []string{"https://myapp.com"},
+				AllowMethods:     []string{"GET", "POST"},
+				AllowHeaders:     []string{"*"},
+				ExposeHeaders:    []string{"X-Custom-Header"},
 				AllowCredentials: true,
 				MaxAge:           7200,
 			},
@@ -83,18 +83,18 @@ func TestConfig_Parsing(t *testing.T) {
 		{
 			name: "struct value config",
 			config: Config{
-				AllowedOrigins:   []string{"http://localhost:8080"},
-				AllowedMethods:   []string{"GET"},
-				AllowedHeaders:   []string{"Accept"},
-				ExposedHeaders:   []string{},
+				AllowOrigins:     []string{"http://localhost:8080"},
+				AllowMethods:     []string{"GET"},
+				AllowHeaders:     []string{"Accept"},
+				ExposeHeaders:    []string{},
 				AllowCredentials: false,
 				MaxAge:           1800,
 			},
 			expected: &Config{
-				AllowedOrigins:   []string{"http://localhost:8080"},
-				AllowedMethods:   []string{"GET"},
-				AllowedHeaders:   []string{"Accept"},
-				ExposedHeaders:   []string{},
+				AllowOrigins:     []string{"http://localhost:8080"},
+				AllowMethods:     []string{"GET"},
+				AllowHeaders:     []string{"Accept"},
+				ExposeHeaders:    []string{},
 				AllowCredentials: false,
 				MaxAge:           1800,
 			},
@@ -116,8 +116,8 @@ func TestConfig_Parsing(t *testing.T) {
 func TestCorsMiddleware_Module(t *testing.T) {
 	module := GetModule()
 
-	if module.Name() != NAME {
-		t.Errorf("Expected module name %s, got %s", NAME, module.Name())
+	if module.Name() != MODULE_NAME {
+		t.Errorf("Expected module name %s, got %s", MODULE_NAME, module.Name())
 	}
 
 	if module.Description() == "" {
@@ -128,9 +128,9 @@ func TestCorsMiddleware_Module(t *testing.T) {
 func TestCorsMiddleware_ActualRequest(t *testing.T) {
 	// Create middleware with custom config
 	config := map[string]any{
-		"allowed_origins":   []string{"http://localhost:3000"},
+		"allow_origins":     []string{"http://localhost:3000"},
 		"allow_credentials": true,
-		"exposed_headers":   []string{"X-Total-Count"},
+		"expose_headers":    []string{"X-Total-Count"},
 	}
 	middleware := factory(config)
 
@@ -179,10 +179,10 @@ func TestCorsMiddleware_ActualRequest(t *testing.T) {
 func TestCorsMiddleware_PreflightRequest(t *testing.T) {
 	// Create middleware with custom config
 	config := map[string]any{
-		"allowed_origins": []string{"*"},
-		"allowed_methods": []string{"GET", "POST", "PUT", "DELETE"},
-		"allowed_headers": []string{"Content-Type", "Authorization"},
-		"max_age":         7200,
+		"allow_origins": []string{"*"},
+		"allow_methods": []string{"GET", "POST", "PUT", "DELETE"},
+		"allow_headers": []string{"Content-Type", "Authorization"},
+		"max_age":       7200,
 	}
 	middleware := factory(config)
 
@@ -237,8 +237,8 @@ func TestCorsMiddleware_PreflightRequest(t *testing.T) {
 func TestCorsMiddleware_WildcardHeaders(t *testing.T) {
 	// Create middleware with wildcard headers
 	config := map[string]any{
-		"allowed_origins": []string{"*"},
-		"allowed_headers": []string{"*"},
+		"allow_origins": []string{"*"},
+		"allow_headers": []string{"*"},
 	}
 	middleware := factory(config)
 
@@ -264,10 +264,10 @@ func TestCorsMiddleware_WildcardHeaders(t *testing.T) {
 
 	// Check that requested headers are echoed back
 	headers := ctx.Response.GetHeaders()
-	allowedHeaders := headers.Get("Access-Control-Allow-Headers")
+	allowHeaders := headers.Get("Access-Control-Allow-Headers")
 
-	if !strings.Contains(allowedHeaders, "X-Custom-Header") {
-		t.Errorf("Expected Access-Control-Allow-Headers to contain 'X-Custom-Header', got '%s'", allowedHeaders)
+	if !strings.Contains(allowHeaders, "X-Custom-Header") {
+		t.Errorf("Expected Access-Control-Allow-Headers to contain 'X-Custom-Header', got '%s'", allowHeaders)
 	}
 }
 
@@ -306,7 +306,7 @@ func TestCorsMiddleware_NoOriginHeader(t *testing.T) {
 func TestCorsMiddleware_OriginNotAllowed(t *testing.T) {
 	// Create middleware with specific allowed origins
 	config := map[string]any{
-		"allowed_origins": []string{"http://localhost:3000"},
+		"allow_origins": []string{"http://localhost:3000"},
 	}
 	middleware := factory(config)
 

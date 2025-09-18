@@ -6,7 +6,7 @@ type Execution struct {
 
 	MiddlewareFn   Func // Function to create the middleware
 	Priority       int  // Lower number means higher priority (1-100)
-	ExecutionOrder int  // Order of execution, lower number means earlier execution
+	ExecutionOrder int  // for internal use. Order of execution, lower number means earlier execution
 }
 
 func NewExecution(fn Func) *Execution {

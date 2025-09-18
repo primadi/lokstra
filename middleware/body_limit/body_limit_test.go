@@ -117,7 +117,7 @@ func TestBodyLimitMiddleware_ExceedsLimit_Reading(t *testing.T) {
 }
 
 func TestBodyLimitMiddleware_SkipLargePayloads(t *testing.T) {
-	config := Config{
+	config := &Config{
 		MaxSize:           1024,
 		SkipLargePayloads: true,
 		Message:           "Body too large",
@@ -179,7 +179,7 @@ func TestBodyLimitMiddleware_NoBody(t *testing.T) {
 }
 
 func TestBodyLimitMiddleware_CustomConfig(t *testing.T) {
-	config := Config{
+	config := &Config{
 		MaxSize:    500,
 		Message:    "Custom error: payload too big",
 		StatusCode: http.StatusBadRequest, // 400 instead of 413

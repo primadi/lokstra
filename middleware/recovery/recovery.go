@@ -53,6 +53,8 @@ func factory(config any) midware.Func {
 					cfg.EnableStackTrace = b
 				}
 			}
+		case bool:
+			cfg.EnableStackTrace = v
 		case *Config:
 			cfg = v
 		case Config:
@@ -70,15 +72,21 @@ func factory(config any) midware.Func {
 						"error": err,
 					}
 
+					debugStack := ""
 					// Include stack trace only if enabled
 					if cfg.EnableStackTrace {
-						logFields["stack"] = string(debug.Stack())
+						debugStack = string(debug.Stack())
+						logFields["stack"] = debugStack
 					}
 
 					// Only log if logger is available
 					if logger != nil {
 						logger.WithFields(logFields).
 							Errorf("Recovered from panic in middleware")
+					}
+
+					if OnRecover != nil {
+						OnRecover(ctx, err, debugStack)
 					}
 				}
 			}()
@@ -93,4 +101,14 @@ var _ registration.Module = (*RecoveryMiddleware)(nil)
 // return RecoveryMiddleware with name "lokstra.recovery"
 func GetModule() registration.Module {
 	return &RecoveryMiddleware{}
+}
+
+// Preferred way to get recovery middleware execution
+func GetMidware(enableStackTrace bool) *midware.Execution {
+	return &midware.Execution{
+		Name:         NAME,
+		Config:       enableStackTrace,
+		MiddlewareFn: factory(enableStackTrace),
+		Priority:     10,
+	}
 }

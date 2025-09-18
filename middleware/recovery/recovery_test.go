@@ -243,3 +243,45 @@ func TestRecoveryMiddleware_ConfigEdgeCases(t *testing.T) {
 		t.Error("Expected middleware to be created with empty config map")
 	}
 }
+
+func TestRecoveryMiddleware_CustomHook(t *testing.T) {
+	called := false
+	var hookErr any
+	var hookStack string
+
+	// Simulate setting a custom hook
+	SetRecoverHook(func(ctx *request.Context, err any, stack string) {
+		called = true
+		hookErr = err
+		hookStack = stack
+	})
+
+	// Create middleware
+	m := factory(map[string]any{"enable_stack_trace": true})
+
+	panicHandler := func(ctx *request.Context) error {
+		panic("custom hook panic")
+	}
+
+	wrapped := m(panicHandler)
+
+	req := httptest.NewRequest("GET", "/hook", nil)
+	w := httptest.NewRecorder()
+	ctx, cancel := request.NewContext(w, req)
+	defer cancel()
+
+	_ = wrapped(ctx)
+
+	if !called {
+		t.Error("Custom recovery hook was not called")
+	}
+	if hookErr == nil || hookErr != "custom hook panic" {
+		t.Errorf("Custom hook received wrong error: %v", hookErr)
+	}
+	if hookStack == "" {
+		t.Error("Custom hook did not receive stack trace")
+	}
+
+	// Reset hook after test
+	SetRecoverHook(nil)
+}

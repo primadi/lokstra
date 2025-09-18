@@ -1,6 +1,7 @@
 package body_limit
 
 import (
+	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/registration"
 )
 
@@ -28,4 +29,19 @@ var _ registration.Module = (*BodyLimitModule)(nil)
 // GetModule returns the body limit module
 func GetModule() registration.Module {
 	return &BodyLimitModule{}
+}
+
+// Preferred way to get body limit middleware execution
+func GetMidware(cfg *Config) *midware.Execution {
+	if cfg == nil {
+		cfg = &Config{
+			MaxSize: 10 * 1024 * 1024, // Default to 10MB
+		}
+	}
+	return &midware.Execution{
+		Name:         MODULE_NAME,
+		Config:       cfg,
+		MiddlewareFn: BodyLimitMiddleware(cfg),
+		Priority:     25,
+	}
 }

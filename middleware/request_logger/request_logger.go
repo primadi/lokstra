@@ -157,3 +157,13 @@ var _ registration.Module = (*RequestLogger)(nil)
 func GetModule() registration.Module {
 	return &RequestLogger{}
 }
+
+// Preferred way to get request logger middleware execution
+func GetMidware(config *Config) *midware.Execution {
+	return &midware.Execution{
+		Name:         NAME,
+		Config:       config,
+		MiddlewareFn: factory(config),
+		Priority:     20,
+	}
+}
