@@ -75,7 +75,7 @@ func main() {
 		params.UserID = 123
 		params.PostID = 456
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":      "Retrieved user post",
 			"user_id":      userID,
 			"post_id":      postID,
@@ -96,7 +96,7 @@ func main() {
 		// Show all query parameters
 		allParams := ctx.Request.URL.Query()
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Search completed",
 			"query":      query,
 			"page":       page,
@@ -124,7 +124,7 @@ func main() {
 			allHeaders[name] = values
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":       "Headers extracted",
 			"authorization": auth,
 			"user_agent":    userAgent,
@@ -156,7 +156,7 @@ func main() {
 			Age:  30,
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":        "Body processed",
 			"raw_body":       string(rawBody),
 			"parsed_data":    simulatedUser,
@@ -179,12 +179,12 @@ func main() {
 		remoteAddr := ctx.Request.RemoteAddr
 
 		// Calculate current processing time
-		var processingTime interface{} = "in-progress"
+		var processingTime any = "in-progress"
 		if start, ok := startTime.(time.Time); ok {
 			processingTime = time.Since(start).String()
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":         "Context information",
 			"request_id":      requestID,
 			"start_time":      startTime,
@@ -217,14 +217,14 @@ func main() {
 		requestID := ctx.Value(requestIDKey)
 
 		// Simulate user update
-		updatedUser := map[string]interface{}{
+		updatedUser := map[string]any{
 			"id":      params.UserID,
 			"name":    req.Name,
 			"email":   req.Email,
 			"include": params.Include,
 		}
 
-		return ctx.OkUpdated(map[string]interface{}{
+		return ctx.OkUpdated(map[string]any{
 			"user":          updatedUser,
 			"authorization": auth,
 			"request_id":    requestID,
@@ -242,7 +242,7 @@ func main() {
 			ctx.Response.WithHeader("X-Request-ID", requestID.(string))
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Custom headers set",
 			"headers":    "Check response headers",
 			"request_id": ctx.Value(requestIDKey),

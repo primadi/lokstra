@@ -57,8 +57,31 @@ func (p *pgxPostgresPool) Acquire(ctx context.Context, schema string) (serviceap
 	return &pgxConnWrapper{conn: conn}, nil
 }
 
+func (p *pgxPostgresPool) AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (serviceapi.DbConn, error) {
+	conn, err := p.Acquire(ctx, schema)
+	if err != nil {
+		return nil, err
+	}
+
+	if tenantID != "" {
+		// set RLS context
+		stmt := "SET LOCAL app.current_tenant = " + pgx.Identifier{tenantID}.Sanitize()
+		if _, err := conn.Exec(ctx, stmt); err != nil {
+			conn.Release()
+			return nil, err
+		}
+	}
+
+	return conn, nil
+}
+
 type pgxConnWrapper struct {
 	conn *pgxpool.Conn
+}
+
+// Ping implements serviceapi.DbConn.
+func (c *pgxConnWrapper) Ping(context context.Context) error {
+	return c.conn.Ping(context)
 }
 
 func (c *pgxConnWrapper) Exec(ctx context.Context, query string, args ...any) (serviceapi.CommandResult, error) {

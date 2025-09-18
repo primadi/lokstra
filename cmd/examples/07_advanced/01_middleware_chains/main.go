@@ -30,7 +30,7 @@ func main() {
 
 	// ===== Logger Service Setup =====
 	regCtx.RegisterModule(logger.GetModule)
-	regCtx.CreateService("lokstra.logger", "app-logger", "debug")
+	regCtx.CreateService("lokstra.logger", "app-logger", true, "debug")
 
 	// ===== Register Middleware Functions =====
 
@@ -160,14 +160,14 @@ func main() {
 
 	// Home endpoint - demonstrates global middleware chain
 	app.GET("/", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Advanced Middleware Chains Example",
 			"middleware_chain": []string{
 				"Request Logger",
 				"CORS Handler",
 				"Rate Limiter",
 			},
-			"routes": map[string]interface{}{
+			"routes": map[string]any{
 				"public": []string{
 					"GET /",
 					"GET /health",
@@ -187,7 +187,7 @@ func main() {
 
 	// Health check - minimal middleware processing
 	app.GET("/health", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status":     "healthy",
 			"timestamp":  time.Now(),
 			"middleware": "global chain executed",
@@ -213,7 +213,7 @@ func main() {
 		}
 
 		logger.Infof("[WEBHOOK] Valid webhook received")
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Webhook processed",
 			"status":  "success",
 		})
@@ -225,9 +225,9 @@ func main() {
 	// Protected profile endpoint
 	protected.GET("/profile", func(ctx *lokstra.Context) error {
 		userID := getContextValue(ctx, userIDKey)
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"user_id": userID,
-			"profile": map[string]interface{}{
+			"profile": map[string]any{
 				"name":  "Demo User",
 				"email": "demo@example.com",
 				"role":  "user",
@@ -258,7 +258,7 @@ func main() {
 			}
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":   "Data processed successfully",
 			"user_id":   userID,
 			"data_type": req.Type,
@@ -272,8 +272,8 @@ func main() {
 
 	// Admin users endpoint
 	admin.GET("/users", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
-			"users": []map[string]interface{}{
+		return ctx.Ok(map[string]any{
+			"users": []map[string]any{
 				{"id": 1, "name": "Admin User", "role": "admin"},
 				{"id": 2, "name": "Regular User", "role": "user"},
 				{"id": 3, "name": "Demo User", "role": "user"},
@@ -303,7 +303,7 @@ func main() {
 
 		logger.Warnf("[DELETE] User deletion confirmed: %s", userID)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "User deleted successfully",
 			"deleted_id": userID,
 			"timestamp":  time.Now(),
@@ -325,7 +325,7 @@ func main() {
 			time.Sleep(5 * time.Second)
 			return ctx.Ok("delayed response")
 		default:
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message": "Error demo endpoint",
 				"types": []string{
 					"?type=middleware - middleware error",
@@ -338,13 +338,13 @@ func main() {
 
 	// Middleware status endpoint
 	app.GET("/middleware-status", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
-			"middleware_statistics": map[string]interface{}{
+		return ctx.Ok(map[string]any{
+			"middleware_statistics": map[string]any{
 				"request_count":        requestCount,
 				"rate_limit_max":       100,
 				"rate_limit_remaining": 100 - requestCount,
 			},
-			"middleware_chain": map[string]interface{}{
+			"middleware_chain": map[string]any{
 				"global": []string{
 					"Request Logger",
 					"CORS Handler",
@@ -357,7 +357,7 @@ func main() {
 					"+ Admin Authorization",
 				},
 			},
-			"authentication": map[string]interface{}{
+			"authentication": map[string]any{
 				"type":      "API Key",
 				"header":    "X-API-Key",
 				"demo_key":  "demo-api-key-123",
@@ -403,7 +403,7 @@ const (
 // ===== Helper Functions =====
 
 // getContextValue safely retrieves a value from context
-func getContextValue(ctx *lokstra.Context, key interface{}) string {
+func getContextValue(ctx *lokstra.Context, key any) string {
 	if value := ctx.Request.Context().Value(key); value != nil {
 		if str, ok := value.(string); ok {
 			return str
@@ -415,8 +415,8 @@ func getContextValue(ctx *lokstra.Context, key interface{}) string {
 // ===== Request Types =====
 
 type DataRequest struct {
-	Type string      `json:"type" validate:"required,oneof=user content analytics"`
-	Data interface{} `json:"data" validate:"required"`
+	Type string `json:"type" validate:"required,oneof=user content analytics"`
+	Data any    `json:"data" validate:"required"`
 }
 
 // Middleware Chain Key Concepts:

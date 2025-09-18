@@ -129,9 +129,9 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Infof("Home endpoint accessed from YAML configuration")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "YAML Configuration Example",
-			"config_info": map[string]interface{}{
+			"config_info": map[string]any{
 				"loaded_from":           "config.yaml",
 				"server_configured":     true,
 				"services_configured":   true,
@@ -153,7 +153,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Debugf("Health check performed")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status":    "healthy",
 			"timestamp": time.Now(),
 			"source":    "YAML configuration",
@@ -165,8 +165,8 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "debug-logger")
 		logger.Debugf("Configuration info requested")
 
-		return ctx.Ok(map[string]interface{}{
-			"configuration": map[string]interface{}{
+		return ctx.Ok(map[string]any{
+			"configuration": map[string]any{
 				"format": "YAML",
 				"file":   "config.yaml",
 				"features": []string{
@@ -177,7 +177,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 					"Environment variables",
 				},
 			},
-			"services": map[string]interface{}{
+			"services": map[string]any{
 				"app-logger":   "Application logger service",
 				"debug-logger": "Debug logger service",
 			},
@@ -194,9 +194,9 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Infof("Data received: type=%s, from YAML config route", req.Type)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Data processed successfully",
-			"data": map[string]interface{}{
+			"data": map[string]any{
 				"type":         req.Type,
 				"content":      req.Content,
 				"processed_at": time.Now(),
@@ -210,14 +210,14 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Infof("Protected profile accessed with YAML auth")
 
-		return ctx.Ok(map[string]interface{}{
-			"profile": map[string]interface{}{
+		return ctx.Ok(map[string]any{
+			"profile": map[string]any{
 				"user":              "YAML Config User",
 				"email":             "yaml.user@example.com",
 				"role":              "demo",
 				"authenticated_via": "YAML middleware",
 			},
-			"access_info": map[string]interface{}{
+			"access_info": map[string]any{
 				"method":        "API Key Authentication",
 				"configured_in": "config.yaml",
 				"middleware":    "custom_auth",

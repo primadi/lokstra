@@ -108,7 +108,7 @@ func (cfg *LokstraConfig) StartAllServices(regCtx registration.Context) error {
 	// Start services in order
 	for _, name := range ordered {
 		svc := serviceMap[name]
-		if _, err := regCtx.CreateService(svc.Type, svc.Name, svc.Config); err != nil {
+		if _, err := regCtx.CreateService(svc.Type, svc.Name, false, svc.Config); err != nil {
 			return fmt.Errorf("start service %s: %w", name, err)
 		}
 	}
@@ -276,7 +276,7 @@ func buildGroup(regCtx registration.Context, parent router.Router, group GroupCo
 
 // createServiceFromConfig creates a service instance from ServiceConfig
 func createServiceFromConfig(regCtx registration.Context, serviceConfig *ServiceConfig) error {
-	_, err := regCtx.CreateService(serviceConfig.Type, serviceConfig.Name, serviceConfig.Config)
+	_, err := regCtx.CreateService(serviceConfig.Type, serviceConfig.Name, false, serviceConfig.Config)
 	if err != nil {
 		return fmt.Errorf("failed to create service %s of type %s: %w", serviceConfig.Name, serviceConfig.Type, err)
 	}

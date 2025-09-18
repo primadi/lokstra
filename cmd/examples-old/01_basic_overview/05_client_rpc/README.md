@@ -9,10 +9,10 @@ Client ini terhubung ke RPC server dan menguji semua 12 methods dengan berbagai 
 1. **String Return** - `Hello(name string) (string, error)`
 2. **Interface Return** - `GetUser(id int) (UserIface, error)`
 3. **Slice Interface Return** - `GetUsers(limit int) ([]UserIface, error)`
-4. **Map Return** - `GetUserStats(id int) (map[string]interface{}, error)`
+4. **Map Return** - `GetUserStats(id int) (map[string]any, error)`
 5. **Struct Return** - `GetSystemInfo() (SystemInfo, error)`
 6. **Primitive Returns** - `GetUserCount() (int, error)`, `GetUserActive(id int) (bool, error)`, `GetServerTime() (time.Time, error)`
-7. **Dynamic Return** - `GetDynamicData(dataType string) (interface{}, error)`
+7. **Dynamic Return** - `GetDynamicData(dataType string) (any, error)`
 8. **Void Operations** - `DeleteUser(id int) error`, `ClearCache() error`, `Ping() error`
 
 ## 🚀 **Cara Menjalankan**
@@ -93,7 +93,7 @@ go run main.go
 ❌ GetUserActive(0) Error: remote error: invalid user ID: 0
 ✅ GetServerTime → 2025-01-25 14:23:54
 
-==================== DYNAMIC INTERFACE{} RETURN TYPE ====================
+==================== DYNAMIC any RETURN TYPE ====================
 ✅ GetDynamicData(user) → map[string]interface {}
    Map with 5 keys
 ✅ GetDynamicData(stats) → map[string]interface {}
@@ -118,10 +118,10 @@ go run main.go
    • string, error
    • interface, error (UserIface → *User)
    • []interface, error ([]UserIface → []*User)
-   • map[string]interface{}, error
+   • map[string]any, error
    • struct, error (SystemInfo)
    • primitive types, error (int, bool, time.Time)
-   • interface{}, error (dynamic types)
+   • any, error (dynamic types)
    • error only (void operations)
 ======================================================================
 ```
@@ -136,7 +136,7 @@ type GreetingServiceClient struct {
 
 // String return
 func (c *GreetingServiceClient) Hello(name string) (string, error) {
-    result, err := c.client.Call("Hello", []interface{}{name})
+    result, err := c.client.Call("Hello", []any{name})
     // Handle type conversion...
 }
 
@@ -150,8 +150,8 @@ func (c *GreetingServiceClient) GetUser(id int) (*User, error) {
 
 ### **2. Type Conversion Handling**
 - **MessagePack Type Mapping**: `int8`, `int16`, `int32`, `int64` → `int`
-- **Interface Slicing**: `[]interface{}` → `[]*User`
-- **Map Handling**: Direct `map[string]interface{}` usage
+- **Interface Slicing**: `[]any` → `[]*User`
+- **Map Handling**: Direct `map[string]any` usage
 - **Time Parsing**: Multiple format support
 - **Error Propagation**: Server errors properly forwarded
 
@@ -193,8 +193,8 @@ case int64: return int(v), nil
 
 ### **3. Slice Interface Conversion**
 ```go
-// Convert []interface{} to []*User
-if resultSlice, ok := result.([]interface{}); ok {
+// Convert []any to []*User
+if resultSlice, ok := result.([]any); ok {
     var users []*User
     for _, item := range resultSlice {
         // Convert each item...
@@ -211,12 +211,12 @@ Client perfectly integrates dengan server di `04_server_rpc`:
 | `Hello` | `Hello` | `string, error` | ✅ |
 | `GetUser` | `GetUser` | `UserIface → *User` | ✅ |
 | `GetUsers` | `GetUsers` | `[]UserIface → []*User` | ✅ |
-| `GetUserStats` | `GetUserStats` | `map[string]interface{}` | ✅ |
+| `GetUserStats` | `GetUserStats` | `map[string]any` | ✅ |
 | `GetSystemInfo` | `GetSystemInfo` | `SystemInfo` | ✅ |
 | `GetUserCount` | `GetUserCount` | `int` | ✅ |
 | `GetUserActive` | `GetUserActive` | `bool` | ✅ |
 | `GetServerTime` | `GetServerTime` | `time.Time` | ✅ |
-| `GetDynamicData` | `GetDynamicData` | `interface{}` | ✅ |
+| `GetDynamicData` | `GetDynamicData` | `any` | ✅ |
 | `DeleteUser` | `DeleteUser` | `error` only | ✅ |
 | `ClearCache` | `ClearCache` | `error` only | ✅ |
 | `Ping` | `Ping` | `error` only | ✅ |

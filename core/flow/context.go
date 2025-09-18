@@ -15,7 +15,7 @@ type Context[T any] struct {
 	dbTx   serviceapi.DbTx
 
 	// Store for passing data between flow steps
-	store map[string]interface{}
+	store map[string]any
 }
 
 func newContext[T any](f *Flow[T], reqCtx *request.Context) *Context[T] {
@@ -123,16 +123,16 @@ func (c *Context[T]) releaseDb(err error) {
 }
 
 // Store/Get methods for passing data between flow steps
-func (c *Context[T]) Set(key string, value interface{}) {
+func (c *Context[T]) Set(key string, value any) {
 	c.store[key] = value
 }
 
-func (c *Context[T]) Get(key string) (interface{}, bool) {
+func (c *Context[T]) Get(key string) (any, bool) {
 	value, exists := c.store[key]
 	return value, exists
 }
 
-func (c *Context[T]) MustGet(key string) interface{} {
+func (c *Context[T]) MustGet(key string) any {
 	if value, exists := c.store[key]; exists {
 		return value
 	}

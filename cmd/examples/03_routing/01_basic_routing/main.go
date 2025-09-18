@@ -26,9 +26,9 @@ func main() {
 	// ===== Static Routes =====
 
 	app.GET("/", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Welcome to Lokstra Basic Routing Example",
-			"routes": map[string]interface{}{
+			"routes": map[string]any{
 				"static":       "/about, /contact",
 				"path_params":  "/users/:id, /products/:category/:id",
 				"query_params": "/search?q=term&page=1",
@@ -38,7 +38,7 @@ func main() {
 	})
 
 	app.GET("/about", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"page":        "About",
 			"description": "This is the about page",
 			"version":     "1.0.0",
@@ -46,7 +46,7 @@ func main() {
 	})
 
 	app.GET("/contact", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"page":    "Contact",
 			"email":   "contact@example.com",
 			"phone":   "+1-555-0123",
@@ -60,7 +60,7 @@ func main() {
 	app.GET("/users/:id", func(ctx *lokstra.Context) error {
 		userID := ctx.GetPathParam("id")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User profile",
 			"user_id": userID,
 			"route":   "/users/:id",
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	app.GET("/users/:id/profile", func(ctx *lokstra.Context, params *UserParams) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User profile with type safety",
 			"user_id": params.ID,
 			"id_type": fmt.Sprintf("%T", params.ID),
@@ -87,7 +87,7 @@ func main() {
 		category := ctx.GetPathParam("category")
 		productID := ctx.GetPathParam("id")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Product details",
 			"category":   category,
 			"product_id": productID,
@@ -102,7 +102,7 @@ func main() {
 	}
 
 	app.GET("/catalog/:category/:id", func(ctx *lokstra.Context, params *ProductParams) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Catalog item",
 			"category":   params.Category,
 			"product_id": params.ID,
@@ -116,7 +116,7 @@ func main() {
 		postID := ctx.GetPathParam("postId")
 		commentID := ctx.GetPathParam("commentId")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Nested resource access",
 			"user_id":    userID,
 			"post_id":    postID,
@@ -148,7 +148,7 @@ func main() {
 			}
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Search results",
 			"query":   query,
 			"page":    pageNum,
@@ -169,7 +169,7 @@ func main() {
 	}
 
 	app.GET("/advanced-search", func(ctx *lokstra.Context, params *SearchParams) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Advanced search with type safety",
 			"query":      params.Query,
 			"page":       params.Page,
@@ -188,17 +188,17 @@ func main() {
 
 	// GET - Read operations
 	app.GET("/posts", func(ctx *lokstra.Context) error {
-		return ctx.OkList([]map[string]interface{}{
+		return ctx.OkList([]map[string]any{
 			{"id": 1, "title": "First Post", "content": "Hello World"},
 			{"id": 2, "title": "Second Post", "content": "Lokstra is awesome"},
-		}, map[string]interface{}{
+		}, map[string]any{
 			"total": 2,
 			"page":  1,
 		})
 	})
 
 	app.GET("/posts/:id", func(ctx *lokstra.Context, params *UserParams) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"id":      params.ID,
 			"title":   "Sample Post",
 			"content": "This is a sample post content",
@@ -214,7 +214,7 @@ func main() {
 	}
 
 	app.POST("/posts", func(ctx *lokstra.Context, req *CreatePostRequest) error {
-		return ctx.OkCreated(map[string]interface{}{
+		return ctx.OkCreated(map[string]any{
 			"id":      123,
 			"title":   req.Title,
 			"content": req.Content,
@@ -231,7 +231,7 @@ func main() {
 	}
 
 	app.PUT("/posts/:id", func(ctx *lokstra.Context, params *UpdatePostParams) error {
-		return ctx.OkUpdated(map[string]interface{}{
+		return ctx.OkUpdated(map[string]any{
 			"id":      params.ID,
 			"title":   params.Data.Title,
 			"content": params.Data.Content,
@@ -249,7 +249,7 @@ func main() {
 	}
 
 	app.PATCH("/posts/:id", func(ctx *lokstra.Context, params *UserParams, req *PatchPostRequest) error {
-		updates := make(map[string]interface{})
+		updates := make(map[string]any)
 
 		if req.Title != nil {
 			updates["title"] = *req.Title
@@ -261,7 +261,7 @@ func main() {
 			updates["tags"] = *req.Tags
 		}
 
-		return ctx.OkUpdated(map[string]interface{}{
+		return ctx.OkUpdated(map[string]any{
 			"id":      params.ID,
 			"updates": updates,
 			"method":  "PATCH",
@@ -271,7 +271,7 @@ func main() {
 
 	// DELETE - Delete operations
 	app.DELETE("/posts/:id", func(ctx *lokstra.Context, params *UserParams) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"id":      params.ID,
 			"method":  "DELETE",
 			"message": "Post deleted successfully",
@@ -284,7 +284,7 @@ func main() {
 	app.GET("/files/*filepath", func(ctx *lokstra.Context) error {
 		filepath := ctx.GetPathParam("filepath")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":  "File access",
 			"filepath": filepath,
 			"route":    "/files/*filepath",
@@ -304,7 +304,7 @@ func main() {
 			format = "json"
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Optional parameters example",
 			"name":    name,
 			"format":  format,
@@ -326,7 +326,7 @@ func main() {
 			return ctx.ErrorBadRequest("ID must be a positive number")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Numeric ID validated",
 			"id":      id,
 			"route":   "/numeric/:id (numeric constraint)",
@@ -342,7 +342,7 @@ func main() {
 			return ctx.ErrorBadRequest("Slug must contain only letters, numbers, and hyphens")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Valid slug",
 			"slug":    slug,
 			"route":   "/slug/:slug (alphanumeric + hyphens only)",

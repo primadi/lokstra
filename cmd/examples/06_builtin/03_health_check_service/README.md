@@ -15,7 +15,7 @@ This example demonstrates comprehensive usage of Lokstra's built-in health check
 
 ### 1. Health Check Service Setup
 ```go
-healthConfig := map[string]interface{}{
+healthConfig := map[string]any{
     "endpoint": "/health",
     "timeout":  "30s",
 }

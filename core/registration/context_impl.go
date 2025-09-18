@@ -93,13 +93,13 @@ func (c *ContextImpl) GetRawHandler(name string) *request.RawHandlerRegister {
 // GetService implements Context.
 func (c *ContextImpl) GetService(serviceName string) (service.Service, error) {
 	if !c.permission.IsAllowedGetService(serviceName) {
-		return nil, errors.New("service '" + serviceName + "' is not allowed to be accessed")
+		return nil, ErrServiceIsNotAllowed(serviceName)
 	}
 
 	if service, exists := serviceInstances[serviceName]; exists {
 		return service, nil
 	}
-	return nil, errors.New("service '" + serviceName + "' not found")
+	return nil, ErrServiceNotFound(serviceName)
 }
 
 // GetServiceFactory implements Context.
@@ -120,10 +120,20 @@ func (c *ContextImpl) GetServiceFactories(pattern string) []service.ServiceFacto
 }
 
 // CreateService implements Context.
-func (c *ContextImpl) CreateService(factoryName string, serviceName string, config ...any) (service.Service, error) {
+func (c *ContextImpl) CreateService(factoryName string, serviceName string, allowReplace bool, config ...any) (service.Service, error) {
+	if !c.permission.IsAllowedGetService(serviceName) {
+		return nil, ErrServiceIsNotAllowed(serviceName)
+	}
+
 	factory, exists := c.GetServiceFactory(factoryName)
 	if !exists {
-		return nil, errors.New("service factory not found for type: " + factoryName)
+		return nil, ErrServiceFactoryNotFound(factoryName)
+	}
+
+	if _, found := serviceInstances[serviceName]; found {
+		if !allowReplace {
+			return nil, ErrServiceAlreadyExists(serviceName)
+		}
 	}
 
 	var cfg any
@@ -140,10 +150,6 @@ func (c *ContextImpl) CreateService(factoryName string, serviceName string, conf
 		return nil, err
 	}
 
-	if _, found := serviceInstances[serviceName]; found {
-		return nil, errors.New("service with name '" + serviceName + "' already exists")
-	}
-
 	serviceInstances[serviceName] = service
 
 	return service, nil
@@ -154,7 +160,7 @@ func (c *ContextImpl) GetOrCreateService(factoryName string, serviceName string,
 	if svc, err := c.GetService(serviceName); err == nil {
 		return svc, nil // Return existing service if found
 	}
-	return c.CreateService(factoryName, serviceName, config...)
+	return c.CreateService(factoryName, serviceName, true, config...)
 }
 
 // RegisterHandler implements Context.
@@ -236,14 +242,15 @@ func (c *ContextImpl) RegisterRawHandler(name string, handlerFunc request.RawHan
 }
 
 // RegisterService implements Context.
-func (c *ContextImpl) RegisterService(serviceName string, service service.Service) error {
+func (c *ContextImpl) RegisterService(serviceName string, service service.Service, allowReplace bool) error {
 	if !c.permission.IsAllowedRegisterService() {
-		return errors.New("registering service '" + serviceName + "' is not allowed")
+		return ErrServiceIsNotAllowed(serviceName)
 	}
 
 	if _, found := serviceInstances[serviceName]; found {
-		return errors.New("service with name '" + serviceName + "' already exists")
-
+		if !allowReplace {
+			return ErrServiceAlreadyExists(serviceName)
+		}
 	}
 	serviceInstances[serviceName] = service
 	return nil

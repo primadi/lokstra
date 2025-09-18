@@ -19,7 +19,7 @@ import (
 // Custom service interface and implementation
 type EmailService interface {
 	SendEmail(to, subject, body string) error
-	GetServiceInfo() map[string]interface{}
+	GetServiceInfo() map[string]any
 }
 
 type SMTPEmailService struct {
@@ -34,8 +34,8 @@ func (s *SMTPEmailService) SendEmail(to, subject, body string) error {
 	return nil
 }
 
-func (s *SMTPEmailService) GetServiceInfo() map[string]interface{} {
-	return map[string]interface{}{
+func (s *SMTPEmailService) GetServiceInfo() map[string]any {
+	return map[string]any{
 		"type": "SMTP",
 		"host": s.host,
 		"port": s.port,
@@ -43,7 +43,7 @@ func (s *SMTPEmailService) GetServiceInfo() map[string]interface{} {
 }
 
 // Factory function for creating EmailService
-func NewSMTPEmailService(config map[string]interface{}) (EmailService, error) {
+func NewSMTPEmailService(config map[string]any) (EmailService, error) {
 	host := "localhost"
 	port := 587
 	username := ""
@@ -111,22 +111,22 @@ func main() {
 	// ===== Service Registration =====
 
 	// 1. Register Email Service factory
-	regCtx.RegisterServiceFactory("smtp-email", func(config any) (interface{}, error) {
-		configMap := make(map[string]interface{})
-		if cfg, ok := config.(map[string]interface{}); ok {
+	regCtx.RegisterServiceFactory("smtp-email", func(config any) (any, error) {
+		configMap := make(map[string]any)
+		if cfg, ok := config.(map[string]any); ok {
 			configMap = cfg
 		}
 		return NewSMTPEmailService(configMap)
 	})
 
 	// 2. Create and register Email Service instance
-	emailConfig := map[string]interface{}{
+	emailConfig := map[string]any{
 		"host":     "smtp.example.com",
 		"port":     587,
 		"username": "noreply@example.com",
 	}
 
-	_, err := regCtx.CreateService("smtp-email", "email", emailConfig)
+	_, err := regCtx.CreateService("smtp-email", "email", true, emailConfig)
 	if err != nil {
 		lokstra.Logger.Errorf("Failed to create email service: %v", err)
 		return
@@ -134,12 +134,12 @@ func main() {
 	lokstra.Logger.Infof("✅ Email service registered successfully")
 
 	// 3. Register Notification Service factory
-	regCtx.RegisterServiceFactory("notification", func(config any) (interface{}, error) {
+	regCtx.RegisterServiceFactory("notification", func(config any) (any, error) {
 		return NewNotificationService(regCtx)
 	})
 
 	// 4. Create Notification Service instance
-	_, err = regCtx.CreateService("notification", "notification")
+	_, err = regCtx.CreateService("notification", "notification", true)
 	if err != nil {
 		lokstra.Logger.Errorf("Failed to create notification service: %v", err)
 		return
@@ -175,7 +175,7 @@ func main() {
 			return ctx.ErrorInternal("Failed to send email")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Email sent successfully",
 			"to":      req.To,
 		})
@@ -202,7 +202,7 @@ func main() {
 			return ctx.ErrorInternal("Failed to send welcome email")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Welcome email sent successfully",
 			"email":   req.Email,
 			"name":    req.Name,
@@ -211,7 +211,7 @@ func main() {
 
 	// Endpoint to get service information
 	app.GET("/services", func(ctx *lokstra.Context) error {
-		services := make(map[string]interface{})
+		services := make(map[string]any)
 
 		// Get email service info
 		if emailSvc, err := lokstra.GetService[EmailService](regCtx, "email"); err == nil {
@@ -220,13 +220,13 @@ func main() {
 
 		// Get logger info
 		if _, err := lokstra.GetService[serviceapi.Logger](regCtx, "logger"); err == nil {
-			services["logger"] = map[string]interface{}{
+			services["logger"] = map[string]any{
 				"type":   "default",
 				"format": "json", // or whatever format is configured
 			}
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":  "Available services",
 			"services": services,
 		})
@@ -234,7 +234,7 @@ func main() {
 
 	// Health check that verifies all services
 	app.GET("/health", func(ctx *lokstra.Context) error {
-		health := map[string]interface{}{
+		health := map[string]any{
 			"status": "healthy",
 		}
 

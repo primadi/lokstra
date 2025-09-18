@@ -127,14 +127,14 @@ func main() {
 
 	// Public routes (only global middleware)
 	app.GET("/", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Public endpoint",
 			"middleware": []string{"requestID", "timing", "cors"},
 		})
 	})
 
 	app.GET("/public", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Another public endpoint",
 			"note":    "Only global middleware applied",
 		})
@@ -145,7 +145,7 @@ func main() {
 	protectedGroup.Use(authMiddleware)
 
 	protectedGroup.GET("/profile", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "User profile",
 			"middleware": []string{"global", "auth"},
 			"note":       "Requires valid Authorization header",
@@ -153,7 +153,7 @@ func main() {
 	})
 
 	protectedGroup.GET("/dashboard", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "User dashboard",
 			"middleware": []string{"global", "auth"},
 		})
@@ -165,7 +165,7 @@ func main() {
 	adminGroup.Use(adminMiddleware)
 
 	adminGroup.GET("/users", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Admin: User list",
 			"middleware": []string{"global", "auth", "admin"},
 			"users":      []string{"user1", "user2", "user3"},
@@ -174,7 +174,7 @@ func main() {
 
 	adminGroup.DELETE("/users/:id", func(ctx *lokstra.Context) error {
 		userID := ctx.GetPathParam("id")
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Admin: User deleted",
 			"user_id":    userID,
 			"middleware": []string{"global", "auth", "admin"},
@@ -187,7 +187,7 @@ func main() {
 	apiGroup.Use(contentValidationMiddleware)
 
 	apiGroup.GET("/status", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status":     "operational",
 			"middleware": []string{"global", "rateLimit", "contentValidation"},
 		})
@@ -199,7 +199,7 @@ func main() {
 	}
 
 	apiGroup.POST("/items", func(ctx *lokstra.Context, req *CreateItemRequest) error {
-		return ctx.OkCreated(map[string]interface{}{
+		return ctx.OkCreated(map[string]any{
 			"message":    "Item created",
 			"item":       req,
 			"middleware": []string{"global", "rateLimit", "contentValidation"},
@@ -212,7 +212,7 @@ func main() {
 	app.GET("/special",
 		rateLimitMiddleware,
 		func(ctx *lokstra.Context) error {
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "Special endpoint with route-specific middleware",
 				"middleware": []string{"global", "routeSpecificRateLimit"},
 			})
@@ -223,7 +223,7 @@ func main() {
 		authMiddleware,
 		contentValidationMiddleware,
 		func(ctx *lokstra.Context) error {
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "File upload endpoint",
 				"middleware": []string{"global", "auth", "contentValidation"},
 			})
@@ -243,7 +243,7 @@ func main() {
 	}
 
 	app.POST("/conditional", conditionalMiddleware, func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Conditional middleware example",
 			"note":    "Check X-JSON-Processed header",
 		})
@@ -272,7 +272,7 @@ func main() {
 		case "error":
 			return ctx.ErrorInternal("Test error")
 		default:
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message": "No error",
 				"try":     "?type=panic or ?type=error",
 			})

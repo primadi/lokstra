@@ -29,26 +29,26 @@ func main() {
 	regCtx.RegisterModule(logger.GetModule)
 
 	// Create a logger service instance
-	_, err := regCtx.CreateService("lokstra.logger", "app-logger", "info")
+	_, err := regCtx.CreateService("lokstra.logger", "app-logger", true, "info")
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create logger service: %v", err)
 	}
 
 	// Create a logger with custom configuration
-	loggerConfig := map[string]interface{}{
+	loggerConfig := map[string]any{
 		"level":  "debug",
 		"format": "text", // or "json"
 	}
-	_, err = regCtx.CreateService("lokstra.logger", "debug-logger", loggerConfig)
+	_, err = regCtx.CreateService("lokstra.logger", "debug-logger", true, loggerConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create debug logger: %v", err)
 	}
 
 	// Register a custom service factory
-	regCtx.RegisterServiceFactory("counter", func(config interface{}) (service.Service, error) {
+	regCtx.RegisterServiceFactory("counter", func(config any) (service.Service, error) {
 		name := "default"
 		if config != nil {
-			if configMap, ok := config.(map[string]interface{}); ok {
+			if configMap, ok := config.(map[string]any); ok {
 				if n, exists := configMap["name"]; exists {
 					name = n.(string)
 				}
@@ -61,14 +61,14 @@ func main() {
 	})
 
 	// Create custom service instances
-	_, err = regCtx.CreateService("counter", "request-counter", map[string]interface{}{
+	_, err = regCtx.CreateService("counter", "request-counter", true, map[string]any{
 		"name": "HTTP Requests",
 	})
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create counter service: %v", err)
 	}
 
-	_, err = regCtx.CreateService("counter", "user-counter", map[string]interface{}{
+	_, err = regCtx.CreateService("counter", "user-counter", true, map[string]any{
 		"name": "Active Users",
 	})
 	if err != nil {
@@ -96,7 +96,7 @@ func main() {
 		logger.Infof("Home endpoint accessed")
 		counter.Increment()
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":       "Services Basic Example",
 			"request_count": counter.GetCount(),
 			"services": []string{
@@ -130,25 +130,25 @@ func main() {
 
 		logger.Debugf("Services info requested")
 
-		return ctx.Ok(map[string]interface{}{
-			"registered_services": map[string]interface{}{
-				"app-logger": map[string]interface{}{
+		return ctx.Ok(map[string]any{
+			"registered_services": map[string]any{
+				"app-logger": map[string]any{
 					"type":        "Logger",
 					"level":       "info",
 					"description": "Main application logger",
 				},
-				"debug-logger": map[string]interface{}{
+				"debug-logger": map[string]any{
 					"type":        "Logger",
 					"level":       "debug",
 					"description": "Debug level logger",
 				},
-				"request-counter": map[string]interface{}{
+				"request-counter": map[string]any{
 					"type":        "Counter",
 					"name":        requestCounter.GetSetting("name"),
 					"count":       requestCounter.GetCount(),
 					"description": "Tracks HTTP request count",
 				},
-				"user-counter": map[string]interface{}{
+				"user-counter": map[string]any{
 					"type":        "Counter",
 					"name":        userCounter.GetSetting("name"),
 					"count":       userCounter.GetCount(),
@@ -181,7 +181,7 @@ func main() {
 
 		logger.Infof("Counter '%s' incremented from %d to %d", counterName, oldCount, newCount)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":   "Counter incremented",
 			"counter":   counterName,
 			"old_count": oldCount,
@@ -210,7 +210,7 @@ func main() {
 
 		logger.Infof("Counter '%s' reset from %d to 0", counterName, oldCount)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":   "Counter reset",
 			"counter":   counterName,
 			"old_count": oldCount,
@@ -232,7 +232,7 @@ func main() {
 		}
 
 		// Create new counter service
-		_, err = regCtx.CreateService("counter", req.ServiceName, map[string]interface{}{
+		_, err = regCtx.CreateService("counter", req.ServiceName, true, map[string]any{
 			"name": req.Name,
 		})
 		if err != nil {
@@ -242,7 +242,7 @@ func main() {
 
 		logger.Infof("Created new counter service: %s", req.ServiceName)
 
-		return ctx.OkCreated(map[string]interface{}{
+		return ctx.OkCreated(map[string]any{
 			"message":      "Counter service created",
 			"service_name": req.ServiceName,
 			"counter_name": req.Name,
@@ -272,8 +272,8 @@ func main() {
 
 		logger.Debugf("Stats requested - %d total services", serviceCount)
 
-		return ctx.Ok(map[string]interface{}{
-			"service_statistics": map[string]interface{}{
+		return ctx.Ok(map[string]any{
+			"service_statistics": map[string]any{
 				"total_services":   serviceCount,
 				"counter_services": counterServices,
 				"logger_services":  loggerServices,
@@ -320,7 +320,7 @@ type CounterService struct {
 	count int
 }
 
-func (c *CounterService) GetSetting(key string) interface{} {
+func (c *CounterService) GetSetting(key string) any {
 	switch key {
 	case "name":
 		return c.name

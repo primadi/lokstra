@@ -27,7 +27,7 @@ func GetUsers(limit int) ([]UserIface, error)
 
 ### 4. **Map, Error**
 ```go
-func GetUserStats(id int) (map[string]interface{}, error)
+func GetUserStats(id int) (map[string]any, error)
 ```
 - Return: Key-value map dengan mixed types
 - Use Case: Dynamic data structures, statistics
@@ -48,9 +48,9 @@ func GetServerTime() (time.Time, error)
 - Return: Built-in Go types (int, bool, time.Time, etc.)
 - Use Case: Simple data values
 
-### 7. **Interface{}, Error**
+### 7. **any, Error**
 ```go
-func GetDynamicData(dataType string) (interface{}, error)
+func GetDynamicData(dataType string) (any, error)
 ```
 - Return: Any type (runtime-determined)
 - Use Case: Dynamic responses, API flexibility
@@ -101,7 +101,7 @@ import "github.com/primadi/lokstra/modules/rpc_service"
 client := rpc_service.NewRpcClient("http://localhost:8080/rpc")
 
 // Call methods
-result, err := client.Call("Hello", []interface{}{"World"})
+result, err := client.Call("Hello", []any{"World"})
 ```
 
 ### 4. Lihat Dokumentasi API
@@ -122,12 +122,12 @@ Buka browser: `http://localhost:8080/`
 | `Hello` | `[name: string]` | `string, error` | Basic greeting |
 | `GetUser` | `[id: int]` | `UserIface, error` | User object |
 | `GetUsers` | `[limit: int]` | `[]UserIface, error` | User list |
-| `GetUserStats` | `[id: int]` | `map[string]interface{}, error` | User statistics |
+| `GetUserStats` | `[id: int]` | `map[string]any, error` | User statistics |
 | `GetSystemInfo` | `[]` | `SystemInfo, error` | System information |
 | `GetUserCount` | `[]` | `int, error` | Total users |
 | `GetUserActive` | `[id: int]` | `bool, error` | User status |
 | `GetServerTime` | `[]` | `time.Time, error` | Current time |
-| `GetDynamicData` | `[type: string]` | `interface{}, error` | Dynamic content |
+| `GetDynamicData` | `[type: string]` | `any, error` | Dynamic content |
 | `DeleteUser` | `[id: int]` | `error` | Delete operation |
 | `ClearCache` | `[]` | `error` | Cache clear |
 | `Ping` | `[]` | `error` | Health ping |
@@ -146,7 +146,7 @@ Buka browser: `http://localhost:8080/`
 2. **Type Safety**: Client harus handle type conversion dari msgpack
 3. **Error Handling**: Semua methods return error sebagai parameter terakhir
 4. **Void Operations**: Methods bisa return hanya error (tanpa data)
-5. **Flexible Returns**: interface{} allows runtime type determination
+5. **Flexible Returns**: any allows runtime type determination
 6. **Protocol Compatibility**: Full compatibility dengan existing Lokstra RPC infrastructure
 
 ## 🛠️ Development Notes

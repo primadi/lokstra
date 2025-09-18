@@ -16,7 +16,7 @@ This example demonstrates comprehensive usage of Lokstra's built-in metrics serv
 
 ### 1. Metrics Service Setup
 ```go
-metricsConfig := map[string]interface{}{
+metricsConfig := map[string]any{
     "enabled":                 true,
     "endpoint":               "/metrics",
     "namespace":              "lokstra_demo",

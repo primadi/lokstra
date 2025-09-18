@@ -130,7 +130,7 @@ func (r *postgresUserRepository) GetByEmail(ctx context.Context, email string) (
 func (r *postgresUserRepository) Update(ctx context.Context, id int64, req *models.UpdateUserRequest) (*models.User, error) {
 	// Build dynamic query based on provided fields
 	var setParts []string
-	var args []interface{}
+	var args []any
 	argIndex := 1
 
 	if req.Name != nil {
@@ -235,7 +235,7 @@ func (r *postgresUserRepository) List(ctx context.Context, req *models.ListUsers
 
 	// Build WHERE clause for search
 	whereClause := "WHERE deleted_at IS NULL"
-	var args []interface{}
+	var args []any
 	argIndex := 1
 
 	if req.Search != "" {

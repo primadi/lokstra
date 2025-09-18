@@ -8,7 +8,7 @@ func TestValidationRules(t *testing.T) {
 	tests := []struct {
 		name     string
 		rule     ValidationRule
-		value    interface{}
+		value    any
 		expected bool
 		message  string
 	}{

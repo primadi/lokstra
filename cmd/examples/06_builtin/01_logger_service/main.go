@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/logger"
 )
@@ -31,37 +32,38 @@ func main() {
 	// Create different logger configurations
 
 	// 1. Basic logger with string level
-	_, err := regCtx.CreateService("lokstra.logger", "basic-logger", "info")
+	factoryName := logger.GetModule().Name()
+	basicLogger, err := registration.CreateService[serviceapi.Logger](regCtx, factoryName, "basic-logger", true, "info")
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create basic logger: %v", err)
 	}
 
 	// 2. Debug logger with detailed configuration
-	debugConfig := map[string]interface{}{
+	debugConfig := map[string]any{
 		"level":  "debug",
 		"format": "text", // or "json"
 	}
-	_, err = regCtx.CreateService("lokstra.logger", "debug-logger", debugConfig)
+	debugLogger, err := registration.CreateService[serviceapi.Logger](regCtx, factoryName, "debug-logger", true, debugConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create debug logger: %v", err)
 	}
 
 	// 3. JSON logger for production-like logging
-	jsonConfig := map[string]interface{}{
+	jsonConfig := map[string]any{
 		"level":  "warn",
 		"format": "json",
 	}
-	_, err = regCtx.CreateService("lokstra.logger", "json-logger", jsonConfig)
+	jsonLogger, err := registration.CreateService[serviceapi.Logger](regCtx, factoryName, "json-logger", true, jsonConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create JSON logger: %v", err)
 	}
 
 	// 4. Error-only logger
-	errorConfig := map[string]interface{}{
+	errorConfig := map[string]any{
 		"level":  "error",
 		"format": "text",
 	}
-	_, err = regCtx.CreateService("lokstra.logger", "error-logger", errorConfig)
+	errorLogger, err := registration.CreateService[serviceapi.Logger](regCtx, factoryName, "error-logger", true, errorConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create error logger: %v", err)
 	}
@@ -77,13 +79,13 @@ func main() {
 
 		logger.Infof("Home endpoint accessed from %s", ctx.Request.RemoteAddr)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Logger Service Example",
 			"loggers": []string{
-				"basic-logger (info level)",
-				"debug-logger (debug level)",
-				"json-logger (warn level)",
-				"error-logger (error level)",
+				"basic-logger (" + basicLogger.GetLogLevel().String() + ")",
+				"debug-logger (" + debugLogger.GetLogLevel().String() + ")",
+				"json-logger (" + jsonLogger.GetLogLevel().String() + ")",
+				"error-logger (" + errorLogger.GetLogLevel().String() + ")",
 			},
 			"client_ip": ctx.Request.RemoteAddr,
 		})
@@ -91,11 +93,6 @@ func main() {
 
 	// Logging levels demonstration
 	app.GET("/log-levels", func(ctx *lokstra.Context) error {
-		debugLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "debug-logger")
-		if err != nil {
-			return ctx.ErrorInternal("Debug logger unavailable")
-		}
-
 		// Demonstrate all logging levels
 		debugLogger.Debugf("Debug message - detailed information for debugging")
 		debugLogger.Infof("Info message - general application information")
@@ -104,7 +101,7 @@ func main() {
 
 		// Note: Fatalf would terminate the application, so we don't use it here
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "All logging levels demonstrated",
 			"levels": map[string]string{
 				"debug": "Detailed debugging information",
@@ -120,11 +117,6 @@ func main() {
 	// Structured logging with context
 	app.POST("/users/:id/update", func(ctx *lokstra.Context) error {
 		userID := ctx.GetPathParam("id")
-
-		jsonLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "json-logger")
-		if err != nil {
-			return ctx.ErrorInternal("JSON logger unavailable")
-		}
 
 		// Simulate user update process with structured logging
 		jsonLogger.Infof("User update initiated - ID: %s, IP: %s", userID, ctx.Request.RemoteAddr)
@@ -144,7 +136,7 @@ func main() {
 		// Success case
 		jsonLogger.Infof("User updated successfully - ID: %s", userID)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User updated successfully",
 			"user_id": userID,
 			"logged":  "Check JSON logs for structured output",
@@ -153,17 +145,12 @@ func main() {
 
 	// Error logging demonstration
 	app.GET("/error-demo", func(ctx *lokstra.Context) error {
-		errorLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "error-logger")
-		if err != nil {
-			return ctx.ErrorInternal("Error logger unavailable")
-		}
-
 		// Simulate various error scenarios
 		errorLogger.Errorf("Simulated database connection error")
 		errorLogger.Errorf("Simulated API rate limit exceeded")
 		errorLogger.Errorf("Simulated authentication failure")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Error scenarios logged",
 			"note":    "Error logger only shows warn and error level messages",
 		})
@@ -171,31 +158,26 @@ func main() {
 
 	// Logger configuration info
 	app.GET("/logger-info", func(ctx *lokstra.Context) error {
-		basicLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "basic-logger")
-		if err != nil {
-			return ctx.ErrorInternal("Basic logger unavailable")
-		}
-
 		basicLogger.Infof("Logger configuration requested")
 
-		return ctx.Ok(map[string]interface{}{
-			"loggers": map[string]interface{}{
-				"basic-logger": map[string]interface{}{
+		return ctx.Ok(map[string]any{
+			"loggers": map[string]any{
+				"basic-logger": map[string]any{
 					"level":       "info",
 					"format":      "text",
 					"description": "Standard application logging",
 				},
-				"debug-logger": map[string]interface{}{
+				"debug-logger": map[string]any{
 					"level":       "debug",
 					"format":      "text",
 					"description": "Detailed debugging information",
 				},
-				"json-logger": map[string]interface{}{
+				"json-logger": map[string]any{
 					"level":       "warn",
 					"format":      "json",
 					"description": "Structured JSON logging for production",
 				},
-				"error-logger": map[string]interface{}{
+				"error-logger": map[string]any{
 					"level":       "error",
 					"format":      "text",
 					"description": "Error-only logging",
@@ -213,20 +195,15 @@ func main() {
 
 	// Benchmark logging performance
 	app.GET("/log-benchmark", func(ctx *lokstra.Context) error {
-		debugLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "debug-logger")
-		if err != nil {
-			return ctx.ErrorInternal("Debug logger unavailable")
-		}
-
 		// Log multiple messages to demonstrate performance
 		count := 100
-		for i := 0; i < count; i++ {
+		for i := range count {
 			debugLogger.Debugf("Benchmark log message %d", i)
 		}
 
 		debugLogger.Infof("Logged %d benchmark messages", count)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":     "Logging benchmark completed",
 			"log_count":   count,
 			"performance": "Check server logs for timing",
@@ -235,32 +212,21 @@ func main() {
 
 	// Smart binding with logging context
 	app.POST("/log-request", func(ctx *lokstra.Context, req *LogRequest) error {
-		basicLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "basic-logger")
-		if err != nil {
-			return ctx.ErrorInternal("Basic logger unavailable")
-		}
-
 		// Log based on request level
 		switch req.Level {
 		case "debug":
-			if debugLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "debug-logger"); err == nil {
-				debugLogger.Debugf("Custom log: %s", req.Message)
-			}
+			debugLogger.Debugf("Custom log: %s", req.Message)
 		case "info":
 			basicLogger.Infof("Custom log: %s", req.Message)
 		case "warn":
-			if jsonLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "json-logger"); err == nil {
-				jsonLogger.Warnf("Custom log: %s", req.Message)
-			}
+			jsonLogger.Warnf("Custom log: %s", req.Message)
 		case "error":
-			if errorLogger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "error-logger"); err == nil {
-				errorLogger.Errorf("Custom log: %s", req.Message)
-			}
+			errorLogger.Errorf("Custom log: %s", req.Message)
 		default:
 			basicLogger.Infof("Custom log (default): %s", req.Message)
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Custom log message recorded",
 			"level":   req.Level,
 			"logged":  req.Message,

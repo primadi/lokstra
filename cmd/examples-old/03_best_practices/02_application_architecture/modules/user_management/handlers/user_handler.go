@@ -179,7 +179,7 @@ func (h *UserHandler) DeleteUser(ctx *lokstra.Context) error {
 		return ctx.ErrorInternal("Failed to delete user: " + err.Error())
 	}
 
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message": "User deleted successfully",
 	})
 }

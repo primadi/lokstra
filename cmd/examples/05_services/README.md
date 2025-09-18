@@ -48,7 +48,7 @@ Services typically implement `GetSetting(key string) any` for configuration acce
 ### 3. **Service Creation**
 - **Create Instance**: `CreateService(factoryName, serviceName, config)`
 - **Get or Create**: `GetOrCreateService(factoryName, serviceName, config)`
-- **Configuration**: Passed to factory functions as `interface{}`
+- **Configuration**: Passed to factory functions as `any`
 
 ### 4. **Service Retrieval**
 - **Basic Retrieval**: `GetService(serviceName)`
@@ -97,7 +97,7 @@ type CounterService struct {
     count int
 }
 
-func (c *CounterService) GetSetting(key string) interface{} {
+func (c *CounterService) GetSetting(key string) any {
     switch key {
     case "name":
         return c.name
@@ -109,10 +109,10 @@ func (c *CounterService) GetSetting(key string) interface{} {
 }
 
 // Register factory
-regCtx.RegisterServiceFactory("counter", func(config interface{}) (service.Service, error) {
+regCtx.RegisterServiceFactory("counter", func(config any) (service.Service, error) {
     name := "default"
     if config != nil {
-        if configMap, ok := config.(map[string]interface{}); ok {
+        if configMap, ok := config.(map[string]any); ok {
             if n, exists := configMap["name"]; exists {
                 name = n.(string)
             }
@@ -169,7 +169,7 @@ regCtx.RegisterServiceFactory("counter", func(config interface{}) (service.Servi
 
 ### Service with Dependencies
 ```go
-func NewDatabaseService(config interface{}) (service.Service, error) {
+func NewDatabaseService(config any) (service.Service, error) {
     // Get dependent services
     logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
     if err != nil {
@@ -182,7 +182,7 @@ func NewDatabaseService(config interface{}) (service.Service, error) {
 
 ### Configuration Validation
 ```go
-func NewAPIService(config interface{}) (service.Service, error) {
+func NewAPIService(config any) (service.Service, error) {
     cfg, ok := config.(APIConfig)
     if !ok {
         return nil, errors.New("invalid configuration type")

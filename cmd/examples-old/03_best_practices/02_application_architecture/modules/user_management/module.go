@@ -35,7 +35,7 @@ func RegisterModule(ctx registration.RegistrationContext) error {
 	}
 
 	if settings, _ := ctx.GetValue("module_settings"); settings != nil {
-		if moduleSettings, ok := settings.(map[string]interface{}); ok {
+		if moduleSettings, ok := settings.(map[string]any); ok {
 			if tableName, ok := moduleSettings["table_name"].(string); ok {
 				config.TableName = tableName
 			}
@@ -87,7 +87,7 @@ func RequiredServices() []string {
 }
 
 // CreateServices returns services that this module wants to create
-func CreateServices() map[string]interface{} {
+func CreateServices() map[string]any {
 	// This module doesn't create services, but could in more complex scenarios
 	return nil
 }

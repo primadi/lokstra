@@ -25,7 +25,8 @@ func (m *mockRegistrationContext) RegisterRawHandler(name string, handler reques
 }
 
 // Implement all required methods for registration.RegistrationContext
-func (m *mockRegistrationContext) RegisterService(serviceName string, service service.Service) error {
+func (m *mockRegistrationContext) RegisterService(serviceName string, service service.Service,
+	errorIfExists bool) error {
 	return nil
 }
 
@@ -33,7 +34,7 @@ func (m *mockRegistrationContext) GetService(serviceName string) (service.Servic
 	return nil, nil
 }
 
-func (m *mockRegistrationContext) CreateService(factoryName, serviceName string, config ...any) (service.Service, error) {
+func (m *mockRegistrationContext) CreateService(factoryName, serviceName string, allowReplace bool, config ...any) (service.Service, error) {
 	return nil, nil
 }
 
@@ -167,8 +168,8 @@ func TestModule_RegisterWithMapConfig(t *testing.T) {
 		"timeout":          "5s",
 		"host":             "0.0.0.0",
 		"port":             9090,
-		"buckets":          []interface{}{0.1, 1.0, 10.0},
-		"labels": map[string]interface{}{
+		"buckets":          []any{0.1, 1.0, 10.0},
+		"labels": map[string]any{
 			"service": "test",
 			"version": "1.0",
 		},
@@ -259,19 +260,19 @@ func TestModule_Interface(t *testing.T) {
 func TestParseBuckets(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected []float64
 		hasError bool
 	}{
 		{
 			name:     "valid float slice",
-			input:    []interface{}{0.1, 1.0, 10.0},
+			input:    []any{0.1, 1.0, 10.0},
 			expected: []float64{0.1, 1.0, 10.0},
 			hasError: false,
 		},
 		{
 			name:     "valid mixed numbers",
-			input:    []interface{}{0.1, 1, int64(10)},
+			input:    []any{0.1, 1, int64(10)},
 			expected: []float64{0.1, 1.0, 10.0},
 			hasError: false,
 		},
@@ -289,7 +290,7 @@ func TestParseBuckets(t *testing.T) {
 		},
 		{
 			name:     "invalid element",
-			input:    []interface{}{0.1, "invalid", 10.0},
+			input:    []any{0.1, "invalid", 10.0},
 			expected: nil,
 			hasError: true,
 		},
@@ -328,13 +329,13 @@ func TestParseBuckets(t *testing.T) {
 func TestParseLabels(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected map[string]string
 		hasError bool
 	}{
 		{
 			name: "valid string map",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"service": "test",
 				"version": "1.0",
 			},
@@ -346,7 +347,7 @@ func TestParseLabels(t *testing.T) {
 		},
 		{
 			name: "mixed value types",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"service": "test",
 				"port":    8080,
 				"enabled": true,

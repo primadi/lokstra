@@ -45,7 +45,7 @@ func main() {
 	// Example 1: Query parameter binding
 	// Test: curl "http://localhost:8080/search?q=john&limit=5&sort=email"
 	app.GET("/search", func(ctx *lokstra.Context, params *SearchParams) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Search completed",
 			"params":  params,
 		})
@@ -54,7 +54,7 @@ func main() {
 	// Example 2: Path parameter binding
 	// Test: curl "http://localhost:8080/users/123?name=John&active=true"
 	app.GET("/users/:id", func(ctx *lokstra.Context, user *User) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User retrieved",
 			"user":    user,
 		})
@@ -66,7 +66,7 @@ func main() {
 	//       -d '{"name":"John Doe","email":"john@example.com","age":25}'
 	app.POST("/users", func(ctx *lokstra.Context, req *CreateUserRequest) error {
 		// In a real app, you would save the user to database here
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User created successfully",
 			"user":    req,
 		})
@@ -83,7 +83,7 @@ func main() {
 	}
 
 	app.PUT("/users/:id", func(ctx *lokstra.Context, params *UpdateUserParams) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User updated successfully",
 			"params":  params,
 		})
@@ -96,7 +96,7 @@ func main() {
 	app.POST("/users/validated", func(ctx *lokstra.Context, req *CreateUserRequest) error {
 		// Lokstra automatically validates based on struct tags
 		// If validation fails, it returns 400 Bad Request automatically
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User validation passed",
 			"user":    req,
 		})

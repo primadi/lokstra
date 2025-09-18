@@ -38,7 +38,7 @@ func main() {
 
 	// Simple info endpoint
 	app.GET("/", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":     "RawHandle Test with Complete Fallback Chain",
 			"description": "Demonstrates all Static Files source types",
 			"fallback_priority": []string{

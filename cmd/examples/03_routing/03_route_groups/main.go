@@ -30,7 +30,7 @@ func main() {
 
 	// ===== Root Routes =====
 	app.GET("/", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Route Groups Example API",
 			"version": "1.0.0",
 			"endpoints": map[string]string{
@@ -45,7 +45,7 @@ func main() {
 	})
 
 	app.GET("/health", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status":    "healthy",
 			"timestamp": "2024-01-01T00:00:00Z",
 		})
@@ -76,7 +76,7 @@ func main() {
 			{ID: 1, Name: "John Doe", Email: "john@example.com", Version: "v1"},
 			{ID: 2, Name: "Jane Smith", Email: "jane@example.com", Version: "v1"},
 		}
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"users":       users,
 			"total":       len(users),
 			"api_version": "1.0",
@@ -97,7 +97,7 @@ func main() {
 			Version: "v1",
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"user":        user,
 			"api_version": "1.0",
 		})
@@ -116,7 +116,7 @@ func main() {
 			Version: "v1",
 		}
 
-		return ctx.OkCreated(map[string]interface{}{
+		return ctx.OkCreated(map[string]any{
 			"message":     "User created (v1)",
 			"user":        user,
 			"api_version": "1.0",
@@ -139,7 +139,7 @@ func main() {
 			{ID: 1, Title: "First Post", Content: "Hello World", AuthorID: 1, Version: "v1"},
 			{ID: 2, Title: "Second Post", Content: "Hello Again", AuthorID: 2, Version: "v1"},
 		}
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"posts":       posts,
 			"total":       len(posts),
 			"api_version": "1.0",
@@ -161,7 +161,7 @@ func main() {
 			Version:  "v1",
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"post":        post,
 			"api_version": "1.0",
 		})
@@ -233,9 +233,9 @@ func main() {
 			},
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"users": users,
-			"pagination": map[string]interface{}{
+			"pagination": map[string]any{
 				"page":  page,
 				"limit": limit,
 				"total": len(users),
@@ -261,7 +261,7 @@ func main() {
 			Version:   "v2",
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"user":        user,
 			"api_version": "2.0",
 		})
@@ -302,9 +302,9 @@ func main() {
 			},
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"posts": posts,
-			"meta": map[string]interface{}{
+			"meta": map[string]any{
 				"total_count": len(posts),
 				"api_version": "2.0",
 				"features":    []string{"pagination", "filtering", "sorting"},
@@ -326,9 +326,9 @@ func main() {
 	})
 
 	admin.GET("/dashboard", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Admin Dashboard",
-			"stats": map[string]interface{}{
+			"stats": map[string]any{
 				"total_users":     150,
 				"total_posts":     75,
 				"active_sessions": 23,
@@ -339,7 +339,7 @@ func main() {
 	// Nested admin groups
 	adminUsers := admin.Group("/users")
 	adminUsers.GET("", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Admin: All users",
 			"count":   150,
 		})
@@ -347,7 +347,7 @@ func main() {
 
 	adminUsers.DELETE("/:id", func(ctx *lokstra.Context) error {
 		userID := ctx.GetPathParam("id")
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Admin: User deleted",
 			"user_id": userID,
 		})
@@ -355,7 +355,7 @@ func main() {
 
 	adminSystem := admin.Group("/system")
 	adminSystem.GET("/logs", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "System logs",
 			"logs": []string{
 				"INFO: Server started",
@@ -366,7 +366,7 @@ func main() {
 	})
 
 	adminSystem.POST("/restart", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "System restart initiated",
 			"status":  "pending",
 		})
@@ -383,7 +383,7 @@ func main() {
 
 	publicBlog := public.Group("/blog")
 	publicBlog.GET("/latest", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Latest blog posts",
 			"posts": []string{
 				"How to build REST APIs",
@@ -395,14 +395,14 @@ func main() {
 
 	publicPages := public.Group("/pages")
 	publicPages.GET("/about", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"page":    "about",
 			"content": "About our amazing API",
 		})
 	})
 
 	publicPages.GET("/contact", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"page":    "contact",
 			"content": "Contact us at hello@example.com",
 		})

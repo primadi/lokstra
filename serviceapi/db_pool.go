@@ -6,7 +6,18 @@ import "context"
 // supporting schema-aware connection acquisition
 // and future multi-backend support.
 type DbPool interface {
+	// Acquire a connection for the specified schema.
+	// If schema is empty, a default connection is provided.
+	// it will set the search_path to the specified schema after acquiring the connection.
+	// For multi-tenant, use AcquireMultiTenant with tenantID.
 	Acquire(ctx context.Context, schema string) (DbConn, error)
+
+	// AcquireMultiTenant acquires a connection for the specified schema and tenantID.
+	// If tenantID is empty, a default connection is provided.
+	// it will set the search_path to the specified schema after acquiring the connection.
+	// and set Row Level Security (RLS) context to the specified tenantID.
+	// This is useful for multi-tenant applications.
+	AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (DbConn, error)
 }
 
 type RowMap = map[string]any
@@ -15,7 +26,7 @@ type RowMap = map[string]any
 type DbConn interface {
 	Begin(ctx context.Context) (DbTx, error)
 	Transaction(ctx context.Context, fn func(tx DbExecutor) error) error
-
+	Ping(context context.Context) error
 	Release() error
 	DbExecutor
 }

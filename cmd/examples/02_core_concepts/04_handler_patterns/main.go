@@ -29,7 +29,7 @@ func simpleHandler(ctx *lokstra.Context) error {
 // 2. Handler with path parameters
 func userHandler(ctx *lokstra.Context) error {
 	userID := ctx.GetPathParam("id")
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message": "User handler",
 		"user_id": userID,
 	})
@@ -43,7 +43,7 @@ type UserPathParams struct {
 }
 
 func userWithPathBinding(ctx *lokstra.Context, params *UserPathParams) error {
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message": "User with path binding",
 		"user_id": params.ID,
 	})
@@ -58,7 +58,7 @@ type SearchQueryParams struct {
 }
 
 func searchWithQueryBinding(ctx *lokstra.Context, params *SearchQueryParams) error {
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message": "Search with query binding",
 		"query":   params.Query,
 		"page":    params.Page,
@@ -75,7 +75,7 @@ type CreateUserRequest struct {
 }
 
 func createUserWithBodyBinding(ctx *lokstra.Context, req *CreateUserRequest) error {
-	return ctx.OkCreated(map[string]interface{}{
+	return ctx.OkCreated(map[string]any{
 		"message": "User created with body binding",
 		"user":    req,
 	})
@@ -88,7 +88,7 @@ type UpdateUserCombined struct {
 }
 
 func updateUserCombined(ctx *lokstra.Context, params *UpdateUserCombined) error {
-	return ctx.OkUpdated(map[string]interface{}{
+	return ctx.OkUpdated(map[string]any{
 		"message": "User updated with combined binding",
 		"id":      params.ID,
 		"data":    params.Data,
@@ -100,12 +100,12 @@ func updateUserCombined(ctx *lokstra.Context, params *UpdateUserCombined) error 
 // Handler with service dependency injection
 func handlerWithServices(ctx *lokstra.Context, regCtx lokstra.RegistrationContext) error {
 	// Get logger service
-	logger, err := lokstra.GetService[interface{}](regCtx, "logger")
+	logger, err := lokstra.GetService[any](regCtx, "logger")
 	if err != nil {
 		return ctx.ErrorInternal("Logger service not available")
 	}
 
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message": "Handler with service injection",
 		"logger":  logger != nil,
 	})
@@ -134,7 +134,7 @@ func handlerWithCustomValidation(ctx *lokstra.Context, req *CustomValidationRequ
 		return ctx.ErrorBadRequest(err.Error())
 	}
 
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message":  "Custom validation passed",
 		"username": req.Username,
 	})
@@ -157,7 +157,7 @@ func handlerWithMiddlewareData(ctx *lokstra.Context) error {
 		}
 	}
 
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message":         "Handler using middleware data",
 		"user_id":         userID,
 		"request_start":   startTime,
@@ -186,7 +186,7 @@ func handlerWithErrorHandling(ctx *lokstra.Context) error {
 	case "internal":
 		return ctx.ErrorInternal("Internal server error occurred")
 	default:
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "No error - success response",
 			"available_errors": []string{
 				"validation", "notfound", "badrequest", "duplicate", "internal",
@@ -204,7 +204,7 @@ func asyncHandler(ctx *lokstra.Context) error {
 		lokstra.Logger.Infof("Background task completed")
 	}()
 
-	return ctx.Ok(map[string]interface{}{
+	return ctx.Ok(map[string]any{
 		"message": "Background task started",
 		"status":  "processing",
 	})
@@ -218,15 +218,15 @@ func responsePatternHandler(ctx *lokstra.Context) error {
 	switch format {
 	case "list":
 		data := []string{"item1", "item2", "item3"}
-		meta := map[string]interface{}{"total": 3, "page": 1}
+		meta := map[string]any{"total": 3, "page": 1}
 		return ctx.OkList(data, meta)
 
 	case "created":
-		newResource := map[string]interface{}{"id": 123, "name": "New Resource"}
+		newResource := map[string]any{"id": 123, "name": "New Resource"}
 		return ctx.OkCreated(newResource)
 
 	case "updated":
-		updatedResource := map[string]interface{}{"id": 456, "name": "Updated Resource"}
+		updatedResource := map[string]any{"id": 456, "name": "Updated Resource"}
 		return ctx.OkUpdated(updatedResource)
 
 	case "html":
@@ -236,7 +236,7 @@ func responsePatternHandler(ctx *lokstra.Context) error {
 		return ctx.WriteRaw("text/plain", 200, []byte("Raw text response"))
 
 	default:
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Standard response",
 			"available_formats": []string{
 				"list", "created", "updated", "html", "raw",
@@ -292,7 +292,7 @@ func main() {
 
 	// ===== Handler with inline definition =====
 	app.GET("/inline", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Inline handler definition",
 			"pattern": "anonymous function",
 		})
@@ -301,7 +301,7 @@ func main() {
 	// ===== Handler with closure =====
 	message := "Closure message"
 	app.GET("/closure", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": message,
 			"pattern": "closure handler",
 		})

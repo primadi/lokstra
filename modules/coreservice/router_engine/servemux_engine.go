@@ -116,6 +116,8 @@ func (m *ServeMuxEngine) ServeStatic(prefix string, spa bool, sources ...fs.FS) 
 	if cleanPrefixStr == "/" {
 		m.mux.Handle("/", handler)
 	} else {
+		// Handle both /app and /app/ patterns for SPA support
+		m.mux.Handle(cleanPrefixStr, handler)
 		m.mux.Handle(cleanPrefixStr+"/", handler)
 	}
 }

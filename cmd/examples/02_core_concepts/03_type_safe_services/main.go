@@ -22,11 +22,11 @@ import (
 
 // Cache service interface
 type CacheService interface {
-	Set(key string, value interface{}) error
-	Get(key string) (interface{}, error)
+	Set(key string, value any) error
+	Get(key string) (any, error)
 	Delete(key string) error
 	Clear() error
-	GetStats() map[string]interface{}
+	GetStats() map[string]any
 }
 
 // Database service interface
@@ -42,7 +42,7 @@ type DatabaseService interface {
 type MetricsService interface {
 	IncrementCounter(name string)
 	RecordDuration(name string, duration float64)
-	GetMetrics() map[string]interface{}
+	GetMetrics() map[string]any
 }
 
 // ===== Domain Models =====
@@ -57,25 +57,25 @@ type User struct {
 
 // In-memory cache implementation
 type InMemoryCache struct {
-	data  map[string]interface{}
+	data  map[string]any
 	stats map[string]int
 }
 
 func NewInMemoryCache() CacheService {
 	return &InMemoryCache{
-		data:  make(map[string]interface{}),
+		data:  make(map[string]any),
 		stats: make(map[string]int),
 	}
 }
 
-func (c *InMemoryCache) Set(key string, value interface{}) error {
+func (c *InMemoryCache) Set(key string, value any) error {
 	c.data[key] = value
 	c.stats["sets"]++
 	lokstra.Logger.Debugf("Cache SET: %s", key)
 	return nil
 }
 
-func (c *InMemoryCache) Get(key string) (interface{}, error) {
+func (c *InMemoryCache) Get(key string) (any, error) {
 	value, exists := c.data[key]
 	if !exists {
 		c.stats["misses"]++
@@ -94,14 +94,14 @@ func (c *InMemoryCache) Delete(key string) error {
 }
 
 func (c *InMemoryCache) Clear() error {
-	c.data = make(map[string]interface{})
+	c.data = make(map[string]any)
 	c.stats["clears"]++
 	lokstra.Logger.Debugf("Cache CLEAR")
 	return nil
 }
 
-func (c *InMemoryCache) GetStats() map[string]interface{} {
-	return map[string]interface{}{
+func (c *InMemoryCache) GetStats() map[string]any {
+	return map[string]any{
 		"type":    "in-memory",
 		"size":    len(c.data),
 		"hits":    c.stats["hits"],
@@ -194,8 +194,8 @@ func (m *SimpleMetrics) RecordDuration(name string, duration float64) {
 	lokstra.Logger.Debugf("Metrics DURATION: %s = %.2fms", name, duration)
 }
 
-func (m *SimpleMetrics) GetMetrics() map[string]interface{} {
-	return map[string]interface{}{
+func (m *SimpleMetrics) GetMetrics() map[string]any {
+	return map[string]any{
 		"counters":  m.counters,
 		"durations": m.durations,
 	}
@@ -324,25 +324,25 @@ func main() {
 	// ===== Register Service Factories =====
 
 	// Register cache service
-	regCtx.RegisterServiceFactory("in-memory-cache", func(config any) (interface{}, error) {
+	regCtx.RegisterServiceFactory("in-memory-cache", func(config any) (any, error) {
 		lokstra.Logger.Infof("🔧 Creating In-Memory Cache Service")
 		return NewInMemoryCache(), nil
 	})
 
 	// Register database service
-	regCtx.RegisterServiceFactory("mock-database", func(config any) (interface{}, error) {
+	regCtx.RegisterServiceFactory("mock-database", func(config any) (any, error) {
 		lokstra.Logger.Infof("🔧 Creating Mock Database Service")
 		return NewMockDatabase(), nil
 	})
 
 	// Register metrics service
-	regCtx.RegisterServiceFactory("simple-metrics", func(config any) (interface{}, error) {
+	regCtx.RegisterServiceFactory("simple-metrics", func(config any) (any, error) {
 		lokstra.Logger.Infof("🔧 Creating Simple Metrics Service")
 		return NewSimpleMetrics(), nil
 	})
 
 	// Register user service (depends on other services)
-	regCtx.RegisterServiceFactory("user-service", func(config any) (interface{}, error) {
+	regCtx.RegisterServiceFactory("user-service", func(config any) (any, error) {
 		lokstra.Logger.Infof("🔧 Creating User Service with dependencies")
 		return NewUserService(regCtx)
 	})
@@ -350,25 +350,25 @@ func main() {
 	// ===== Create Service Instances =====
 
 	// Create services in dependency order
-	_, err := regCtx.CreateService("in-memory-cache", "cache")
+	_, err := regCtx.CreateService("in-memory-cache", "cache", true)
 	if err != nil {
 		lokstra.Logger.Errorf("Failed to create cache service: %v", err)
 		return
 	}
 
-	_, err = regCtx.CreateService("mock-database", "database")
+	_, err = regCtx.CreateService("mock-database", "database", true)
 	if err != nil {
 		lokstra.Logger.Errorf("Failed to create database service: %v", err)
 		return
 	}
 
-	_, err = regCtx.CreateService("simple-metrics", "metrics")
+	_, err = regCtx.CreateService("simple-metrics", "metrics", true)
 	if err != nil {
 		lokstra.Logger.Errorf("Failed to create metrics service: %v", err)
 		return
 	}
 
-	_, err = regCtx.CreateService("user-service", "user-service")
+	_, err = regCtx.CreateService("user-service", "user-service", true)
 	if err != nil {
 		lokstra.Logger.Errorf("Failed to create user service: %v", err)
 		return
@@ -456,7 +456,7 @@ func main() {
 			return ctx.ErrorInternal(err.Error())
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User deleted successfully",
 			"id":      params.ID,
 		})
@@ -464,7 +464,7 @@ func main() {
 
 	// Service status endpoint
 	app.GET("/services/status", func(ctx *lokstra.Context) error {
-		status := make(map[string]interface{})
+		status := make(map[string]any)
 
 		// Get cache stats
 		if cache, err := lokstra.GetService[CacheService](regCtx, "cache"); err == nil {
@@ -478,13 +478,13 @@ func main() {
 
 		// Get database connection info
 		if db, err := lokstra.GetService[DatabaseService](regCtx, "database"); err == nil {
-			status["database"] = map[string]interface{}{
+			status["database"] = map[string]any{
 				"connection": db.GetConnection(),
 				"status":     "connected",
 			}
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":  "Service status",
 			"services": status,
 		})
@@ -501,7 +501,7 @@ func main() {
 			return ctx.ErrorInternal("Failed to clear cache")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Cache cleared successfully",
 		})
 	})

@@ -18,7 +18,7 @@ type GreetingService interface {
 	GetUsers(limit int) ([]UserIface, error)
 
 	// Return map, error
-	GetUserStats(id int) (map[string]interface{}, error)
+	GetUserStats(id int) (map[string]any, error)
 
 	// Return struct, error
 	GetSystemInfo() (SystemInfo, error)
@@ -28,8 +28,8 @@ type GreetingService interface {
 	GetUserActive(id int) (bool, error)
 	GetServerTime() (time.Time, error)
 
-	// Return interface{} (any), error
-	GetDynamicData(dataType string) (interface{}, error)
+	// Return any (any), error
+	GetDynamicData(dataType string) (any, error)
 
 	// Return only error (void operations)
 	DeleteUser(id int) error

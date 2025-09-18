@@ -53,7 +53,7 @@ func main() {
 		return ctx.HtmxPageData(
 			"Welcome to HTMX Example",             // Page title
 			"Learn HTMX integration with Lokstra", // Description
-			map[string]interface{}{ // Page data
+			map[string]any{ // Page data
 				"subtitle": "Build dynamic web applications with ease",
 				"features": []string{
 					"🚀 Fast server-side rendering",
@@ -71,11 +71,11 @@ func main() {
 		return ctx.HtmxPageData(
 			"About Us",
 			"Learn about our company and mission",
-			map[string]interface{}{
+			map[string]any{
 				"company":  "Lokstra Framework",
 				"founded":  2024,
 				"location": "Global",
-				"team": []map[string]interface{}{
+				"team": []map[string]any{
 					{"name": "Alice Johnson", "role": "Framework Developer", "bio": "Go enthusiast with 10+ years experience"},
 					{"name": "Bob Smith", "role": "Frontend Designer", "bio": "HTMX expert and UI/UX specialist"},
 					{"name": "Carol White", "role": "DevOps Engineer", "bio": "Infrastructure and deployment expert"},
@@ -87,7 +87,7 @@ func main() {
 
 	// Products page data
 	pageData.GET("/products", func(ctx *lokstra.Context) error {
-		products := []map[string]interface{}{
+		products := []map[string]any{
 			{
 				"id":          1,
 				"name":        "Lokstra Framework",
@@ -114,7 +114,7 @@ func main() {
 		return ctx.HtmxPageData(
 			"Our Products",
 			"Discover the tools and frameworks we offer",
-			map[string]interface{}{
+			map[string]any{
 				"products": products,
 				"total":    len(products),
 			},
@@ -128,9 +128,9 @@ func main() {
 
 	// Dynamic content for home page
 	api.GET("/featured-content", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"title": "Featured Content",
-			"items": []map[string]interface{}{
+			"items": []map[string]any{
 				{"title": "Getting Started Guide", "description": "Learn the basics of Lokstra", "link": "/docs/getting-started"},
 				{"title": "HTMX Tutorial", "description": "Master HTMX with practical examples", "link": "/docs/htmx"},
 				{"title": "Best Practices", "description": "Tips for building great apps", "link": "/docs/best-practices"},
@@ -140,7 +140,7 @@ func main() {
 
 	// Dynamic stats
 	api.GET("/stats", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"users_online":   42,
 			"requests_today": 1523,
 			"uptime":         "99.9%",
@@ -154,14 +154,14 @@ func main() {
 		productID := ctx.GetPathParam("id")
 
 		// Simulate product lookup
-		product := map[string]interface{}{
+		product := map[string]any{
 			"id":          productID,
 			"name":        "Product " + productID,
 			"description": "Detailed information about product " + productID,
 			"price":       "$99.99",
 			"in_stock":    true,
 			"rating":      4.5,
-			"reviews": []map[string]interface{}{
+			"reviews": []map[string]any{
 				{"user": "John D.", "rating": 5, "comment": "Excellent product!"},
 				{"user": "Jane S.", "rating": 4, "comment": "Very good, would recommend."},
 			},
@@ -188,7 +188,7 @@ func main() {
 		time.Sleep(500 * time.Millisecond)
 
 		// Return success message
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"success": true,
 			"message": "Thank you for your message! We'll get back to you soon.",
 			"name":    name,
@@ -201,21 +201,21 @@ func main() {
 		query := ctx.GetQueryParam("q")
 
 		if query == "" {
-			return ctx.Ok(map[string]interface{}{
-				"results": []map[string]interface{}{},
+			return ctx.Ok(map[string]any{
+				"results": []map[string]any{},
 				"message": "Enter a search term to get started",
 			})
 		}
 
 		// Simulate search results
-		results := []map[string]interface{}{
+		results := []map[string]any{
 			{"title": "HTMX Basics", "description": "Learn the fundamentals of HTMX", "url": "/docs/htmx-basics"},
 			{"title": "Lokstra Framework", "description": "Getting started with Lokstra", "url": "/docs/lokstra"},
 			{"title": "Dynamic Content", "description": "Building dynamic web pages", "url": "/docs/dynamic"},
 		}
 
 		// Filter results based on query
-		filteredResults := []map[string]interface{}{}
+		filteredResults := []map[string]any{}
 		for _, result := range results {
 			title := result["title"].(string)
 			description := result["description"].(string)
@@ -224,7 +224,7 @@ func main() {
 			}
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"results": filteredResults,
 			"query":   query,
 			"count":   len(filteredResults),

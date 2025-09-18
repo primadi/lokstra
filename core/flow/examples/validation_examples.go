@@ -38,7 +38,7 @@ func CreateUserHandler() request.HandlerFunc {
 			_ = user.Email    // guaranteed to be non-empty
 			_ = user.Password // guaranteed to be non-empty
 
-			return fctx.OkCreated(map[string]interface{}{
+			return fctx.OkCreated(map[string]any{
 				"id":       123,
 				"username": user.Username,
 				"email":    user.Email,
@@ -125,7 +125,7 @@ func UpdateUserHandler() request.HandlerFunc {
 				_ = *update.Password
 			}
 
-			return fctx.Ok(map[string]interface{}{
+			return fctx.Ok(map[string]any{
 				"updated": true,
 			})
 		}).AsHandler()
@@ -133,7 +133,7 @@ func UpdateUserHandler() request.HandlerFunc {
 
 // Example 4: Custom validation rule
 func StrongPassword() flow.ValidationRule {
-	return func(value interface{}) (bool, string) {
+	return func(value any) (bool, string) {
 		password, ok := value.(string)
 		if !ok {
 			return false, "must be a string"

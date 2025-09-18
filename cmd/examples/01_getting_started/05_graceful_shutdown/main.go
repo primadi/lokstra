@@ -65,7 +65,7 @@ func main() {
 
 	// Routes that simulate various processing times
 	app.GET("/quick", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":      "Quick response",
 			"process_time": "fast",
 		})
@@ -74,7 +74,7 @@ func main() {
 	app.GET("/slow", func(ctx *lokstra.Context) error {
 		lokstra.Logger.Infof("🐌 Processing slow request...")
 		time.Sleep(5 * time.Second) // Simulate slow processing
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":      "Slow response completed",
 			"process_time": "5 seconds",
 		})
@@ -87,7 +87,7 @@ func main() {
 
 		// Simulate database operation
 		time.Sleep(2 * time.Second)
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Data retrieved from database",
 			"records": []string{"record1", "record2", "record3"},
 		})
@@ -99,7 +99,7 @@ func main() {
 			status = "degraded"
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status":          status,
 			"active_requests": atomic.LoadInt64(&activeRequests),
 			"database":        dbConnection.connected,

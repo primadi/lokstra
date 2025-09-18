@@ -251,7 +251,7 @@ type RequestExample struct {
     
     // Body from request body (JSON, form, etc.)
     Name  string                 `body:"name"`
-    Data  map[string]interface{} `body:"data"`
+    Data  map[string]any `body:"data"`
     Items []Item                 `body:"items"`
 }
 ```

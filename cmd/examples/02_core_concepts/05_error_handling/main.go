@@ -211,7 +211,7 @@ func main() {
 			})
 
 		default:
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message": "Error demo endpoint",
 				"available_types": []string{
 					"notfound", "badrequest", "duplicate", "internal", "validation",
@@ -267,7 +267,7 @@ func main() {
 			return ctx.ErrorInternal("Withdrawal failed")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Withdrawal successful",
 			"account": account,
 		})
@@ -289,7 +289,7 @@ func main() {
 			return ctx.ErrorInternal("Deposit failed")
 		}
 
-		return ctx.OkCreated(map[string]interface{}{
+		return ctx.OkCreated(map[string]any{
 			"message": "Deposit successful",
 			"account": account,
 		})
@@ -342,7 +342,7 @@ func main() {
 			return ctx.ErrorInternal("Transfer failed during deposit")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":      "Transfer successful",
 			"from_account": fromAccount,
 			"to_account":   toAccount,
@@ -387,7 +387,7 @@ func main() {
 			return ctx.ErrorValidation("Validation failed", fieldErrors)
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Validation passed",
 			"data":    req,
 		})
@@ -411,7 +411,7 @@ func main() {
 			return ctx.ErrorInternal(fmt.Sprintf("Health check failed: %v", errors))
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status": "healthy",
 			"checks": "All systems operational",
 		})

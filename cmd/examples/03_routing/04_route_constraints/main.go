@@ -31,7 +31,7 @@ func main() {
 			return ctx.ErrorBadRequest("User ID is required")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Basic path parameter",
 			"user_id": userID,
 			"type":    "string",
@@ -55,7 +55,7 @@ func main() {
 			return ctx.ErrorBadRequest("Post ID must be numeric")
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Numeric constraints",
 			"user_id":    userID,
 			"post_id":    postID,
@@ -83,7 +83,7 @@ func main() {
 		validateNumericID("id"),
 		func(ctx *lokstra.Context) error {
 			userID, _ := strconv.Atoi(ctx.GetPathParam("id"))
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "Validated numeric ID",
 				"user_id":    userID,
 				"validation": "middleware",
@@ -111,7 +111,7 @@ func main() {
 		validateEmail("email"),
 		func(ctx *lokstra.Context) error {
 			email := ctx.GetPathParam("email")
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "Valid email parameter",
 				"email":      email,
 				"validation": "regex",
@@ -137,7 +137,7 @@ func main() {
 		validateUUID("uuid"),
 		func(ctx *lokstra.Context) error {
 			uuid := ctx.GetPathParam("uuid")
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "Valid UUID parameter",
 				"uuid":       uuid,
 				"validation": "uuid_regex",
@@ -167,7 +167,7 @@ func main() {
 		validateRange("pageNum", 1, 100),
 		func(ctx *lokstra.Context) error {
 			pageNum, _ := strconv.Atoi(ctx.GetPathParam("pageNum"))
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "Valid page number",
 				"page":       pageNum,
 				"validation": "range_1_100",
@@ -197,7 +197,7 @@ func main() {
 			userID, _ := strconv.Atoi(ctx.GetPathParam("id"))
 			section := ctx.GetPathParam("section")
 
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "Profile section",
 				"user_id":    userID,
 				"section":    section,
@@ -226,7 +226,7 @@ func main() {
 		validateSlug("slug"),
 		func(ctx *lokstra.Context) error {
 			slug := ctx.GetPathParam("slug")
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":      "Blog post",
 				"slug":         slug,
 				"validation":   "slug_format",
@@ -253,7 +253,7 @@ func main() {
 		validateDate("date"),
 		func(ctx *lokstra.Context) error {
 			date := ctx.GetPathParam("date")
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":    "Daily report",
 				"date":       date,
 				"validation": "date_format",
@@ -271,7 +271,7 @@ func main() {
 			userID, _ := strconv.Atoi(ctx.GetPathParam("userId"))
 			postID, _ := strconv.Atoi(ctx.GetPathParam("postId"))
 
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"message":     "API endpoint with multiple constraints",
 				"api_version": version,
 				"user_id":     userID,
@@ -319,7 +319,7 @@ func main() {
 			}
 		}
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message":    "Search results",
 			"query":      query,
 			"page":       page,
@@ -332,7 +332,7 @@ func main() {
 	// ===== Helper Routes for Testing =====
 
 	app.GET("/", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Route Constraints Example",
 			"examples": map[string]string{
 				"basic_param":          "/users/123",

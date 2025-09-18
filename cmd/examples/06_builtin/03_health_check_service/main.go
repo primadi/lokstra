@@ -37,24 +37,24 @@ func main() {
 	regCtx.RegisterModule(logger.GetModule)
 
 	// Configure health check service
-	healthConfig := map[string]interface{}{
+	healthConfig := map[string]any{
 		"endpoint": "/health",
 		"timeout":  "30s",
 	}
 
 	// Create health check service
-	_, err := regCtx.CreateService("health_check", "app-health", healthConfig)
+	_, err := regCtx.CreateService("health_check", "app-health", true, healthConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create health check service: %v", err)
 	}
 
 	// Create logger service
-	loggerConfig := map[string]interface{}{
+	loggerConfig := map[string]any{
 		"level":  "info",
 		"format": "json",
 		"output": "stdout",
 	}
-	_, err = regCtx.CreateService("logger", "app-logger", loggerConfig)
+	_, err = regCtx.CreateService("logger", "app-logger", true, loggerConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create logger service: %v", err)
 	}
@@ -105,7 +105,7 @@ func main() {
 
 		if allHealthy {
 			ctx.SetStatusCode(200)
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"status":    "ready",
 				"timestamp": time.Now(),
 			})
@@ -121,7 +121,7 @@ func main() {
 
 		if isAlive {
 			ctx.SetStatusCode(200)
-			return ctx.Ok(map[string]interface{}{
+			return ctx.Ok(map[string]any{
 				"status":    "alive",
 				"timestamp": time.Now(),
 				"uptime":    time.Since(time.Now().Add(-time.Hour)).String(), // Mock uptime
@@ -139,9 +139,9 @@ func main() {
 		result := healthSvc.CheckHealthWithTimeout(15 * time.Second)
 
 		// Add additional system information
-		detailed := map[string]interface{}{
+		detailed := map[string]any{
 			"health_result": result,
-			"system_info": map[string]interface{}{
+			"system_info": map[string]any{
 				"go_version":  "go1.21.0",
 				"app_version": "1.0.0",
 				"build_time":  "2025-09-18T10:00:00Z",
@@ -171,7 +171,7 @@ func main() {
 
 		result := healthSvc.CheckHealthWithTimeout(5 * time.Second)
 
-		summary := map[string]interface{}{
+		summary := map[string]any{
 			"overall_status":   result.Status,
 			"total_checks":     len(result.Checks),
 			"healthy_checks":   0,
@@ -460,8 +460,8 @@ func setupHealthChecks(regCtx lokstra.RegistrationContext) {
 }
 
 // generateMockHistory creates mock health check history for demonstration
-func generateMockHistory() []map[string]interface{} {
-	history := make([]map[string]interface{}, 5)
+func generateMockHistory() []map[string]any {
+	history := make([]map[string]any, 5)
 
 	for i := 0; i < 5; i++ {
 		status := "healthy"
@@ -471,7 +471,7 @@ func generateMockHistory() []map[string]interface{} {
 			status = "degraded"
 		}
 
-		history[i] = map[string]interface{}{
+		history[i] = map[string]any{
 			"timestamp": time.Now().Add(-time.Duration(i+1) * time.Minute),
 			"status":    status,
 			"duration":  fmt.Sprintf("%dms", rand.Intn(500)+50),

@@ -41,7 +41,7 @@ regCtx.RegisterModule(logger.GetModule)
 regCtx.CreateService("lokstra.logger", "app-logger", "info")
 
 // Create logger with detailed config
-loggerConfig := map[string]interface{}{
+loggerConfig := map[string]any{
     "level":  "debug",
     "format": "json",
 }
@@ -60,7 +60,7 @@ PostgreSQL connection pooling with transaction management:
 ```go
 regCtx.RegisterModule(dbpool_pg.GetModule)
 
-dbConfig := map[string]interface{}{
+dbConfig := map[string]any{
     "host":     "localhost",
     "port":     5432,
     "database": "myapp",
@@ -75,7 +75,7 @@ Redis connectivity with connection pooling:
 ```go
 regCtx.RegisterModule(redis.GetModule)
 
-redisConfig := map[string]interface{}{
+redisConfig := map[string]any{
     "addr":     "localhost:6379",
     "password": "",
     "db":       0,
@@ -126,7 +126,7 @@ regCtx.CreateService("lokstra.dbpool_pg", "db", "postgres://user:pass@localhost/
 ### Map Configuration
 Complex services use map configuration:
 ```go
-config := map[string]interface{}{
+config := map[string]any{
     "host":            "localhost",
     "port":            5432,
     "database":        "myapp",
@@ -141,7 +141,7 @@ regCtx.CreateService("lokstra.dbpool_pg", "main-db", config)
 ### Environment-based Configuration
 Use environment variables for configuration:
 ```go
-dbConfig := map[string]interface{}{
+dbConfig := map[string]any{
     "host":     os.Getenv("DB_HOST"),
     "port":     os.Getenv("DB_PORT"),
     "database": os.Getenv("DB_NAME"),
@@ -220,7 +220,7 @@ app.GET("/users/:id", func(ctx *lokstra.Context) error {
 ### 1. **Environment-based Configuration**
 ```go
 // Use environment variables with defaults
-config := map[string]interface{}{
+config := map[string]any{
     "level":  getEnv("LOG_LEVEL", "info"),
     "format": getEnv("LOG_FORMAT", "text"),
 }
@@ -235,7 +235,7 @@ func getEnv(key, defaultValue string) string {
 
 ### 2. **Configuration Validation**
 ```go
-func validateLoggerConfig(config map[string]interface{}) error {
+func validateLoggerConfig(config map[string]any) error {
     level, ok := config["level"].(string)
     if !ok {
         return errors.New("level must be string")
@@ -304,7 +304,7 @@ regCtx.RegisterModule(kvstore_mem.GetModule)
 services := []struct {
     factory string
     name    string
-    config  interface{}
+    config  any
 }{
     {"lokstra.logger", "app-logger", "info"},
     {"lokstra.dbpool_pg", "main-db", dbConfig},
@@ -344,7 +344,7 @@ app.POST("/users", func(ctx *lokstra.Context, req *CreateUserRequest) error {
     }
     
     logger.Infof("User created successfully: %d", userID)
-    return ctx.OkCreated(map[string]interface{}{"user_id": userID})
+    return ctx.OkCreated(map[string]any{"user_id": userID})
 })
 ```
 

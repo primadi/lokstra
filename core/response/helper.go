@@ -1,6 +1,11 @@
 package response
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/primadi/lokstra/common/json"
+)
 
 // =========================
 // ✅ Success Responses
@@ -13,6 +18,15 @@ func (r *Response) Ok(data any) error {
 	r.Success = true
 	r.Data = data
 	return nil
+}
+
+// return JSON response as raw data
+func (r *Response) JSON(data any) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("JSON: failed to marshal data: %w", err)
+	}
+	return r.WriteRaw("application/json; charset=utf-8", http.StatusOK, b)
 }
 
 // OkCreated sends a structured response indicating successful creation
@@ -126,32 +140,16 @@ func (r *Response) WriteRaw(contentType string, status int, data []byte) error {
 	r.Headers.Set("Content-Type", contentType)
 	r.StatusCode = status
 	r.Success = true
-	r.Data = data
 	r.RawData = data
 	return nil
 }
 
 // HTML renders HTML content with 200 status
 func (r *Response) HTML(html string) error {
-	if r.Headers == nil {
-		r.Headers = make(http.Header)
-	}
-	r.Headers.Set("Content-Type", "text/html; charset=utf-8")
-	r.StatusCode = http.StatusOK
-	r.Success = true
-	r.RawData = []byte(html)
-	return nil
+	return r.WriteRaw("text/html; charset=utf-8", http.StatusOK, []byte(html))
 }
 
 // ErrorHTML renders HTML content with error status and message
 func (r *Response) ErrorHTML(status int, html string) error {
-	if r.Headers == nil {
-		r.Headers = make(http.Header)
-	}
-	r.Headers.Set("Content-Type", "text/html; charset=utf-8")
-	r.StatusCode = status
-	r.Success = false
-	r.Message = html
-	r.RawData = []byte(html)
-	return nil
+	return r.WriteRaw("text/html; charset=utf-8", status, []byte(html))
 }

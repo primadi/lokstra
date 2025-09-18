@@ -36,7 +36,7 @@ func main() {
 	regCtx.RegisterModule(logger.GetModule)
 
 	// Configure metrics service
-	metricsConfig := map[string]interface{}{
+	metricsConfig := map[string]any{
 		"enabled":                 true,
 		"endpoint":                "/metrics",
 		"namespace":               "lokstra_demo",
@@ -48,18 +48,18 @@ func main() {
 	}
 
 	// Create metrics service
-	_, err := regCtx.CreateService("metrics", "app-metrics", metricsConfig)
+	_, err := regCtx.CreateService("metrics", "app-metrics", true, metricsConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create metrics service: %v", err)
 	}
 
 	// Create logger service
-	loggerConfig := map[string]interface{}{
+	loggerConfig := map[string]any{
 		"level":  "info",
 		"format": "json",
 		"output": "stdout",
 	}
-	_, err = regCtx.CreateService("logger", "app-logger", loggerConfig)
+	_, err = regCtx.CreateService("logger", "app-logger", true, loggerConfig)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to create logger service: %v", err)
 	}
@@ -146,7 +146,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 		logger.Infof("Home endpoint accessed")
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "Metrics Service Demo",
 			"features": []string{
 				"Request counting",
@@ -198,7 +198,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 		logger.Infof("User operation completed: %s for %s user", operation, userType)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"operation":       operation,
 			"user_type":       userType,
 			"processing_time": processingTime,
@@ -241,7 +241,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 		logger.Infof("Order processed: type=%s, region=%s, amount=%.2f", orderType, region, amount)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"order_id":        fmt.Sprintf("ord_%d", time.Now().Unix()),
 			"type":            orderType,
 			"region":          region,
@@ -285,7 +285,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 		logger.Infof("Analytics query completed: type=%s, source=%s", queryType, dataSource)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"query_type":        queryType,
 			"data_source":       dataSource,
 			"computation_time":  computationTime.String(),
@@ -312,7 +312,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 		metrics.SetGauge("system_memory_usage_percent", memoryUsage, nil)
 		metrics.SetGauge("system_disk_usage_percent", diskUsage, nil)
 
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status":    "healthy",
 			"timestamp": time.Now(),
 			"system": map[string]float64{

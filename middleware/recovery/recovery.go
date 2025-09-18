@@ -75,8 +75,11 @@ func factory(config any) midware.Func {
 						logFields["stack"] = string(debug.Stack())
 					}
 
-					logger.WithFields(logFields).
-						Errorf("Recovered from panic in middleware")
+					// Only log if logger is available
+					if logger != nil {
+						logger.WithFields(logFields).
+							Errorf("Recovered from panic in middleware")
+					}
 				}
 			}()
 

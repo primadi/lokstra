@@ -66,7 +66,7 @@ func (c *RpcClient) Call(methodName string, args ...any) (any, error) {
 		return nil, nil
 	}
 
-	var result interface{}
+	var result any
 	if err := msgpack.Unmarshal(respBytes, &result); err != nil {
 		return nil, fmt.Errorf("decode error: %w", err)
 	}

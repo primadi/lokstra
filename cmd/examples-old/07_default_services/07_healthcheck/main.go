@@ -36,7 +36,7 @@ func main() {
 		}
 	} else {
 		// Fallback: create health service manually if not in config
-		healthService, err := regCtx.CreateService("health_check", "health-service", nil)
+		healthService, err := regCtx.CreateService("health_check", "health-service", true, nil)
 		if err != nil {
 			log.Fatalf("❌ Failed to create health service: %v", err)
 		}

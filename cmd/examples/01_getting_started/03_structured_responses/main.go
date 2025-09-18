@@ -47,7 +47,7 @@ func main() {
 	// Example 1: Ok() - Standard success response
 	// Test: curl http://localhost:8080/health
 	app.GET("/health", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"status":    "healthy",
 			"timestamp": "2024-01-01T10:00:00Z",
 			"version":   "1.0.0",
@@ -57,7 +57,7 @@ func main() {
 	// Example 2: OkList() - List response with metadata
 	// Test: curl http://localhost:8080/products
 	app.GET("/products", func(ctx *lokstra.Context) error {
-		meta := map[string]interface{}{
+		meta := map[string]any{
 			"total":    len(products),
 			"page":     1,
 			"per_page": 10,
@@ -133,7 +133,7 @@ func main() {
 		for i, product := range products {
 			if product.ID == params.ID {
 				products = append(products[:i], products[i+1:]...)
-				return ctx.Ok(map[string]interface{}{
+				return ctx.Ok(map[string]any{
 					"message": "Product deleted successfully",
 					"id":      params.ID,
 				})

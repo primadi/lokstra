@@ -26,18 +26,18 @@ func main() {
 	publicAPI := lokstra.NewApp(regCtx, "public-api", ":8080")
 
 	publicAPI.GET("/api/health", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"service": "Public API",
 			"status":  "healthy",
 		})
 	})
 
 	publicAPI.GET("/api/users", func(ctx *lokstra.Context) error {
-		users := []map[string]interface{}{
+		users := []map[string]any{
 			{"id": 1, "name": "John Doe", "email": "john@example.com"},
 			{"id": 2, "name": "Jane Smith", "email": "jane@example.com"},
 		}
-		return ctx.OkList(users, map[string]interface{}{
+		return ctx.OkList(users, map[string]any{
 			"total": len(users),
 			"page":  1,
 		})
@@ -49,7 +49,7 @@ func main() {
 	}
 
 	publicAPI.POST("/api/users", func(ctx *lokstra.Context, req *CreateUserRequest) error {
-		user := map[string]interface{}{
+		user := map[string]any{
 			"id":    3,
 			"name":  req.Name,
 			"email": req.Email,
@@ -65,14 +65,14 @@ func main() {
 	adminAPI := lokstra.NewApp(regCtx, "admin-api", ":8081")
 
 	adminAPI.GET("/admin/health", func(ctx *lokstra.Context) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"service": "Admin API",
 			"status":  "healthy",
 		})
 	})
 
 	adminAPI.GET("/admin/dashboard", func(ctx *lokstra.Context) error {
-		stats := map[string]interface{}{
+		stats := map[string]any{
 			"total_users":    150,
 			"active_users":   120,
 			"revenue":        25000.50,
@@ -83,7 +83,7 @@ func main() {
 
 	adminAPI.GET("/admin/users", func(ctx *lokstra.Context) error {
 		// Admin sees more detailed user information
-		users := []map[string]interface{}{
+		users := []map[string]any{
 			{
 				"id":         1,
 				"name":       "John Doe",
@@ -101,7 +101,7 @@ func main() {
 				"role":       "admin",
 			},
 		}
-		return ctx.OkList(users, map[string]interface{}{
+		return ctx.OkList(users, map[string]any{
 			"total":      len(users),
 			"page":       1,
 			"per_page":   10,
@@ -116,7 +116,7 @@ func main() {
 	}
 
 	adminAPI.POST("/admin/users/:id/ban", func(ctx *lokstra.Context, req *BanUserRequest) error {
-		return ctx.Ok(map[string]interface{}{
+		return ctx.Ok(map[string]any{
 			"message": "User banned successfully",
 			"user_id": req.UserID,
 			"reason":  req.Reason,
@@ -131,7 +131,7 @@ func main() {
 	metricsAPI := lokstra.NewApp(regCtx, "metrics-api", ":8082")
 
 	metricsAPI.GET("/metrics", func(ctx *lokstra.Context) error {
-		metrics := map[string]interface{}{
+		metrics := map[string]any{
 			"requests_per_second": 45.2,
 			"response_time_avg":   120,
 			"error_rate":          0.02,
@@ -143,23 +143,23 @@ func main() {
 	})
 
 	metricsAPI.GET("/metrics/detailed", func(ctx *lokstra.Context) error {
-		detailed := map[string]interface{}{
-			"http_requests": map[string]interface{}{
+		detailed := map[string]any{
+			"http_requests": map[string]any{
 				"total":   10540,
 				"success": 10330,
 				"errors":  210,
 			},
-			"endpoints": map[string]interface{}{
-				"/api/users": map[string]interface{}{
+			"endpoints": map[string]any{
+				"/api/users": map[string]any{
 					"requests": 5420,
 					"avg_time": 89,
 				},
-				"/api/health": map[string]interface{}{
+				"/api/health": map[string]any{
 					"requests": 3210,
 					"avg_time": 12,
 				},
 			},
-			"database": map[string]interface{}{
+			"database": map[string]any{
 				"connections_active": 8,
 				"connections_total":  25,
 				"query_time_avg":     45,

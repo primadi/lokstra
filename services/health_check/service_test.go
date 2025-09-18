@@ -244,19 +244,20 @@ func TestMemoryHealthChecker(t *testing.T) {
 }
 
 func TestDiskHealthChecker(t *testing.T) {
-	checker := DiskHealthChecker("/tmp", 80.0)
+	// Use current directory "." which should be accessible on all platforms
+	checker := DiskHealthChecker(".", 80.0)
 	check := checker(context.Background())
 
 	if check.Status != serviceapi.HealthStatusHealthy {
 		t.Errorf("Expected healthy status, got %s", check.Status)
 	}
 
-	if check.Details["path"] != "/tmp" {
-		t.Errorf("Expected path to be /tmp, got %v", check.Details["path"])
+	if check.Details["path"] != "." {
+		t.Errorf("Expected path to be ., got %v", check.Details["path"])
 	}
 
-	if check.Details["max_usage_percent"] != 80.0 {
-		t.Errorf("Expected max_usage_percent to be 80.0, got %v", check.Details["max_usage_percent"])
+	if check.Details["max_usage_percent"] != "80.00%" {
+		t.Errorf("Expected max_usage_percent to be 80.00%%, got %v", check.Details["max_usage_percent"])
 	}
 }
 
@@ -273,7 +274,19 @@ func (m *mockDbPool) Acquire(ctx context.Context, schema string) (serviceapi.DbC
 	return &mockDbConn{}, nil
 }
 
+func (m *mockDbPool) AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (serviceapi.DbConn, error) {
+	if m.shouldFail {
+		return nil, errors.New("mock database connection failed")
+	}
+	return &mockDbConn{}, nil
+}
+
 type mockDbConn struct{}
+
+// Ping implements serviceapi.DbConn.
+func (m *mockDbConn) Ping(context context.Context) error {
+	panic("unimplemented")
+}
 
 func (m *mockDbConn) Begin(ctx context.Context) (serviceapi.DbTx, error) { return nil, nil }
 func (m *mockDbConn) Transaction(ctx context.Context, fn func(tx serviceapi.DbExecutor) error) error {
