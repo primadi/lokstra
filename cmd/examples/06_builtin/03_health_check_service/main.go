@@ -67,8 +67,8 @@ func main() {
 
 	// Register routes with direct handler functions
 	app.GET("/health", func(ctx *lokstra.Context) error {
-		healthSvc, _ := serviceapi.GetService[serviceapi.HealthService](regCtx, "app-health")
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		healthSvc, _ := lokstra.GetService[serviceapi.HealthService](regCtx, "app-health")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		result := healthSvc.CheckHealthWithTimeout(10 * time.Second)
 
@@ -89,7 +89,7 @@ func main() {
 	})
 
 	app.GET("/health/ready", func(ctx *lokstra.Context) error {
-		healthSvc, _ := serviceapi.GetService[serviceapi.HealthService](regCtx, "app-health")
+		healthSvc, _ := lokstra.GetService[serviceapi.HealthService](regCtx, "app-health")
 
 		// For readiness, we only care about critical dependencies
 		criticalChecks := []string{"database", "redis"}
@@ -133,8 +133,8 @@ func main() {
 	})
 
 	app.GET("/health/detailed", func(ctx *lokstra.Context) error {
-		healthSvc, _ := serviceapi.GetService[serviceapi.HealthService](regCtx, "app-health")
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		healthSvc, _ := lokstra.GetService[serviceapi.HealthService](regCtx, "app-health")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		result := healthSvc.CheckHealthWithTimeout(15 * time.Second)
 
@@ -167,7 +167,7 @@ func main() {
 	})
 
 	app.GET("/health/summary", func(ctx *lokstra.Context) error {
-		healthSvc, _ := serviceapi.GetService[serviceapi.HealthService](regCtx, "app-health")
+		healthSvc, _ := lokstra.GetService[serviceapi.HealthService](regCtx, "app-health")
 
 		result := healthSvc.CheckHealthWithTimeout(5 * time.Second)
 
@@ -197,7 +197,7 @@ func main() {
 	})
 
 	app.GET("/health/check/:check", func(ctx *lokstra.Context) error {
-		healthSvc, _ := serviceapi.GetService[serviceapi.HealthService](regCtx, "app-health")
+		healthSvc, _ := lokstra.GetService[serviceapi.HealthService](regCtx, "app-health")
 
 		checkName := ctx.GetPathParam("check")
 		if checkName == "" {
@@ -245,8 +245,8 @@ func main() {
 
 // setupHealthChecks registers comprehensive health checks for various system components
 func setupHealthChecks(regCtx lokstra.RegistrationContext) {
-	healthSvc, _ := serviceapi.GetService[serviceapi.HealthService](regCtx, "app-health")
-	logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+	healthSvc, _ := lokstra.GetService[serviceapi.HealthService](regCtx, "app-health")
+	logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 	// 1. Database Health Check
 	healthSvc.RegisterCheck("database", func(ctx context.Context) serviceapi.HealthCheck {

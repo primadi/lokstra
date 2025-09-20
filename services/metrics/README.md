@@ -54,8 +54,9 @@ import (
 )
 
 func main() {
+    regCtx := lokstra.NewGlobalRegistrationContext()
     // Get metrics service
-    metricsService := serviceapi.GetService[serviceapi.Metrics]("metrics")
+    metricsService := lokstra.GetService[serviceapi.Metrics](regCtx, "metrics")
     
     // Increment a counter
     metricsService.IncCounter("http_requests_total", map[string]string{

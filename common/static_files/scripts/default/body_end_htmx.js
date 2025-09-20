@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var layoutMeta = document.querySelector('meta[name="ls-layout"]')
     var layoutName = layoutMeta ? layoutMeta.content : "base.html"
     evt.detail.headers["LS-Layout"] = layoutName
+    console.log("Injecting LS-Layout header:", layoutName)
   })
 
   // Handle layout changes by full page reload, if layout differs

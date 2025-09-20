@@ -38,7 +38,7 @@ func main() {
 	app.GET("/cache/:key", func(ctx *lokstra.Context) error {
 		key := ctx.GetPathParam("key")
 
-		redisService, err := serviceapi.GetService[serviceapi.Redis](regCtx, "basic-redis")
+		redisService, err := lokstra.GetService[serviceapi.Redis](regCtx, "basic-redis")
 		if err != nil {
 			return ctx.ErrorBadRequest("Redis service not available")
 		}
@@ -56,7 +56,7 @@ func main() {
 	app.POST("/cache/:key", func(ctx *lokstra.Context, req *CacheRequest) error {
 		key := ctx.GetPathParam("key")
 
-		redisService, err := serviceapi.GetService[serviceapi.Redis](regCtx, "basic-redis")
+		redisService, err := lokstra.GetService[serviceapi.Redis](regCtx, "basic-redis")
 		if err != nil {
 			return ctx.ErrorBadRequest("Redis service not available")
 		}

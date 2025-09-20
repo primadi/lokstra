@@ -28,7 +28,7 @@ func SetDefaultMetricsService(metrics serviceapi.Metrics) {
 }
 
 func SetDefaultDbPool(regCtx registration.Context, name string) error {
-	svc, err := serviceapi.GetService[serviceapi.DbPool](regCtx, name)
+	svc, err := registration.GetService[serviceapi.DbPool](regCtx, name)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func SetDefaultDbPool(regCtx registration.Context, name string) error {
 }
 
 func SetDefaultLogger(regCtx registration.Context, name string) error {
-	svc, err := serviceapi.GetService[serviceapi.Logger](regCtx, name)
+	svc, err := registration.GetService[serviceapi.Logger](regCtx, name)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func SetDefaultLogger(regCtx registration.Context, name string) error {
 }
 
 func SetDefaultI18n(regCtx registration.Context, name string) error {
-	svc, err := serviceapi.GetService[serviceapi.I18n](regCtx, name)
+	svc, err := registration.GetService[serviceapi.I18n](regCtx, name)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func SetDefaultI18n(regCtx registration.Context, name string) error {
 }
 
 func SetDefaultMetrics(regCtx registration.Context, name string) error {
-	svc, err := serviceapi.GetService[serviceapi.Metrics](regCtx, name)
+	svc, err := registration.GetService[serviceapi.Metrics](regCtx, name)
 	if err != nil {
 		return err
 	}

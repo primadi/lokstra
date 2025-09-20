@@ -72,7 +72,7 @@ func main() {
 
 	// Home endpoint - basic logging
 	app.GET("/", func(ctx *lokstra.Context) error {
-		logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "basic-logger")
+		logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "basic-logger")
 		if err != nil {
 			return ctx.ErrorInternal("Logger service unavailable")
 		}
@@ -289,7 +289,7 @@ type LogRequest struct {
 //    - Consider performance implications
 //
 // 5. Service Integration:
-//    - Type-safe retrieval with serviceapi.GetService[serviceapi.Logger]
+//    - Type-safe retrieval with lokstra.GetService[serviceapi.Logger]
 //    - Multiple logger instances with different configs
 //    - Service lifecycle managed by framework
 //    - Available across all handlers

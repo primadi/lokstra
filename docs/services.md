@@ -120,7 +120,7 @@ Get services with compile-time type checking:
 
 ```go
 // Using the serviceapi helper
-dbPool, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "db.main")
+dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "db.main")
 if err != nil {
     return err
 }
@@ -188,7 +188,7 @@ config := map[string]any{
 dbPool, err := regCtx.CreateService("lokstra.dbpool_pg", "db.main", false, config)
 
 // Use the service
-db, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "db.main")
+db, err := lokstra.GetService[serviceapi.DbPool](regCtx, "db.main")
 conn, err := db.Acquire(ctx, "public")
 defer conn.Release()
 ```
@@ -213,7 +213,7 @@ config := map[string]any{
 logger, err := regCtx.CreateService("lokstra.logger", "app-logger", false, config)
 
 // Use the service
-log, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+log, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 log.Info("Application started")
 log.Error("Something went wrong", "error", err)
 ```
@@ -231,7 +231,7 @@ redis, err := regCtx.CreateService("lokstra.redis", "cache", false,
     "redis://localhost:6379/0")
 
 // Use the service
-cache, err := serviceapi.GetService[serviceapi.Redis](regCtx, "cache")
+cache, err := lokstra.GetService[serviceapi.Redis](regCtx, "cache")
 err = cache.Set(ctx, "key", "value", time.Hour)
 value, err := cache.Get(ctx, "key")
 ```
@@ -251,7 +251,7 @@ redisStore, err := regCtx.CreateService("lokstra.kvstore_redis", "user-cache", f
     "redis://localhost:6379/1")
 
 // Use the services
-kv, err := serviceapi.GetService[serviceapi.KvStore](regCtx, "session-store")
+kv, err := lokstra.GetService[serviceapi.KvStore](regCtx, "session-store")
 err = kv.Set(ctx, "session:123", userData, time.Hour)
 data, err := kv.Get(ctx, "session:123")
 ```
@@ -268,7 +268,7 @@ regCtx.RegisterModule(metrics.GetModule)
 metrics, err := regCtx.CreateService("lokstra.metrics", "app-metrics", false, nil)
 
 // Use the service
-m, err := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+m, err := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
 m.Counter("requests_total").Inc()
 m.Histogram("request_duration").Observe(duration.Seconds())
 ```
@@ -285,7 +285,7 @@ regCtx.RegisterModule(health_check.GetModule)
 health, err := regCtx.CreateService("lokstra.health", "app-health", false, nil)
 
 // Use the service
-hc, err := serviceapi.GetService[serviceapi.HealthCheck](regCtx, "app-health")
+hc, err := lokstra.GetService[serviceapi.HealthCheck](regCtx, "app-health")
 hc.AddCheck("database", func(ctx context.Context) error {
     return dbPool.Ping(ctx)
 })
@@ -426,13 +426,13 @@ Access services in your HTTP handlers:
 ```go
 func createUserHandler(ctx *lokstra.Context) error {
     // Get database service
-    dbPool, err := serviceapi.GetService[serviceapi.DbPool](ctx.RegistrationContext, "db.main")
+    dbPool, err := lokstra.GetService[serviceapi.DbPool](ctx.RegistrationContext, "db.main")
     if err != nil {
         return ctx.ErrorInternal("Database unavailable")
     }
     
     // Get logger service
-    logger, err := serviceapi.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
+    logger, err := lokstra.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
     if err != nil {
         return ctx.ErrorInternal("Logger unavailable")
     }
@@ -464,17 +464,17 @@ type UserHandler struct {
 }
 
 func NewUserHandler(regCtx registration.Context) (*UserHandler, error) {
-    dbPool, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "db.main")
+    dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "db.main")
     if err != nil {
         return nil, err
     }
     
-    logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "logger")
+    logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "logger")
     if err != nil {
         return nil, err
     }
     
-    cache, err := serviceapi.GetService[serviceapi.KvStore](regCtx, "user-cache")
+    cache, err := lokstra.GetService[serviceapi.KvStore](regCtx, "user-cache")
     if err != nil {
         return nil, err
     }
@@ -550,7 +550,7 @@ flow.SetDefaultLogger(regCtx, "logger")
 flow.SetDefaultMetrics(regCtx, "metrics")
 
 // Or set directly
-dbPool, _ := serviceapi.GetService[serviceapi.DbPool](regCtx, "db.main")
+dbPool, _ := lokstra.GetService[serviceapi.DbPool](regCtx, "db.main")
 flow.SetDefaultDbPoolService(dbPool)
 ```
 
@@ -668,7 +668,7 @@ Handle service errors gracefully:
 
 ```go
 func getDBPool(regCtx registration.Context) (serviceapi.DbPool, error) {
-    dbPool, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "db.main")
+    dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "db.main")
     if err != nil {
         // Fallback to default or return error
         return nil, fmt.Errorf("database service unavailable: %w", err)

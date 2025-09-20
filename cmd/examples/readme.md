@@ -116,7 +116,30 @@ Advanced usage patterns and customization.
 
 ---
 
-## 🏢 08. Real-World Examples (`08_real_world/`)
+## 🏢 08. Scalable Deployment (`08_scalable_deployment/`)
+
+Demonstrates Lokstra's deployment flexibility - same codebase deployed as monolith or microservices.
+
+**Complete Example**: Backend system with 3 applications:
+- **User API** (`/api/users`) - User management endpoints
+- **Order API** (`/api/orders`) - Order management endpoints  
+- **Dashboard** (`/dashboard`) - HTMX admin interface
+
+**Deployment Strategies**:
+- **Monolith**: All apps in single container (port 8080)
+- **Microservices**: Each app in separate container with load balancer
+
+**Key Files**:
+- `main.go` - Single binary entry point
+- `monolith-config.yaml` - All apps in one deployment
+- `*-service-config.yaml` - Individual microservice configs
+- `docker-compose.monolith.yml` - Single container deployment
+- `docker-compose.microservices.yml` - Multi-container deployment
+- `nginx.conf` - Load balancer configuration
+
+**Key Learning**: One codebase, multiple deployment strategies, configuration-driven architecture, scalability patterns.
+
+## 🏢 09. Real-World Examples (`09_real_world/`)
 
 Complete applications demonstrating production patterns.
 

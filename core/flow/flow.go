@@ -73,7 +73,7 @@ func (f *Flow[T]) SetDbPoolService(dbPool serviceapi.DbPool) *Flow[T] {
 func (f *Flow[T]) SetDbPool(regCtx registration.Context, name string) *Flow[T] {
 	var err error
 
-	f.DbPool, err = serviceapi.GetService[serviceapi.DbPool](regCtx, name)
+	f.DbPool, err = registration.GetService[serviceapi.DbPool](regCtx, name)
 	if err != nil {
 		panic(err)
 	}

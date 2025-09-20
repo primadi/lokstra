@@ -2,6 +2,8 @@ package static_files
 
 import (
 	"embed"
+	"io"
+	"io/fs"
 	"strings"
 )
 
@@ -25,6 +27,12 @@ type ScriptInjection struct {
 //go:embed scripts
 var emScript embed.FS
 
+var fsScript fs.FS
+
+func init() {
+	fsScript, _ = fs.Sub(emScript, "scripts")
+}
+
 func getInjectLocation(fileName string) InjectLocation {
 	switch {
 	case strings.HasPrefix(fileName, "body_end"):
@@ -38,30 +46,39 @@ func getInjectLocation(fileName string) InjectLocation {
 	}
 }
 
+// Creates a new empty script injection
 func NewScriptInjection() *ScriptInjection {
 	return &ScriptInjection{
 		LayoutScripts: []*ScriptData{},
 	}
 }
 
+// Adds all scripts from the embedded "scripts/<name>" directory
 func (si *ScriptInjection) AddNamedScriptInjection(name string) *ScriptInjection {
-	namedPath := "scripts/" + name
-	files, _ := emScript.ReadDir(namedPath)
+	return si.AddCustomNamedScriptInjection(fsScript, name)
+}
+
+// Adds all scripts from the provided fs.FS at "<name>" directory
+func (si *ScriptInjection) AddCustomNamedScriptInjection(fsScript fs.FS, name string) *ScriptInjection {
+	files, _ := fs.ReadDir(fsScript, name)
 	for _, file := range files {
 		fName := file.Name()
 		if file.IsDir() || !strings.HasSuffix(fName, ".js") {
 			continue
 		}
-		if content, err := emScript.ReadFile(namedPath + "/" + fName); err == nil {
-			si.LayoutScripts = append(si.LayoutScripts, &ScriptData{
-				Location: getInjectLocation(fName),
-				Script:   string(content),
-			})
+		if fsFile, err := fsScript.Open(name + "/" + fName); err == nil {
+			if content, err := io.ReadAll(fsFile); err == nil {
+				si.LayoutScripts = append(si.LayoutScripts, &ScriptData{
+					Location: getInjectLocation(fName),
+					Script:   string(content),
+				})
+			}
 		}
 	}
 	return si
 }
 
+// Creates a default script injection with optional animation scripts
 func NewDefaultScriptInjection(enableAnimation bool) *ScriptInjection {
 	if enableAnimation {
 		return NewScriptInjection().AddNamedScriptInjection("default").
@@ -70,6 +87,7 @@ func NewDefaultScriptInjection(enableAnimation bool) *ScriptInjection {
 	return NewScriptInjection().AddNamedScriptInjection("default")
 }
 
+// Adds a custom script to be injected at the end of the body
 func (si *ScriptInjection) AddBodyEndScript(script string) *ScriptInjection {
 	si.LayoutScripts = append(si.LayoutScripts, &ScriptData{
 		Location: InjectLocationBodyEnd,
@@ -78,6 +96,7 @@ func (si *ScriptInjection) AddBodyEndScript(script string) *ScriptInjection {
 	return si
 }
 
+// Adds a custom script to be injected at the start of the head
 func (si *ScriptInjection) AddHeadStartScript(script string) *ScriptInjection {
 	si.LayoutScripts = append(si.LayoutScripts, &ScriptData{
 		Location: InjectLocationHeadStart,
@@ -86,6 +105,7 @@ func (si *ScriptInjection) AddHeadStartScript(script string) *ScriptInjection {
 	return si
 }
 
+// Adds a custom script to be injected at the end of the head
 func (si *ScriptInjection) AddHeadEndScript(script string) *ScriptInjection {
 	si.LayoutScripts = append(si.LayoutScripts, &ScriptData{
 		Location: InjectLocationHeadEnd,
@@ -94,6 +114,7 @@ func (si *ScriptInjection) AddHeadEndScript(script string) *ScriptInjection {
 	return si
 }
 
+// Loads the injection scripts into the provided layout content
 func (si *ScriptInjection) LoadInjectionScripts(strLayoutContent string) string {
 	var headStartInjection, headEndInjection, bodyEndInjection string
 

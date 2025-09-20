@@ -17,7 +17,7 @@
                 <ul>
                     <li>
                         <a href="/" 
-                           hx-get="/page-data/" 
+                           hx-get="/" 
                            hx-target="main" 
                            hx-push-url="true"
                            hx-indicator=".htmx-indicator"
@@ -27,7 +27,7 @@
                     </li>
                     <li>
                         <a href="/about" 
-                           hx-get="/page-data/about" 
+                           hx-get="/about" 
                            hx-target="main" 
                            hx-push-url="true"
                            hx-indicator=".htmx-indicator"
@@ -37,12 +37,32 @@
                     </li>
                     <li>
                         <a href="/products" 
-                           hx-get="/page-data/products" 
+                           hx-get="/products" 
                            hx-target="main" 
                            hx-push-url="true"
                            hx-indicator=".htmx-indicator"
                            class="nav-link">
                             Products
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/stats" 
+                           hx-get="/stats" 
+                           hx-target="main" 
+                           hx-push-url="true"
+                           hx-indicator=".htmx-indicator"
+                           class="nav-link">
+                            Stats
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/featured-content" 
+                           hx-get="/featured-content" 
+                           hx-target="main" 
+                           hx-push-url="true"
+                           hx-indicator=".htmx-indicator"
+                           class="nav-link">
+                            Featured
                         </a>
                     </li>
                 </ul>

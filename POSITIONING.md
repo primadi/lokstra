@@ -33,7 +33,7 @@ Lokstra is not a platform, not a service mesh, and not a low-level network proxy
 | APM or Tracing system | Does not inject distributed tracing (yet)                      |
 | Operator framework    | No K8s controller/operator support at runtime (yet)            |
 | RPC framework         | Not a gRPC or internal RPC tool (planned as `lokstra-call`)    |
-| Web framework with UI | Lokstra is backend-only; frontend handled separately           |
+| Full-stack UI framework | Lokstra focuses on the backend. It provides helpers for server-driven UI (HTMX, layout, pages renderer), but it is not a replacement for React, Vue, or other rich frontend frameworks.           |
 | Deployment platform  | Deployment modes achieved via Docker strategies, not framework |
 
 ---
@@ -111,4 +111,4 @@ Lokstra is **not ideal** for:
 
 > Lokstra is the Rails-inspired framework for Go backend services. It combines Go's simplicity with structured conventions, smart request binding, HTMX integration, and type-safe dependency injection — without sacrificing control or performance.
 
-Tagline: **Simple. Smart. Structured.**
+Tagline: **Simple. Scalable. Structured.**

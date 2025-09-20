@@ -1,0 +1,94 @@
+{{if .results}}
+<div class="search-results-list">
+    <div class="search-header">
+        <h4>Search Results for "{{.query}}"</h4>
+        <span class="result-count">{{.count}} results found</span>
+    </div>
+    
+    {{range .results}}
+    <div class="search-result-item">
+        <h5><a href="{{.url}}">{{.title}}</a></h5>
+        <p>{{.description}}</p>
+        <small class="result-url">{{.url}}</small>
+    </div>
+    {{end}}
+</div>
+{{else}}
+<div class="search-empty">
+    {{if .query}}
+    <p>No results found for "{{.query}}"</p>
+    <p><small>Try different keywords or check your spelling</small></p>
+    {{else}}
+    <p>{{.message}}</p>
+    {{end}}
+</div>
+{{end}}
+
+<style>
+.search-results-list {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.search-header {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-header h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.result-count {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.search-result-item {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.search-result-item a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.search-result-item a:hover {
+    text-decoration: underline;
+}
+
+.search-result-item p {
+    margin: 0 0 0.5rem 0;
+    color: #6c757d;
+}
+
+.result-url {
+    color: #28a745;
+    font-size: 0.75rem;
+}
+
+.search-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+</style>

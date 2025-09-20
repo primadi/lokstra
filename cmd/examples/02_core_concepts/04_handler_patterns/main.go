@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/primadi/lokstra"
@@ -230,7 +231,7 @@ func responsePatternHandler(ctx *lokstra.Context) error {
 		return ctx.OkUpdated(updatedResource)
 
 	case "html":
-		return ctx.HTML("<h1>HTML Response</h1><p>This is HTML content</p>")
+		return ctx.HTML(http.StatusOK, "<h1>HTML Response</h1><p>This is HTML content</p>")
 
 	case "raw":
 		return ctx.WriteRaw("text/plain", 200, []byte("Raw text response"))

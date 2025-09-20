@@ -138,6 +138,6 @@ func (ctx *Context) GetRawResponseBody() ([]byte, error) {
 }
 
 // HTMX renders HTMX content with the specified status code
-func (ctx *Context) HTMX(html string) error {
-	return ctx.Response.WithHeader("Vary", "HX-Request").HTML(html)
+func (ctx *Context) HTMX(httpStatus int, html string) error {
+	return ctx.Response.WithHeader("Vary", "HX-Request").HTML(httpStatus, html)
 }

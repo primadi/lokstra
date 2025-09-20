@@ -1,0 +1,72 @@
+{{if .activities}}
+<div class="activity-list">
+    {{range .activities}}
+    <div class="activity-item">
+        <div class="activity-icon">{{.icon}}</div>
+        <div class="activity-content">
+            <div class="activity-message">{{.message}}</div>
+            <div class="activity-timestamp">{{.timestamp}}</div>
+        </div>
+    </div>
+    {{end}}
+</div>
+<div class="activity-summary">
+    <p><small>{{.total}} activities • Last updated: {{.last_updated}}</small></p>
+</div>
+{{else}}
+<div class="activity-empty">
+    <p>No recent activity found</p>
+</div>
+{{end}}
+
+<style>
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.activity-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-message {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.activity-timestamp {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.activity-summary {
+    margin-top: 1rem;
+    text-align: center;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.activity-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+</style>

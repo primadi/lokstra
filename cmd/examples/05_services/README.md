@@ -15,7 +15,7 @@ This section demonstrates Lokstra's powerful service system for dependency injec
 **Key Concepts:**
 - `RegisterServiceFactory()` for factory registration
 - `CreateService()` for instance creation
-- `serviceapi.GetService[T]()` for type-safe retrieval
+- `lokstra.GetService[T]()` for type-safe retrieval
 - Service configuration and lifecycle
 - Custom service interfaces
 
@@ -52,7 +52,7 @@ Services typically implement `GetSetting(key string) any` for configuration acce
 
 ### 4. **Service Retrieval**
 - **Basic Retrieval**: `GetService(serviceName)`
-- **Type-Safe Retrieval**: `serviceapi.GetService[T](ctx, serviceName)`
+- **Type-Safe Retrieval**: `lokstra.GetService[T](ctx, serviceName)`
 - **Type Assertions**: For custom service types
 
 ### 5. **Service Lifecycle**
@@ -76,7 +76,7 @@ regCtx.RegisterModule(logger.GetModule)
 regCtx.CreateService("lokstra.logger", "app-logger", false, "info")
 
 // Use type-safe retrieval
-logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 ```
 
 ### Other Built-in Services
@@ -171,7 +171,7 @@ regCtx.RegisterServiceFactory("counter", func(config any) (service.Service, erro
 ```go
 func NewDatabaseService(config any) (service.Service, error) {
     // Get dependent services
-    logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+    logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
     if err != nil {
         return nil, err
     }

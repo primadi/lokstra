@@ -21,12 +21,12 @@ func (r *Response) Ok(data any) error {
 }
 
 // return JSON response as raw data
-func (r *Response) JSON(data any) error {
+func (r *Response) JSON(httpStatus int, data any) error {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("JSON: failed to marshal data: %w", err)
 	}
-	return r.WriteRaw("application/json; charset=utf-8", http.StatusOK, b)
+	return r.WriteRaw("application/json; charset=utf-8", httpStatus, b)
 }
 
 // OkCreated sends a structured response indicating successful creation
@@ -154,12 +154,7 @@ func (r *Response) WriteRaw(contentType string, status int, data []byte) error {
 	return nil
 }
 
-// HTML renders HTML content with 200 status
-func (r *Response) HTML(html string) error {
-	return r.WriteRaw("text/html; charset=utf-8", http.StatusOK, []byte(html))
-}
-
-// ErrorHTML renders HTML content with error status and message
-func (r *Response) ErrorHTML(status int, html string) error {
-	return r.WriteRaw("text/html; charset=utf-8", status, []byte(html))
+// HTML renders HTML content with status
+func (r *Response) HTML(httpStatus int, html string) error {
+	return r.WriteRaw("text/html; charset=utf-8", httpStatus, []byte(html))
 }

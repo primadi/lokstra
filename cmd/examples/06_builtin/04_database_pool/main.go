@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/app"
@@ -74,12 +75,12 @@ func registerRoutes(app *app.App) {
 }
 
 func registerHandlers(regCtx registration.Context) {
-	log, err := serviceapi.GetService[serviceapi.Logger](regCtx, "logger")
+	log, err := lokstra.GetService[serviceapi.Logger](regCtx, "logger")
 	if err != nil {
 		panic("Logger service not available")
 	}
 
-	dbService, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "dbMain")
+	dbService, err := lokstra.GetService[serviceapi.DbPool](regCtx, "dbMain")
 	if err != nil {
 		log.Errorf("Database service not available: %v", err)
 	}
@@ -100,14 +101,14 @@ func registerHandlers(regCtx registration.Context) {
 		err = conn.Ping(ctx)
 		if err != nil {
 			log.Errorf("Database ping failed: %v", err)
-			return ctx.JSON(map[string]any{
+			return ctx.JSON(http.StatusOK, map[string]any{
 				"status":   "unhealthy",
 				"database": "ping failed",
 				"error":    err.Error(),
 			})
 		}
 
-		return ctx.JSON(map[string]any{
+		return ctx.JSON(http.StatusOK, map[string]any{
 			"status":   "healthy",
 			"database": "connected",
 			"message":  "All systems operational",
@@ -139,7 +140,7 @@ func registerHandlers(regCtx registration.Context) {
 			},
 		}
 
-		return ctx.JSON(map[string]any{
+		return ctx.JSON(http.StatusOK, map[string]any{
 			"users": users,
 			"count": len(users),
 		})
@@ -176,7 +177,7 @@ func registerHandlers(regCtx registration.Context) {
 				"email": userReq.Email,
 			}
 
-			return ctx.JSON(map[string]any{
+			return ctx.JSON(http.StatusOK, map[string]any{
 				"message": "User created successfully",
 				"user":    createdUser,
 			})
@@ -201,7 +202,7 @@ func registerHandlers(regCtx registration.Context) {
 			"email": "user@example.com",
 		}
 
-		return ctx.JSON(map[string]any{
+		return ctx.JSON(http.StatusOK, map[string]any{
 			"user": user,
 		})
 	})
@@ -232,7 +233,7 @@ func registerHandlers(regCtx registration.Context) {
 				"email": updateReq.Email,
 			}
 
-			return ctx.JSON(map[string]any{
+			return ctx.JSON(http.StatusOK, map[string]any{
 				"message": "User updated successfully",
 				"user":    updatedUser,
 			})
@@ -250,7 +251,7 @@ func registerHandlers(regCtx registration.Context) {
 
 		log.Infof("Deleting user with ID: %s", userID)
 
-		return ctx.JSON(map[string]any{
+		return ctx.JSON(http.StatusOK, map[string]any{
 			"message": "User deleted successfully",
 			"id":      userID,
 		})
@@ -267,7 +268,7 @@ func registerHandlers(regCtx registration.Context) {
 				"note":               "Statistics would come from actual pool implementation",
 			}
 
-			return ctx.JSON(map[string]any{
+			return ctx.JSON(http.StatusOK, map[string]any{
 				"database_stats": stats,
 			})
 		})

@@ -44,7 +44,7 @@ func NewGlobalRegistrationContext() RegistrationContext {
 	defaults.RegisterAll(ctx)
 
 	// get default logger service
-	Logger, _ = serviceapi.GetService[serviceapi.Logger](ctx, "logger")
+	Logger, _ = registration.GetService[serviceapi.Logger](ctx, "logger")
 
 	return ctx
 }
@@ -100,7 +100,7 @@ func loadSettingFromConfig(regCtx RegistrationContext, svr *server.Server, cfg *
 	}
 
 	// change Logger if exists on server settings
-	svc, err := serviceapi.GetService[serviceapi.Logger](regCtx, "logger")
+	svc, err := registration.GetService[serviceapi.Logger](regCtx, "logger")
 	if err == nil {
 		Logger = svc
 	}
@@ -180,27 +180,4 @@ func LoadConfigDir(dir string) (*config.LokstraConfig, error) {
 // It returns a pointer to the LokstraConfig and an error if any.
 func LoadConfigFile(filePath string) (*config.LokstraConfig, error) {
 	return config.LoadConfigFile(filePath)
-}
-
-// Retrieves a service by name from service registry.
-//
-// Returns error:
-//   - nil on success
-//   - ErrServiceNotAllowed if accessing the service is not allowed.
-//   - ErrServiceNotFound if the service does not exist.
-//   - ErrServiceTypeInvalid if the service is not of the expected type.
-func GetService[T service.Service](regCtx RegistrationContext, serviceName string) (T, error) {
-	return registration.GetService[T](regCtx, serviceName)
-}
-
-// Retrieves a service by name if it exists, otherwise creates it using the specified factory
-// and configuration, and insert into service registry.
-//
-// Returns error:
-//   - nil on success
-//   - ErrServiceNotAllowed if accessing the service is not allowed.
-//   - ErrServiceFactoryNotFound if the specified factory does not exist
-func GetOrCreateService[T any](regCtx RegistrationContext,
-	serviceName string, factoryName string, config ...any) (T, error) {
-	return registration.GetOrCreateService[T](regCtx, serviceName, factoryName, config...)
 }

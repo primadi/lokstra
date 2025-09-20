@@ -126,7 +126,7 @@ func registerCustomMiddleware(regCtx lokstra.RegistrationContext) {
 func registerHandlers(regCtx lokstra.RegistrationContext) {
 	// Home handler
 	regCtx.RegisterHandler("home", func(ctx *lokstra.Context) error {
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Infof("Home endpoint accessed from YAML configuration")
 
 		return ctx.Ok(map[string]any{
@@ -150,7 +150,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// Health check handler
 	regCtx.RegisterHandler("health_check", func(ctx *lokstra.Context) error {
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Debugf("Health check performed")
 
 		return ctx.Ok(map[string]any{
@@ -162,7 +162,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// Configuration info handler
 	regCtx.RegisterHandler("config_info", func(ctx *lokstra.Context) error {
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "debug-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "debug-logger")
 		logger.Debugf("Configuration info requested")
 
 		return ctx.Ok(map[string]any{
@@ -191,7 +191,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// Data handler with smart binding
 	regCtx.RegisterHandler("data_handler", func(ctx *lokstra.Context, req *DataRequest) error {
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Infof("Data received: type=%s, from YAML config route", req.Type)
 
 		return ctx.Ok(map[string]any{
@@ -207,7 +207,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// Protected profile handler
 	regCtx.RegisterHandler("protected_profile", func(ctx *lokstra.Context) error {
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Infof("Protected profile accessed with YAML auth")
 
 		return ctx.Ok(map[string]any{

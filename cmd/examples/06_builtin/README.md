@@ -157,10 +157,10 @@ dbConfig := map[string]any{
 ### Type-Safe Service Retrieval
 ```go
 // Built-in service types
-logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
-dbPool, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "main-db")
-redis, err := serviceapi.GetService[serviceapi.Redis](regCtx, "cache-redis")
-kvStore, err := serviceapi.GetService[serviceapi.KvStore](regCtx, "memory-store")
+logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
+dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "main-db")
+redis, err := lokstra.GetService[serviceapi.Redis](regCtx, "cache-redis")
+kvStore, err := lokstra.GetService[serviceapi.KvStore](regCtx, "memory-store")
 ```
 
 ### Service Dependency Injection
@@ -168,12 +168,12 @@ Services can depend on other services:
 ```go
 func NewCustomService(regCtx *lokstra.RegistrationContext) (service.Service, error) {
     // Get dependent services
-    logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+    logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
     if err != nil {
         return nil, err
     }
     
-    dbPool, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "main-db")
+    dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "main-db")
     if err != nil {
         return nil, err
     }
@@ -189,12 +189,12 @@ func NewCustomService(regCtx *lokstra.RegistrationContext) (service.Service, err
 Use services in HTTP handlers:
 ```go
 app.GET("/users/:id", func(ctx *lokstra.Context) error {
-    logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+    logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
     if err != nil {
         return ctx.ErrorInternal("Logger unavailable")
     }
     
-    dbPool, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "main-db")
+    dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "main-db")
     if err != nil {
         return ctx.ErrorInternal("Database unavailable")
     }
@@ -254,11 +254,11 @@ func validateLoggerConfig(config map[string]any) error {
 ```go
 func checkServiceHealth(regCtx *lokstra.RegistrationContext) error {
     // Check critical services
-    if _, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger"); err != nil {
+    if _, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger"); err != nil {
         return fmt.Errorf("logger service unavailable: %w", err)
     }
     
-    if _, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "main-db"); err != nil {
+    if _, err := lokstra.GetService[serviceapi.DbPool](regCtx, "main-db"); err != nil {
         return fmt.Errorf("database service unavailable: %w", err)
     }
     
@@ -274,7 +274,7 @@ app.GET("/status", func(ctx *lokstra.Context) error {
     }
     
     // Check optional services gracefully
-    if logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger"); err == nil {
+    if logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger"); err == nil {
         status["logger"] = "available"
         logger.Debugf("Status check performed")
     } else {
@@ -332,8 +332,8 @@ for _, svc := range services {
 ### Database with Logging
 ```go
 app.POST("/users", func(ctx *lokstra.Context, req *CreateUserRequest) error {
-    logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
-    dbPool, _ := serviceapi.GetService[serviceapi.DbPool](regCtx, "main-db")
+    logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
+    dbPool, _ := lokstra.GetService[serviceapi.DbPool](regCtx, "main-db")
     
     logger.Infof("Creating user: %s", req.Email)
     
@@ -351,8 +351,8 @@ app.POST("/users", func(ctx *lokstra.Context, req *CreateUserRequest) error {
 ### Caching with Redis
 ```go
 app.GET("/users/:id", func(ctx *lokstra.Context) error {
-    redis, _ := serviceapi.GetService[serviceapi.Redis](regCtx, "cache-redis")
-    logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+    redis, _ := lokstra.GetService[serviceapi.Redis](regCtx, "cache-redis")
+    logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
     
     userID := ctx.GetPathParam("id")
     cacheKey := fmt.Sprintf("user:%s", userID)

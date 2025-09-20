@@ -29,6 +29,7 @@ func New(sources ...fs.FS) *StaticFiles {
 	}
 }
 
+// Handler returns a request.HandlerFunc that serves files from the configured sources.
 func (sf *StaticFiles) Handler(spa bool) request.HandlerFunc {
 	return func(ctx *request.Context) error {
 		sf.RawHandler(false).ServeHTTP(ctx.Writer, ctx.Request)
@@ -49,6 +50,7 @@ func openFileAndStats(s fs.FS, path string) (fs.File, fs.FileInfo, error) {
 	return f, stat, nil
 }
 
+// RawHandler returns an http.Handler that serves files from the configured sources.
 func (sf *StaticFiles) RawHandler(spa bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -103,6 +105,7 @@ func (sf *StaticFiles) RawHandler(spa bool) http.Handler {
 	})
 }
 
+// ReadFile reads a file from the first source that has it available
 func (sf *StaticFiles) ReadFile(file string) ([]byte, error) {
 	var lastErr error
 	for _, source := range sf.Sources {
@@ -115,6 +118,7 @@ func (sf *StaticFiles) ReadFile(file string) ([]byte, error) {
 	return nil, fmt.Errorf("file %s not found in any source: %w", file, lastErr)
 }
 
+// Open File from the first source that has it available
 func (sf *StaticFiles) Open(file string) (fs.File, error) {
 	var lastErr error
 	for _, source := range sf.Sources {
@@ -127,16 +131,19 @@ func (sf *StaticFiles) Open(file string) (fs.File, error) {
 	return nil, fmt.Errorf("file %s not found in any source: %w", file, lastErr)
 }
 
+// Adds a source from local directory
 func (sf *StaticFiles) WithSourceDir(dir string) *StaticFiles {
 	sf.Sources = append(sf.Sources, os.DirFS(dir))
 	return sf
 }
 
+// Adds a source from fs.FS
 func (sf *StaticFiles) WithSourceFS(fs fs.FS) *StaticFiles {
 	sf.Sources = append(sf.Sources, fs)
 	return sf
 }
 
+// Adds a source from embedded FS at subFS path
 func (sf *StaticFiles) WithEmbedFS(fsys embed.FS, subFS string) *StaticFiles {
 	fs, err := fs.Sub(fsys, subFS)
 	if err != nil {
@@ -144,6 +151,16 @@ func (sf *StaticFiles) WithEmbedFS(fsys embed.FS, subFS string) *StaticFiles {
 	}
 	sf.Sources = append(sf.Sources, fs)
 	return sf
+}
+
+// Helper to create StaticFiles with embedded FS
+func EmbedFS(fsys embed.FS, subFS string) *StaticFiles {
+	return New().WithEmbedFS(fsys, subFS)
+}
+
+// Helper to create StaticFiles with source directory
+func DirFS(dir string) *StaticFiles {
+	return New().WithSourceDir(dir)
 }
 
 // regex to detect layout directive in HTML page comments

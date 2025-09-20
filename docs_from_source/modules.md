@@ -256,7 +256,7 @@ Inside the module you can read settings via `regCtx.GetSetting("sample_rate")` (
 ```go
 ctx := registration.NewGlobalContext()
 defaults.RegisterAll(ctx)
-Logger, _ = serviceapi.GetService[serviceapi.Logger](ctx, "logger")
+Logger, _ = lokstra.GetService[serviceapi.Logger](ctx, "logger")
 ```
 So you start with a registry that already has common middleware modules registered (CORS, recovery, gzip, body_limit, request_logger, slow_request_logger) and default HTTP listener/router factories.
 

@@ -61,7 +61,7 @@ type Metrics interface {
 ### Example Usage
 ```go
 // Get metrics service
-metrics := serviceapi.GetService[serviceapi.Metrics]("metrics")
+metrics := lokstra.GetService[serviceapi.Metrics]("metrics")
 
 // Track requests
 metrics.IncCounter("http_requests_total", map[string]string{

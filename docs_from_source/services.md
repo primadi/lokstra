@@ -248,7 +248,7 @@ inst3, err := reg.GetOrCreateService("factoryName", "svc.name", param1, param2) 
 **Typed retrieval**:
 ```go
 // Convert from 'any' safely into a known interface/type
-listener, err := serviceapi.GetService[serviceapi.HttpListener](reg, "listener.main")
+listener, err := lokstra.GetService[serviceapi.HttpListener](reg, "listener.main")
 ```
 
 **From config** (string name or map field → resolves to a typed service):
@@ -365,6 +365,6 @@ The registration context will automatically detect services implementing `Shutdo
 - Prefer **factories** for all services so they can be created from YAML or code uniformly.
 - Keep **service names** unique and descriptive (e.g., `db.main`, `redis.cache`, `listener.admin`).
 - When exposing an engine-like service (listener/router), follow the **prefix** conventions for discoverability.
-- Use `serviceapi.GetService[T]` for **type safety** at call sites.
+- Use `lokstra.GetService[T]` for **type safety** at call sites.
 - When reading service references from mixed config values, use `registration.GetServiceFromConfig[T]`.
 - For RPC services, pass either a **service name** or a concrete instance to `Router.MountRpcService`; when using a name, the router will resolve to `service.Service` at build time and mount an appropriate `RpcServer`.

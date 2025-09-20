@@ -76,7 +76,7 @@ func main() {
 
 	// Simple request logging middleware
 	app.Use(func(ctx *lokstra.Context, next lokstra.HandlerFunc) error {
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		logger.Infof("%s %s from %s", ctx.Request.Method, ctx.Request.URL.Path, ctx.Request.RemoteAddr)
 		return next(ctx)
 	})
@@ -124,8 +124,8 @@ func main() {
 func registerHandlers(regCtx lokstra.RegistrationContext) {
 	// Home handler with basic metrics
 	regCtx.RegisterHandler("home", func(ctx *lokstra.Context) error {
-		metrics, _ := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		metrics, _ := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		// Track API calls
 		metrics.IncCounter("api_requests_total", serviceapi.Labels{
@@ -167,8 +167,8 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// User operations handler with detailed metrics
 	regCtx.RegisterHandler("user_operations", func(ctx *lokstra.Context) error {
-		metrics, _ := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		metrics, _ := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		// Track user operations
 		operation := ctx.GetQueryParamWithDefault("operation", "view")
@@ -209,8 +209,8 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// Order processing handler with business metrics
 	regCtx.RegisterHandler("order_processing", func(ctx *lokstra.Context) error {
-		metrics, _ := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		metrics, _ := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		// Simulate order details
 		orderType := ctx.GetQueryParamWithDefault("type", "product")
@@ -253,8 +253,8 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// Analytics handler with performance metrics
 	regCtx.RegisterHandler("analytics", func(ctx *lokstra.Context) error {
-		metrics, _ := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		metrics, _ := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		// Track analytics queries
 		queryType := ctx.GetQueryParamWithDefault("query", "dashboard")
@@ -296,7 +296,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 	// Health check with system metrics
 	regCtx.RegisterHandler("health", func(ctx *lokstra.Context) error {
-		metrics, _ := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+		metrics, _ := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
 
 		// Track health checks
 		metrics.IncCounter("health_checks_total", serviceapi.Labels{
@@ -326,7 +326,7 @@ func registerHandlers(regCtx lokstra.RegistrationContext) {
 
 // generateBusinessMetrics simulates background business metrics generation
 func generateBusinessMetrics(regCtx lokstra.RegistrationContext) {
-	metrics, _ := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+	metrics, _ := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
 
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
@@ -354,7 +354,7 @@ func generateBusinessMetrics(regCtx lokstra.RegistrationContext) {
 
 // monitorSystemHealth simulates system health monitoring
 func monitorSystemHealth(regCtx lokstra.RegistrationContext) {
-	metrics, _ := serviceapi.GetService[serviceapi.Metrics](regCtx, "app-metrics")
+	metrics, _ := lokstra.GetService[serviceapi.Metrics](regCtx, "app-metrics")
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()

@@ -80,7 +80,7 @@ func main() {
 	// Home endpoint - demonstrates basic service retrieval
 	app.GET("/", func(ctx *lokstra.Context) error {
 		// Get logger service with type safety
-		logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		if err != nil {
 			return ctx.ErrorInternal("Logger service unavailable")
 		}
@@ -110,7 +110,7 @@ func main() {
 
 	// Service info endpoint
 	app.GET("/services", func(ctx *lokstra.Context) error {
-		logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "debug-logger")
+		logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "debug-logger")
 		if err != nil {
 			return ctx.ErrorInternal("Debug logger unavailable")
 		}
@@ -163,7 +163,7 @@ func main() {
 		counterName := ctx.GetPathParam("name")
 		serviceName := counterName + "-counter"
 
-		logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		if err != nil {
 			return ctx.ErrorInternal("Logger unavailable")
 		}
@@ -193,7 +193,7 @@ func main() {
 		counterName := ctx.GetPathParam("name")
 		serviceName := counterName + "-counter"
 
-		logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		if err != nil {
 			return ctx.ErrorInternal("Logger unavailable")
 		}
@@ -220,7 +220,7 @@ func main() {
 
 	// Service creation endpoint with smart binding
 	app.POST("/services/counters", func(ctx *lokstra.Context, req *CreateCounterRequest) error {
-		logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 		if err != nil {
 			return ctx.ErrorInternal("Logger unavailable")
 		}
@@ -251,7 +251,7 @@ func main() {
 
 	// Service stats endpoint
 	app.GET("/stats", func(ctx *lokstra.Context) error {
-		logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "debug-logger")
+		logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "debug-logger")
 		if err != nil {
 			return ctx.ErrorInternal("Logger unavailable")
 		}
@@ -366,7 +366,7 @@ func (c *CounterService) SetCount(count int) {
 //
 // 4. Service Retrieval:
 //    - GetService() returns service instances
-//    - serviceapi.GetService[T]() provides type safety
+//    - lokstra.GetService[T]() provides type safety
 //    - Type assertions for custom services
 //
 // 5. Service Lifecycle:

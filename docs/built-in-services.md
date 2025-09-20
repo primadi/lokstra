@@ -76,7 +76,7 @@ services:
 
 ```go
 // Get database service
-dbPool, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "main_db")
+dbPool, err := lokstra.GetService[serviceapi.DbPool](regCtx, "main_db")
 if err != nil {
     return err
 }
@@ -136,7 +136,7 @@ services:
 
 ```go
 // Get memory cache service
-cache, err := serviceapi.GetService[serviceapi.KvStore](regCtx, "cache_memory")
+cache, err := lokstra.GetService[serviceapi.KvStore](regCtx, "cache_memory")
 if err != nil {
     return err
 }
@@ -198,7 +198,7 @@ services:
 
 ```go
 // Same interface as memory cache
-cache, err := serviceapi.GetService[serviceapi.KvStore](regCtx, "cache_redis")
+cache, err := lokstra.GetService[serviceapi.KvStore](regCtx, "cache_redis")
 if err != nil {
     return err
 }
@@ -248,7 +248,7 @@ services:
 
 ```go
 // Get Redis service
-redis, err := serviceapi.GetService[serviceapi.Redis](regCtx, "redis_main")
+redis, err := lokstra.GetService[serviceapi.Redis](regCtx, "redis_main")
 if err != nil {
     return err
 }
@@ -321,7 +321,7 @@ services:
 
 ```go
 // Get logger service
-logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app_logger")
+logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app_logger")
 if err != nil {
     return err
 }
@@ -387,7 +387,7 @@ services:
 
 ```go
 // Get metrics service
-metrics, err := serviceapi.GetService[serviceapi.Metrics](regCtx, "app_metrics")
+metrics, err := lokstra.GetService[serviceapi.Metrics](regCtx, "app_metrics")
 if err != nil {
     return err
 }
@@ -487,7 +487,7 @@ The service automatically exposes several endpoints:
 
 ```go
 // Get health service
-health, err := serviceapi.GetService[serviceapi.HealthService](regCtx, "health_service")
+health, err := lokstra.GetService[serviceapi.HealthService](regCtx, "health_service")
 if err != nil {
     return err
 }
@@ -566,9 +566,9 @@ func setupHandlers(regCtx lokstra.RegistrationContext) {
     // Inject services into handlers
     regCtx.RegisterHandler("user.create", func(ctx *lokstra.Context) error {
         // Get services
-        db, _ := serviceapi.GetService[serviceapi.DbPool](ctx.RegistrationContext, "main_db")
-        cache, _ := serviceapi.GetService[serviceapi.KvStore](ctx.RegistrationContext, "cache_redis")
-        logger, _ := serviceapi.GetService[serviceapi.Logger](ctx.RegistrationContext, "app_logger")
+        db, _ := lokstra.GetService[serviceapi.DbPool](ctx.RegistrationContext, "main_db")
+        cache, _ := lokstra.GetService[serviceapi.KvStore](ctx.RegistrationContext, "cache_redis")
+        logger, _ := lokstra.GetService[serviceapi.Logger](ctx.RegistrationContext, "app_logger")
         
         // Use services...
         return nil
@@ -586,17 +586,17 @@ type UserService struct {
 }
 
 func NewUserService(regCtx lokstra.RegistrationContext) (*UserService, error) {
-    db, err := serviceapi.GetService[serviceapi.DbPool](regCtx, "main_db")
+    db, err := lokstra.GetService[serviceapi.DbPool](regCtx, "main_db")
     if err != nil {
         return nil, err
     }
     
-    cache, err := serviceapi.GetService[serviceapi.KvStore](regCtx, "cache_redis")
+    cache, err := lokstra.GetService[serviceapi.KvStore](regCtx, "cache_redis")
     if err != nil {
         return nil, err
     }
     
-    logger, err := serviceapi.GetService[serviceapi.Logger](regCtx, "app_logger")
+    logger, err := lokstra.GetService[serviceapi.Logger](regCtx, "app_logger")
     if err != nil {
         return nil, err
     }

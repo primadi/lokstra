@@ -37,7 +37,7 @@ func main() {
 	// 1. Request Logger Middleware
 	regCtx.RegisterMiddlewareFunc("request_logger", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
-			logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+			logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 			start := time.Now()
 
 			logger.Infof("[REQUEST] %s %s from %s",
@@ -63,7 +63,7 @@ func main() {
 	// 2. CORS Middleware
 	regCtx.RegisterMiddlewareFunc("cors", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
-			logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+			logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 			// Add CORS headers
 			ctx.WithHeader("Access-Control-Allow-Origin", "*")
@@ -86,7 +86,7 @@ func main() {
 	var requestCount int
 	regCtx.RegisterMiddlewareFunc("rate_limit", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
-			logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+			logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 			requestCount++
 
@@ -105,7 +105,7 @@ func main() {
 	// 4. Authentication Middleware
 	regCtx.RegisterMiddlewareFunc("auth", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
-			logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+			logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 			// Simple API key authentication
 			apiKey := ctx.GetHeader("X-API-Key")
@@ -136,7 +136,7 @@ func main() {
 	// 5. Admin Authorization Middleware
 	regCtx.RegisterMiddlewareFunc("admin_auth", func(next lokstra.HandlerFunc) lokstra.HandlerFunc {
 		return func(ctx *lokstra.Context) error {
-			logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+			logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 			// Check for admin privileges (based on API key suffix)
 			apiKey := getContextValue(ctx, apiKeyKey)
@@ -196,7 +196,7 @@ func main() {
 
 	// Webhook endpoint with conditional middleware
 	app.POST("/webhook", func(ctx *lokstra.Context) error {
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		// Conditional middleware - verify webhook signature
 		signature := ctx.GetHeader("X-Webhook-Signature")
@@ -244,7 +244,7 @@ func main() {
 	// Protected data endpoint with request validation
 	protected.POST("/data", func(ctx *lokstra.Context, req *DataRequest) error {
 		userID := getContextValue(ctx, userIDKey)
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		logger.Infof("[DATA] Processing data for user: %s, type: %s", userID, req.Type)
 
@@ -292,7 +292,7 @@ func main() {
 	// Admin delete user endpoint with method-specific middleware
 	admin.DELETE("/users/:id", func(ctx *lokstra.Context) error {
 		userID := ctx.GetPathParam("id")
-		logger, _ := serviceapi.GetService[serviceapi.Logger](regCtx, "app-logger")
+		logger, _ := lokstra.GetService[serviceapi.Logger](regCtx, "app-logger")
 
 		// Additional validation middleware for destructive operations
 		confirmHeader := ctx.GetHeader("X-Confirm-Delete")

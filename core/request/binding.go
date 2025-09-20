@@ -10,6 +10,7 @@ import (
 )
 
 var jsonBodyDecoder = jsoniter.Config{TagKey: "body"}.Froze()
+var jsonDecoder = jsoniter.Config{TagKey: "json"}.Froze()
 
 func (ctx *Context) bindPathField(fieldMeta bindingFieldMeta, rv reflect.Value) error {
 	rawValue := ctx.GetPathParam(fieldMeta.Name)
@@ -213,7 +214,13 @@ func (ctx *Context) BindBody(v any) error {
 	if len(ctx.rawRequestBody) == 0 {
 		return nil // No body to bind
 	}
-	return jsonBodyDecoder.Unmarshal(ctx.rawRequestBody, v)
+
+	// First try body tag, then json tag
+	err := jsonBodyDecoder.Unmarshal(ctx.rawRequestBody, v)
+	if err != nil {
+		return err
+	}
+	return jsonDecoder.Unmarshal(ctx.rawRequestBody, v)
 }
 
 func (ctx *Context) BindAll(v any) error {

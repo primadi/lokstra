@@ -1,0 +1,310 @@
+<!-- layout: base.html -->
+<div class="page-content">
+    <div class="page-header">
+        <h1>{{.title}}</h1>
+        <p class="page-description">{{.description}}</p>
+    </div>
+
+    <div class="stats-dashboard">
+        <div class="stats-summary">
+            <h2>System Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <span class="stat-number">{{.users_online}}</span>
+                        <span class="stat-label">Users Online</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-info">
+                        <span class="stat-number">{{.requests_today}}</span>
+                        <span class="stat-label">Requests Today</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-info">
+                        <span class="stat-number">{{.uptime}}</span>
+                        <span class="stat-label">Uptime</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-info">
+                        <span class="stat-number">{{.response_time}}</span>
+                        <span class="stat-label">Avg Response Time</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="live-stats">
+            <h3>Live Statistics</h3>
+            <div class="live-controls">
+                <button class="btn btn-primary" 
+                        hx-get="/api/stats" 
+                        hx-target="#live-stats-content"
+                        hx-swap="innerHTML">
+                    Refresh Stats
+                </button>
+                
+                <button class="btn btn-secondary" 
+                        hx-get="/api/stats" 
+                        hx-target="#live-stats-content"
+                        hx-trigger="every 5s"
+                        hx-swap="innerHTML">
+                    Auto-refresh (5s)
+                </button>
+            </div>
+            
+            <div id="live-stats-content" class="live-stats-content">
+                <div class="stats-placeholder">
+                    <p>Click "Refresh Stats" to load current statistics</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <h3>Performance Charts</h3>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h4>Request Volume</h4>
+                    <div class="chart-placeholder">
+                        <div class="mock-chart">
+                            <div class="chart-bar" style="height: 60%"></div>
+                            <div class="chart-bar" style="height: 80%"></div>
+                            <div class="chart-bar" style="height: 45%"></div>
+                            <div class="chart-bar" style="height: 90%"></div>
+                            <div class="chart-bar" style="height: 70%"></div>
+                            <div class="chart-bar" style="height: 85%"></div>
+                            <div class="chart-bar" style="height: 95%"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" 
+                            hx-get="/api/charts/requests" 
+                            hx-target="#chart-requests"
+                            hx-swap="innerHTML">
+                        Load Real Chart
+                    </button>
+                    <div id="chart-requests"></div>
+                </div>
+                
+                <div class="chart-card">
+                    <h4>Response Times</h4>
+                    <div class="chart-placeholder">
+                        <div class="mock-line-chart">
+                            <svg viewBox="0 0 200 100" class="line-chart">
+                                <polyline points="0,80 30,60 60,40 90,45 120,30 150,35 180,25 200,20" 
+                                          fill="none" stroke="#007bff" stroke-width="2"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" 
+                            hx-get="/api/charts/response-times" 
+                            hx-target="#chart-response-times"
+                            hx-swap="innerHTML">
+                        Load Real Chart
+                    </button>
+                    <div id="chart-response-times"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detailed-stats">
+            <h3>Detailed Statistics</h3>
+            <div class="stats-table">
+                <div class="table-header">
+                    <div class="table-cell">Metric</div>
+                    <div class="table-cell">Current</div>
+                    <div class="table-cell">24h Avg</div>
+                    <div class="table-cell">Trend</div>
+                </div>
+                
+                <div class="table-row">
+                    <div class="table-cell">Active Users</div>
+                    <div class="table-cell">{{.users_online}}</div>
+                    <div class="table-cell">38</div>
+                    <div class="table-cell trend-up">↗️ +10%</div>
+                </div>
+                
+                <div class="table-row">
+                    <div class="table-cell">Requests/min</div>
+                    <div class="table-cell">127</div>
+                    <div class="table-cell">105</div>
+                    <div class="table-cell trend-up">↗️ +21%</div>
+                </div>
+                
+                <div class="table-row">
+                    <div class="table-cell">Error Rate</div>
+                    <div class="table-cell">0.1%</div>
+                    <div class="table-cell">0.2%</div>
+                    <div class="table-cell trend-down">↘️ -50%</div>
+                </div>
+                
+                <div class="table-row">
+                    <div class="table-cell">Memory Usage</div>
+                    <div class="table-cell">64MB</div>
+                    <div class="table-cell">72MB</div>
+                    <div class="table-cell trend-down">↘️ -11%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="export-section">
+            <h3>Export & Analysis</h3>
+            <div class="export-options">
+                <button class="btn btn-secondary" 
+                        hx-get="/api/export/stats" 
+                        hx-target="#export-result">
+                    Export CSV
+                </button>
+                
+                <button class="btn btn-secondary" 
+                        hx-get="/api/export/report" 
+                        hx-target="#export-result">
+                    Generate Report
+                </button>
+                
+                <button class="btn btn-outline" 
+                        hx-get="/api/analysis/performance" 
+                        hx-target="#analysis-result">
+                    Performance Analysis
+                </button>
+            </div>
+            
+            <div id="export-result" class="export-result"></div>
+            <div id="analysis-result" class="analysis-result"></div>
+        </div>
+    </div>
+
+    <div class="last-updated">
+        <p><small>Last updated: {{.last_updated}}</small></p>
+    </div>
+</div>
+
+<style>
+.stats-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon {
+    font-size: 2rem;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.chart-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.mock-chart {
+    display: flex;
+    align-items: end;
+    gap: 4px;
+    height: 100px;
+    margin: 1rem 0;
+}
+
+.chart-bar {
+    background: #007bff;
+    width: 20px;
+    border-radius: 2px 2px 0 0;
+}
+
+.line-chart {
+    width: 100%;
+    height: 100px;
+    margin: 1rem 0;
+}
+
+.stats-table {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.table-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    background: #f8f9fa;
+    font-weight: bold;
+}
+
+.table-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    border-top: 1px solid #dee2e6;
+}
+
+.table-cell {
+    padding: 1rem;
+}
+
+.trend-up {
+    color: #28a745;
+}
+
+.trend-down {
+    color: #dc3545;
+}
+
+.export-options {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.last-updated {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+</style>

@@ -718,7 +718,7 @@ func cacheMiddleware() lokstra.MiddlewareFunc {
             if ctx.GetMethod() == "GET" {
                 cacheKey := generateCacheKey(ctx.GetPath(), ctx.GetQuery())
                 
-                cache, _ := serviceapi.GetService[serviceapi.KvStore](ctx.RegistrationContext, "cache.hot")
+                cache, _ := lokstra.GetService[serviceapi.KvStore](ctx.RegistrationContext, "cache.hot")
                 if data, err := cache.Get(ctx.Context, cacheKey); err == nil {
                     ctx.SetHeader("X-Cache", "HIT")
                     return ctx.Ok(data)
@@ -731,7 +731,7 @@ func cacheMiddleware() lokstra.MiddlewareFunc {
             // Cache successful GET responses
             if err == nil && ctx.GetMethod() == "GET" && ctx.Response.StatusCode == 200 {
                 cacheKey := generateCacheKey(ctx.GetPath(), ctx.GetQuery())
-                cache, _ := serviceapi.GetService[serviceapi.KvStore](ctx.RegistrationContext, "cache.hot")
+                cache, _ := lokstra.GetService[serviceapi.KvStore](ctx.RegistrationContext, "cache.hot")
                 cache.Set(ctx.Context, cacheKey, ctx.Response.Data, time.Hour)
                 ctx.SetHeader("X-Cache", "MISS")
             }
@@ -850,7 +850,7 @@ func setupHealthChecks(app *lokstra.App) {
         checks := map[string]string{}
         
         // Check database
-        if db, err := serviceapi.GetService[serviceapi.DbPool](ctx.RegistrationContext, "db.main"); err == nil {
+        if db, err := lokstra.GetService[serviceapi.DbPool](ctx.RegistrationContext, "db.main"); err == nil {
             if conn, err := db.Acquire(ctx.Context, "public"); err == nil {
                 conn.Release()
                 checks["database"] = "healthy"
@@ -860,7 +860,7 @@ func setupHealthChecks(app *lokstra.App) {
         }
         
         // Check Redis
-        if redis, err := serviceapi.GetService[serviceapi.Redis](ctx.RegistrationContext, "cache"); err == nil {
+        if redis, err := lokstra.GetService[serviceapi.Redis](ctx.RegistrationContext, "cache"); err == nil {
             if err := redis.Ping(ctx.Context); err == nil {
                 checks["redis"] = "healthy"
             } else {
@@ -976,7 +976,7 @@ func requestLoggingMiddleware() lokstra.MiddlewareFunc {
             ctx.Set("request_id", requestID)
             ctx.SetHeader("X-Request-ID", requestID)
             
-            logger, _ := serviceapi.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
+            logger, _ := lokstra.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
             
             // Log request start
             logger.Info("Request started",
@@ -1208,7 +1208,7 @@ func errorHandlingMiddleware() lokstra.MiddlewareFunc {
             err := next(ctx)
             
             if err != nil {
-                logger, _ := serviceapi.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
+                logger, _ := lokstra.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
                 
                 // Log error with context
                 logger.Error("Request error",
@@ -1234,7 +1234,7 @@ func recoveryMiddleware() lokstra.MiddlewareFunc {
         return func(ctx *lokstra.Context) error {
             defer func() {
                 if r := recover(); r != nil {
-                    logger, _ := serviceapi.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
+                    logger, _ := lokstra.GetService[serviceapi.Logger](ctx.RegistrationContext, "logger")
                     
                     logger.Error("Panic recovered",
                         "panic", r,
