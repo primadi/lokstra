@@ -32,13 +32,6 @@ func TestGroupImpl_BasicMethods(t *testing.T) {
 			t.Errorf("Expected meta prefix '/api', got %s", groupMeta.Prefix)
 		}
 	})
-
-	t.Run("GetMiddleware", func(t *testing.T) {
-		middleware := group.GetMiddleware()
-		if middleware == nil {
-			t.Error("Expected middleware slice to be available, got nil")
-		}
-	})
 }
 
 func TestGroupImpl_WithPrefix(t *testing.T) {
@@ -301,11 +294,6 @@ func TestGroupImpl_Use(t *testing.T) {
 
 	if result == nil {
 		t.Error("Expected group to be returned, got nil")
-	}
-
-	middleware := result.GetMiddleware()
-	if len(middleware) == 0 {
-		t.Error("Expected middleware to be added to group")
 	}
 }
 

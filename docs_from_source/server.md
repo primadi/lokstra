@@ -46,7 +46,7 @@ func (s *Server) GetSetting(key string) (any, bool)
 func (s *Server) MergeAppsWithSameAddress()
 
 func (s *Server) Start() error
-func (s *Server) StartAndWaitForShutdown(shutdownTimeout time.Duration) error
+func (s *Server) StartWithGracefulShutdown(shutdownTimeout time.Duration) error
 func (s *Server) Shutdown(shutdownTimeout time.Duration) error
 
 func (s *Server) ListApps() []*app.App
@@ -61,7 +61,7 @@ func (s *Server) ListApps() []*app.App
 - **SetSetting / SetSettingsIfAbsent / GetSetting** — key/value server-level settings store.  
 - **MergeAppsWithSameAddress** — groups apps by `.GetAddr()`; apps sharing the same address will be merged to run on a **single listener/router engine** (internally calls `base.MergeOtherApp(peer)` on duplicates).  
 - **Start** — builds and starts all apps (after merging same-address apps). Uses goroutines & a wait group; returns the first error encountered (if any).  
-- **StartAndWaitForShutdown** — runs `Start()` in the background, waits for `os.Interrupt`/`syscall.SIGTERM`. On signal it calls `Shutdown(timeout)` and returns.  
+- **StartWithGracefulShutdown** — runs `Start()` in the background, waits for `os.Interrupt`/`syscall.SIGTERM`. On signal it calls `Shutdown(timeout)` and returns.  
 - **Shutdown** — calls `app.Shutdown(timeout)` for each app, aggregating errors.  
 - **ListApps** — returns the slice of registered apps.
 
@@ -91,7 +91,7 @@ svr.AddApp(app2)
 svr.SetSetting("log_level", "info")
 
 // Start and handle SIGINT/SIGTERM gracefully (10s timeout on shutdown)
-if err := svr.StartAndWaitForShutdown(10 * time.Second); err != nil {
+if err := svr.StartWithGracefulShutdown(10 * time.Second); err != nil {
     panic(err)
 }
 ```
@@ -123,4 +123,4 @@ With YAML you can declare multiple apps; the loader will build them under a sing
 - Use `NewApp` on the server when you want a convenient way to create & attach apps.
 - If multiple apps share `addr`, the server **merges** them automatically; you need to start only once.
 - Keep module registration at the server/bootstrap level using `RegisterModule`, or rely on YAML `modules` so the loader calls `Module.Register(...)` for you.
-- Prefer `StartAndWaitForShutdown` in production to handle OS signals cleanly.
+- Prefer `StartWithGracefulShutdown` in production to handle OS signals cleanly.

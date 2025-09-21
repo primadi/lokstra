@@ -204,7 +204,7 @@ The **Server** manages multiple applications in a single process:
 server := lokstra.NewServer(regCtx, "my-server")
 server.AddApp(apiApp)
 server.AddApp(adminApp)
-server.StartAndWaitForShutdown(30 * time.Second)
+server.StartWithGracefulShutdown(30 * time.Second)
 ```
 
 ### App

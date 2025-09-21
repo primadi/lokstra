@@ -25,7 +25,7 @@ func main() {
 	registerRoutes(app)
 
 	// Start the application
-	app.Start()
+	app.Start(true)
 }
 
 func createDbServiceAndPing(regCtx lokstra.RegistrationContext) {

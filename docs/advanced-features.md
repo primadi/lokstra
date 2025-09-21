@@ -1152,7 +1152,7 @@ func main() {
     setupApps(server)
     
     // Graceful shutdown with timeout
-    server.StartAndWaitForShutdown(30 * time.Second)
+    server.StartWithGracefulShutdown(30 * time.Second)
 }
 ```
 

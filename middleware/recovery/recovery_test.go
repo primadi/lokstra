@@ -121,7 +121,7 @@ func TestRecoveryMiddleware_PanicRecovery(t *testing.T) {
 	// Create test context
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler
@@ -165,7 +165,7 @@ func TestRecoveryMiddleware_NormalExecution(t *testing.T) {
 	// Create test context
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler
@@ -202,7 +202,7 @@ func TestRecoveryMiddleware_DisabledStackTrace(t *testing.T) {
 	// Create test context
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler
@@ -267,7 +267,7 @@ func TestRecoveryMiddleware_CustomHook(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/hook", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	_ = wrapped(ctx)

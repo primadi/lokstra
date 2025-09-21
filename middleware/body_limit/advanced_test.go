@@ -85,7 +85,7 @@ func TestBodyLimit_SkipOnPath(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("POST", tt.path, strings.NewReader(body))
 
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			err := wrappedHandler(ctx)
@@ -166,7 +166,7 @@ func TestFactory(t *testing.T) {
 				body := strings.Repeat("a", 5*1024*1024)
 				w := httptest.NewRecorder()
 				r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
-				ctx, cancel := request.NewContext(w, r)
+				ctx, cancel := request.NewContext(nil, w, r)
 				defer cancel()
 
 				err := wrappedHandler(ctx)
@@ -191,7 +191,7 @@ func TestFactory(t *testing.T) {
 				body := strings.Repeat("a", 2048)
 				w := httptest.NewRecorder()
 				r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
-				ctx, cancel := request.NewContext(w, r)
+				ctx, cancel := request.NewContext(nil, w, r)
 				defer cancel()
 
 				err := wrappedHandler(ctx)
@@ -222,7 +222,7 @@ func TestFactory(t *testing.T) {
 				body := strings.Repeat("a", 1024)
 				w := httptest.NewRecorder()
 				r := httptest.NewRequest("POST", "/webhook", strings.NewReader(body))
-				ctx, cancel := request.NewContext(w, r)
+				ctx, cancel := request.NewContext(nil, w, r)
 				defer cancel()
 
 				err := wrappedHandler(ctx)

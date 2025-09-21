@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/common/static_files"
-	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 
 	"github.com/valyala/fasthttp"
@@ -64,23 +62,6 @@ func (g *GroupImpl) FastHttpHandler() fasthttp.RequestHandler {
 // GET implements Router.
 func (g *GroupImpl) GET(path string, handler any, mw ...any) Router {
 	return g.Handle("GET", path, handler, mw...)
-}
-
-// GetMiddleware implements Router.
-func (g *GroupImpl) GetMiddleware() []*midware.Execution {
-	mw := make([]*midware.Execution, len(g.meta.Middleware))
-	copy(mw, g.meta.Middleware)
-
-	if g.meta.OverrideMiddleware {
-		return mw
-	}
-
-	if len(g.parent.GetMiddleware())+len(mw) == 0 {
-		return []*midware.Execution{}
-	}
-
-	// Slices.Concat return 0 ?
-	return utils.SlicesConcat(g.parent.GetMiddleware(), mw)
 }
 
 // Group implements Router.

@@ -26,7 +26,7 @@ func WrapStdMiddleware(mw func(http.Handler) http.Handler) Func {
 func AsStdMiddleware(mw Func) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx, deferFunc := request.NewContext(w, r)
+			ctx, deferFunc := request.NewContext(nil, w, r)
 			defer deferFunc()
 			_ = mw(func(c *request.Context) error {
 				next.ServeHTTP(c.Writer, c.Request)

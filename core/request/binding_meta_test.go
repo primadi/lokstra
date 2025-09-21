@@ -55,7 +55,7 @@ func TestBindingMeta_TagParsing(t *testing.T) {
 	r.Header.Set("Content-Type", "application/json")
 	r.SetPathValue("id", "123")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var params TaggedStruct
@@ -96,7 +96,7 @@ func TestBindingMeta_UntaggedFields(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?Field1=value1&Field2=42&Field3=true", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var params UntaggedStruct
@@ -127,7 +127,7 @@ func TestBindingMeta_MixedTaggedUntagged(t *testing.T) {
 	r := httptest.NewRequest("GET", "/test?tagged=value&Untagged=ignored", strings.NewReader(body))
 	r.Header.Set("Authorization", "Bearer token")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var params MixedStruct
@@ -158,12 +158,12 @@ func TestBindingMeta_CacheConsistency(t *testing.T) {
 	// Test that binding metadata is cached and reused correctly
 	w1 := httptest.NewRecorder()
 	r1 := httptest.NewRequest("GET", "/test1?name=john", nil)
-	ctx1, cancel1 := request.NewContext(w1, r1)
+	ctx1, cancel1 := request.NewContext(nil, w1, r1)
 	defer cancel1()
 
 	w2 := httptest.NewRecorder()
 	r2 := httptest.NewRequest("GET", "/test2?name=jane", nil)
-	ctx2, cancel2 := request.NewContext(w2, r2)
+	ctx2, cancel2 := request.NewContext(nil, w2, r2)
 	defer cancel2()
 
 	// Bind same struct type multiple times
@@ -196,7 +196,7 @@ func TestBindingMeta_SliceDetection(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?tags=go&tags=web&tags=api", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type SliceTestStruct struct {
@@ -230,7 +230,7 @@ func TestBindingMeta_MapDetection(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?config[debug]=true&config[timeout]=30&config[host]=localhost", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type MapTestStruct struct {
@@ -277,7 +277,7 @@ func TestBindingMeta_MultipleTagTypes(t *testing.T) {
 	r.Header.Set("from_header", "header_value")
 	r.SetPathValue("from_path", "path_value")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var params MultiTagStruct
@@ -298,7 +298,7 @@ func TestBindingMeta_PointerTypes(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?name=john", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type SimpleStruct struct {
@@ -332,7 +332,7 @@ func TestBindingMeta_NestedStructs(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?name=parent&nested_value=ignored", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var params ParentStruct
@@ -364,7 +364,7 @@ func TestBindingMeta_EmptyTagValues(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?name=value&Field1=ignored&Field3=ignored", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var params EmptyTagStruct

@@ -83,7 +83,7 @@ func main() {
 	lokstra.Logger.Infof("")
 	lokstra.Logger.Infof("Visit http://localhost:8080 to see the SPA")
 
-	app.Start()
+	app.Start(true)
 }
 
 // createSampleSPA creates a sample SPA structure

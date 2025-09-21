@@ -76,5 +76,5 @@ func main() {
 		return ctx.Ok(map[string]any{"message": "Key set successfully", "key": key})
 	})
 
-	app.ListenAndServe()
+	app.ListenAndServe(true)
 }

@@ -53,7 +53,7 @@ func TestPrematureStopCheck(t *testing.T) {
 	// Test request
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute

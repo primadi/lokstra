@@ -516,7 +516,7 @@ func main() {
 	lokstra.Logger.Infof("  GET    /services/status   - Service status and metrics")
 	lokstra.Logger.Infof("  POST   /cache/clear       - Clear cache")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Type-Safe Services Key Benefits:

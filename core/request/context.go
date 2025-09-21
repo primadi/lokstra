@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/primadi/lokstra/common/htmx_fsmanager"
 	"github.com/primadi/lokstra/core/response"
 )
 
@@ -19,18 +20,20 @@ type Context struct {
 	rawRequestBody  []byte
 	requestBodyOnce sync.Once
 	requestBodyErr  error
+	hfmContainer    htmx_fsmanager.IContainer
 }
 
-func NewContext(w http.ResponseWriter, r *http.Request) (*Context, func()) {
+func NewContext(hfmContainer htmx_fsmanager.IContainer, w http.ResponseWriter, r *http.Request) (*Context, func()) {
 	ctx, cancel := context.WithCancel(r.Context())
 	req := r.WithContext(ctx)
 	resp := response.NewResponse()
 
 	return &Context{
-		Context:  ctx,
-		Response: resp,
-		Writer:   response.NewResponseWriterWrapper(w),
-		Request:  req,
+		Context:      ctx,
+		Response:     resp,
+		Writer:       response.NewResponseWriterWrapper(w),
+		Request:      req,
+		hfmContainer: hfmContainer,
 	}, cancel
 }
 

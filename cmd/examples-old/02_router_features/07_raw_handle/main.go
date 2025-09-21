@@ -78,7 +78,7 @@ func main() {
 	fmt.Println("  http://localhost:8080/assets/app.js")
 	fmt.Println("  http://localhost:8080/embed/static/app.js")
 
-	if err := app.Start(); err != nil {
+	if err := app.Start(true); err != nil {
 		panic(err)
 	}
 }

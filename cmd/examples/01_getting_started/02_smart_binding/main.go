@@ -109,7 +109,7 @@ func main() {
 	lokstra.Logger.Infof("  POST /users (with JSON body)")
 	lokstra.Logger.Infof("  PUT  /users/123?active=false (with JSON body)")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Smart Binding Features Demonstrated:

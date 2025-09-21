@@ -59,7 +59,7 @@ func TestIntegration_CompleteRequestBinding(t *testing.T) {
 	r.SetPathValue("user_id", "123")
 	r.SetPathValue("post_id", "456")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test complete binding
@@ -182,7 +182,7 @@ func TestIntegration_RealWorldAPIEndpoint(t *testing.T) {
 	r.Header.Set("If-Match", "\"etag-12345\"")
 	r.SetPathValue("id", "user123")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var req UpdateUserRequest
@@ -256,7 +256,7 @@ func TestIntegration_HandlerFunctionWorkflow(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/search?q=golang&category=programming&tags=web,api&page=1&size=10", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Execute handler
@@ -298,7 +298,7 @@ func TestIntegration_ContextCancellationWithBinding(t *testing.T) {
 	defer baseCancel()
 
 	r = r.WithContext(baseCtx)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 
 	type TestParams struct {
 		Name string `query:"name"`
@@ -347,7 +347,7 @@ func TestIntegration_MultipleBindingCalls(t *testing.T) {
 	r.Header.Set("Authorization", "Bearer token")
 	r.SetPathValue("id", "123")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Define separate structs for different binding types
@@ -496,7 +496,7 @@ func TestIntegration_ErrorHandling(t *testing.T) {
 				r.SetPathValue(key, value)
 			}
 
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			type TestRequest struct {

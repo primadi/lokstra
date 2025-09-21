@@ -62,7 +62,7 @@ func main() {
 	fmt.Println("\n🌐 Server running on: http://localhost:8080")
 	fmt.Println("💡 Try: curl http://localhost:8080/health")
 
-	if err := server.Start(); err != nil {
+	if err := server.Start(true); err != nil {
 		log.Fatalf("❌ Failed to start application: %v", err)
 	}
 }

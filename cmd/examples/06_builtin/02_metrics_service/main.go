@@ -100,7 +100,7 @@ func main() {
 	server.AddApp(app)
 
 	// Start server
-	err = server.Start()
+	err = server.Start(true)
 	if err != nil {
 		lokstra.Logger.Fatalf("Failed to load server: %v", err)
 	}
@@ -115,7 +115,7 @@ func main() {
 	go monitorSystemHealth(regCtx)
 
 	// Start the server
-	if err := server.Start(); err != nil {
+	if err := server.Start(true); err != nil {
 		lokstra.Logger.Fatalf("Failed to start server: %v", err)
 	}
 }

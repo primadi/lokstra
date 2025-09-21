@@ -361,13 +361,6 @@ func TestRouterImpl_BasicMethods(t *testing.T) {
 			t.Error("Expected meta to be available, got nil")
 		}
 	})
-
-	t.Run("GetMiddleware", func(t *testing.T) {
-		middleware := r.GetMiddleware()
-		if middleware == nil {
-			t.Error("Expected middleware slice to be available, got nil")
-		}
-	})
 }
 
 func TestRouterImpl_HTTPMethods(t *testing.T) {

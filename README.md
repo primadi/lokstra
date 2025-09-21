@@ -108,7 +108,7 @@ func main() {
         return ctx.OkCreated(user).WithMessage("User created successfully")
     })
     
-    app.StartAndWaitForShutdown(30 * time.Second)
+    app.StartWithGracefulShutdown(true, 30 * time.Second)
 }
 ```
 
@@ -150,7 +150,7 @@ func main() {
     adminApp.GET("/admin/dashboard", adminHandler)
     
     server.AddApp(apiApp).AddApp(adminApp)
-    server.StartAndWaitForShutdown(30 * time.Second)
+    server.StartWithGracefulShutdown(true, 30 * time.Second)
 }
 ```
 

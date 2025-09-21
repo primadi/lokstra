@@ -223,7 +223,7 @@ func main() {
 	lokstra.Logger.Infof("    POST /products/unique     - ErrorDuplicate() 409")
 	lokstra.Logger.Infof("    GET  /error-demo          - ErrorInternal() 500")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Structured Response Format:

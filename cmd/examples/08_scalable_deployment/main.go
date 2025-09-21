@@ -29,7 +29,7 @@ func main() {
 
 	// Start the server
 	log.Printf("Starting server with config: %s", configFile)
-	if err := svr.StartAndWaitForShutdown(30 * time.Second); err != nil {
+	if err := svr.StartWithGracefulShutdown(true, 30*time.Second); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

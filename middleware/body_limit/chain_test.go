@@ -66,7 +66,7 @@ func TestFullMiddlewareChainBehavior(t *testing.T) {
 	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(largePayload)))
 
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute composed middleware chain

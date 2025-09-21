@@ -54,7 +54,7 @@ func main() {
     })
     
     // Start with graceful shutdown
-    if err := app.StartAndWaitForShutdown(30 * time.Second); err != nil {
+    if err := app.StartWithGracefulShutdown(30 * time.Second); err != nil {
         panic(err)
     }
 }
@@ -85,7 +85,7 @@ func main() {
     server.AddApp(app2)
 
     // Start all apps
-    if err := server.StartAndWaitForShutdown(30 * time.Second); err != nil {
+    if err := server.StartWithGracefulShutdown(30 * time.Second); err != nil {
         panic(err)
     }
 }
@@ -157,7 +157,7 @@ func main() {
         panic(err)
     }
     
-    if err := server.StartAndWaitForShutdown(30 * time.Second); err != nil {
+    if err := server.StartWithGracefulShutdown(30 * time.Second); err != nil {
         panic(err)
     }
 }

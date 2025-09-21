@@ -124,7 +124,7 @@ func main() {
 	lokstra.Logger.Infof("  3. Observe how the server waits for the request to complete")
 
 	// Start the application
-	if err := app.Start(); err != nil {
+	if err := app.Start(true); err != nil {
 		lokstra.Logger.Errorf("❌ Application failed to start: %v", err)
 	}
 }

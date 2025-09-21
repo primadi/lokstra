@@ -45,9 +45,9 @@ func NewAppCustom(ctx registration.Context, name string, addr string,
 func (a *App) Start() error
 func (a *App) BuildRouter() error
 func (a *App) ListenAndServe() error
-func (a *App) StartAndWaitForShutdown(shutdownTimeout time.Duration) error
+func (a *App) StartWithGracefulShutdown(shutdownTimeout time.Duration) error
 func (a *App) Shutdown(shutdownTimeout time.Duration) error
-func (a *App) PrintStartMessage()
+func (a *App) PrintStartMessage(dumpRoutes bool)
 
 // Composition
 func (a *App) MergeOtherApp(otherApp *App)
@@ -108,7 +108,7 @@ So, for example, `"httprouter"` is normalized to `"lokstra.http_router.httproute
   `app.GetMeta().DumpRoutes()` (and for merged routers too).
 - Starts the HTTP listener: `listener.ListenAndServe(addr, app.Router)`
 
-### `StartAndWaitForShutdown(timeout)`
+### `StartWithGracefulShutdown(timeout)`
 - Runs `Start()` in a goroutine.
 - Waits for OS signals: `os.Interrupt`, `syscall.SIGTERM`.
 - On signal, calls `Shutdown(timeout)` and returns.
@@ -178,7 +178,7 @@ app := app.NewAppCustom(reg, "api", ":8080", "net_http", "httprouter", map[strin
     "write_timeout": "30s",
 })
 
-if err := app.StartAndWaitForShutdown(5 * time.Second); err != nil {
+if err := app.StartWithGracefulShutdown(5 * time.Second); err != nil {
     panic(err)
 }
 ```
@@ -192,4 +192,4 @@ Or use YAML to construct the router and app settings, then call `BuildRouter()` 
 - **App** = Router + Listener + Address + Lifecycle.
 - **Factories** (registered in the **Registration Context**) create listeners & router engines by name.
 - **BuildRouter** resolves names and shares the engine when merging apps.
-- Use **StartAndWaitForShutdown** for graceful exits on SIGINT/SIGTERM.
+- Use **StartWithGracefulShutdown** for graceful exits on SIGINT/SIGTERM.

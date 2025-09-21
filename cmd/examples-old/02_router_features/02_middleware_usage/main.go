@@ -89,7 +89,7 @@ func main() {
 	lokstra.Logger.Infof("  GET  /api/v1/admin/stats - Admin route with nested group middleware")
 	lokstra.Logger.Infof("  GET  /public            - Public route with middleware override")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Context keys for storing values

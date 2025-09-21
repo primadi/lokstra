@@ -250,7 +250,7 @@ func main() {
 	lokstra.Logger.Infof("  - json-logger: warn level, JSON format")
 	lokstra.Logger.Infof("  - error-logger: error level, text format")
 
-	app.Start()
+	app.Start(true)
 }
 
 // ===== Request Types =====

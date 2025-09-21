@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"slices"
 
+	"github.com/primadi/lokstra/common/htmx_fsmanager"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
@@ -57,7 +58,7 @@ func createReverseProxyHandler(target string) request.HandlerFunc {
 	}
 }
 
-func composeReverseProxyMw(rp *ReverseProxyMeta, mwParent []*midware.Execution) http.HandlerFunc {
+func composeReverseProxyMw(hfmContainer htmx_fsmanager.IContainer, rp *ReverseProxyMeta, mwParent []*midware.Execution) http.HandlerFunc {
 	var mw []*midware.Execution
 
 	if rp.OverrideMiddleware {
@@ -109,7 +110,7 @@ func composeReverseProxyMw(rp *ReverseProxyMeta, mwParent []*midware.Execution) 
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, deferFunc := request.NewContext(w, r)
+		ctx, deferFunc := request.NewContext(hfmContainer, w, r)
 		defer deferFunc()
 
 		// Execute the wrapped middleware chain

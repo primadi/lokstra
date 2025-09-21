@@ -148,7 +148,7 @@ func TestRequestLogger_WithRequestBody(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
+		ctx, cancel := request.NewContext(nil, w, req)
 		defer cancel()
 		ctx.Response.StatusCode = 201
 
@@ -176,7 +176,7 @@ func TestRequestLogger_WithRequestBody(t *testing.T) {
 		req.Header.Set("Content-Type", "text/plain")
 
 		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
+		ctx, cancel := request.NewContext(nil, w, req)
 		defer cancel()
 		ctx.Response.StatusCode = 200
 
@@ -294,7 +294,7 @@ func TestRequestLogger_WithResponseBody(t *testing.T) {
 	t.Run("JSON response body", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
+		ctx, cancel := request.NewContext(nil, w, req)
 		defer cancel()
 
 		err := wrappedHandler(ctx)
@@ -330,7 +330,7 @@ func TestRequestLogger_WithResponseBody(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/test", nil)
 		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
+		ctx, cancel := request.NewContext(nil, w, req)
 		defer cancel()
 
 		err := wrappedEmptyHandler(ctx)

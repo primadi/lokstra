@@ -37,7 +37,7 @@ func TestBodyLimitMiddleware_WithinLimit(t *testing.T) {
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(smallBody))
 	r.Header.Set("Content-Type", "text/plain")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	err := wrappedHandler(ctx)
@@ -67,7 +67,7 @@ func TestBodyLimitMiddleware_ExceedsLimit_ContentLength(t *testing.T) {
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(largeBody))
 	r.Header.Set("Content-Type", "text/plain")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	err := wrappedHandler(ctx)
@@ -107,7 +107,7 @@ func TestBodyLimitMiddleware_ExceedsLimit_Reading(t *testing.T) {
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(largeBody))
 	// Don't set Content-Length to test reading limit
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	err := wrappedHandler(ctx)
@@ -138,7 +138,7 @@ func TestBodyLimitMiddleware_SkipLargePayloads(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(largeBody))
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	err := wrappedHandler(ctx)
@@ -165,7 +165,7 @@ func TestBodyLimitMiddleware_NoBody(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	err := wrappedHandler(ctx)
@@ -198,7 +198,7 @@ func TestBodyLimitMiddleware_CustomConfig(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	err := wrappedHandler(ctx)
@@ -246,7 +246,7 @@ func TestConvenienceFunctions(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("POST", "/test", strings.NewReader("small body"))
 
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			err := wrappedHandler(ctx)
@@ -264,7 +264,7 @@ func TestLimitedReadCloser(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	limitedReader := &limitedReadCloser{

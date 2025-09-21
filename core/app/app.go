@@ -65,7 +65,7 @@ func (a *App) GetAddr() string {
 	return a.addr
 }
 
-func (a *App) Start() error {
+func (a *App) Start(dumpRoutes bool) error {
 	if a.merged {
 		return nil
 	}
@@ -73,7 +73,7 @@ func (a *App) Start() error {
 		return err
 	}
 
-	return a.ListenAndServe()
+	return a.ListenAndServe(dumpRoutes)
 }
 
 func (a *App) BuildRouter() error {
@@ -106,12 +106,14 @@ func (a *App) PrintStartMessage() {
 	}
 }
 
-func (a *App) ListenAndServe() error {
+func (a *App) ListenAndServe(dumpRoutes bool) error {
 	if a.merged {
 		return nil
 	}
 
-	a.PrintStartMessage()
+	if dumpRoutes {
+		a.PrintStartMessage()
+	}
 
 	return a.listener.ListenAndServe(a.addr, a.Router)
 }
@@ -125,15 +127,15 @@ func (a *App) MergeOtherApp(otherApp *App) {
 	a.mergedRoutes = append(a.mergedRoutes, otherApp.Router)
 }
 
-// StartAndWaitForShutdown starts the app and waits for interrupt/terminate signal, then gracefully shuts down.
-func (a *App) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
+// Starts the app and waits for interrupt/terminate signal, then gracefully shuts down.
+func (a *App) StartWithGracefulShutdown(dumpRoutes bool, shutdownTimeout time.Duration) error {
 	if a.merged {
 		return nil
 	}
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- a.Start()
+		errCh <- a.Start(dumpRoutes)
 	}()
 
 	sigCh := make(chan os.Signal, 1)

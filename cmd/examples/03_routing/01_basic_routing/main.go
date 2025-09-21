@@ -378,7 +378,7 @@ func main() {
 	lokstra.Logger.Infof("    GET  /numeric/123         - Numeric constraint")
 	lokstra.Logger.Infof("    GET  /slug/my-blog-post   - String constraint")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Helper function to validate slug format

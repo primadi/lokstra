@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/primadi/lokstra/common/static_files"
-	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 
 	"github.com/valyala/fasthttp"
@@ -77,8 +76,6 @@ type Router interface {
 	FastHttpHandler() fasthttp.RequestHandler
 	// OverrideMiddleware returns whether the router overrides middleware
 	OverrideMiddleware() bool
-	// GetMiddleware returns the router's middleware stack
-	GetMiddleware() []*midware.Execution
 
 	// GetMeta returns the router's metadata
 	GetMeta() *RouterMeta

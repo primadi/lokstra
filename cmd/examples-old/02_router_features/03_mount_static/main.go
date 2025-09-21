@@ -73,5 +73,5 @@ func main() {
 	lokstra.Logger.Infof("  http://localhost:8080/assets/style.css")
 	lokstra.Logger.Infof("  http://localhost:8080/public/index.html")
 
-	app.Start()
+	app.Start(true)
 }

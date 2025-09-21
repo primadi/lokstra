@@ -86,7 +86,7 @@ func TestContext_ShouldStopMiddlewareChain(t *testing.T) {
 			// Setup
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/test", nil)
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			// Set the status code
@@ -115,7 +115,7 @@ func TestContext_ShouldStopMiddlewareChain_NilContext(t *testing.T) {
 	// Setup minimal context
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test various combinations
@@ -145,7 +145,7 @@ func TestContext_ShouldStopMiddlewareChain_NilContext(t *testing.T) {
 func TestContext_ShouldStopMiddlewareChain_EdgeCases(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test boundary values

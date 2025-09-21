@@ -29,7 +29,7 @@ func main() {
 	createPageDataRoutes(app)
 	createApiRoutes(app)
 
-	app.Start()
+	app.Start(true)
 }
 
 // HTMX Integration Key Concepts:

@@ -34,7 +34,7 @@ func TestBindingUtilities_ConvertAndSetField_String(t *testing.T) {
 	// Setup
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?name=john&age=25&active=true&score=95.5", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test with a struct that exercises different field types
@@ -74,7 +74,7 @@ func TestBindingUtilities_ConvertAndSetField_Slice(t *testing.T) {
 	// Test slice handling with comma-separated values
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?tags=go,web,api&numbers=1,2,3", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type TestParams struct {
@@ -121,7 +121,7 @@ func TestBindingUtilities_UnsupportedTypes(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?complex=1+2i", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	var params UnsupportedParams
@@ -160,7 +160,7 @@ func TestBindingUtilities_InvalidConversions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/test"+tt.queryString, nil)
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			switch tt.paramType {
@@ -202,7 +202,7 @@ func TestBindingUtilities_EmptyValues(t *testing.T) {
 	// Test with empty query parameters
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?name=&age=", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type TestParams struct {
@@ -236,7 +236,7 @@ func TestBindingUtilities_SliceFromMultipleValues(t *testing.T) {
 	values.Add("tags", "api")
 	r.URL.RawQuery = values.Encode()
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type TestParams struct {
@@ -267,7 +267,7 @@ func TestBindingUtilities_IntegerTypes(t *testing.T) {
 	// Test various integer types
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?int8=127&int16=32767&int32=2147483647&uint8=255&uint16=65535", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type TestParams struct {
@@ -311,7 +311,7 @@ func TestBindingUtilities_FloatTypes(t *testing.T) {
 	// Test float32 and float64
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?float32=3.14&float64=2.718281828", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type TestParams struct {
@@ -354,7 +354,7 @@ func TestBindingUtilities_BooleanValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/test?active="+tt.value, nil)
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			type TestParams struct {
@@ -379,7 +379,7 @@ func TestBindingUtilities_CommaSeparatedValues(t *testing.T) {
 	// Test comma-separated values with various whitespace
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?tags=go%2Cweb%2C+api+%2C+microservice%2C++docker++", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type TestParams struct {
@@ -411,7 +411,7 @@ func TestBindingUtilities_EmptyCommaSeparated(t *testing.T) {
 	// Test comma-separated values with empty elements
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?tags=go,,web,,,api", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	type TestParams struct {

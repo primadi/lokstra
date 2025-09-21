@@ -365,7 +365,7 @@ func main() {
 	lokstra.Logger.Infof("  GET  /api/:version/users/:userId/posts/:postId - Multiple constraints")
 	lokstra.Logger.Infof("  GET  /search                        - Query parameter validation")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Utility functions

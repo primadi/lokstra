@@ -128,7 +128,7 @@ func main() {
 	lokstra.Logger.Infof("Visit http://localhost:8080 for more information")
 
 	// Start the app with proper error handling
-	if err := app.Start(); err != nil {
+	if err := app.Start(true); err != nil {
 		lokstra.Logger.Errorf("Failed to start server: %v", err)
 	}
 }

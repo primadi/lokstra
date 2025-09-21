@@ -388,7 +388,7 @@ func main() {
 	lokstra.Logger.Infof("  User Key: demo-api-key-123")
 	lokstra.Logger.Infof("  Admin Key: demo-api-key-123-admin")
 
-	app.Start()
+	app.Start(true)
 }
 
 // ===== Context Keys =====

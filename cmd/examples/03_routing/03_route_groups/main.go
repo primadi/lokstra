@@ -512,7 +512,7 @@ curl http://localhost:8080/health
 	lokstra.Logger.Infof("    /api                    - API docs")
 	lokstra.Logger.Infof("    /examples               - Usage examples")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Route Groups Key Concepts:

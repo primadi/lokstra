@@ -17,7 +17,7 @@ func TestNewContext(t *testing.T) {
 	r.Header.Set("X-Test-Header", "test-value")
 
 	// Test
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Assertions
@@ -50,7 +50,7 @@ func TestContextFromRequest(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Simulate how middleware would set the context
@@ -85,7 +85,7 @@ func TestContext_GetPathParam(t *testing.T) {
 	// Simulate path parameter (this would normally be set by the router)
 	r.SetPathValue("id", "123")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -107,7 +107,7 @@ func TestContext_GetQueryParam(t *testing.T) {
 	// Setup
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?name=john&age=25&tags=go,web", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test existing params
@@ -136,7 +136,7 @@ func TestContext_GetHeader(t *testing.T) {
 	r.Header.Set("Authorization", "Bearer token123")
 	r.Header.Set("X-Custom-Header", "custom-value")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test existing headers
@@ -172,7 +172,7 @@ func TestContext_IsHeaderContainValue(t *testing.T) {
 	r.Header.Add("X-Multi", "value1")
 	r.Header.Add("X-Multi", "value2")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test header contains value
@@ -247,7 +247,7 @@ func TestContext_GetRawBody(t *testing.T) {
 				r = httptest.NewRequest("POST", "/test", strings.NewReader(tt.body))
 			}
 
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			// Test
@@ -283,7 +283,7 @@ func TestContext_CacheBodyMultipleCalls(t *testing.T) {
 	w := httptest.NewRecorder()
 	body := "test body content"
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test multiple calls
@@ -305,7 +305,7 @@ func TestContext_EmbeddedTypes(t *testing.T) {
 	// Setup
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test that Context embeds context.Context
@@ -334,7 +334,7 @@ func TestContext_ContextCancellation(t *testing.T) {
 	// Setup
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 
 	// Test that context is not cancelled initially
 	if ctx.Err() != nil {
@@ -356,7 +356,7 @@ func TestContext_NilBodyHandling(t *testing.T) {
 	r := httptest.NewRequest("GET", "/test", nil)
 	r.Body = nil // Explicitly set body to nil
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -405,7 +405,7 @@ func TestContext_GetRawResponseBody(t *testing.T) {
 			// Setup
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/test", nil)
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			// Set response data directly to Response.RawData
@@ -432,7 +432,7 @@ func TestContext_ResponseBodyDirectAccess(t *testing.T) {
 	// Setup
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test direct access to Response.RawData
@@ -454,7 +454,7 @@ func TestContext_ResponseBodyModification(t *testing.T) {
 	// Setup
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test setting response body directly
@@ -490,7 +490,7 @@ func TestContext_GetRawResponseBodyNilResponse(t *testing.T) {
 	// Setup context with nil Response (edge case)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Manually set Response to nil to test edge case

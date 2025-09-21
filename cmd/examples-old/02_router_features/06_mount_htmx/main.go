@@ -75,7 +75,7 @@ func main() {
 	registerApi(app)
 
 	// 8. Start App
-	if err := app.Start(); err != nil {
+	if err := app.Start(true); err != nil {
 		lokstra.Logger.Fatalf("Failed to start app: %v", err)
 	}
 }

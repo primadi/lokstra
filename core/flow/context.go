@@ -18,7 +18,7 @@ type Context[T any] struct {
 	store map[string]any
 }
 
-func newContext[T any](f *Flow[T], reqCtx *request.Context) *Context[T] {
+func newFlowContext[T any](f *Flow[T], reqCtx *request.Context) *Context[T] {
 	return &Context[T]{
 		flow:    f,
 		store:   make(map[string]any),

@@ -101,7 +101,7 @@ func TestComposeMiddleware_ErrorHandling(t *testing.T) {
 			// Create test context
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", "/test", nil)
-			ctx, cancel := request.NewContext(w, r)
+			ctx, cancel := request.NewContext(nil, w, r)
 			defer cancel()
 
 			// Execute composed handler
@@ -181,7 +181,7 @@ func TestComposeMiddleware_MultipleMiddleware(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	err := composedHandler(ctx)

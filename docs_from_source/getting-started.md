@@ -47,7 +47,7 @@ func main() {
 **Graceful shutdown (recommended in production):**
 
 ```go
-if err := app.StartAndWaitForShutdown(30 * time.Second); err != nil {
+if err := app.StartWithGracefulShutdown(30 * time.Second); err != nil {
 	panic(err)
 }
 ```
@@ -85,7 +85,7 @@ func main() {
 	}
 
 	// Or with graceful shutdown
-	// if err := server.StartAndWaitForShutdown(30 * time.Second); err != nil { panic(err) }
+	// if err := server.StartWithGracefulShutdown(30 * time.Second); err != nil { panic(err) }
 }
 ```
 
@@ -154,7 +154,7 @@ func main() {
 > * `lokstra.LoadConfigDir(dir)` loads **all `.yaml` files** in a directory (and merges them).
 > * To load **one** YAML file, prefer `config.LoadConfigFile(path)`.
 > * If multiple Apps share the **same port**, they will be **merged** at runtime.
-> * You can also run `server.StartAndWaitForShutdown(timeout)` for graceful shutdown.
+> * You can also run `server.StartWithGracefulShutdown(timeout)` for graceful shutdown.
 
 ---
 
@@ -190,11 +190,11 @@ Both App and Server support graceful shutdown:
 ```go
 // App level
 a := lokstra.NewApp(ctx, "demo-app", ":8080")
-_ = a.StartAndWaitForShutdown(30 * time.Second)
+_ = a.StartWithGracefulShutdown(30 * time.Second)
 
 // Server level
 s := lokstra.NewServer(ctx, "demo-server")
-_ = s.StartAndWaitForShutdown(30 * time.Second)
+_ = s.StartWithGracefulShutdown(30 * time.Second)
 ```
 
 The call waits up to the given timeout for the internal shutdown process to complete (e.g., finishing in-flight requests and closing listeners). Refer to the source for exact steps.
@@ -207,4 +207,4 @@ The call waits up to the given timeout for the internal shutdown process to comp
 * **By config**: `config.LoadConfigFile` (single file) or `lokstra.LoadConfigDir` (folder) → `lokstra.NewServerFromConfig(ctx, cfg)` → `Start()`.
 * **Embedded Router**: `app.GET(...)` or `app.Router.GET(...)` are equivalent.
 * **Same-port merge**: Apps with the same port are merged.
-* **Graceful shutdown**: Use `StartAndWaitForShutdown(timeout)`.
+* **Graceful shutdown**: Use `StartWithGracefulShutdown(timeout)`.

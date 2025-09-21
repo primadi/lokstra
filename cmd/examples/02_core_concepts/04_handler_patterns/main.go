@@ -331,7 +331,7 @@ func main() {
 	lokstra.Logger.Infof("    GET  /response-patterns?format=list - Response formats")
 	lokstra.Logger.Infof("    GET  /async                - Async processing")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Handler Pattern Best Practices:

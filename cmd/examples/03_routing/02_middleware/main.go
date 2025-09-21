@@ -304,7 +304,7 @@ func main() {
 	lokstra.Logger.Infof("    POST /conditional         - Conditional middleware")
 	lokstra.Logger.Infof("    GET  /error-test?type=error - Error handling")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Middleware Key Concepts:

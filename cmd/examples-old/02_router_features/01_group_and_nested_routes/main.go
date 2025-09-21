@@ -43,7 +43,7 @@ func main() {
 	// Create and start the server
 	server := lokstra.NewServer(ctx, "server")
 	server.AddApp(app1)
-	server.Start()
+	server.Start(true)
 }
 
 // registerMiddlewares registers the named middlewares used in this example.

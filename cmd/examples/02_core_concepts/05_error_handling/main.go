@@ -435,7 +435,7 @@ func main() {
 	lokstra.Logger.Infof("    POST /validate-complex             - Field validation")
 	lokstra.Logger.Infof("    GET  /errors/health                - Health check errors")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Error Handling Best Practices:

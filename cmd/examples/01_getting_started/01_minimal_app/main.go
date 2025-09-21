@@ -36,7 +36,7 @@ func main() {
 	lokstra.Logger.Infof("Minimal Lokstra Application started on :8080")
 
 	// Start the application (blocks until shutdown)
-	app.Start()
+	app.Start(true)
 }
 
 // Test this example:

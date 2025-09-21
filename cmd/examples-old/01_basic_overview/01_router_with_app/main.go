@@ -65,5 +65,5 @@ func main() {
 
 	lokstra.Logger.Infof("Lokstra Application started")
 
-	app.Start()
+	app.Start(true)
 }

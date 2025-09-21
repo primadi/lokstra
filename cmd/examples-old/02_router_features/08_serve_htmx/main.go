@@ -196,5 +196,5 @@ func main() {
 	lokstra.Logger.Infof("  http://localhost:8080/contact")
 	lokstra.Logger.Infof("  http://localhost:8080/static/style.css")
 
-	app.StartAndWaitForShutdown(30 * time.Second)
+	app.StartWithGracefulShutdown(true, 30*time.Second)
 }

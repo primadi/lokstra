@@ -238,7 +238,7 @@ func main() {
 	fmt.Println("")
 
 	// Start the server
-	if err := server.Start(); err != nil {
+	if err := server.Start(true); err != nil {
 		lokstra.Logger.Fatalf("Failed to start server: %v", err)
 	}
 }

@@ -191,7 +191,7 @@ func main() {
 	lokstra.Logger.Infof("Starting multi-app server...")
 
 	// Start the server (this will start all apps concurrently)
-	if err := server.Start(); err != nil {
+	if err := server.Start(true); err != nil {
 		lokstra.Logger.Errorf("Server failed to start: %v", err)
 	}
 }

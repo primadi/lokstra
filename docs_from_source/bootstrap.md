@@ -65,7 +65,7 @@ func main() {
     app.GET("/api/hello", hello)
 
     svr.AddApp(app)
-    _ = svr.StartAndWaitForShutdown(5 * time.Second)
+    _ = svr.StartWithGracefulShutdown(5 * time.Second)
 }
 ```
 
@@ -188,7 +188,7 @@ func main() {
     svr, err := lokstra.NewServerFromConfig(reg, cfg)
     if err != nil { log.Fatal(err) }
 
-    _ = svr.StartAndWaitForShutdown(5 * time.Second)
+    _ = svr.StartWithGracefulShutdown(5 * time.Second)
 }
 ```
 
@@ -367,7 +367,7 @@ hello-lokstra/
 - **RPC server factory name**: if you don’t pre‑create `rpc_server.default` (type `rpc_service`), auto‑creation expects a factory named `rpc_service.rpc_server`. Easiest fix: just define the service in YAML as shown above.
 - **Middleware override**: for mounts and routes, `override_middleware: true` isolates from parent stacks.
 - **Use trailing slash** for static mounts (e.g., `/static/`) to avoid odd path joins.
-- **Signals**: use `StartAndWaitForShutdown` for graceful exit on Ctrl‑C; apps shut down concurrently.
+- **Signals**: use `StartWithGracefulShutdown` for graceful exit on Ctrl‑C; apps shut down concurrently.
 
 ---
 

@@ -68,7 +68,7 @@ func main() {
 	fmt.Println("  POST /users/:id/all-map - BindAllSmart to map")
 	fmt.Println("  GET /health - Health check")
 
-	if err := app.StartAndWaitForShutdown(30 * time.Second); err != nil {
+	if err := app.StartWithGracefulShutdown(true, 30*time.Second); err != nil {
 		log.Fatal(err)
 	}
 }

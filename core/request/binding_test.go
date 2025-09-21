@@ -66,7 +66,7 @@ func TestContext_BindPath(t *testing.T) {
 	r.SetPathValue("id", "123")
 	r.SetPathValue("name", "john")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -92,7 +92,7 @@ func TestContext_BindPath_EmptyParams(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/users", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -119,7 +119,7 @@ func TestContext_BindQuery(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?name=john&age=25&active=true&tags=go,web,api", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -167,7 +167,7 @@ func TestContext_BindQuery_MultipleValues(t *testing.T) {
 	values.Add("tags", "api")
 	r.URL.RawQuery = values.Encode()
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -200,7 +200,7 @@ func TestContext_BindQuery_InvalidTypes(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?age=invalid&active=notbool", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -222,7 +222,7 @@ func TestContext_BindHeader(t *testing.T) {
 	r.Header.Add("X-Custom-Header", "value1")
 	r.Header.Add("X-Custom-Header", "value2")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -261,7 +261,7 @@ func TestContext_BindBody(t *testing.T) {
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/json")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -291,7 +291,7 @@ func TestContext_BindBody_EmptyBody(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/test", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -310,7 +310,7 @@ func TestContext_BindBody_InvalidJSON(t *testing.T) {
 	body := `{"title":"Test Title","description":invalid json}`
 	r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -332,7 +332,7 @@ func TestContext_BindAll(t *testing.T) {
 	r.Header.Set("Authorization", "Bearer token123")
 	r.SetPathValue("id", "123")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -382,7 +382,7 @@ func TestContext_BindMapParams(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test?meta[key1]=value1&meta[key2]=value2&meta[key3]=value3", nil)
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -420,7 +420,7 @@ func TestContext_BindAll_PartialErrors(t *testing.T) {
 	r := httptest.NewRequest("POST", "/users/123?name=john", strings.NewReader(body))
 	r.SetPathValue("id", "123")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test
@@ -454,7 +454,7 @@ func TestContext_BindingWithNoMatchingTags(t *testing.T) {
 	r := httptest.NewRequest("GET", "/test?name=john&age=25", nil)
 	r.SetPathValue("id", "123")
 
-	ctx, cancel := request.NewContext(w, r)
+	ctx, cancel := request.NewContext(nil, w, r)
 	defer cancel()
 
 	// Test each binding method

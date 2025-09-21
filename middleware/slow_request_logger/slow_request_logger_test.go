@@ -25,7 +25,7 @@ func TestSlowRequestLogger_DefaultConfig(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/slow", nil)
 	w := httptest.NewRecorder()
-	ctx, _ := request.NewContext(w, req)
+	ctx, _ := request.NewContext(nil, w, req)
 
 	// Simulate middleware execution
 	err := mw.MiddlewareFn(handler)(ctx)
@@ -55,7 +55,7 @@ func TestSlowRequestLogger_Threshold(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/threshold", nil)
 	w := httptest.NewRecorder()
-	ctx, _ := request.NewContext(w, req)
+	ctx, _ := request.NewContext(nil, w, req)
 
 	err := mw.MiddlewareFn(handler)(ctx)
 	if err != nil {

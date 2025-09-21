@@ -119,7 +119,7 @@ func (f *Flow[T]) AsHandler() request.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		flowCtx := newContext(f, reqCtx)
+		flowCtx := newFlowContext(f, reqCtx)
 		flowCtx.Params = &params
 		return f.run(flowCtx)
 	}
@@ -135,7 +135,7 @@ func (f *Flow[T]) AsHandlerSmart() request.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		flowCtx := newContext(f, reqCtx)
+		flowCtx := newFlowContext(f, reqCtx)
 		flowCtx.Params = &params
 		return f.run(flowCtx)
 	}

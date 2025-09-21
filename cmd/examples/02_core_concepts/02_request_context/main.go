@@ -267,7 +267,7 @@ func main() {
 	lokstra.Logger.Infof("  Response:")
 	lokstra.Logger.Infof("    GET  /response-headers")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Request Context Key Features:

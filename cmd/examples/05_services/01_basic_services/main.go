@@ -302,7 +302,7 @@ func main() {
 	lokstra.Logger.Infof("  - request-counter: HTTP request counter")
 	lokstra.Logger.Infof("  - user-counter: Active user counter")
 
-	app.Start()
+	app.Start(true)
 }
 
 // ===== Request Types =====

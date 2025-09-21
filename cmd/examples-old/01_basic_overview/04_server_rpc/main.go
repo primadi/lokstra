@@ -24,5 +24,5 @@ func main() {
 	svr.AddApp(app)
 
 	// Start the server
-	svr.StartAndWaitForShutdown(10 * time.Second)
+	svr.StartWithGracefulShutdown(true, 10*time.Second)
 }

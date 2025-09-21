@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/primadi/lokstra/common/htmx_fsmanager"
 	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/midware"
@@ -22,8 +23,14 @@ import (
 )
 
 type RouterImpl struct {
-	meta     *RouterMeta
-	r_engine serviceapi.RouterEngine
+	meta         *RouterMeta
+	r_engine     serviceapi.RouterEngine
+	hfmContainer *htmx_fsmanager.HtmxFsManager
+}
+
+// GetHtmxFsManager implements htmx_fsmanager.IContainer.
+func (r *RouterImpl) GetHtmxFsManager() *htmx_fsmanager.HtmxFsManager {
+	return r.hfmContainer
 }
 
 // RawHandle implements Router.
@@ -141,13 +148,6 @@ func (r *RouterImpl) FastHttpHandler() fasthttp.RequestHandler {
 // GET implements Router.
 func (r *RouterImpl) GET(path string, handler any, mw ...any) Router {
 	return r.Handle("GET", path, handler, mw...)
-}
-
-// GetMiddleware implements Router.
-func (r *RouterImpl) GetMiddleware() []*midware.Execution {
-	mwf := make([]*midware.Execution, len(r.meta.Middleware))
-	copy(mwf, r.meta.Middleware)
-	return mwf
 }
 
 // Group implements Router.
@@ -276,6 +276,7 @@ func (r *RouterImpl) WithPrefix(prefix string) Router {
 }
 
 var _ Router = (*RouterImpl)(nil)
+var _ htmx_fsmanager.IContainer = (*RouterImpl)(nil)
 
 func (r *RouterImpl) cleanPrefix(prefix string) string {
 	if prefix == "/" || prefix == "" {
@@ -314,7 +315,7 @@ func (r *RouterImpl) handleRouteMeta(route *RouteMeta, mwParent []*midware.Execu
 
 		var cancel func()
 		if !ok {
-			ctx, cancel = request.NewContext(w, req)
+			ctx, cancel = request.NewContext(r, w, req)
 			defer cancel()
 		}
 		if err := handler_with_mw(ctx); err != nil {
@@ -393,7 +394,7 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 	}
 
 	for _, rp := range router.ReverseProxies {
-		handler := composeReverseProxyMw(rp, mwh)
+		handler := composeReverseProxyMw(r, rp, mwh)
 		r.r_engine.ServeReverseProxy(rp.Prefix, handler)
 	}
 

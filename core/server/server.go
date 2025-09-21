@@ -91,7 +91,7 @@ func (s *Server) MergeAppsWithSameAddress() {
 }
 
 // Start starts all registered apps concurrently.
-func (s *Server) Start() error {
+func (s *Server) Start(dumpRoutes bool) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, len(s.apps))
 
@@ -102,7 +102,7 @@ func (s *Server) Start() error {
 		wg.Add(1)
 		go func(a *app.App) {
 			defer wg.Done()
-			if err := a.Start(); err != nil {
+			if err := a.Start(dumpRoutes); err != nil {
 				errCh <- fmt.Errorf("app '%s' failed: %w", ap.GetName(), err)
 			}
 		}(ap)
@@ -143,12 +143,12 @@ func (s *Server) Shutdown(shutdownTimeout time.Duration) error {
 	return nil
 }
 
-// StartAndWaitForShutdown starts the server and waits for shutdown signal.
-func (s *Server) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
+// StartWithGracefulShutdown starts the server and waits for shutdown signal.
+func (s *Server) StartWithGracefulShutdown(dumpRoutes bool, shutdownTimeout time.Duration) error {
 	// Run server in background
 	errCh := make(chan error, 1)
 	go func() {
-		if err := s.Start(); err != nil {
+		if err := s.Start(dumpRoutes); err != nil {
 			errCh <- err
 		}
 	}()

@@ -20,7 +20,7 @@ func main() {
 	server := newServerFromConfig(regCtx, "configs/dev")
 
 	// 4. Start Server
-	server.Start()
+	server.Start(true)
 }
 
 func registerAllComponents(regCtx lokstra.RegistrationContext) {

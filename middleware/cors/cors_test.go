@@ -148,7 +148,7 @@ func TestCorsMiddleware_ActualRequest(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set("Origin", "http://localhost:3000")
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler
@@ -201,7 +201,7 @@ func TestCorsMiddleware_PreflightRequest(t *testing.T) {
 	req.Header.Set("Access-Control-Request-Method", "POST")
 	req.Header.Set("Access-Control-Request-Headers", "Content-Type")
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler
@@ -253,7 +253,7 @@ func TestCorsMiddleware_WildcardHeaders(t *testing.T) {
 	req.Header.Set("Origin", "http://example.com")
 	req.Header.Set("Access-Control-Request-Headers", "X-Custom-Header, X-Another-Header")
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler
@@ -285,7 +285,7 @@ func TestCorsMiddleware_NoOriginHeader(t *testing.T) {
 	// Create request without Origin header
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler
@@ -321,7 +321,7 @@ func TestCorsMiddleware_OriginNotAllowed(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set("Origin", "http://evil.com")
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
+	ctx, cancel := request.NewContext(nil, w, req)
 	defer cancel()
 
 	// Execute the wrapped handler

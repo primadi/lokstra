@@ -265,7 +265,7 @@ func main() {
 	lokstra.Logger.Infof("  POST /send-email     - Test email service directly")
 	lokstra.Logger.Infof("  POST /send-welcome   - Test notification service (with DI)")
 
-	app.Start()
+	app.Start(true)
 }
 
 // Registration Context Key Concepts:
