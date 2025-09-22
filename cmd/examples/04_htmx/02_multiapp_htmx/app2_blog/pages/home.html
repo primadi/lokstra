@@ -1,0 +1,111 @@
+<!-- layout: blog.html -->
+
+<div class="blog-home">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1>{{.hero.title}}</h1>
+            <p>{{.hero.subtitle}}</p>
+            <div class="hero-stats">
+                <span class="stat">📝 {{.stats.total_articles}} Articles</span>
+                <span class="stat">👥 {{.stats.total_readers}} Readers</span>
+                <span class="stat">💬 {{.stats.total_comments}} Comments</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Latest Articles -->
+    <section class="articles-section">
+        <div class="section-header">
+            <h2>📚 Latest Articles</h2>
+            <a href="/app2/articles" 
+               hx-get="/app2/articles" 
+               hx-target="main" 
+               hx-push-url="true"
+               class="view-all-btn">View All →</a>
+        </div>
+
+        <div class="articles-grid">
+            {{range .featured_articles}}
+            <article class="article-card" hx-get="/app2/article/{{.slug}}" hx-target="main" hx-push-url="true">
+                <div class="article-image">
+                    <img src="{{.image}}" alt="{{.title}}" loading="lazy">
+                    <div class="article-category">{{.category}}</div>
+                </div>
+                <div class="article-content">
+                    <h3>{{.title}}</h3>
+                    <p>{{.excerpt}}</p>
+                    <div class="article-meta">
+                        <div class="author">
+                            <div class="author-avatar">{{.author.avatar}}</div>
+                            <span>{{.author.name}}</span>
+                        </div>
+                        <div class="article-stats">
+                            <span>📅 {{.published_date}}</span>
+                            <span>⏱️ {{.read_time}} min read</span>
+                            <span>👁️ {{.views}} views</span>
+                        </div>
+                    </div>
+                    <div class="article-tags">
+                        {{range .tags}}
+                        <span class="tag">{{.}}</span>
+                        {{end}}
+                    </div>
+                </div>
+            </article>
+            {{end}}
+        </div>
+    </section>
+
+    <!-- Popular Categories -->
+    <section class="categories-section">
+        <h2>🏷️ Popular Categories</h2>
+        <div class="categories-grid">
+            {{range .popular_categories}}
+            <div class="category-card" 
+                 hx-get="/app2/category/{{.slug}}" 
+                 hx-target="main" 
+                 hx-push-url="true">
+                <div class="category-icon">{{.icon}}</div>
+                <div class="category-info">
+                    <h3>{{.name}}</h3>
+                    <p>{{.description}}</p>
+                    <span class="article-count">{{.article_count}} articles</span>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </section>
+
+    <!-- Newsletter Signup -->
+    <section class="newsletter-section">
+        <div class="newsletter-content">
+            <h2>📬 Stay Updated</h2>
+            <p>Subscribe to our newsletter and never miss a new article!</p>
+            <form class="newsletter-form" 
+                  hx-post="/app2/api/newsletter/subscribe" 
+                  hx-target="#newsletter-result">
+                <input type="email" 
+                       name="email" 
+                       placeholder="Enter your email address" 
+                       required
+                       class="newsletter-input">
+                <button type="submit" class="newsletter-btn">Subscribe</button>
+            </form>
+            <div id="newsletter-result" class="newsletter-result">
+                <!-- Subscription result will appear here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Activity -->
+    <section class="activity-section">
+        <h2>🔥 Recent Activity</h2>
+        <div class="activity-feed" 
+             hx-get="/app2/api/activity" 
+             hx-trigger="load, every 60s"
+             hx-indicator=".activity-loading">
+            <div class="activity-loading htmx-indicator">Loading recent activity...</div>
+        </div>
+    </section>
+</div>

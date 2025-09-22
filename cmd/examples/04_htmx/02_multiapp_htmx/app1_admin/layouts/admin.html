@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Title and meta tags are automatically injected by Lokstra -->
+    <link rel="stylesheet" href="{{.StaticCSS}}/admin.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🛡️ Admin Panel</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="/app1" 
+                           hx-get="/app1" 
+                           hx-target="main" 
+                           hx-push-url="true"
+                           class="nav-link active">
+                            📊 Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/app1/users" 
+                           hx-get="/app1/users" 
+                           hx-target="main" 
+                           hx-push-url="true"
+                           class="nav-link">
+                            👥 Users
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/app1/settings" 
+                           hx-get="/app1/settings" 
+                           hx-target="main" 
+                           hx-push-url="true"
+                           class="nav-link">
+                            ⚙️ Settings
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/app1/analytics" 
+                           hx-get="/app1/analytics" 
+                           hx-target="main" 
+                           hx-push-url="true"
+                           class="nav-link">
+                            📈 Analytics
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <div class="user-name">Admin User</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 class="page-title">Admin Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-search" onclick="openSearch()">🔍 Search</button>
+                    <div class="notifications">
+                        <span class="notification-badge">3</span>
+                        🔔
+                    </div>
+                </div>
+            </header>
+
+            <main class="page-content">
+                {{template "page" .}}
+            </main>
+        </div>
+    </div>
+
+    <!-- Loading indicator for HTMX requests -->
+    <div class="htmx-indicator">
+        <div class="loading-overlay">
+            <div class="spinner blue"></div>
+            <span>Loading...</span>
+        </div>
+    </div>
+
+    <!-- Search overlay -->
+    <div class="search-overlay" id="search-overlay">
+        <div class="search-container">
+            <input type="text" 
+                   placeholder="Search admin panel..." 
+                   hx-get="/app1/api/search" 
+                   hx-target="#search-results"
+                   hx-trigger="keyup changed delay:300ms"
+                   name="q"
+                   class="search-input">
+            <div id="search-results" class="search-results">
+                <p class="search-placeholder">Start typing to search...</p>
+            </div>
+            <button onclick="closeSearch()" class="close-search">✕</button>
+        </div>
+    </div>
+
+    <script src="{{.StaticJS}}/admin.js"></script>
+</body>
+</html>

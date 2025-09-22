@@ -20,6 +20,11 @@ var paramPatternServeMux = regexp.MustCompile(`:([a-zA-Z_][a-zA-Z0-9_]*)|\*([a-z
 // This is necessary because http.ServeMux does not support the :param or *param syntax.
 // Instead, it uses {param} for single parameters and {param...} for variadic parameters.
 func ConvertToServeMuxParamPath(path string) string {
+	// Handle exact root match vs catch-all
+	if path == "" {
+		return "/" // Convert empty path to "/" for exact match
+	}
+
 	return paramPatternServeMux.ReplaceAllStringFunc(path, func(m string) string {
 		match := paramPatternServeMux.FindStringSubmatch(m)
 		if match[2] != "" {
@@ -72,7 +77,13 @@ func (w headFallbackWriter) Write(b []byte) (int, error) {
 }
 
 func cleanPrefix(prefix string) string {
-	if prefix == "/" || prefix == "" {
+	// Handle exact root match (empty string should only match root)
+	if prefix == "" {
+		return ""
+	}
+
+	// Handle catch-all root pattern
+	if prefix == "/" {
 		return "/"
 	}
 

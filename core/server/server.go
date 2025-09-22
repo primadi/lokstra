@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/primadi/lokstra/common/htmx_fsmanager"
 	"github.com/primadi/lokstra/core/app"
 
 	"github.com/primadi/lokstra/core/registration"
@@ -35,12 +36,19 @@ func (s *Server) GetName() string {
 	return s.name
 }
 
-// AddApp registers an application to the server.
-func (s *Server) AddApp(app *app.App) {
+// Registers an application to the server.
+func (s *Server) AddApp(app *app.App) *Server {
 	s.apps = append(s.apps, app)
+	return s
 }
 
-// NewApp creates a new application instance and registers it to the server.
+// Register multiple applications to the server.
+func (s *Server) AddApps(app ...*app.App) *Server {
+	s.apps = append(s.apps, app...)
+	return s
+}
+
+// Creates a new application instance and registers it to the server.
 func (s *Server) NewApp(name string, addr string) *app.App {
 	newApp := app.NewApp(s.ctx, name, addr)
 	s.AddApp(newApp)
@@ -75,7 +83,21 @@ func (s *Server) GetSetting(key string) (any, bool) {
 }
 
 func (s *Server) MergeAppsWithSameAddress() {
+	var staticHtmxMaps = make(map[string]struct{})
+
 	for i, app := range s.apps {
+		htmxContainer, ok := app.Router.(htmx_fsmanager.IContainer)
+		if ok {
+			fsm := htmxContainer.GetHtmxFsManager()
+			if fsm != nil && len(fsm.GetStaticFiles()) > 0 {
+				htmxPrefix := fsm.GetStaticPrefix()
+
+				if _, exists := staticHtmxMaps[htmxPrefix]; !exists {
+					staticHtmxMaps[htmxPrefix] = struct{}{}
+					app.MountStatic(htmxPrefix, false, fsm.GetStaticFiles()...)
+				}
+			}
+		}
 		if app.IsMerged() {
 			continue
 		}

@@ -38,6 +38,12 @@ func (r *Response) OkCreated(data any) error {
 	return nil
 }
 
+func (r *Response) OkNoContent() error {
+	r.StatusCode = http.StatusNoContent
+	r.Success = true
+	return nil
+}
+
 // OkUpdated sends a structured response indicating successful update
 func (r *Response) OkUpdated(data any) error {
 	r.StatusCode = http.StatusOK

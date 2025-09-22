@@ -36,6 +36,13 @@ func (m *ServeMuxEngine) HandleMethod(method string, path string, handler http.H
 
 		convertedPath := ConvertToServeMuxParamPath(path)
 		m.mux.HandleFunc(convertedPath, func(w http.ResponseWriter, r *http.Request) {
+			// Handle exact root match logic here
+			if path == "" && r.URL.Path != "/" {
+				// This is an exact root match handler, but request is for sub-path
+				http.NotFound(w, r)
+				return
+			}
+
 			requestMethod := r.Method
 
 			if requestMethod == http.MethodOptions {

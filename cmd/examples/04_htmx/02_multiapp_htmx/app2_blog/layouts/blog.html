@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Title and meta tags are automatically injected by Lokstra -->
+    <link rel="stylesheet" href="{{.StaticCSS}}/blog.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+    <!-- Blog Header -->
+    <header class="blog-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>🌱 TechBlog</h1>
+                    <p>Sharing knowledge, inspiring growth</p>
+                </div>
+                <nav class="main-nav">
+                    <ul>
+                        <li>
+                            <a href="/app2" 
+                               hx-get="/app2" 
+                               hx-target="main" 
+                               hx-push-url="true"
+                               hx-indicator=".htmx-indicator"
+                               class="nav-link">
+                                🏠 Home
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/app2/articles" 
+                               hx-get="/app2/articles" 
+                               hx-target="main" 
+                               hx-push-url="true"
+                               hx-indicator=".htmx-indicator"
+                               class="nav-link">
+                                📝 Articles
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/app2/categories" 
+                               hx-get="/app2/categories" 
+                               hx-target="main" 
+                               hx-push-url="true"
+                               hx-indicator=".htmx-indicator"
+                               class="nav-link">
+                                📁 Categories
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/app2/about" 
+                               hx-get="/app2/about" 
+                               hx-target="main" 
+                               hx-push-url="true"
+                               hx-indicator=".htmx-indicator"
+                               class="nav-link">
+                                👋 About
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <div class="header-actions">
+                    <button class="search-btn" onclick="openSearch()">🔍</button>
+                    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="blog-layout">
+        <div class="container">
+            <div class="content-grid">
+                <!-- Main Content -->
+                <main class="main-content">
+                    {{template "page" .}}
+                </main>
+
+                <!-- Sidebar -->
+                <aside class="sidebar">
+                    <!-- Featured Post -->
+                    <div class="widget">
+                        <h3>🌟 Featured Post</h3>
+                        <div class="featured-post" 
+                             hx-get="/app2/api/featured" 
+                             hx-trigger="load"
+                             hx-indicator=".featured-loading">
+                            <div class="featured-loading htmx-indicator">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Posts -->
+                    <div class="widget">
+                        <h3>📰 Recent Posts</h3>
+                        <div class="recent-posts" 
+                             hx-get="/app2/api/recent" 
+                             hx-trigger="load"
+                             hx-indicator=".recent-loading">
+                            <div class="recent-loading htmx-indicator">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="widget">
+                        <h3>📂 Categories</h3>
+                        <div class="categories-list" 
+                             hx-get="/app2/api/categories" 
+                             hx-trigger="load">
+                            <div class="categories-loading htmx-indicator">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Tags Cloud -->
+                    <div class="widget">
+                        <h3>🏷️ Popular Tags</h3>
+                        <div class="tags-cloud" 
+                             hx-get="/app2/api/tags" 
+                             hx-trigger="load">
+                            <div class="tags-loading htmx-indicator">Loading...</div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blog Footer -->
+    <footer class="blog-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>TechBlog</h4>
+                    <p>A place where technology enthusiasts share knowledge and inspire each other to grow.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="/app2">Home</a></li>
+                        <li><a href="/app2/articles">Articles</a></li>
+                        <li><a href="/app2/about">About</a></li>
+                        <li><a href="/app2/contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Connect</h4>
+                    <div class="social-links">
+                        <a href="#">📘 Facebook</a>
+                        <a href="#">🐦 Twitter</a>
+                        <a href="#">💼 LinkedIn</a>
+                        <a href="#">📷 Instagram</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TechBlog. Built with ❤️ using Lokstra & HTMX.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading indicator for HTMX requests -->
+    <div class="htmx-indicator">
+        <div class="loading-overlay">
+            <div class="spinner green"></div>
+            <span>Loading...</span>
+        </div>
+    </div>
+
+    <!-- Search overlay -->
+    <div class="search-overlay" id="search-overlay">
+        <div class="search-container">
+            <input type="text" 
+                   placeholder="Search articles..." 
+                   hx-get="/app2/api/search" 
+                   hx-target="#search-results"
+                   hx-trigger="keyup changed delay:300ms"
+                   name="q"
+                   class="search-input">
+            <div id="search-results" class="search-results">
+                <p class="search-placeholder">Start typing to search...</p>
+            </div>
+            <button onclick="closeSearch()" class="close-search">✕</button>
+        </div>
+    </div>
+
+    <script src="{{.StaticJS}}/blog.js"></script>
+</body>
+</html>

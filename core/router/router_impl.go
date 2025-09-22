@@ -28,6 +28,45 @@ type RouterImpl struct {
 	hfmContainer *htmx_fsmanager.HtmxFsManager
 }
 
+// SetHTMXLayoutScriptInjection implements Router.
+func (r *RouterImpl) SetHTMXLayoutScriptInjection(si *htmx_fsmanager.ScriptInjection) Router {
+	r.hfmContainer.SetScriptInjection(si)
+	return r
+}
+
+// AddHtmxLayouts implements Router.
+func (r *RouterImpl) AddHtmxLayouts(source fs.FS, dir ...string) Router {
+	if r.hfmContainer == nil {
+		r.hfmContainer = htmx_fsmanager.New()
+	}
+	r.hfmContainer.AddLayoutFiles(source, dir...)
+	return r
+}
+
+// AddHtmxPages implements Router.
+func (r *RouterImpl) AddHtmxPages(source fs.FS, dir ...string) Router {
+	if r.hfmContainer == nil {
+		r.hfmContainer = htmx_fsmanager.New()
+	}
+	r.hfmContainer.AddPageFiles(source, dir...)
+	return r
+}
+
+// AddHtmxStatics implements Router.
+func (r *RouterImpl) AddHtmxStatics(source fs.FS, dir ...string) Router {
+	if r.hfmContainer == nil {
+		r.hfmContainer = htmx_fsmanager.New()
+	}
+	r.hfmContainer.AddStaticFiles(source, dir...)
+	return r
+}
+
+// SetHtmxFSManager implements Router.
+func (r *RouterImpl) SetHtmxFSManager(manager *htmx_fsmanager.HtmxFsManager) Router {
+	r.hfmContainer = manager
+	return r
+}
+
 // GetHtmxFsManager implements htmx_fsmanager.IContainer.
 func (r *RouterImpl) GetHtmxFsManager() *htmx_fsmanager.HtmxFsManager {
 	return r.hfmContainer
@@ -106,6 +145,26 @@ func (r *RouterImpl) DELETE(path string, handler any, mw ...any) Router {
 	return r.Handle("DELETE", path, handler, mw...)
 }
 
+// DELETEPrefix implements Router.
+func (r *RouterImpl) DELETEPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return r.HandlePrefix("DELETE", pathPrefix, handler, mw...)
+}
+
+// POSTPrefix implements Router.
+func (r *RouterImpl) POSTPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return r.HandlePrefix("POST", pathPrefix, handler, mw...)
+}
+
+// PUTPrefix implements Router.
+func (r *RouterImpl) PUTPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return r.HandlePrefix("PUT", pathPrefix, handler, mw...)
+}
+
+// PATCHPrefix implements Router.
+func (r *RouterImpl) PATCHPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return r.HandlePrefix("PATCH", pathPrefix, handler, mw...)
+}
+
 // DumpRoutes implements Router.
 func (r *RouterImpl) DumpRoutes() {
 	r.meta.DumpRoutes()
@@ -150,6 +209,11 @@ func (r *RouterImpl) GET(path string, handler any, mw ...any) Router {
 	return r.Handle("GET", path, handler, mw...)
 }
 
+// GETPrefix implements Router.
+func (r *RouterImpl) GETPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return r.HandlePrefix("GET", pathPrefix, handler, mw...)
+}
+
 // Group implements Router.
 func (r *RouterImpl) Group(prefix string, mw ...any) Router {
 	rm := NewRouterMeta()
@@ -176,7 +240,25 @@ func (r *RouterImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 // Handle implements Router.
 func (r *RouterImpl) Handle(method request.HTTPMethod, path string, handler any,
 	mw ...any) Router {
-	r.meta.Handle(method, r.cleanPrefix(path), handler, false, mw...)
+	prefixPath := r.cleanPrefix(path)
+	if strings.HasSuffix(path, "/") {
+		// remove trailing slash for exact match
+		prefixPath, _ = strings.CutSuffix(prefixPath, "/")
+	}
+	r.meta.Handle(method, prefixPath, handler, false, mw...)
+	return r
+}
+
+// HandlePrefix implements prefix-based routing (catch-all)
+func (r *RouterImpl) HandlePrefix(method request.HTTPMethod, prefix string, handler any,
+	mw ...any) Router {
+	// For prefix routing, ensure the path ends with "/" for ServeMux prefix matching
+	prefixPath := r.cleanPrefix(prefix)
+	if !strings.HasSuffix(prefixPath, "/") {
+		prefixPath += "/"
+	}
+
+	r.meta.Handle(method, prefixPath, handler, false, mw...)
 	return r
 }
 
@@ -279,8 +361,20 @@ var _ Router = (*RouterImpl)(nil)
 var _ htmx_fsmanager.IContainer = (*RouterImpl)(nil)
 
 func (r *RouterImpl) cleanPrefix(prefix string) string {
-	if prefix == "/" || prefix == "" {
+	// Handle exact root match (empty string should only match root)
+	if prefix == "" {
+		if r.meta.Prefix == "" || r.meta.Prefix == "/" {
+			return "" // exact root match
+		}
 		return r.meta.Prefix
+	}
+
+	// Handle catch-all root pattern
+	if prefix == "/" {
+		if r.meta.Prefix == "" || r.meta.Prefix == "/" {
+			return "/" // catch-all pattern
+		}
+		return r.meta.Prefix + "/"
 	}
 
 	cleaned := strings.Trim(prefix, "/")
@@ -340,13 +434,10 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 		mwh = utils.SlicesConcat(mwParent, router.Middleware)
 	}
 
-	for _, route := range router.Routes {
-		r.handleRouteMeta(route, mwh)
-	}
-
-	for _, gr := range router.Groups {
-		r.buildRouter(gr, mwh)
-	}
+	// Handler Priority:
+	// RawHandles -> RPCHandles -> ReverseProxies -> StaticMounts -> HTMXPages -> Routes -> Groups
+	// This order ensures that RawHandles and RPCHandles are checked first,
+	// followed by ReverseProxies, StaticMounts, HTMXPages, and finally Routes and Groups.
 
 	for _, rh := range router.RawHandles {
 		if rh.Strip {
@@ -404,6 +495,14 @@ func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Executi
 
 	for _, htmx := range router.HTMXPages {
 		r.r_engine.ServeHtmxPage(r.r_engine, htmx.Prefix, htmx.Script, htmx.Sources...)
+	}
+
+	for _, route := range router.Routes {
+		r.handleRouteMeta(route, mwh)
+	}
+
+	for _, gr := range router.Groups {
+		r.buildRouter(gr, mwh)
 	}
 }
 

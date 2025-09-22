@@ -12,6 +12,7 @@ func TestNewResponse(t *testing.T) {
 
 	if r == nil {
 		t.Error("Expected response to be created, got nil")
+		return
 	}
 
 	// Check default values

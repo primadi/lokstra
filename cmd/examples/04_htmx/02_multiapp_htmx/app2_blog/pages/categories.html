@@ -1,0 +1,74 @@
+<!-- layout: blog.html -->
+
+<div class="categories-page">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>📁 Categories</h1>
+        <p>Explore articles organized by topics and interests</p>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="categories-grid">
+        {{range .categories}}
+        <div class="category-card-large" 
+             hx-get="/app2/category/{{.slug}}" 
+             hx-target="main" 
+             hx-push-url="true">
+            <div class="category-header">
+                <div class="category-icon-large">{{.icon}}</div>
+                <div class="category-info">
+                    <h3>{{.name}}</h3>
+                    <p>{{.description}}</p>
+                </div>
+            </div>
+            
+            <div class="category-stats">
+                <div class="stat">
+                    <span class="stat-number">{{.article_count}}</span>
+                    <span class="stat-label">Articles</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">{{.authors_count}}</span>
+                    <span class="stat-label">Authors</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">{{.total_views}}</span>
+                    <span class="stat-label">Total Views</span>
+                </div>
+            </div>
+
+            <div class="category-recent">
+                <h4>Recent Articles:</h4>
+                <ul>
+                    {{range .recent_articles}}
+                    <li>
+                        <a href="/app2/article/{{.slug}}" 
+                           hx-get="/app2/article/{{.slug}}" 
+                           hx-target="main" 
+                           hx-push-url="true">
+                            {{.title}}
+                        </a>
+                        <span class="article-date">{{.published_date}}</span>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
+
+            <div class="category-footer">
+                <span class="view-all">View All Articles →</span>
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Category Statistics -->
+    <div class="category-stats-section">
+        <h2>📊 Category Statistics</h2>
+        <div class="stats-visualization" 
+             hx-get="/app2/api/categories/stats" 
+             hx-trigger="load"
+             hx-indicator=".stats-loading">
+            <div class="stats-loading htmx-indicator">Loading statistics...</div>
+        </div>
+    </div>
+</div>

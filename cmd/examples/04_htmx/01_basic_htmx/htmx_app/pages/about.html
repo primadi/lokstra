@@ -10,20 +10,20 @@
             <h2>Company Information</h2>
             <div class="detail-grid">
                 <div class="detail-item">
-                    <strong>Company:</strong> {{.company}}
+                    <strong>Company:</strong> {{.company.name}}
                 </div>
                 <div class="detail-item">
-                    <strong>Founded:</strong> {{.founded}}
+                    <strong>Founded:</strong> {{.company.founded}}
                 </div>
                 <div class="detail-item">
-                    <strong>Location:</strong> {{.location}}
+                    <strong>Location:</strong> {{.company.location}}
                 </div>
             </div>
         </div>
 
         <div class="mission-section">
             <h2>Our Mission</h2>
-            <p class="mission-text">{{.mission}}</p>
+            <p class="mission-text">{{.company.mission}}</p>
         </div>
     </div>
 

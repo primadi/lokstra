@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/primadi/lokstra/common/htmx_fsmanager"
 	"github.com/primadi/lokstra/common/static_files"
 	"github.com/primadi/lokstra/core/request"
 
@@ -14,6 +15,48 @@ import (
 type GroupImpl struct {
 	parent *RouterImpl
 	meta   *RouterMeta
+}
+
+// SetHTMXLayoutScriptInjection implements Router.
+func (g *GroupImpl) SetHTMXLayoutScriptInjection(si *htmx_fsmanager.ScriptInjection) Router {
+	if g.parent.hfmContainer == nil {
+		g.parent.hfmContainer = htmx_fsmanager.New()
+	}
+	g.parent.hfmContainer.SetScriptInjection(si)
+	return g
+}
+
+// AddHtmxLayouts implements Router.
+func (g *GroupImpl) AddHtmxLayouts(source fs.FS, dir ...string) Router {
+	if g.parent.hfmContainer == nil {
+		g.parent.hfmContainer = htmx_fsmanager.New()
+	}
+	g.parent.hfmContainer.AddLayoutFiles(source, dir...)
+	return g
+}
+
+// AddHtmxPages implements Router.
+func (g *GroupImpl) AddHtmxPages(source fs.FS, dir ...string) Router {
+	if g.parent.hfmContainer == nil {
+		g.parent.hfmContainer = htmx_fsmanager.New()
+	}
+	g.parent.hfmContainer.AddPageFiles(source, dir...)
+	return g
+}
+
+// AddHtmxStatics implements Router.
+func (g *GroupImpl) AddHtmxStatics(source fs.FS, dir ...string) Router {
+	if g.parent.hfmContainer == nil {
+		g.parent.hfmContainer = htmx_fsmanager.New()
+	}
+	g.parent.hfmContainer.AddStaticFiles(source, dir...)
+	return g
+}
+
+// SetHtmxFSManager implements Router.
+func (g *GroupImpl) SetHtmxFSManager(manager *htmx_fsmanager.HtmxFsManager) Router {
+	g.parent.hfmContainer = manager
+	return g
 }
 
 // RawHandle implements Router.
@@ -64,6 +107,11 @@ func (g *GroupImpl) GET(path string, handler any, mw ...any) Router {
 	return g.Handle("GET", path, handler, mw...)
 }
 
+// GETPrefix implements Router.
+func (g *GroupImpl) GETPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return g.HandlePrefix("GET", pathPrefix, handler, mw...)
+}
+
 // Group implements Router.
 func (g *GroupImpl) Group(prefix string, mw ...any) Router {
 	rm := NewRouterMeta()
@@ -89,13 +137,30 @@ func (g *GroupImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
 
 // Handle implements Router.
 func (g *GroupImpl) Handle(method request.HTTPMethod, path string, handler any, mw ...any) Router {
-	g.meta.Handle(method, g.cleanPrefix(path), handler, false, mw...)
+	prefixPath := g.cleanPrefix(path)
+	if strings.HasSuffix(path, "/") {
+		// remove trailing slash for exact match
+		prefixPath, _ = strings.CutSuffix(prefixPath, "/")
+	}
+	g.meta.Handle(method, prefixPath, handler, false, mw...)
 	return g
 }
 
 // HandleOverrideMiddleware implements Router.
 func (g *GroupImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string, handler any, mw ...any) Router {
 	g.meta.Handle(method, g.cleanPrefix(path), handler, true, mw...)
+	return g
+}
+
+// HandlePrefix implements prefix-based routing (catch-all)
+func (g *GroupImpl) HandlePrefix(method request.HTTPMethod, prefix string, handler any, mw ...any) Router {
+	// For prefix routing, ensure the path ends with "/" for ServeMux prefix matching
+	prefixPath := g.cleanPrefix(prefix)
+	if !strings.HasSuffix(prefixPath, "/") {
+		prefixPath += "/"
+	}
+
+	g.meta.Handle(method, prefixPath, handler, false, mw...)
 	return g
 }
 
@@ -130,6 +195,26 @@ func (g *GroupImpl) POST(path string, handler any, mw ...any) Router {
 // PUT implements Router.
 func (g *GroupImpl) PUT(path string, handler any, mw ...any) Router {
 	return g.Handle("PUT", path, handler, mw...)
+}
+
+// POSTPrefix implements Router.
+func (g *GroupImpl) POSTPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return g.HandlePrefix("POST", pathPrefix, handler, mw...)
+}
+
+// PUTPrefix implements Router.
+func (g *GroupImpl) PUTPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return g.HandlePrefix("PUT", pathPrefix, handler, mw...)
+}
+
+// PATCHPrefix implements Router.
+func (g *GroupImpl) PATCHPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return g.HandlePrefix("PATCH", pathPrefix, handler, mw...)
+}
+
+// DELETEPrefix implements Router.
+func (g *GroupImpl) DELETEPrefix(pathPrefix string, handler any, mw ...any) Router {
+	return g.HandlePrefix("DELETE", pathPrefix, handler, mw...)
 }
 
 // Prefix implements Router.
