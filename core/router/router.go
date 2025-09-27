@@ -1,114 +1,143 @@
 package router
 
 import (
-	"io/fs"
 	"net/http"
 
-	"github.com/primadi/lokstra/common/htmx_fsmanager"
-	"github.com/primadi/lokstra/common/static_files"
-	"github.com/primadi/lokstra/core/request"
-
-	"github.com/valyala/fasthttp"
+	"github.com/primadi/lokstra/core/route"
 )
 
 type Router interface {
-	// Prefix returns the router's base prefix string (routerPrefix)
-	// This is the base path that gets prepended to all routes in this router
-	// Example: if Prefix() returns "/api/v1", then GET("/users") becomes "/api/v1/users"
-	Prefix() string
+	http.Handler
 
-	// Use adds middleware to the router's middleware stack
-	Use(any) Router
-	// Handle registers a new route with the given method, path, handler, and optional middleware
-	// Final endpoint = routerPrefix + path
-	Handle(method request.HTTPMethod, path string, handler any, mw ...any) Router
-	// HandleOverrideMiddleware registers a new route with the given method, path, handler, and optional middleware, overriding the router's middleware stack
-	HandleOverrideMiddleware(method request.HTTPMethod, path string, handler any, mw ...any) Router
+	// Router Name for identification
+	Name() string
+	// EngineType returns the underlying engine type, e.g. "default", "servemux", etc.
+	EngineType() string
+	// PathPrefix returns the path prefix of this router
+	PathPrefix() string
 
-	// GET registers an exact-match GET route at: routerPrefix + path
-	// Example: router.WithPrefix("/api").GET("/users") handles exactly "/api/users"
-	GET(path string, handler any, mw ...any) Router
-
-	// GETPrefix registers a catch-all GET route that handles: routerPrefix + pathPrefix + /*
-	// Example: router.WithPrefix("/api").GETPrefix("/files") handles "/api/files", "/api/files/doc.pdf", etc.
-	// Parameter 'pathPrefix' is the method-level prefix, different from router's base prefix
-	GETPrefix(pathPrefix string, handler any, mw ...any) Router
-
-	// POST registers an exact-match POST route at: routerPrefix + path
-	POST(path string, handler any, mw ...any) Router
-	// POSTPrefix registers a catch-all POST route that handles: routerPrefix + pathPrefix + /*
-	POSTPrefix(pathPrefix string, handler any, mw ...any) Router
-
-	// PUT registers an exact-match PUT route at: routerPrefix + path
-	PUT(path string, handler any, mw ...any) Router
-	// PUTPrefix registers a catch-all PUT route that handles: routerPrefix + pathPrefix + /*
-	PUTPrefix(pathPrefix string, handler any, mw ...any) Router
-
-	// PATCH registers an exact-match PATCH route at: routerPrefix + path
-	PATCH(path string, handler any, mw ...any) Router
-	// PATCHPrefix registers a catch-all PATCH route that handles: routerPrefix + pathPrefix + /*
-	PATCHPrefix(pathPrefix string, handler any, mw ...any) Router
-
-	// DELETE registers an exact-match DELETE route at: routerPrefix + path
-	DELETE(path string, handler any, mw ...any) Router
-	// DELETEPrefix registers a catch-all DELETE route that handles: routerPrefix + pathPrefix + /*
-	DELETEPrefix(pathPrefix string, handler any, mw ...any) Router
-
-	// WithOverrideMiddleware enables or disables middleware override for the router
-	WithOverrideMiddleware(enable bool) Router
-
-	// WithPrefix sets the base prefix for all routes in this router (routerPrefix)
-	// This affects ALL routes registered after this call
-	// Example: router.WithPrefix("/api/v1") makes GET("/users") handle "/api/v1/users"
-	WithPrefix(prefix string) Router
-
-	// RawHandle registers a standard http.Handler for the given path prefix
-	RawHandle(prefix string, stripPrefix bool, handler http.Handler) Router
-
-	// MountStatic serves static files from multiple sources at the specified prefix, using the first available file
-	MountStatic(prefix string, spa bool, sources ...fs.FS) Router
-
-	// MountHtmx serves HTMX pages with layout support at the specified prefix, using the provided sources
-	// Assume sources has:
-	//   - "/layouts" for HTML layout templates
-	//   - "/pages" for HTML page templates
+	// route registration for GET method
 	//
-	// All Request paths will be treated as page requests,
-	// it will be depreceted in the future.
-	MountHtmx(prefix string, si *static_files.ScriptInjection, sources ...fs.FS) Router
+	// h can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//
+	// middleware can be:
+	//  - [same as above]
+	//  - route.HandlerOption (e.g. route.WithNameOption,
+	//    route.WithDescriptionOption, route.WithOverrideParentMwOption)
+	GET(path string, h any, middleware ...any) Router
+	// route registration for POST method
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//  - route.HandlerOption
+	POST(path string, h any, middleware ...any) Router
+	// route registration for PUT method
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//  - route.HandlerOption
+	PUT(path string, h any, middleware ...any) Router
+	// route registration for DELETE metod
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//  - route.HandlerOption
+	DELETE(path string, h any, middleware ...any) Router
+	// route registration for PATCH method
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//  - route.HandlerOption
+	PATCH(path string, h any, middleware ...any) Router
+	// route registration for ANY method (all methods)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//  - route.HandlerOption
+	ANY(path string, h any, middleware ...any) Router
 
-	// MountReverseProxy mounts a reverse proxy at the specified prefix, targeting the given URL, with optional middleware and override option
-	MountReverseProxy(prefix string, target string, overrideMiddleware bool, mw ...any) Router
-	// MountRpcService mounts an RPC service at the specified path, with optional middleware and override option
-	MountRpcService(path string, service any, overrideMiddleware bool, mw ...any) Router
+	// route registration for GET method with prefix match
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//  - route.HandlerOption
+	GETPrefix(prefix string, h any, middleware ...any) Router
+	// route registration for POST method with prefix match
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, *T) error
+	//  - route.HandlerOption
+	POSTPrefix(prefix string, h any, middleware ...any) Router
+	// route registration for PUT method with prefix match
+	PUTPrefix(prefix string, h any, middleware ...any) Router
+	// route registration for DELETE method with prefix match
+	DELETEPrefix(prefix string, h any, middleware ...any) Router
+	// route registration for PATCH method with prefix match
+	PATCHPrefix(prefix string, h any, middleware ...any) Router
+	// route registration for ANY method with prefix match
+	ANYPrefix(prefix string, h any, middleware ...any) Router
 
-	// Group creates a sub-router with the given prefix and optional middleware
-	Group(prefix string, mw ...any) Router
-	// GroupBlock creates a sub-router with the given prefix and applies the provided function to it
-	GroupBlock(prefix string, fn func(gr Router)) Router
+	// create a sub- router with prefix, and call the fn to register routes on it
+	// e.g. r.Group("/v1", func(g lokstra.Router) { ... })
+	Group(prefix string, fn func(r Router)) Router
+	// create a sub- router with prefix, and return it for further route registration
+	// e.g. gv2 := r.AddGroup("/v2")
+	AddGroup(prefix string) Router
 
-	// RecurseAllHandler calls the given callback for each registered route, including those in sub-routers
-	RecurseAllHandler(callback func(rt *RouteMeta))
-	// DumpRoutes prints all registered routes and mounts (comprehensive view)
-	DumpRoutes()
+	// add global middleware(s) to this router
+	// e.g. r.Use(middleware...)
+	Use(middleware ...any) Router
 
-	// AddRouter merges another router into the current router
-	AddRouter(r Router) Router
+	// set whether this router should override parent middleware when adding routes
+	WithOverrideParentMiddleware(override bool) Router
 
-	// ServeHTTP makes the router implement the http.Handler interface
-	ServeHTTP(w http.ResponseWriter, r *http.Request)
-	// FastHttpHandler returns a fasthttp.RequestHandler for the router
-	FastHttpHandler() fasthttp.RequestHandler
-	// OverrideMiddleware returns whether the router overrides middleware
-	OverrideMiddleware() bool
+	// walk through all routes (including in child groups) and call fn for each route
+	// fullPath is the complete path including all parent group prefixes
+	// e.g. /v1/admin/stats
+	Walk(fn func(rt *route.Route))
+	// Print all routes to stdout for introspection
+	PrintRoutes()
 
-	// GetMeta returns the router's metadata
-	GetMeta() *RouterMeta
+	// finalize the router and its children, building the underlying engine
+	Build()
+	// check if the router has been built
+	IsBuilt() bool
 
-	// HTMX Support
-	AddHtmxPages(source fs.FS, dir ...string) Router
-	AddHtmxLayouts(source fs.FS, dir ...string) Router
-	AddHtmxStatics(source fs.FS, dir ...string) Router
-	SetHtmxFSManager(manager *htmx_fsmanager.HtmxFsManager) Router
-	SetHTMXLayoutScriptInjection(si *htmx_fsmanager.ScriptInjection) Router
+	// check if the router is part of a chain
+	IsChained() bool
+	// get the next router in the chain, or nil if none
+	GetNextChain() Router
 }

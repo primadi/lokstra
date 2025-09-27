@@ -1,6 +1,0 @@
-apps:
-  - name: user-app
-    routes:
-      - method: GET
-        path: /list
-        handler: user.list

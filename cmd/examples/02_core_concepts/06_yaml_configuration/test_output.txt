@@ -1,1 +1,0 @@
-?   	github.com/primadi/lokstra/cmd/examples/02_core_concepts/06_yaml_configuration	[no test files]

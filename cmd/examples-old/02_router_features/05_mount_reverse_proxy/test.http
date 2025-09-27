@@ -1,5 +1,0 @@
-@host=http://localhost:8080
-
-### secure get
-GET {{host}}/api/secure/get
-X-API-Key: secret-key

@@ -1,5 +1,0 @@
-This is a sample text file served from the static directory.
-
-You can access this file at: http://localhost:8080/static/sample.txt
-
-This demonstrates how Lokstra can serve static files from mounted directories.

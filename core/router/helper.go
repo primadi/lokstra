@@ -1,127 +1,124 @@
 package router
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"slices"
+	"reflect"
+	"strings"
 
-	"github.com/primadi/lokstra/common/htmx_fsmanager"
-	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/midware"
 	"github.com/primadi/lokstra/core/request"
 )
 
-func anyArraytoMiddleware(middleware []any) []*midware.Execution {
-	mwExec := make([]*midware.Execution, len(middleware))
-	for i := range middleware {
-		if middleware[i] == nil {
-			continue
-		}
+var (
+	typeOfContext = reflect.TypeOf((*request.Context)(nil))
+	typeOfError   = reflect.TypeOf((*error)(nil)).Elem()
+)
 
-		var mw *midware.Execution
-		switch m := middleware[i].(type) {
-		case midware.Func:
-			mw = midware.NewExecution(m)
-		case string:
-			mw = midware.Named(m)
-		case *midware.Execution:
-			mw = m
-		default:
-			panic("Invalid middleware type, must be a MiddlewareFunc, string, or *MiddlewareExecution")
-		}
+func createEngine(engineType string) RouterEngine {
+	var engine RouterEngine
 
-		mwExec[i] = mw
+	switch engineType {
+	case "default", "servemux":
+		engine = NewMethodServeMux()
+	default:
+		panic("Unsupported engine type: " + engineType)
 	}
-	return mwExec
+	return engine
 }
 
-func createReverseProxyHandler(target string) request.HandlerFunc {
-	targetURL, err := url.Parse(target)
-	if err != nil {
-		panic("invalid proxy target: " + err.Error())
+func adaptSmart(name string, v any) request.HandlerFunc {
+	fnVal := reflect.ValueOf(v)
+	fnType := fnVal.Type()
+
+	if fnType.Kind() == reflect.Func &&
+		fnType.NumIn() == 2 &&
+		fnType.NumOut() == 1 &&
+		fnType.In(0) == typeOfContext &&
+		fnType.Out(0) == typeOfError &&
+		fnType.In(1).Kind() == reflect.Ptr &&
+		fnType.In(1).Elem().Kind() == reflect.Struct {
+
+		paramType := fnType.In(1)
+
+		return func(ctx *request.Context) error {
+			paramPtr := reflect.New(paramType.Elem()).Interface()
+			if err := ctx.BindAllSmart(paramPtr); err != nil {
+				return ctx.ErrorBadRequest(err)
+			}
+			out := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(paramPtr)})
+			if !out[0].IsNil() {
+				return out[0].Interface().(error)
+			}
+			return nil
+		}
 	}
+	msg := "Invalid handler type for [" + name +
+		"], it must be request.HandlerFunc, http.HandlerFunc, http.Handler, or func(*Context, *T) error"
+	fmt.Println(msg)
+	panic(msg)
+}
 
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
-
-	return func(ctx *request.Context) error {
-		fmt.Printf("Proxying request to %s\n", targetURL.String())
-		r := ctx.Request
-		w := ctx.Writer
-		r.URL.Scheme = targetURL.Scheme
-		r.URL.Host = targetURL.Host
-		r.Host = targetURL.Host
-		proxy.ServeHTTP(w, r)
-		return nil
+func adaptHandler(name string, h any) request.HandlerFunc {
+	switch v := h.(type) {
+	case func(*request.Context) error:
+		return v
+	case request.HandlerFunc:
+		return v
+	case http.HandlerFunc:
+		return func(c *request.Context) error {
+			v(c.W, c.R)
+			return nil
+		}
+	case http.Handler:
+		return func(c *request.Context) error {
+			v.ServeHTTP(c.W, c.R)
+			return nil
+		}
+	default:
+		return adaptSmart(name, v)
 	}
 }
 
-func composeReverseProxyMw(hfmContainer htmx_fsmanager.IContainer, rp *ReverseProxyMeta, mwParent []*midware.Execution) http.HandlerFunc {
-	var mw []*midware.Execution
-
-	if rp.OverrideMiddleware {
-		mw = make([]*midware.Execution, len(rp.Middleware))
-		copy(mw, rp.Middleware)
-	} else {
-		mw = utils.SlicesConcat(mwParent, rp.Middleware)
-	}
-
-	// Update execution order based on order of addition
-	execOrder := 0
+func adaptMiddlewares(mw []any) []request.HandlerFunc {
+	var adapted []request.HandlerFunc
 	for _, m := range mw {
-		m.ExecutionOrder = execOrder
-		execOrder++
+		adapted = append(adapted, adaptHandler("middleware", m))
+	}
+	return adapted
+}
+
+func cleanPath(p string) string {
+	p = strings.Trim(p, "/")
+	if p == "" {
+		return ""
+	}
+	return "/" + p
+}
+
+func cleanPrefix(p string) string {
+	p = strings.Trim(p, "/")
+	if p == "" {
+		return "/"
+	}
+	return "/" + p + "/"
+}
+
+func normalizeName(childName, childPath, method string) string {
+	if len(childName) > 0 {
+		return childName
 	}
 
-	// Sort middleware by priority and execution order
-	slices.SortStableFunc(mw, func(a, b *midware.Execution) int {
-		aOrder := a.Priority + a.ExecutionOrder
-		bOrder := b.Priority + b.ExecutionOrder
-
-		if aOrder < bOrder {
-			return -1
-		} else if aOrder > bOrder {
-			return 1
-		}
-
-		return 0
-	})
-
-	// Create the final proxy handler
-	proxyHandler := createReverseProxyHandler(rp.Target)
-
-	// Wrap proxy handler with error-aware middleware composition
-	// Start from the innermost handler (proxy) and wrap outward
-	handler := proxyHandler
-	for i := len(mw) - 1; i >= 0; i-- {
-		currentMw := mw[i]
-		handler = func(innerHandler request.HandlerFunc, middleware *midware.Execution) request.HandlerFunc {
-			return middleware.MiddlewareFn(func(ctx *request.Context) error {
-				// Check if previous middleware already set an error response (4xx or 5xx)
-				if ctx.Response.StatusCode >= 400 {
-					// Return error to stop middleware chain and prevent "after" logic
-					return errors.New("previous middleware set error response")
-				}
-				return innerHandler(ctx)
-			})
-		}(handler, currentMw)
+	pref := ""
+	if strings.HasSuffix(childPath, "/") {
+		pref = "PREF:"
 	}
+	return strings.Join([]string{method, "[" + pref +
+		strings.Trim(childPath, "/") + "]", "_handler"}, "")
+}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, deferFunc := request.NewContext(hfmContainer, w, r)
-		defer deferFunc()
-
-		// Execute the wrapped middleware chain
-		err := handler(ctx)
-
-		// Handle response writing
-		if err != nil || ctx.Response.StatusCode >= 400 {
-			// Error case - write lokstra response
-			ctx.Response.WriteHttp(ctx.Writer)
-		}
-		// Success case - proxy has already written response directly to http.ResponseWriter
-		// No need to call WriteHttp for successful proxy responses
-	})
+func normalizeGroupName(childName, childPath string) string {
+	if len(childName) == 0 {
+		childName = strings.ReplaceAll(strings.Trim(childPath, "/"), "/", ".")
+	}
+	return childName
 }
