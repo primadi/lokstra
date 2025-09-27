@@ -46,6 +46,18 @@ func createV2Group(r lokstra.Router) {
 	}, route.WithNameOption("stats"))
 }
 
+func createNewRouter() lokstra.Router {
+	r2 := lokstra.NewRouter("secondary-router")
+	r2.GET("/status", func(c *lokstra.RequestContext) error {
+		return c.Ok("r2 status ok")
+	}, route.WithNameOption("r2-status-route"))
+	r2.GET("/ping", func(c *lokstra.RequestContext) error {
+		return c.Ok("r2 pong")
+	})
+
+	return r2
+}
+
 func main() {
 	r := lokstra.NewRouter("basic-router")
 
@@ -66,6 +78,10 @@ func main() {
 
 	createV1Group(r)
 	createV2Group(r)
+
+	r2 := createNewRouter()
+	// chain r2 to r
+	r.SetNextChain(r2, "/r2")
 
 	fmt.Println("starting server at :8080")
 	r.PrintRoutes()

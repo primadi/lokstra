@@ -140,4 +140,6 @@ type Router interface {
 	IsChained() bool
 	// get the next router in the chain, or nil if none
 	GetNextChain() Router
+	// set the next router in the chain, returns the next router
+	SetNextChain(next Router, prefix string) Router
 }

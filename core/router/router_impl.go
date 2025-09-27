@@ -72,6 +72,9 @@ func (r *routerImpl) assertNotBuilt() {
 
 // Build implements Router.
 func (r *routerImpl) Build() {
+	if r.isBuilt.Load() {
+		return
+	}
 	if !r.isRoot {
 		panic("router: Build() can only be called on the root router")
 	}
@@ -94,7 +97,6 @@ func (r *routerImpl) Build() {
 						rt.Handler, fullMw...))
 				})
 		}
-		r.isBuilt.Store(true)
 	})
 }
 
@@ -222,6 +224,25 @@ func (r *routerImpl) PathPrefix() string {
 	return r.pathPrefix
 }
 
+// SetNextChain implements Router.
+func (r *routerImpl) SetNextChain(next Router, prefix string) Router {
+	r.assertNotBuilt()
+	curr := r
+	curPrefix := prefix
+	for curr.nextChain != nil {
+		curr = curr.nextChain
+		curPrefix += curr.pathPrefix
+	}
+	if nc, ok := next.(*routerImpl); ok {
+		nc.isChained = true
+		nc.pathPrefix = cleanPath(curPrefix + nc.pathPrefix)
+		curr.nextChain = nc
+	} else {
+		panic("router: SetNextChain expects a *routerImpl")
+	}
+	return r
+}
+
 // Use implements Router.
 func (r *routerImpl) Use(middleware ...any) Router {
 	r.middlewares = append(r.middlewares, adaptMiddlewares(middleware)...)
@@ -237,7 +258,7 @@ func (r *routerImpl) WithOverrideParentMiddleware(override bool) Router {
 func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []request.HandlerFunc,
 	fn func(*route.Route, string, string, []request.HandlerFunc)) {
 	baseName := ""
-	if !r.isRoot {
+	if !r.isRoot || r.isChained {
 		baseName = fullName + r.name + "."
 	}
 	basePrefix := fullPrefix + r.pathPrefix
@@ -256,6 +277,7 @@ func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []re
 	if r.nextChain != nil {
 		r.nextChain.walkBuildRecursive(fullName, fullPrefix, fullMw, fn)
 	}
+	r.isBuilt.Store(true)
 }
 
 // Walk implements Router.
