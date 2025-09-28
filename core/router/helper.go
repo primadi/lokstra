@@ -26,7 +26,7 @@ func createEngine(engineType string) RouterEngine {
 	return engine
 }
 
-func adaptSmart(name string, v any) request.HandlerFunc {
+func adaptSmart(path string, v any) request.HandlerFunc {
 	fnVal := reflect.ValueOf(v)
 	fnType := fnVal.Type()
 
@@ -52,13 +52,13 @@ func adaptSmart(name string, v any) request.HandlerFunc {
 			return nil
 		}
 	}
-	msg := "Invalid handler type for [" + name +
+	msg := "Invalid handler type for path [" + path +
 		"], it must be request.HandlerFunc, http.HandlerFunc, http.Handler, or func(*Context, *T) error"
 	fmt.Println(msg)
 	panic(msg)
 }
 
-func adaptHandler(name string, h any) request.HandlerFunc {
+func adaptHandler(path string, h any) request.HandlerFunc {
 	switch v := h.(type) {
 	case func(*request.Context) error:
 		return v
@@ -75,7 +75,7 @@ func adaptHandler(name string, h any) request.HandlerFunc {
 			return nil
 		}
 	default:
-		return adaptSmart(name, v)
+		return adaptSmart(path, v)
 	}
 }
 
@@ -101,19 +101,6 @@ func cleanPrefix(p string) string {
 		return "/"
 	}
 	return "/" + p + "/"
-}
-
-func normalizeName(childName, childPath, method string) string {
-	if len(childName) > 0 {
-		return childName
-	}
-
-	pref := ""
-	if strings.HasSuffix(childPath, "/") {
-		pref = "PREF:"
-	}
-	return strings.Join([]string{method, "[" + pref +
-		strings.Trim(childPath, "/") + "]", "_handler"}, "")
 }
 
 func normalizeGroupName(childName, childPath string) string {

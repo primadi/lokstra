@@ -3,6 +3,7 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -85,7 +86,15 @@ func (r *routerImpl) Build() {
 				func(rt *route.Route, fullName, fullPath string, fullMiddlewares []request.HandlerFunc) {
 					rt.FullName = fullName
 					rt.FullPath = fullPath
-
+					if rt.Name == "" {
+						pref := ""
+						if strings.HasSuffix(rt.FullPath, "/") {
+							pref = "PREF:"
+						}
+						rt.Name = strings.Join([]string{rt.Method, "[", pref, strings.ReplaceAll(
+							strings.Trim(fullPath, "/"), "/", "_"), "]"}, "")
+						rt.FullName += rt.Name
+					}
 					var fullMw []request.HandlerFunc
 					if rt.OverrideParentMw {
 						fullMw = rt.Middleware
@@ -124,9 +133,9 @@ func (r *routerImpl) handle(method string, path string, h any, middleware []any)
 		mws = append(mws, mw)
 	}
 
-	rt.Name = normalizeName(rt.Name, path, method)
+	// rt.Name = normalizeName(rt.Name, path, method)
 	rt.Middleware = adaptMiddlewares(mws)
-	rt.Handler = adaptHandler(rt.Name, h)
+	rt.Handler = adaptHandler(path, h)
 	r.routes = append(r.routes, rt)
 	return r
 }
@@ -225,17 +234,20 @@ func (r *routerImpl) PathPrefix() string {
 }
 
 // SetNextChain implements Router.
-func (r *routerImpl) SetNextChain(next Router, prefix string) Router {
+func (r *routerImpl) SetNextChain(next Router) Router {
+	return r.SetNextChainWithPrefix(next, "")
+}
+
+// SetNextChain implements Router.
+func (r *routerImpl) SetNextChainWithPrefix(next Router, prefix string) Router {
 	r.assertNotBuilt()
 	curr := r
-	curPrefix := prefix
 	for curr.nextChain != nil {
 		curr = curr.nextChain
-		curPrefix += curr.pathPrefix
 	}
 	if nc, ok := next.(*routerImpl); ok {
 		nc.isChained = true
-		nc.pathPrefix = cleanPath(curPrefix + nc.pathPrefix)
+		nc.pathPrefix = cleanPath(prefix) + nc.pathPrefix
 		curr.nextChain = nc
 	} else {
 		panic("router: SetNextChain expects a *routerImpl")
@@ -257,9 +269,9 @@ func (r *routerImpl) WithOverrideParentMiddleware(override bool) Router {
 
 func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []request.HandlerFunc,
 	fn func(*route.Route, string, string, []request.HandlerFunc)) {
-	baseName := ""
-	if !r.isRoot || r.isChained {
-		baseName = fullName + r.name + "."
+	baseName := fullName
+	if r.isRoot {
+		baseName += r.name + "."
 	}
 	basePrefix := fullPrefix + r.pathPrefix
 	var baseMw []request.HandlerFunc
@@ -282,6 +294,7 @@ func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []re
 
 // Walk implements Router.
 func (r *routerImpl) Walk(fn func(rt *route.Route)) {
+	r.Build()
 	for _, rt := range r.routes {
 		fn(rt)
 	}

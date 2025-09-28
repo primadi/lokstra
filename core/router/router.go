@@ -141,5 +141,7 @@ type Router interface {
 	// get the next router in the chain, or nil if none
 	GetNextChain() Router
 	// set the next router in the chain, returns the next router
-	SetNextChain(next Router, prefix string) Router
+	SetNextChain(next Router) Router
+	// set the next router in the chain with prefix, returns the next router
+	SetNextChainWithPrefix(next Router, prefix string) Router
 }

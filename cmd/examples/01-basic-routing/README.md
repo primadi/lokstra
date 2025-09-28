@@ -6,6 +6,9 @@
 - Direct route definition with `app.GET`
 - Unique route naming
 - Simple handler response
+- Group route
+- Chain route
+- Simple middleware
 
 ## Run
 ```

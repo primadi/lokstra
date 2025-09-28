@@ -6,7 +6,7 @@ import (
 	"github.com/primadi/lokstra/core/route"
 )
 
-func MergeRoutes(yamlRoutes []route.Route, codeRoutes []route.Route) ([]route.Route, error) {
+func MergeYamlRoutes(yamlRoutes []route.Route, codeRoutes []route.Route) ([]route.Route, error) {
 	merged := make([]route.Route, 0, len(codeRoutes))
 
 	// index YAML routes by name

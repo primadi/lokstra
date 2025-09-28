@@ -46,8 +46,8 @@ func createV2Group(r lokstra.Router) {
 	}, route.WithNameOption("stats"))
 }
 
-func createNewRouter() lokstra.Router {
-	r2 := lokstra.NewRouter("secondary-router")
+func createR2Router() lokstra.Router {
+	r2 := lokstra.NewRouter("r2-router")
 	r2.GET("/status", func(c *lokstra.RequestContext) error {
 		return c.Ok("r2 status ok")
 	}, route.WithNameOption("r2-status-route"))
@@ -64,6 +64,7 @@ func main() {
 	// incoming request logging middleware
 	r.Use(func(c *lokstra.RequestContext) error {
 		fmt.Println("[Incoming request]", c.R.Method, c.R.URL.Path)
+		// proceed to next middleware or handler
 		return c.Next()
 	})
 
@@ -79,9 +80,10 @@ func main() {
 	createV1Group(r)
 	createV2Group(r)
 
-	r2 := createNewRouter()
-	// chain r2 to r
-	r.SetNextChain(r2, "/r2")
+	r2 := createR2Router()
+
+	// chain r2 to r with /r2 prefix
+	r.SetNextChainWithPrefix(r2, "/r2")
 
 	fmt.Println("starting server at :8080")
 	r.PrintRoutes()
