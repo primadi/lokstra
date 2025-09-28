@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/route"
@@ -31,16 +32,28 @@ func createAnotherRouter() lokstra.Router {
 	return r
 }
 
+func createAdminRouter() lokstra.Router {
+	r := lokstra.NewRouter("admin-router")
+	r.GET("/status", func(c *lokstra.RequestContext) error {
+		return c.Ok("Server is running")
+	})
+	return r
+}
+
 func main() {
 	basicRouter := createBasicRouter()
 	anotherRouter := createAnotherRouter()
+	adminRouter := createAdminRouter()
 
-	// app := lokstra.NewApp("basic-app", ":8080", basicRouter, anotherRouter)
-	app := lokstra.NewAppWithConfig("basic-app", ":8080", "fasthttp", nil,
-		basicRouter, anotherRouter)
+	// Create multiple apps, some sharing the same address
+	app1 := lokstra.NewApp("basic-app", ":8080", basicRouter)
+	app2 := lokstra.NewApp("another-app", ":8080", anotherRouter)
+	appAdmin := lokstra.NewApp("admin-app", ":8081", adminRouter)
 
-	// Print app start information
-	app.PrintStartInfo()
-	// Start the app
-	app.Start()
+	// Create server with multiple apps
+	svr := lokstra.NewServer("multi-app-server", app1, app2, appAdmin)
+	svr.PrintStartInfo()
+
+	// Run server with 5 seconds graceful shutdown timeout
+	svr.Run(5 * time.Second)
 }

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/quic-go/quic-go/http3"
 )
 
@@ -67,10 +66,8 @@ func (s *Http3) Shutdown(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	fmt.Printf("[HTTP3] Initiating graceful shutdown for server at %s\n", s.server.Addr)
+	fmt.Printf("[HTTP3] Initiating graceful shutdown for app at %s\n", s.server.Addr)
 	shutdownErr := s.server.Shutdown(ctx)
-
-	lokstra_registry.ShutdownServices()
 
 	done := make(chan struct{})
 	go func() {

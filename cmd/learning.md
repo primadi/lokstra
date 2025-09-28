@@ -23,17 +23,17 @@ cmd/learning/
 
 ## 📘 Learning Stages
 
-### 1. Basic Routing
+### 1. Basic Router
 Direct code-first routes.
 
-### 2. Services & DI
+### 2. Basic App
+Direct code-first apps.
+
+### 3. Basic Server
+Direct code-first server.
+
+### 4. Services & DI
 Introduce services and dependency injection.
-
-### 3. Middleware
-Create and apply middleware.
-
-### 4. Modules
-Use ServerModule and AppModule for modular structure.
 
 ### 5. YAML Monolith
 Configure a monolithic server with YAML.

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 const READ_TIMEOUT_KEY = "read_timeout"
@@ -59,8 +58,6 @@ func (s *NetHttp) ListenAndServe() error {
 
 		s.handler.ServeHTTP(w, r)
 	})
-
-	s.server.RegisterOnShutdown(lokstra_registry.ShutdownServices)
 
 	var listener net.Listener
 
@@ -114,9 +111,9 @@ func (s *NetHttp) Shutdown(timeout time.Duration) error {
 	defer cancel()
 
 	if s.secure {
-		fmt.Printf("[NETHTTP] Initiating graceful shutdown for secure server at %s\n", s.server.Addr)
+		fmt.Printf("[NETHTTP] Initiating graceful shutdown for secure app at %s\n", s.server.Addr)
 	} else {
-		fmt.Printf("[NETHTTP] Initiating graceful shutdown for server at %s\n", s.server.Addr)
+		fmt.Printf("[NETHTTP] Initiating graceful shutdown for app at %s\n", s.server.Addr)
 	}
 	shutdownErr := s.server.Shutdown(ctx)
 

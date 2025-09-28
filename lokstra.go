@@ -4,6 +4,7 @@ import (
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/server"
 )
 
 type Router = router.Router
@@ -28,4 +29,8 @@ func NewApp(name string, addr string, routers ...Router) *app.App {
 func NewAppWithConfig(name string, addr string, listenerType string,
 	config map[string]any, routers ...Router) *app.App {
 	return app.NewWithConfig(name, addr, listenerType, config, routers...)
+}
+
+func NewServer(name string, apps ...*app.App) *server.Server {
+	return server.New(name, apps...)
 }

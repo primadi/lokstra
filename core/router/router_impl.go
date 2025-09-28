@@ -244,7 +244,6 @@ func (r *routerImpl) SetNextChain(next Router) Router {
 
 // SetNextChain implements Router.
 func (r *routerImpl) SetNextChainWithPrefix(next Router, prefix string) Router {
-	r.assertNotBuilt()
 	curr := r
 	for curr.nextChain != nil {
 		curr = curr.nextChain

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
@@ -104,13 +103,11 @@ func (s *FastHttp) Shutdown(timeout time.Duration) error {
 	defer cancel()
 
 	if s.secure {
-		fmt.Printf("[FastHttp] Initiating graceful shutdown for secure server at %s\n", s.addr)
+		fmt.Printf("[FastHttp] Initiating graceful shutdown for secure app at %s\n", s.addr)
 	} else {
-		fmt.Printf("[FastHttp] Initiating graceful shutdown for server at %s\n", s.addr)
+		fmt.Printf("[FastHttp] Initiating graceful shutdown for app at %s\n", s.addr)
 	}
 	shutdownErr := s.server.ShutdownWithContext(ctx)
-
-	lokstra_registry.ShutdownServices()
 
 	done := make(chan struct{})
 	go func() {

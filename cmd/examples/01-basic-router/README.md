@@ -1,4 +1,4 @@
-# Basic Routing Example
+# Basic Router Example
 
 **Purpose:** Demonstrate a minimal Lokstra application with a 2 chaining routes, using direct code-based routing.
 

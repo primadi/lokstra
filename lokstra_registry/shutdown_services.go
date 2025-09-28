@@ -14,5 +14,5 @@ func ShutdownServices() {
 			}
 		}
 	}
-	fmt.Println("[ShutdownServices] All services have been shut down.")
+	fmt.Println("[ShutdownServices] gracefully shutdown all services.")
 }
