@@ -9,6 +9,7 @@ import (
 
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/route"
+	"github.com/primadi/lokstra/core/router/engine"
 )
 
 type routerImpl struct {
@@ -28,7 +29,7 @@ type routerImpl struct {
 
 	buildOnce    sync.Once
 	isBuilt      atomic.Bool
-	routerEngine RouterEngine
+	routerEngine engine.RouterEngine
 }
 
 func New(name string) Router {
@@ -81,7 +82,7 @@ func (r *routerImpl) Build() {
 	}
 	r.buildOnce.Do(func() {
 		if !r.isChained {
-			r.routerEngine = createEngine(r.engineType)
+			r.routerEngine = engine.CreateEngine(r.engineType)
 			r.walkBuildRecursive("", "", nil,
 				func(rt *route.Route, fullName, fullPath string, fullMiddlewares []request.HandlerFunc) {
 					rt.FullName = fullName

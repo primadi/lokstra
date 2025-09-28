@@ -1,9 +1,9 @@
 # Basic Routing Example
 
-**Purpose:** Demonstrate a minimal Lokstra application with a single route, using direct code-based routing.
+**Purpose:** Demonstrate a minimal Lokstra application with a 2 chaining routes, using direct code-based routing.
 
 ## Features
-- Direct route definition with `app.GET`
+- Direct route definition with `router.GET`
 - Unique route naming
 - Simple handler response
 - Group route

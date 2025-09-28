@@ -14,18 +14,6 @@ var (
 	typeOfError   = reflect.TypeOf((*error)(nil)).Elem()
 )
 
-func createEngine(engineType string) RouterEngine {
-	var engine RouterEngine
-
-	switch engineType {
-	case "default", "servemux":
-		engine = NewMethodServeMux()
-	default:
-		panic("Unsupported engine type: " + engineType)
-	}
-	return engine
-}
-
 func adaptSmart(path string, v any) request.HandlerFunc {
 	fnVal := reflect.ValueOf(v)
 	fnType := fnVal.Type()
