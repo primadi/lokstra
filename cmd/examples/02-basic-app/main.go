@@ -7,7 +7,7 @@ import (
 	"github.com/primadi/lokstra/core/route"
 )
 
-func main() {
+func createBasicRouter() lokstra.Router {
 	r := lokstra.NewRouter("basic-router")
 
 	// incoming request logging middleware
@@ -20,9 +20,24 @@ func main() {
 	r.GET("/ping", func(c *lokstra.RequestContext) error {
 		return c.Ok("pong")
 	}, route.WithNameOption("ping-route"))
+	return r
+}
+
+func createAnotherRouter() lokstra.Router {
+	r := lokstra.NewRouter("another-router")
+	r.GET("/hello", func(c *lokstra.RequestContext) error {
+		return c.Ok("Hello, World!")
+	})
+	return r
+}
+
+func main() {
+	basicRouter := createBasicRouter()
+	anotherRouter := createAnotherRouter()
 
 	// app := lokstra.NewApp("basic-app", ":8080", r)
-	app := lokstra.NewAppWithConfig("basic-app", ":8080", "fasthttp", nil, r)
+	app := lokstra.NewAppWithConfig("basic-app", ":8080", "fasthttp", nil, basicRouter, anotherRouter)
+
 	app.PrintStartInfo()
 	app.Start()
 }

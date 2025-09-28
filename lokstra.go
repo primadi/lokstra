@@ -21,19 +21,11 @@ func NewRouterWithEngine(name string, engineType string) Router {
 
 // Create a new App instance with given routers
 func NewApp(name string, addr string, routers ...Router) *app.App {
-	app := app.New(name, addr)
-	for _, r := range routers {
-		app.AddRouter(r)
-	}
-	return app
+	return app.New(name, addr, routers...)
 }
 
 // Create a new App instance with given routers and custom listener configuration
 func NewAppWithConfig(name string, addr string, listenerType string,
 	config map[string]any, routers ...Router) *app.App {
-	app := app.NewWithConfig(name, addr, listenerType, config)
-	for _, r := range routers {
-		app.AddRouter(r)
-	}
-	return app
+	return app.NewWithConfig(name, addr, listenerType, config, routers...)
 }

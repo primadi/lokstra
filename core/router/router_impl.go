@@ -57,6 +57,9 @@ func (r *routerImpl) IsChained() bool {
 
 // GetNextChain implements Router.
 func (r *routerImpl) GetNextChain() Router {
+	if r.nextChain == nil {
+		return nil
+	}
 	return r.nextChain
 }
 
