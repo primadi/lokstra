@@ -34,7 +34,7 @@ func createAnotherRouter() lokstra.Router {
 
 func createAdminRouter() lokstra.Router {
 	r := lokstra.NewRouter("admin-router")
-	r.GET("/status", func(c *lokstra.RequestContext) error {
+	r.POST("/status", func(c *lokstra.RequestContext) error {
 		return c.Ok("Server is running")
 	})
 	return r

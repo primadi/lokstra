@@ -102,7 +102,7 @@ func (r *routerImpl) Build() {
 				fullMw = append(fullMiddlewares, rt.Middleware...)
 			}
 			rt.FullMiddleware = fullMw
-			r.routerEngine.Handle(rt.Method, fullPath, request.NewHandler(
+			r.routerEngine.Handle(rt.Method+" "+fullPath, request.NewHandler(
 				rt.Handler, fullMw...))
 		})
 }

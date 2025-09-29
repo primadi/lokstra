@@ -4,5 +4,5 @@ import "net/http"
 
 type RouterEngine interface {
 	http.Handler
-	Handle(method, path string, h http.Handler)
+	Handle(pattern string, h http.Handler)
 }
