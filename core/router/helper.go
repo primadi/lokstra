@@ -57,6 +57,11 @@ func adaptHandler(path string, h any) request.HandlerFunc {
 			v(c.W, c.R)
 			return nil
 		}
+	case func(http.ResponseWriter, *http.Request):
+		return func(c *request.Context) error {
+			v(c.W, c.R)
+			return nil
+		}
 	case http.Handler:
 		return func(c *request.Context) error {
 			v.ServeHTTP(c.W, c.R)
@@ -88,7 +93,8 @@ func cleanPrefix(p string) string {
 	if p == "" {
 		return "/"
 	}
-	return "/" + p + "/"
+	// For Go 1.22+ ServeMux prefix patterns, use {path...} wildcard
+	return "/" + p + "/{path...}"
 }
 
 func normalizeGroupName(childName, childPath string) string {

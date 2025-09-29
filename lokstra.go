@@ -7,6 +7,8 @@ import (
 	"github.com/primadi/lokstra/core/server"
 )
 
+type Server = server.Server
+type App = app.App
 type Router = router.Router
 type RequestContext = request.Context
 type HandlerFunc = request.HandlerFunc
