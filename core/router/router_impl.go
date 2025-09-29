@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
-	"sync/atomic"
 
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/route"
@@ -27,8 +25,7 @@ type routerImpl struct {
 
 	isRoot bool
 
-	buildOnce    sync.Once
-	isBuilt      atomic.Bool
+	isBuilt      bool
 	routerEngine engine.RouterEngine
 }
 
@@ -65,52 +62,49 @@ func (r *routerImpl) GetNextChain() Router {
 
 // IsBuilt implements Router.
 func (r *routerImpl) IsBuilt() bool {
-	return r.isBuilt.Load()
+	return r.isBuilt
 }
 
 // Guard: forbid adding routes after build
 func (r *routerImpl) assertNotBuilt() {
-	if r.IsBuilt() {
+	if r.isBuilt {
 		panic("router: cannot register routes after Build()")
 	}
 }
 
 // Build implements Router.
 func (r *routerImpl) Build() {
-	if r.isBuilt.Load() {
+	if r.isBuilt || r.isChained {
 		return
 	}
 	if !r.isRoot {
 		panic("router: Build() can only be called on the root router")
 	}
-	r.buildOnce.Do(func() {
-		if !r.isChained {
-			r.routerEngine = engine.CreateEngine(r.engineType)
-			r.walkBuildRecursive("", "", nil,
-				func(rt *route.Route, fullName, fullPath string, fullMiddlewares []request.HandlerFunc) {
-					rt.FullName = fullName
-					rt.FullPath = fullPath
-					if rt.Name == "" {
-						pref := ""
-						if strings.HasSuffix(rt.FullPath, "/") {
-							pref = "PREF:"
-						}
-						rt.Name = strings.Join([]string{rt.Method, "[", pref, strings.ReplaceAll(
-							strings.Trim(fullPath, "/"), "/", "_"), "]"}, "")
-						rt.FullName += rt.Name
-					}
-					var fullMw []request.HandlerFunc
-					if rt.OverrideParentMw {
-						fullMw = rt.Middleware
-					} else {
-						fullMw = append(fullMiddlewares, rt.Middleware...)
-					}
-					rt.FullMiddleware = fullMw
-					r.routerEngine.Handle(rt.Method, fullPath, request.NewHandler(
-						rt.Handler, fullMw...))
-				})
-		}
-	})
+
+	r.routerEngine = engine.CreateEngine(r.engineType)
+	r.walkBuildRecursive("", "", nil,
+		func(rt *route.Route, fullName, fullPath string, fullMiddlewares []request.HandlerFunc) {
+			rt.FullName = fullName
+			rt.FullPath = fullPath
+			if rt.Name == "" {
+				pref := ""
+				if strings.HasSuffix(rt.FullPath, "/") {
+					pref = "PREF:"
+				}
+				rt.Name = strings.Join([]string{rt.Method, "[", pref, strings.ReplaceAll(
+					strings.Trim(fullPath, "/"), "/", "_"), "]"}, "")
+				rt.FullName += rt.Name
+			}
+			var fullMw []request.HandlerFunc
+			if rt.OverrideParentMw {
+				fullMw = rt.Middleware
+			} else {
+				fullMw = append(fullMiddlewares, rt.Middleware...)
+			}
+			rt.FullMiddleware = fullMw
+			r.routerEngine.Handle(rt.Method, fullPath, request.NewHandler(
+				rt.Handler, fullMw...))
+		})
 }
 
 // ServeHTTP implements Router.
@@ -137,7 +131,6 @@ func (r *routerImpl) handle(method string, path string, h any, middleware []any)
 		mws = append(mws, mw)
 	}
 
-	// rt.Name = normalizeName(rt.Name, path, method)
 	rt.Middleware = adaptMiddlewares(mws)
 	rt.Handler = adaptHandler(path, h)
 	r.routes = append(r.routes, rt)
@@ -292,7 +285,7 @@ func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []re
 	if r.nextChain != nil {
 		r.nextChain.walkBuildRecursive(fullName, fullPrefix, fullMw, fn)
 	}
-	r.isBuilt.Store(true)
+	r.isBuilt = true
 }
 
 // Walk implements Router.

@@ -46,29 +46,34 @@ func adaptSmart(path string, v any) request.HandlerFunc {
 	panic(msg)
 }
 
+// adaptHandler converts various handler types to request.HandlerFunc.
+// TODO: Consider dual-path architecture for pure http.Handler chains in future versions.
 func adaptHandler(path string, h any) request.HandlerFunc {
 	switch v := h.(type) {
 	case func(*request.Context) error:
-		return v
+		return v // Zero-cost for Lokstra handlers
 	case request.HandlerFunc:
-		return v
+		return v // Zero-cost for Lokstra handlers
 	case http.HandlerFunc:
+		// Lightweight wrapper for standard handlers
 		return func(c *request.Context) error {
 			v(c.W, c.R)
 			return nil
 		}
 	case func(http.ResponseWriter, *http.Request):
+		// Lightweight wrapper for standard handlers
 		return func(c *request.Context) error {
 			v(c.W, c.R)
 			return nil
 		}
 	case http.Handler:
+		// Lightweight wrapper for standard handlers
 		return func(c *request.Context) error {
 			v.ServeHTTP(c.W, c.R)
 			return nil
 		}
 	default:
-		return adaptSmart(path, v)
+		return adaptSmart(path, v) // Smart binding for complex handlers
 	}
 }
 
