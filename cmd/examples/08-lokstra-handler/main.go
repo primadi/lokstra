@@ -11,11 +11,11 @@ import (
 func createHelloApp(addr string) *lokstra.App {
 	r := lokstra.NewRouter("hello-router")
 	r.GET("/hello", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello, World!"))
+		w.Write([]byte("Hello, World! - using http.HandlerFunc"))
 	})
 
 	r.GET("/admin/hello", func(c *lokstra.RequestContext) error {
-		return c.Ok("Hello, Admin!")
+		return c.Ok("Hello, Admin! - using lokstra.HandlerFunc")
 	})
 
 	app := lokstra.NewApp("hello-app", addr, r)
@@ -24,7 +24,7 @@ func createHelloApp(addr string) *lokstra.App {
 
 // createMainApp creates the main application with a reverse proxy to the hello service.
 func createMainApp(addr string) *lokstra.App {
-	r := lokstra.NewRouter("main-router")
+	r := lokstra.NewRouterWithEngine("main-router", "chi")
 
 	r.GET("/ping", func(c *lokstra.RequestContext) error {
 		return c.Ok("pong")
@@ -35,7 +35,7 @@ func createMainApp(addr string) *lokstra.App {
 	//   /say/hello          -> http://localhost:8081/hello
 	//   /say/admin/hello    -> http://localhost:8081/admin/hello
 	r.ANYPrefix("/say", lokstra_handler.
-		MountReverseProxy("/say/", "http://localhost:8081"))
+		MountReverseProxy("/say", "http://localhost:8081"))
 
 	app := lokstra.NewApp("main-app", addr, r)
 	return app

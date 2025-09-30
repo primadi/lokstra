@@ -7,7 +7,7 @@ import (
 )
 
 func (r *Response) WithStatus(code int) *Response {
-	r.StatusCode = code
+	r.RespStatusCode = code
 	return r
 }
 
@@ -28,7 +28,7 @@ func (r *Response) Text(text string) error {
 }
 
 func (r *Response) Raw(contentType string, b []byte) error {
-	r.ContentType = contentType
+	r.RespContentType = contentType
 	r.WriterFunc = func(w http.ResponseWriter) error {
 		_, err := w.Write(b)
 		return err
@@ -37,7 +37,7 @@ func (r *Response) Raw(contentType string, b []byte) error {
 }
 
 func (r *Response) Stream(contentType string, fn func(w http.ResponseWriter) error) error {
-	r.ContentType = contentType
+	r.RespContentType = contentType
 	r.WriterFunc = func(w http.ResponseWriter) error {
 		return fn(w)
 	}

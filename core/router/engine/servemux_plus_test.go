@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestModernServeMux_BasicRouting(t *testing.T) {
-	engine := NewModernServeMux()
+func TestServeMuxPlus_BasicRouting(t *testing.T) {
+	engine := NewServeMuxPlus()
 
 	// Register handlers
 	engine.Handle("GET /api/users", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +44,8 @@ func TestModernServeMux_BasicRouting(t *testing.T) {
 	}
 }
 
-func TestModernServeMux_HeadAutoGeneration(t *testing.T) {
-	engine := NewModernServeMux()
+func TestServeMuxPlus_HeadAutoGeneration(t *testing.T) {
+	engine := NewServeMuxPlus()
 
 	// Register GET handler
 	engine.Handle("GET /api/info", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,8 +70,8 @@ func TestModernServeMux_HeadAutoGeneration(t *testing.T) {
 	}
 }
 
-func TestModernServeMux_OptionsHandling(t *testing.T) {
-	engine := NewModernServeMux()
+func TestServeMuxPlus_OptionsHandling(t *testing.T) {
+	engine := NewServeMuxPlus()
 
 	// Register handlers
 	engine.Handle("GET /api/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -103,8 +103,8 @@ func TestModernServeMux_OptionsHandling(t *testing.T) {
 	}
 }
 
-func TestModernServeMux_AnyMethod(t *testing.T) {
-	engine := NewModernServeMux()
+func TestServeMuxPlus_AnyMethod(t *testing.T) {
+	engine := NewServeMuxPlus()
 
 	// Register ANY handler
 	engine.Handle("ANY /api/wildcard", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -128,8 +128,8 @@ func TestModernServeMux_AnyMethod(t *testing.T) {
 	}
 }
 
-func TestModernServeMux_MethodNotAllowed(t *testing.T) {
-	engine := NewModernServeMux()
+func TestServeMuxPlus_MethodNotAllowed(t *testing.T) {
+	engine := NewServeMuxPlus()
 
 	// Register only GET
 	engine.Handle("GET /api/readonly", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -151,8 +151,8 @@ func TestModernServeMux_MethodNotAllowed(t *testing.T) {
 	}
 }
 
-func TestModernServeMux_NotFound(t *testing.T) {
-	engine := NewModernServeMux()
+func TestServeMuxPlus_NotFound(t *testing.T) {
+	engine := NewServeMuxPlus()
 
 	// Don't register any routes
 

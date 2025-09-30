@@ -48,8 +48,8 @@ func (c *Context) FinalizeResponse(err error) {
 	}
 
 	if err != nil {
-		st := c.StatusCode
-		if st == 0 || st < 400 {
+		st := c.RespStatusCode
+		if st == 0 || st < http.StatusBadRequest {
 			c.ErrorInternal(err)
 		}
 	}

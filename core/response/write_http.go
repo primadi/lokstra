@@ -9,22 +9,22 @@ import (
 // Priority: WriterFunc > Data > empty.
 func (r *Response) WriteHttp(w http.ResponseWriter) {
 	// apply headers
-	for k, values := range r.Headers {
+	for k, values := range r.RespHeaders {
 		for _, v := range values {
 			w.Header().Add(k, v)
 		}
 	}
 
 	// determine status code
-	status := r.StatusCode
+	status := r.RespStatusCode
 	if status == 0 {
 		status = http.StatusOK
 	}
 
 	// 1. Custom writer
 	if r.WriterFunc != nil {
-		if r.ContentType != "" {
-			w.Header().Set("Content-Type", r.ContentType)
+		if r.RespContentType != "" {
+			w.Header().Set("Content-Type", r.RespContentType)
 		}
 		w.WriteHeader(status)
 		_ = r.WriterFunc(w)
@@ -32,14 +32,14 @@ func (r *Response) WriteHttp(w http.ResponseWriter) {
 	}
 
 	// 2. JSON encoder
-	if r.Data != nil {
-		ct := r.ContentType
+	if r.RespData != nil {
+		ct := r.RespContentType
 		if ct == "" {
 			ct = "application/json"
 		}
 		w.Header().Set("Content-Type", ct)
 		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(r.Data)
+		_ = json.NewEncoder(w).Encode(r.RespData)
 		return
 	}
 

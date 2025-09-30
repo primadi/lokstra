@@ -16,6 +16,8 @@ func CreateEngine(engineType string) RouterEngine {
 }
 
 func init() {
-	RegisterEngine("default", NewModernServeMux)  // Use modern Go 1.22+ version as default
-	RegisterEngine("servemux", NewModernServeMux) // New modern version
+	RegisterEngine("default", NewServeMux)
+	RegisterEngine("servemux", NewServeMux)
+	RegisterEngine("servemux-plus", NewServeMuxPlus)
+	RegisterEngine("chi", NewChiRouter)
 }

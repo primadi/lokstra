@@ -7,20 +7,20 @@ import (
 
 // return JSON response with status code 200
 func (r *Response) Ok(data any) error {
-	r.StatusCode = http.StatusOK
+	r.RespStatusCode = http.StatusOK
 	return r.Json(data)
 }
 
 // return JSON response with status code 201
 func (r *Response) OkCreated(data any) error {
-	r.StatusCode = http.StatusCreated
+	r.RespStatusCode = http.StatusCreated
 	return r.Json(data)
 }
 
 // return no content with status code 204
 func (r *Response) OkNoContent() error {
-	r.Data = nil
-	r.StatusCode = http.StatusNoContent
+	r.RespData = nil
+	r.RespStatusCode = http.StatusNoContent
 	return nil
 }
 
@@ -29,7 +29,7 @@ func (r *Response) ErrorBadRequest(err error) error {
 	if jerr := r.Json(map[string]string{"error": err.Error()}); jerr != nil {
 		return jerr
 	}
-	r.StatusCode = http.StatusBadRequest
+	r.RespStatusCode = http.StatusBadRequest
 	return err
 }
 
@@ -38,7 +38,7 @@ func (r *Response) ErrorUnauthorized(err error) error {
 	if jerr := r.Json(map[string]string{"error": err.Error()}); jerr != nil {
 		return jerr
 	}
-	r.StatusCode = http.StatusUnauthorized
+	r.RespStatusCode = http.StatusUnauthorized
 	return err
 }
 
@@ -47,7 +47,7 @@ func (r *Response) ErrorForbidden(err error) error {
 	if jerr := r.Json(map[string]string{"error": err.Error()}); jerr != nil {
 		return jerr
 	}
-	r.StatusCode = http.StatusForbidden
+	r.RespStatusCode = http.StatusForbidden
 	return err
 }
 
@@ -56,7 +56,7 @@ func (r *Response) ErrorNotFound(err error) error {
 	if jerr := r.Json(map[string]string{"error": err.Error()}); jerr != nil {
 		return jerr
 	}
-	r.StatusCode = http.StatusNotFound
+	r.RespStatusCode = http.StatusNotFound
 	return err
 }
 
@@ -65,7 +65,7 @@ func (r *Response) ErrorConflict(err error) error {
 	if jerr := r.Json(map[string]string{"error": err.Error()}); jerr != nil {
 		return jerr
 	}
-	r.StatusCode = http.StatusConflict
+	r.RespStatusCode = http.StatusConflict
 	return err
 }
 
@@ -77,6 +77,6 @@ func (r *Response) ErrorInternal(err error) error {
 	if jerr := r.Json(map[string]string{"error": err.Error()}); jerr != nil {
 		return jerr
 	}
-	r.StatusCode = http.StatusInternalServerError
+	r.RespStatusCode = http.StatusInternalServerError
 	return err
 }
