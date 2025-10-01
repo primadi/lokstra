@@ -47,98 +47,189 @@ type PagingRequest struct {
 ### Base Struct
 
 ```go
-type ApiResponse struct {
-    Success  bool        `json:"success"`
-    Message  string      `json:"message"`
-    Data     any         `json:"data,omitempty"`
-    Metadata *ListMeta   `json:"metadata,omitempty"`
-    Error    any         `json:"error,omitempty"`
+// ApiResponse standardizes API response structure
+type ApiResponse[T any] struct {
+    Status    string `json:"status"`              // "success" | "error"
+    Message   string `json:"message,omitempty"`   // Human readable message
+    Data      T      `json:"data,omitempty"`      // Response data
+    Error     *Error `json:"error,omitempty"`     // Error details if status = "error"
+    Meta      *Meta  `json:"meta,omitempty"`      // Metadata for lists/pagination
+    RequestID string `json:"request_id,omitempty"` // For tracing
+}
+
+// ListResponse is specialized for list/paginated data
+type ListResponse[T any] struct {
+    ApiResponse[[]T]
 }
 ```
 
-### List Metadata
+### Error Structure
 
 ```go
+type Error struct {
+    Code    string                 `json:"code"`              // Error code (e.g. "VALIDATION_ERROR")
+    Message string                 `json:"message"`           // Error message
+    Details map[string]any `json:"details,omitempty"` // Additional error details
+    Fields  []FieldError          `json:"fields,omitempty"`  // Validation field errors
+}
+
+type FieldError struct {
+    Field   string `json:"field"`   // Field name
+    Code    string `json:"code"`    // Error code (e.g. "REQUIRED")
+    Message string `json:"message"` // Error message
+    Value   any    `json:"value,omitempty"` // Invalid value provided
+}
+```
+
+### Metadata Structure
+
+```go
+type Meta struct {
+    *ListMeta     `json:",omitempty"`
+    *RequestMeta  `json:",omitempty"`
+    *ResponseMeta `json:",omitempty"`
+}
+
 type ListMeta struct {
-    Page       int               `json:"page,omitempty"`
-    PageSize   int               `json:"pageSize,omitempty"`
-    Total      int               `json:"total,omitempty"`
-    MaxData    int               `json:"maxData,omitempty"`
+    Page       int  `json:"page"`        // Current page
+    PageSize   int  `json:"page_size"`   // Items per page
+    Total      int  `json:"total"`       // Total items
+    TotalPages int  `json:"total_pages"` // Total pages
+    HasNext    bool `json:"has_next"`    // Has next page
+    HasPrev    bool `json:"has_prev"`    // Has previous page
+}
 
-    Headers    []string          `json:"headers,omitempty"`
-    DataType   string            `json:"dataType"`
-    DataFormat string            `json:"dataFormat"`
-    Formats    map[string]string `json:"formats,omitempty"`
-
-    OrderBy    []string          `json:"orderBy,omitempty"`
-    Filters    map[string]any    `json:"filters,omitempty"`
-    Search     string            `json:"search,omitempty"`
+type RequestMeta struct {
+    Filters  map[string]string `json:"filters,omitempty"`   // Applied filters
+    OrderBy  []string         `json:"order_by,omitempty"`  // Applied ordering
+    Fields   []string         `json:"fields,omitempty"`    // Selected fields
+    Search   string           `json:"search,omitempty"`    // Search query
+    DataType string           `json:"data_type,omitempty"` // Response format type
 }
 ```
 
 ### Rules
 
-- **Success/Error** → mutually exclusive.  
-- **Metadata** is always included for list responses.  
-- **Headers** and **Formats** are always returned, regardless of `dataType`.  
-- **OrderBy, Filters, Search** are echoed from request.  
-- **DataFormat** is echoed back to reflect the chosen output format.  
+- **Status** → "success" or "error", mutually exclusive with Error field.  
+- **Meta** is always included for list responses with ListMeta.  
+- **RequestMeta** echoes back applied filters, ordering, search terms.  
+- **ResponseMeta** includes processing time, cache status, etc.  
+- **Error** contains structured error information with field-level validation errors.  
+- **RequestID** supports distributed tracing and debugging.  
 
 ---
 
-## 📌 Response Helper (ApiHelper)
+## 📌 Response Helpers
 
-Lokstra provides an `ApiHelper` to simplify response building.
+Lokstra provides helper functions to build standardized responses.
 
 ```go
-type ApiHelper struct {
-    ctx *RequestContext
-}
-
 // ✅ Success Responses
-func (a *ApiHelper) Ok(message string) error
-func (a *ApiHelper) OkData(message string, data any) error
-func (a *ApiHelper) OkDeleted(message string) error
+func NewSuccess[T any](data T) *ApiResponse[T]
+func NewSuccessWithMessage[T any](data T, message string) *ApiResponse[T]
 
-// ✅ List Responses (Paginated)
-func (a *ApiHelper) OkList(message string, items any, headers []string, pg Pagination) error
-func (a *ApiHelper) OkListTable(message string, rows [][]any, headers []string, pg Pagination) error
+// ✅ Error Responses  
+func NewError(code, message string) *ApiResponse[any]
+func NewErrorWithDetails(code, message string, details map[string]any) *ApiResponse[any]
+func NewValidationError(message string, fields []FieldError) *ApiResponse[any]
 
-// ✅ List Responses (All Data, No Pagination)
-func (a *ApiHelper) OkListAll(message string, items any, headers []string) error
-func (a *ApiHelper) OkListTableAll(message string, rows [][]any, headers []string) error
+// ✅ List Responses
+func NewListResponse[T any](data []T, meta *ListMeta) *ListResponse[T]
+func CalculateListMeta(page, pageSize, total int) *ListMeta
 
-// ✅ List with Formats (for Auto-UI)
-func (a *ApiHelper) OkListWithFormat(message string, items any, headers []string, formats map[string]string, pg Pagination) error
-func (a *ApiHelper) OkListTableWithFormat(message string, rows [][]any, headers []string, formats map[string]string, pg Pagination) error
+// ✅ PagingRequest Helpers
+func (p *PagingRequest) SetDefaults()
+func (p *PagingRequest) GetOffset() int
+func (p *PagingRequest) GetLimit() int
+func (p *PagingRequest) ParseFilters() map[string]string
+func (p *PagingRequest) ParseOrderBy() []OrderField
+```
 
-// ✅ Error Responses
-func (a *ApiHelper) Error(code, details string) error
-func (a *ApiHelper) ErrorInternal(message string) error
-func (a *ApiHelper) ErrorNotFound(message string) error
-func (a *ApiHelper) ErrorUnauthorized(message string) error
-func (a *ApiHelper) ErrorForbidden(message string) error
-func (a *ApiHelper) ErrorValidation(fields map[string]string) error
-func (a *ApiHelper) ErrorRule(code, message string) error
+### Usage in Handlers
+
+```go
+func GetUsers(c *request.Context) error {
+    var req request.PagingRequest
+    if err := c.Req.BindQuery(&req); err != nil {
+        return c.Resp.JSON(400, response.NewValidationError("Invalid query", nil))
+    }
+    
+    req.SetDefaults()
+    users, total, err := userService.GetUsers(req.GetOffset(), req.GetLimit())
+    if err != nil {
+        return c.Resp.JSON(500, response.NewError("DATABASE_ERROR", err.Error()))
+    }
+    
+    meta := response.CalculateListMeta(req.Page, req.PageSize, total)
+    resp := response.NewListResponse(users, meta)
+    return c.Resp.JSON(200, resp)
+}
 ```
 
 ---
 
 ## 📌 Example
 
-### Request
-```
-GET /users?page=1&page_size=20&fields=id,name,email&order_by=-created_at&data_type=table&data_format=csv&download=true
+### Request Examples
+```bash
+# Basic pagination
+GET /users?page=1&page_size=20
+
+# With ordering and filters  
+GET /users?page=1&order_by=-created_at&filter=status:active
+
+# Export as CSV
+GET /users?data_format=csv&download=true&all=true
 ```
 
-### Response (CSV)
+### Response Examples
+
+#### JSON List Response
+```json
+{
+  "status": "success",
+  "data": [
+    {"id": 1, "name": "John", "email": "john@example.com"}
+  ],
+  "meta": {
+    "page": 1,
+    "page_size": 20,
+    "total": 1,
+    "total_pages": 1,
+    "has_next": false,
+    "has_prev": false,
+    "filters": {"status": "active"},
+    "order_by": ["-created_at"]
+  }
+}
+```
+
+#### Error Response  
+```json
+{
+  "status": "error",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "fields": [
+      {
+        "field": "email", 
+        "code": "INVALID_FORMAT",
+        "message": "Email format is invalid"
+      }
+    ]
+  }
+}
+```
+
+#### CSV Response
 ```
 Content-Type: text/csv
 Content-Disposition: attachment; filename="users.csv"
 
 id,name,email
-1,John,john@mail.com
-2,Ana,ana@mail.com
+1,John,john@example.com
+2,Ana,ana@example.com
 ```
 
 ---

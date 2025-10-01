@@ -15,7 +15,7 @@ func createHelloApp(addr string) *lokstra.App {
 	})
 
 	r.GET("/admin/hello", func(c *lokstra.RequestContext) error {
-		return c.Ok("Hello, Admin! - using lokstra.HandlerFunc")
+		return c.Api.Ok("Hello, Admin! - using lokstra.HandlerFunc")
 	})
 
 	app := lokstra.NewApp("hello-app", addr, r)
@@ -27,7 +27,7 @@ func createMainApp(addr string) *lokstra.App {
 	r := lokstra.NewRouterWithEngine("main-router", "chi")
 
 	r.GET("/ping", func(c *lokstra.RequestContext) error {
-		return c.Ok("pong")
+		return c.Api.Ok("pong")
 	})
 
 	// Reverse proxy for /say* to http://localhost:8081

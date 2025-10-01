@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/response/api_formatter"
 )
 
 var (
@@ -30,8 +31,15 @@ func adaptSmart(path string, v any) request.HandlerFunc {
 
 		return func(ctx *request.Context) error {
 			paramPtr := reflect.New(paramType.Elem()).Interface()
-			if err := ctx.BindAllSmart(paramPtr); err != nil {
-				return ctx.ErrorBadRequest(err)
+			if err := ctx.Req.BindAllSmart(paramPtr); err != nil {
+				// return ctx.Resp.WithStatus(400).Json(map[string]string{"error": err.Error()})
+				return ctx.Api.ValidationError("Binding failed", []api_formatter.FieldError{
+					{
+						Field:   "request",
+						Code:    "BIND_ERROR",
+						Message: err.Error(),
+					},
+				})
 			}
 			out := fnVal.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(paramPtr)})
 			if !out[0].IsNil() {

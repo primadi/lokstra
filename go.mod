@@ -17,7 +17,6 @@ require (
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.44.0 // indirect
@@ -35,6 +34,5 @@ require (
 	github.com/quic-go/quic-go v0.54.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/valyala/fasthttp v1.66.0
-	github.com/vmihailenco/msgpack/v5 v5.4.1
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -19,7 +19,7 @@ func createBasicRouter() lokstra.Router {
 	})
 
 	r.GET("/ping", func(c *lokstra.RequestContext) error {
-		return c.Ok("pong")
+		return c.Api.Ok("pong")
 	}, route.WithNameOption("ping-route"))
 	return r
 }
@@ -27,7 +27,7 @@ func createBasicRouter() lokstra.Router {
 func createAnotherRouter() lokstra.Router {
 	r := lokstra.NewRouter("another-router")
 	r.GET("/hello", func(c *lokstra.RequestContext) error {
-		return c.Ok("Hello, World!")
+		return c.Api.Ok("Hello, World!")
 	})
 	return r
 }
@@ -35,7 +35,7 @@ func createAnotherRouter() lokstra.Router {
 func createAdminRouter() lokstra.Router {
 	r := lokstra.NewRouter("admin-router")
 	r.POST("/status", func(c *lokstra.RequestContext) error {
-		return c.Ok("Server is running")
+		return c.Api.Ok("Server is running")
 	})
 	return r
 }

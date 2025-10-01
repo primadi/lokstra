@@ -36,7 +36,7 @@ func createAdminRouter() lokstra.Router {
 	r.GET("/count", func(c *lokstra.RequestContext) error {
 		// Lazy load the service, it will be created only on first request
 		myCounter = lokstra_registry.GetService("my-counter", myCounter)
-		return c.Ok(myCounter.Increment())
+		return c.Api.Ok(myCounter.Increment())
 	})
 	return r
 }

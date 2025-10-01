@@ -97,7 +97,7 @@ func (a *App) PrintStartInfo() {
 		panic("No router added to the app. Use AddRouter() to add at least one router.")
 	}
 
-	fmt.Println("["+a.name+"] ### Starting app with", a.numRouters(), "router(s) on address",
+	fmt.Println("Starting ["+a.name+"] app with", a.numRouters(), "router(s) on address",
 		a.listenerConfig["addr"], "###")
 	a.mainRouter.PrintRoutes()
 }

@@ -9,6 +9,12 @@ import (
 
 // ChiRouter wraps go-chi router to implement RouterEngine interface
 // Converts Go 1.22+ patterns like "/api/{path...}" to Chi patterns like "/api/*"
+//
+// Path parameters can be accessed using standard Go 1.22+ r.PathValue():
+//
+//	func handler(w http.ResponseWriter, r *http.Request) {
+//	    id := r.PathValue("id")  // for route "/users/{id}"
+//	}
 type ChiRouter struct {
 	mux          *chi.Mux
 	allowMethods map[string]string // path -> pre-computed Allow header for OPTIONS
@@ -28,11 +34,14 @@ func (c *ChiRouter) Handle(pattern string, h http.Handler) {
 	// Convert Go 1.22+ wildcard patterns to Chi patterns
 	chiPath := convertToChiPattern(path)
 
+	// Wrap handler to support PathValue compatibility
+	wrappedHandler := c.wrapHandlerForPathValue(h)
+
 	if method == "ANY" {
 		// Chi doesn't have "ANY", so register for all common methods
 		methods := []string{"GET", "POST", "PUT", "PATCH", "DELETE"}
 		for _, m := range methods {
-			c.mux.Method(m, chiPath, h)
+			c.mux.Method(m, chiPath, wrappedHandler)
 		}
 		// Update Allow methods for this path
 		c.addToAllowMethods(path, methods...)
@@ -41,7 +50,7 @@ func (c *ChiRouter) Handle(pattern string, h http.Handler) {
 		// Auto-register HEAD and OPTIONS
 		c.registerHeadAndOptions(path, chiPath)
 	} else {
-		c.mux.Method(method, chiPath, h)
+		c.mux.Method(method, chiPath, wrappedHandler)
 
 		// Add method to Allow methods for this path
 		c.addToAllowMethods(path, method)
@@ -49,7 +58,7 @@ func (c *ChiRouter) Handle(pattern string, h http.Handler) {
 			// Auto-register HEAD
 			c.mux.Head(chiPath, func(w http.ResponseWriter, r *http.Request) {
 				// Chi will call GET handler and discard body automatically
-				h.ServeHTTP(w, r)
+				wrappedHandler.ServeHTTP(w, r)
 			})
 			c.addToAllowMethods(path, "HEAD")
 		}
@@ -62,6 +71,23 @@ func (c *ChiRouter) Handle(pattern string, h http.Handler) {
 
 func (c *ChiRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.mux.ServeHTTP(w, r)
+}
+
+// wrapHandlerForPathValue wraps a handler to make Chi path parameters available via r.PathValue()
+func (c *ChiRouter) wrapHandlerForPathValue(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get path parameters from Chi context
+		rctx := chi.RouteContext(r.Context())
+		if rctx != nil {
+			// Set path values using Go 1.22+ SetPathValue so r.PathValue() works
+			for i, key := range rctx.URLParams.Keys {
+				r.SetPathValue(key, rctx.URLParams.Values[i])
+			}
+		}
+
+		// Call original handler
+		h.ServeHTTP(w, r)
+	})
 }
 
 // addToAllowMethods adds methods to the Allow header for a path

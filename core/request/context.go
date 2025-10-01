@@ -8,13 +8,18 @@ import (
 )
 
 type Context struct {
-	// Embedding standard context and response for easy access
+	// Embedding standard context for easy access
 	context.Context
-	*response.Response
 
-	// for internal use only
+	// Helper to access request methods and fields
+	Req *RequestHelper
+	// Helper to access response methods and fields
+	Resp *response.Response
+	// Helper for opinionated API responses (wraps data in ApiResponse)
+	Api *response.ApiHelper
+
+	// Direct access to primitives (for advanced usage)
 	W *writerWrapper
-	// for internal use only
 	R *http.Request
 
 	index    int
@@ -22,12 +27,20 @@ type Context struct {
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request, handlers []HandlerFunc) *Context {
-	return &Context{
+	resp := &response.Response{}
+
+	ctx := &Context{
 		W:        newWriterWrapper(w),
 		R:        r,
 		handlers: handlers,
-		Response: &response.Response{},
+		Resp:     resp,                        // Direct assignment to Resp
+		Api:      response.NewApiHelper(resp), // Initialize API helper
 	}
+
+	// Initialize request helper
+	ctx.Req = newRequestHelper(ctx)
+
+	return ctx
 }
 
 // Call inside middleware
@@ -48,13 +61,13 @@ func (c *Context) FinalizeResponse(err error) {
 	}
 
 	if err != nil {
-		st := c.RespStatusCode
+		st := c.Resp.RespStatusCode
 		if st == 0 || st < http.StatusBadRequest {
-			c.ErrorInternal(err)
+			c.Resp.WithStatus(http.StatusInternalServerError).Json(map[string]string{"error": err.Error()})
 		}
 	}
 
-	c.WriteHttp(c.W)
+	c.Resp.WriteHttp(c.W)
 }
 
 func (c *Context) executeHandler() error {

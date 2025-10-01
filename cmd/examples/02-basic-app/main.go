@@ -18,7 +18,7 @@ func createBasicRouter() lokstra.Router {
 	})
 
 	r.GET("/ping", func(c *lokstra.RequestContext) error {
-		return c.Ok("pong")
+		return c.Api.Ok("pong")
 	}, route.WithNameOption("ping-route"))
 	return r
 }
@@ -26,7 +26,7 @@ func createBasicRouter() lokstra.Router {
 func createAnotherRouter() lokstra.Router {
 	r := lokstra.NewRouter("another-router")
 	r.GET("/hello", func(c *lokstra.RequestContext) error {
-		return c.Ok("Hello, World!")
+		return c.Api.Ok("Hello, World!")
 	})
 	return r
 }
