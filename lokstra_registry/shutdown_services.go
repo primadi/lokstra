@@ -1,6 +1,8 @@
 package lokstra_registry
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Shutdownable interface {
 	Shutdown() error

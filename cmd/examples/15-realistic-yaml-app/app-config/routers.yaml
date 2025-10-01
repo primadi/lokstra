@@ -1,0 +1,38 @@
+# Router configuration - API and Admin routes
+# Router configuration - STRICT middleware-only policy
+# Routes can ONLY:
+# 1. Add middleware to existing named routes (use) - ADDITIVE to existing middleware
+# 2. Disable existing routes (enable: false)
+# 
+# Middleware inheritance is ALWAYS additive - no override capability
+
+routers:
+  - name: api
+    use: [api-logger, api-cors]  # Add middleware to ALL routes in this router
+    routes:
+      # Add middleware to specific existing routes (routes must be registered in code first)
+      # All middleware is ADDITIVE to existing middleware from code registration
+      
+      - name: health-endpoint
+        use: [rate-limit]        # health gets: [existing code middleware] + [api-logger, api-cors, rate-limit]
+        
+      - name: users-endpoint  
+        use: [admin-auth, cache] # users gets: [existing code middleware] + [api-logger, api-cors, admin-auth, cache]
+        
+      - name: status-endpoint
+        use: [monitoring]        # status gets: [existing code middleware] + [api-logger, api-cors, monitoring]
+
+  - name: admin
+    use: [api-logger, admin-auth]  # All admin routes get logger and auth (ADDITIVE)
+    routes:
+      # Add middleware to existing admin routes
+      
+      - name: admin-dashboard
+        use: [audit-log]         # dashboard gets: [existing code middleware] + [api-logger, admin-auth, audit-log]
+        
+      - name: admin-users
+        use: [rate-limit, cache] # admin-users gets: [existing code middleware] + [api-logger, admin-auth, rate-limit, cache]
+        
+      # Disable dangerous operations
+      - name: admin-reset
+        enable: false            # Disabled for safety in this environment

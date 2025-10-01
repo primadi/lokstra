@@ -10,14 +10,26 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/core/app"
-	"github.com/primadi/lokstra/lokstra_registry"
 )
+
+// Callback to shutdown services - set by registry to avoid circular dependency
+var shutdownServicesCallback func()
+
+// SetShutdownServicesCallback allows registry to set the callback function
+func SetShutdownServicesCallback(callback func()) {
+	shutdownServicesCallback = callback
+}
 
 type Server struct {
 	name string
 	apps []*app.App
 
 	built bool
+}
+
+// GetName returns the server name (implements ServerInterface)
+func (s *Server) GetName() string {
+	return s.name
 }
 
 // Create a new Server instance with given apps
@@ -101,7 +113,29 @@ func (s *Server) Start() error {
 }
 
 // Shutdown gracefully all apps within the given timeout.
-func (s *Server) Shutdown(timeout time.Duration) error {
+func (s *Server) Shutdown(timeout interface{}) error {
+	// Convert timeout to time.Duration
+	var duration time.Duration
+	switch t := timeout.(type) {
+	case time.Duration:
+		duration = t
+	case int:
+		duration = time.Duration(t) * time.Second
+	case string:
+		var err error
+		duration, err = time.ParseDuration(t)
+		if err != nil {
+			return fmt.Errorf("invalid timeout format: %v", err)
+		}
+	default:
+		duration = 5 * time.Second // default
+	}
+
+	return s.shutdown(duration)
+}
+
+// Internal shutdown method with time.Duration
+func (s *Server) shutdown(timeout time.Duration) error {
 	var wg sync.WaitGroup
 
 	errCh := make(chan error, len(s.apps))
@@ -121,8 +155,10 @@ func (s *Server) Shutdown(timeout time.Duration) error {
 	wg.Wait()
 	close(errCh)
 
-	// Shutdown any remaining services
-	lokstra_registry.ShutdownServices()
+	// Shutdown any remaining services via callback to avoid circular dependency
+	if shutdownServicesCallback != nil {
+		shutdownServicesCallback()
+	}
 
 	var errs []error
 	for err := range errCh {
@@ -154,7 +190,7 @@ func (s *Server) Run(timeout time.Duration) error {
 	select {
 	case sig := <-stop:
 		fmt.Println("Received shutdown signal:", sig)
-		if err := s.Shutdown(timeout); err != nil {
+		if err := s.shutdown(timeout); err != nil {
 			return fmt.Errorf("shutdown error: %w", err)
 		}
 		return nil

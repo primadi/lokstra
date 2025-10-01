@@ -1,0 +1,71 @@
+# Microservices Deployment - Order Service  
+# Order processing service with transactional capabilities
+
+configs:
+  - name: deployment-type
+    value: "microservices"
+  - name: service-name
+    value: "order-service"
+  - name: product-service-url
+    value: "${PRODUCT_SERVICE_URL:http://localhost:8081}"
+  - name: user-service-url
+    value: "${USER_SERVICE_URL:http://localhost:8083}"
+  - name: payment-service-url
+    value: "${PAYMENT_SERVICE_URL:http://localhost:8084}"
+  - name: analytics-service-url
+    value: "${ANALYTICS_SERVICE_URL:http://localhost:8085}"
+  - name: cors-origins
+    value: "${CORS_ORIGINS:*}"
+  - name: rate-limit-rps
+    value: 200  # Lower rate for order processing
+  - name: cache-ttl-seconds
+    value: 60   # Short cache for order data
+  - name: enable-cache  
+    value: false  # No caching for orders (transactional data)
+  - name: database-url
+    value: "${ORDER_DB_URL:postgres://localhost:5432/orders}"
+  - name: database-pool-size
+    value: 15
+  - name: redis-url
+    value: "${ORDER_REDIS_URL:redis://localhost:6379/1}"
+
+middlewares:
+  - name: logging
+    type: logging
+  - name: cors
+    type: cors
+  - name: auth
+    type: auth
+  - name: rate-limit
+    type: rate-limit
+
+services:
+  - name: database
+    type: database
+  - name: redis
+    type: redis
+  # Business services - will use HTTP clients in microservices
+  - name: product-service
+    type: product-service
+  - name: user-service
+    type: user-service
+  - name: payment-service
+    type: payment-service
+  - name: analytics-service
+    type: analytics-service
+
+routers:
+  - name: order-api
+    use: [logging, cors, auth]
+    routes:
+      - name: create-order
+        use: [rate-limit]
+
+servers:
+  - name: order-service
+    listen: "${ORDER_PORT:8082}"
+    services: [database, redis, product-service, user-service, payment-service, analytics-service]
+    apps:
+      - name: order-app
+        addr: "/"
+        routers: [order-api]

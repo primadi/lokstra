@@ -34,5 +34,5 @@ require (
 	github.com/quic-go/quic-go v0.54.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/valyala/fasthttp v1.66.0
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 )

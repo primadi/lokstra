@@ -1,0 +1,105 @@
+# Monolith Deployment Configuration
+# Single server running ALL services - suitable for small to medium deployments
+
+# General Configuration
+configs:
+  - name: deployment-type
+    value: "monolith"
+  - name: service-name
+    value: "ecommerce-monolith"
+  - name: cors-origins
+    value: "${CORS_ORIGINS:*}"
+  - name: rate-limit-rps  
+    value: 1000
+  - name: cache-ttl-seconds
+    value: 300
+  - name: payment-gateway
+    value: "${PAYMENT_GATEWAY:stripe}"
+  - name: enable-cache
+    value: true
+  - name: database-url
+    value: "${DATABASE_URL:postgres://localhost:5432/ecommerce}"
+  - name: database-pool-size
+    value: 20
+  - name: redis-url
+    value: "${REDIS_URL:redis://localhost:6379}"
+  - name: email-provider
+    value: "${EMAIL_PROVIDER:sendgrid}"
+
+# Middleware Configuration
+middlewares:
+  - name: logging
+    type: logging
+  - name: cors
+    type: cors
+  - name: auth
+    type: auth
+  - name: rate-limit
+    type: rate-limit
+  - name: cache
+    type: cache
+
+# Service Configuration  
+services:
+  - name: database
+    type: database
+  - name: redis
+    type: redis
+  - name: email
+    type: email
+  # Business services - will use local implementation in monolith
+  - name: product-service
+    type: product-service
+  - name: user-service
+    type: user-service
+  - name: payment-service
+    type: payment-service
+  - name: analytics-service
+    type: analytics-service
+
+# Router Configuration
+routers:
+  # Product API with caching for better performance
+  - name: product-api
+    use: [logging, cors, cache]
+    routes:
+      - name: products-list
+        use: [rate-limit]
+
+  # Order API with auth and logging
+  - name: order-api  
+    use: [logging, cors, auth]
+    routes:
+      - name: create-order
+        use: [rate-limit]
+
+  # User management with full protection
+  - name: user-api
+    use: [logging, cors, auth]
+    routes:
+      - name: users-list  
+        use: [rate-limit]
+
+  # Payment API with enhanced security
+  - name: payment-api
+    use: [logging, cors, auth]
+    routes:
+      - name: process-payment
+        use: [rate-limit, cache]
+
+  # Analytics with caching for dashboard performance
+  - name: analytics-api
+    use: [logging, cors, auth]  
+    routes:
+      - name: get-analytics
+        use: [cache]
+
+# Server Configuration - Single server for all APIs
+servers:
+  - name: monolith-server
+    listen: "${PORT:8080}"
+    services: [database, redis, email, product-service, user-service, payment-service, analytics-service]
+    apps:
+      - name: ecommerce-app
+        addr: "/api"  # Mount all APIs under /api prefix for monolith
+        routers: [product-api, order-api, user-api, payment-api, analytics-api]

@@ -1,0 +1,31 @@
+# General Configuration - available for hardcoded components
+configs:
+  - name: server-url
+    value: "https://api.production.com"
+  
+  - name: max-connections
+    value: 1000
+    
+  - name: debug-enabled
+    value: false
+    
+  - name: jwt-secret
+    value: "${JWT_SECRET:default-secret-key}"
+    
+  - name: database-pool-size
+    value: 50
+    
+  - name: cache-ttl-seconds
+    value: 300
+    
+  - name: rate-limit-requests-per-minute
+    value: 60
+    
+  - name: cors-origins
+    value: ["https://app.example.com", "https://admin.example.com"]
+    
+  - name: monitoring-config
+    value:
+      enabled: true
+      sample_rate: 0.1
+      endpoint: "https://monitoring.example.com"

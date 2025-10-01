@@ -1,0 +1,73 @@
+# Microservices Deployment - Payment Service
+# Secure payment processing service
+
+configs:
+  - name: deployment-type
+    value: "microservices"
+  - name: service-name
+    value: "payment-service"
+  - name: product-service-url
+    value: "${PRODUCT_SERVICE_URL:http://localhost:8081}"
+  - name: user-service-url
+    value: "${USER_SERVICE_URL:http://localhost:8083}"
+  - name: analytics-service-url
+    value: "${ANALYTICS_SERVICE_URL:http://localhost:8085}"
+  - name: cors-origins
+    value: "${CORS_ORIGINS:https://secure.ecommerce.com}"  # Stricter CORS
+  - name: rate-limit-rps
+    value: 50   # Very low rate for payment security
+  - name: cache-ttl-seconds
+    value: 30   # Very short cache for payments
+  - name: enable-cache
+    value: true # Cache for fraud detection
+  - name: payment-gateway
+    value: "${PAYMENT_GATEWAY:stripe}"
+  - name: database-url
+    value: "${PAYMENT_DB_URL:postgres://localhost:5432/payments}"
+  - name: database-pool-size
+    value: 5   # Smaller pool for security
+  - name: redis-url
+    value: "${PAYMENT_REDIS_URL:redis://localhost:6379/3}"
+
+middlewares:
+  - name: logging
+    type: logging
+  - name: cors
+    type: cors
+  - name: auth
+    type: auth
+  - name: rate-limit
+    type: rate-limit
+  - name: cache
+    type: cache
+
+services:
+  - name: database
+    type: database
+  - name: redis
+    type: redis
+  # Business services - will use HTTP clients in microservices
+  - name: product-service
+    type: product-service
+  - name: user-service
+    type: user-service
+  - name: payment-service
+    type: payment-service
+  - name: analytics-service
+    type: analytics-service
+
+routers:
+  - name: payment-api
+    use: [logging, cors, auth]
+    routes:
+      - name: process-payment
+        use: [rate-limit, cache]
+
+servers:
+  - name: payment-service
+    listen: "${PAYMENT_PORT:8084}"
+    services: [database, redis, product-service, user-service, payment-service, analytics-service]
+    apps:
+      - name: payment-app
+        addr: "/"
+        routers: [payment-api]

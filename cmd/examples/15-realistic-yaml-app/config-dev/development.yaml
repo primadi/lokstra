@@ -1,0 +1,48 @@
+# Development Environment Configuration
+middlewares:
+  - name: dev-logger
+    type: logger
+    config:
+      level: "debug"
+      format: "pretty"
+      
+  - name: dev-cors
+    type: cors
+    config:
+      origins: ["*"]  # Allow all origins in dev
+      
+services:
+  - name: dev-db
+    type: database
+    config:
+      host: "localhost"
+      database: "lokstra_dev"
+      user: "dev_user"
+      password: "dev_pass"
+      
+routers:
+  - name: api
+    use: [dev-logger, dev-cors]  # Use development middleware
+    routes:
+      - name: dev-debug
+        path: /dev/debug
+        method: GET
+        
+  - name: admin
+    use: [dev-logger]  # No auth in development
+    routes:
+      - name: admin-reset
+        path: /admin/reset-all
+        method: POST
+        enable: true  # Enable dangerous operations in dev
+        
+servers:
+  - name: main-server
+    services: [dev-db]
+    apps:
+      - name: api-service
+        addr: ":3000"  # Different port for dev
+        routers: [api]
+      - name: admin-panel
+        addr: ":3001"
+        routers: [admin]

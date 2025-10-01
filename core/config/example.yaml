@@ -1,0 +1,204 @@
+# Example YAML configuration based on the blog application scenario
+# This demonstrates the concepts described in notes.txt
+
+routers:
+  - name: blog-app-router
+    engine-type: default  # can be skipped
+    enable: true          # this is default value, can be skip
+    use: [cors-mw, logging-mw]
+    override-parent-mw: false  # this is default value
+    routes:
+      - name: ping
+        path: /ping
+        enable: true      # this is default value, can be skip
+        method: GET       # this is default method, we can skip it for GET method
+        override-parent-mw: false  # this is default value
+        use: []
+        handler: PingHandler
+      
+      - name: get-posts
+        path: /posts
+        method: GET
+        use: [cache-mw]
+        handler: GetPostsHandler
+      
+      - name: create-post
+        path: /posts
+        method: POST
+        use: [auth-mw, validate-mw]
+        handler: CreatePostHandler
+      
+      - name: get-post
+        path: /posts/{id}
+        method: GET
+        use: [cache-mw]
+        handler: GetPostHandler
+
+  - name: blog-admin-router
+    use: [cors-mw, admin-auth-mw, logging-mw]
+    routes:
+      - name: admin-dashboard
+        path: /dashboard
+        handler: AdminDashboardHandler
+      
+      - name: manage-posts
+        path: /admin/posts
+        handler: ManagePostsHandler
+      
+      - name: manage-users
+        path: /admin/users
+        handler: ManageUsersHandler
+
+  - name: blog-backend-router
+    use: [api-cors-mw, api-auth-mw, logging-mw]
+    routes:
+      - name: api-posts
+        path: /api/posts
+        method: GET
+        handler: ApiGetPostsHandler
+      
+      - name: api-create-post
+        path: /api/posts
+        method: POST
+        use: [validate-api-mw]
+        handler: ApiCreatePostHandler
+      
+      - name: api-users
+        path: /api/users
+        method: GET
+        handler: ApiGetUsersHandler
+
+services:
+  - name: db-main  # programmer can access service from DI using name
+    type: postgres  # service factory to create service
+    enable: true   # this is default value, can be skip
+    config:
+      dsn: "postgres://user:password@localhost:5432/blog_db?sslmode=disable"
+      max_connections: 25
+      max_idle_connections: 5
+      connection_lifetime: "1h"
+  
+  - name: redis-cache
+    type: redis
+    config:
+      addr: "localhost:6379"
+      password: ""
+      db: 0
+      pool_size: 10
+  
+  - name: email-service
+    type: smtp
+    config:
+      host: "smtp.gmail.com"
+      port: 587
+      username: "blog@example.com"
+      password: "app-password"
+
+middlewares:
+  - name: cors-mw  # programmer can access middleware from DI using name
+    type: cors
+    enable: true   # this is default value, can be skip
+    config:
+      allowed_origins: ["http://localhost:3000", "https://myblog.com"]
+      allowed_methods: ["GET", "POST", "PUT", "DELETE"]
+      allowed_headers: ["Content-Type", "Authorization"]
+      allow_credentials: true
+
+  - name: api-cors-mw
+    type: cors
+    config:
+      allowed_origins: ["*"]
+      allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed_headers: ["*"]
+      allow_credentials: false
+
+  - name: auth-mw
+    type: jwt
+    config:
+      secret: "blog-jwt-secret-key"
+      algorithm: "HS256"
+      token_lookup: "header:Authorization"
+      auth_scheme: "Bearer"
+
+  - name: admin-auth-mw
+    type: jwt
+    config:
+      secret: "admin-jwt-secret-key"
+      algorithm: "HS256"
+      token_lookup: "header:Authorization"
+      auth_scheme: "Bearer"
+      required_role: "admin"
+
+  - name: api-auth-mw
+    type: jwt
+    config:
+      secret: "api-jwt-secret-key"
+      algorithm: "HS256"
+      token_lookup: "header:X-API-Key"
+
+  - name: logging-mw
+    type: logger
+    config:
+      level: "info"
+      format: "json"
+      include_request_body: false
+      include_response_body: false
+
+  - name: cache-mw
+    type: cache
+    config:
+      ttl: "5m"
+      key_prefix: "blog_cache:"
+      skip_if_error: true
+
+  - name: validate-mw
+    type: validator
+    config:
+      skip_validation_on_error: false
+
+  - name: validate-api-mw
+    type: validator
+    config:
+      return_detailed_errors: true
+
+servers:
+  - name: monolith
+    description: "monolith server, all apps in one server"
+    services: [db-main, redis-cache, email-service]
+    apps:
+      - name: monolith-app
+        addr: ":8080"
+        listener-type: default  # default value
+        routers: [blog-app-router, blog-admin-router, blog-backend-router]
+
+  - name: blog-app-server
+    description: "blog-app-service"
+    services: [db-main, redis-cache]
+    apps:
+      - name: blog-app-service
+        addr: ":8080"
+        routers: [blog-app-router]
+        reverse-proxies:
+          - path: /api
+            strip-prefix: ""  # default value
+            target: "http://blog-backend:8080"
+
+  - name: blog-admin-server
+    description: "blog-admin-service"
+    services: [db-main]
+    apps:
+      - name: blog-admin-service
+        addr: ":8080"
+        routers: [blog-admin-router]
+        reverse-proxies:
+          - path: /api
+            strip-prefix: ""  # default value
+            target: "http://blog-backend:8080"
+
+  - name: blog-backend-server
+    description: "blog-backend-service"
+    services: [db-main, redis-cache, email-service]
+    apps:
+      - name: blog-backend-service
+        addr: ":8080"
+        routers: [blog-backend-router]

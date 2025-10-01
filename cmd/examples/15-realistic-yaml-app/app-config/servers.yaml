@@ -1,0 +1,12 @@
+# Server configuration - Apps and services binding
+servers:
+  - name: main-server
+    services: [main-db, session-cache]
+    apps:
+      - name: api-service
+        addr: "${API_PORT::8080}"
+        routers: [api]
+        
+      - name: admin-panel
+        addr: "${ADMIN_PORT::8081}"
+        routers: [admin]

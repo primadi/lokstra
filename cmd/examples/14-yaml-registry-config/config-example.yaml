@@ -1,0 +1,107 @@
+# Complete Lokstra Configuration Example
+# This file demonstrates all configuration options available
+
+middlewares:
+  - name: logging-mw
+    type: logger
+    config:
+      level: "info"
+      format: "json"
+      
+  - name: auth-mw
+    type: jwt
+    config:
+      secret: "${JWT_SECRET}"
+      expiry: "24h"
+      
+  - name: cors-mw
+    type: cors
+    config:
+      origins: ["*"]
+      methods: ["GET", "POST", "PUT", "DELETE"]
+
+services:
+  - name: database
+    type: postgres
+    config:
+      host: "${DB_HOST:localhost}"
+      port: 5432
+      database: "lokstra_app"
+      ssl_mode: "disable"
+      
+  - name: cache
+    type: redis
+    config:
+      addr: "${REDIS_ADDR:localhost:6379}"
+      password: "${REDIS_PASSWORD:}"
+      db: 0
+      
+  - name: storage
+    type: s3
+    config:
+      bucket: "app-assets"
+      region: "us-east-1"
+
+routers:
+  - name: api-router
+    use: [logging-mw, cors-mw]
+    routes:
+      # Add new endpoints to existing router
+      - name: health-check
+        path: /health
+        method: GET
+        # handler: healthHandler (would be set if handler registry exists)
+        
+      - name: user-profile
+        path: /api/user/profile
+        method: GET
+        use: [auth-mw]  # Route-specific middleware
+        
+      - name: upload-file
+        path: /api/upload
+        method: POST
+        use: [auth-mw]
+        
+      # Modify existing route from code
+      - name: existing-endpoint
+        path: ""  # Empty = use path from code registration
+        method: GET
+        enable: true
+        
+  - name: admin-router
+    use: [logging-mw, auth-mw]
+    routes:
+      - name: admin-dashboard
+        path: /admin
+        method: GET
+        
+      - name: admin-users
+        path: /admin/users
+        method: GET
+        
+      # Disable a route (maybe for maintenance)
+      - name: admin-dangerous
+        path: /admin/reset-all
+        method: POST
+        enable: false
+
+servers:
+  - name: web-server
+    services: [database, cache, storage]
+    apps:
+      - name: api-app
+        addr: ":8080"
+        routers: [api-router]
+        
+      - name: admin-app
+        addr: ":8081"
+        routers: [admin-router]
+        
+  - name: worker-server
+    services: [database, cache]
+    # No apps = background worker only
+    
+# Configuration can be split across multiple files:
+# - config/base.yaml (common middlewares, services)
+# - config/development.yaml (dev-specific overrides)
+# - config/production.yaml (prod-specific settings)

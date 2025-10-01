@@ -28,3 +28,8 @@ func GetRouter(name string) router.Router {
 	}
 	return nil
 }
+
+// GetRouterRegistry returns the router registry for Router Integration
+func GetRouterRegistry() map[string]router.Router {
+	return routerRegistry
+}

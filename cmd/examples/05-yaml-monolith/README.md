@@ -9,7 +9,6 @@
 
 ## Run
 ```
-export DUMMY_INITIAL=5   # optional
 go run main.go
 curl http://localhost:8080/blog/
 ```
