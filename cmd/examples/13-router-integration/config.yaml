@@ -1,0 +1,54 @@
+# =============================================================================
+# LOKSTRA AUTO SERVICE DISCOVERY CONFIG
+# =============================================================================
+# Routers are defined in code via lokstra_registry.RegisterRouter()
+# No separate routers: section needed - just reference them by name in apps
+# 
+# Auto-discovery resolves communication paths based on deployment scenarios:
+# 1. monolith-single-port  → All routers local (router.ServeHTTP)
+# 2. monolith-multi-port   → Same server, different ports (router.ServeHTTP)  
+# 3. microservice          → Different servers (HTTP call to baseUrl + addr)
+# =============================================================================
+configs:
+  - name: server-name
+    value: order-service
+
+servers:
+  # SCENARIO 1: Monolith Single Port
+  # All services run in one server on one port
+  # Communication: Local (httptest) - zero network overhead
+  - name: monolith-single-port-server
+    baseUrl: http://localhost
+    deployment-id: monolith-single-port
+    apps: 
+      - addr: ":8081"
+        routers: [product-api, order-api, health-api]
+
+  # SCENARIO 2: Monolith Multi Port  
+  # All services run on same server but different ports
+  # Communication: HTTP to localhost:different-ports
+  - name: monolith-multi-port-server
+    baseUrl: http://localhost
+    deployment-id: monolith-multi-port
+    apps:
+      - addr: ":8082"
+        routers: [product-api, health-api]
+      - addr: ":8083"
+        routers: [order-api, health-api]
+
+  # SCENARIO 3: Microservices
+  # Each service runs on separate server/container
+  # Communication: HTTP to different base URLs
+  - name: product-service
+    baseUrl: http://localhost
+    deployment-id: microservice
+    apps:
+      - addr: ":8084"
+        routers: [product-api, health-api]
+        
+  - name: order-service
+    baseUrl: http://localhost  
+    deployment-id: microservice
+    apps:
+      - addr: ":8085"
+        routers: [order-api, health-api]

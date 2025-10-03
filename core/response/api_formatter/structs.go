@@ -2,12 +2,11 @@ package api_formatter
 
 // ApiResponse standardizes API response structure
 type ApiResponse struct {
-	Status    string `json:"status"`               // "success" | "error"
-	Message   string `json:"message,omitempty"`    // Human readable message
-	Data      any    `json:"data,omitempty"`       // Response data
-	Error     *Error `json:"error,omitempty"`      // Error details if status = "error"
-	Meta      *Meta  `json:"meta,omitempty"`       // Metadata for lists/pagination
-	RequestID string `json:"request_id,omitempty"` // For tracing
+	Status  string `json:"status"`            // "success" | "error"
+	Message string `json:"message,omitempty"` // Human readable message
+	Data    any    `json:"data,omitempty"`    // Response data
+	Error   *Error `json:"error,omitempty"`   // Error details if status = "error"
+	Meta    *Meta  `json:"meta,omitempty"`    // Metadata for lists/pagination
 }
 
 // Error represents detailed error information
@@ -81,4 +80,16 @@ func CalculateListMeta(page, pageSize, total int) *ListMeta {
 		HasNext:    page < totalPages,
 		HasPrev:    page > 1,
 	}
+}
+
+// ClientResponse holds parsed HTTP response from external/internal services
+type ClientResponse struct {
+	Status     string         `json:"status,omitempty"`      // Response status ("success" or "error")
+	Message    string         `json:"message,omitempty"`     // Response message
+	Data       any            `json:"data,omitempty"`        // Response data
+	Error      *Error         `json:"error,omitempty"`       // Error details if status = "error"
+	Meta       *Meta          `json:"meta,omitempty"`        // Metadata for lists/pagination
+	StatusCode int            `json:"status_code,omitempty"` // HTTP status code
+	RawBody    []byte         `json:"-"`                     // Raw response body
+	Headers    map[string]any `json:"headers,omitempty"`     // Response headers
 }

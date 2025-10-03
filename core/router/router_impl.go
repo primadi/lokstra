@@ -78,7 +78,7 @@ func (r *routerImpl) Build() {
 		return
 	}
 	if !r.isRoot {
-		panic("router: Build() can only be called on the root router")
+		panic("router [" + r.name + "] is not root router, Build() can only be called on the root router")
 	}
 
 	r.routerEngine = engine.CreateEngine(r.engineType)
@@ -159,6 +159,24 @@ func (r *routerImpl) AddGroup(path string) Router {
 	return child
 }
 
+// Clone implements Router.
+func (r *routerImpl) Clone() Router {
+	return &routerImpl{
+		name:             r.name,
+		engineType:       r.engineType,
+		pathPrefix:       r.pathPrefix,
+		routes:           r.routes,
+		middlewares:      r.middlewares,
+		overrideParentMw: r.overrideParentMw,
+		children:         r.children,
+		isChained:        r.isChained,
+		nextChain:        r.nextChain,
+		isRoot:           r.isRoot,
+		isBuilt:          r.isBuilt,
+		routerEngine:     r.routerEngine,
+	}
+}
+
 // DELETE implements Router.
 func (r *routerImpl) DELETE(path string, h any, middleware ...any) Router {
 	return r.handle("DELETE", cleanPath(path), h, middleware)
@@ -228,6 +246,12 @@ func (r *routerImpl) PUTPrefix(prefix string, h any, middleware ...any) Router {
 // PathPrefix implements Router.
 func (r *routerImpl) PathPrefix() string {
 	return r.pathPrefix
+}
+
+// SetPathPrefix implements Router.
+func (r *routerImpl) SetPathPrefix(prefix string) Router {
+	r.pathPrefix = cleanPath(prefix)
+	return r
 }
 
 // SetNextChain implements Router.

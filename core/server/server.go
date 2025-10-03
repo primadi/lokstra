@@ -21,29 +21,32 @@ func SetShutdownServicesCallback(callback func()) {
 }
 
 type Server struct {
-	name string
-	apps []*app.App
+	Name         string
+	BaseUrl      string // Base URL of the server
+	DeploymentID string // Deployment ID for grouping servers
+	Apps         []*app.App
 
 	built bool
 }
 
 // GetName returns the server name (implements ServerInterface)
 func (s *Server) GetName() string {
-	return s.name
+	return s.Name
 }
 
 // Create a new Server instance with given apps
 func New(name string, apps ...*app.App) *Server {
 	return &Server{
-		name: name,
-		apps: apps,
+		Name: name,
+		Apps: apps,
 	}
 }
 
 // Print server start information, including each app's details
 func (s *Server) PrintStartInfo() {
 	s.build()
-	for _, a := range s.apps {
+	fmt.Printf("Server '%s' starting with %d app(s):\n", s.Name, len(s.Apps))
+	for _, a := range s.Apps {
 		a.PrintStartInfo()
 	}
 	fmt.Println("Press CTRL+C to stop the server...")
@@ -53,7 +56,7 @@ func (s *Server) AddApp(a *app.App) {
 	if s.built {
 		panic("Cannot add app after server is built")
 	}
-	s.apps = append(s.apps, a)
+	s.Apps = append(s.Apps, a)
 }
 
 func (s *Server) build() {
@@ -64,7 +67,7 @@ func (s *Server) build() {
 	addrMap := make(map[string]*app.App)
 	var mergedApps []*app.App
 
-	for _, a := range s.apps {
+	for _, a := range s.Apps {
 		addr := a.GetAddress()
 		if existing, ok := addrMap[addr]; ok {
 			// Merge the existing app with the new one
@@ -75,19 +78,19 @@ func (s *Server) build() {
 		}
 	}
 
-	s.apps = mergedApps
+	s.Apps = mergedApps
 }
 
-// Start runs the HTTP server. It blocks until the server stops or returns an error.
+// Start the server. It blocks until the server stops or returns an error.
 // Shutdown must be called separately.
 func (s *Server) Start() error {
 	var wg sync.WaitGroup
-	errCh := make(chan error, len(s.apps))
+	errCh := make(chan error, len(s.Apps))
 
 	s.build()
 
 	// Start each app in its own goroutine
-	for _, ap := range s.apps {
+	for _, ap := range s.Apps {
 		wg.Add(1)
 		go func(a *app.App) {
 			defer wg.Done()
@@ -138,8 +141,8 @@ func (s *Server) Shutdown(timeout interface{}) error {
 func (s *Server) shutdown(timeout time.Duration) error {
 	var wg sync.WaitGroup
 
-	errCh := make(chan error, len(s.apps))
-	for _, ap := range s.apps {
+	errCh := make(chan error, len(s.Apps))
+	for _, ap := range s.Apps {
 		wg.Add(1)
 		go func(a *app.App) {
 			defer wg.Done()
@@ -172,7 +175,7 @@ func (s *Server) shutdown(timeout time.Duration) error {
 	return nil
 }
 
-// Run starts the server and blocks until a termination signal is received.
+// Starts the server and blocks until a termination signal is received.
 // It shuts down gracefully with the given timeout.
 func (s *Server) Run(timeout time.Duration) error {
 	// Run server in background
@@ -198,3 +201,11 @@ func (s *Server) Run(timeout time.Duration) error {
 		return fmt.Errorf("server error: %w", err)
 	}
 }
+
+type ServerInterface interface {
+	GetName() string
+	Start() error
+	Shutdown(timeout interface{}) error
+}
+
+var _ ServerInterface = (*Server)(nil)

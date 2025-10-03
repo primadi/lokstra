@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response"
@@ -83,6 +86,108 @@ func (f *CustomCorporateFormatter) List(data any, meta *api_formatter.ListMeta) 
 	return result
 }
 
+func (f *CustomCorporateFormatter) ParseClientResponse(resp *http.Response, cr *api_formatter.ClientResponse) error {
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Store raw body and status code
+	cr.RawBody = body
+	cr.StatusCode = resp.StatusCode
+
+	// Parse headers
+	cr.Headers = make(map[string]any)
+	for key, values := range resp.Header {
+		if len(values) == 1 {
+			cr.Headers[key] = values[0]
+		} else {
+			cr.Headers[key] = values
+		}
+	}
+
+	// Try to parse as Corporate format
+	var result map[string]any
+	if err := json.Unmarshal(body, &result); err != nil {
+		// If not valid JSON, treat as plain text
+		cr.Status = "unknown"
+		cr.Data = string(body)
+		return nil
+	}
+
+	// Parse Corporate format
+	if responseStatus, ok := result["responseStatus"].(string); ok {
+		switch responseStatus {
+		case "SUCCESS", "CREATED":
+			cr.Status = "success"
+			// Extract payload
+			if payload, hasPayload := result["payload"]; hasPayload {
+				cr.Data = payload
+			}
+			// Extract description as message
+			if desc, hasDesc := result["description"]; hasDesc {
+				cr.Message = fmt.Sprint(desc)
+			}
+			// Extract pagination info
+			if paginationInfo, hasPagination := result["paginationInfo"]; hasPagination {
+				if paginationMap, ok := paginationInfo.(map[string]any); ok {
+					paginationBytes, _ := json.Marshal(paginationMap)
+					var listMeta api_formatter.ListMeta
+					if json.Unmarshal(paginationBytes, &listMeta) == nil {
+						cr.Meta = &api_formatter.Meta{ListMeta: &listMeta}
+					}
+				}
+			}
+		case "ERROR", "VALIDATION_ERROR":
+			cr.Status = "error"
+			// Extract error details
+			errorObj := &api_formatter.Error{}
+			if errorCode, hasCode := result["errorCode"]; hasCode {
+				errorObj.Code = fmt.Sprint(errorCode)
+			}
+			if errorMessage, hasMessage := result["errorMessage"]; hasMessage {
+				errorObj.Message = fmt.Sprint(errorMessage)
+			}
+			if errorDetails, hasDetails := result["errorDetails"]; hasDetails {
+				if detailsMap, ok := errorDetails.(map[string]any); ok {
+					errorObj.Details = detailsMap
+				}
+			}
+			if validationErrors, hasValidation := result["validationErrors"]; hasValidation {
+				if fieldsSlice, ok := validationErrors.([]any); ok {
+					errorObj.Fields = make([]api_formatter.FieldError, 0, len(fieldsSlice))
+					for _, field := range fieldsSlice {
+						if fieldMap, ok := field.(map[string]any); ok {
+							fe := api_formatter.FieldError{}
+							if f, ok := fieldMap["field"].(string); ok {
+								fe.Field = f
+							}
+							if c, ok := fieldMap["code"].(string); ok {
+								fe.Code = c
+							}
+							if m, ok := fieldMap["message"].(string); ok {
+								fe.Message = m
+							}
+							fe.Value = fieldMap["value"]
+							errorObj.Fields = append(errorObj.Fields, fe)
+						}
+					}
+				}
+			}
+			cr.Error = errorObj
+		}
+	} else {
+		// Unknown format, store entire result as data
+		cr.Status = "unknown"
+		cr.Data = result
+	}
+
+	return nil
+}
+
 // MobileApiFormatter implements mobile-optimized response format
 type MobileApiFormatter struct{}
 
@@ -146,6 +251,107 @@ func (f *MobileApiFormatter) List(data any, meta *api_formatter.ListMeta) any {
 		result["page"] = meta
 	}
 	return result
+}
+
+func (f *MobileApiFormatter) ParseClientResponse(resp *http.Response, cr *api_formatter.ClientResponse) error {
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Store raw body and status code
+	cr.RawBody = body
+	cr.StatusCode = resp.StatusCode
+
+	// Parse headers
+	cr.Headers = make(map[string]any)
+	for key, values := range resp.Header {
+		if len(values) == 1 {
+			cr.Headers[key] = values[0]
+		} else {
+			cr.Headers[key] = values
+		}
+	}
+
+	// Try to parse as Mobile format
+	var result map[string]any
+	if err := json.Unmarshal(body, &result); err != nil {
+		// If not valid JSON, treat as plain text
+		cr.Status = "unknown"
+		cr.Data = string(body)
+		return nil
+	}
+
+	// Parse Mobile format - check "ok" field
+	if ok, hasOk := result["ok"].(bool); hasOk {
+		if ok {
+			cr.Status = "success"
+			// Extract data
+			if data, hasData := result["data"]; hasData {
+				cr.Data = data
+			}
+			// Extract message
+			if msg, hasMsg := result["msg"]; hasMsg {
+				cr.Message = fmt.Sprint(msg)
+			}
+			// Extract pagination
+			if page, hasPage := result["page"]; hasPage {
+				if pageMap, ok := page.(map[string]any); ok {
+					pageBytes, _ := json.Marshal(pageMap)
+					var listMeta api_formatter.ListMeta
+					if json.Unmarshal(pageBytes, &listMeta) == nil {
+						cr.Meta = &api_formatter.Meta{ListMeta: &listMeta}
+					}
+				}
+			}
+		} else {
+			// Error response
+			cr.Status = "error"
+			errorObj := &api_formatter.Error{}
+			if errorMsg, hasError := result["error"]; hasError {
+				errorObj.Message = fmt.Sprint(errorMsg)
+			}
+			if code, hasCode := result["code"]; hasCode {
+				errorObj.Code = fmt.Sprint(code)
+			}
+			if info, hasInfo := result["info"]; hasInfo {
+				if infoMap, ok := info.(map[string]any); ok {
+					errorObj.Details = infoMap
+				}
+			}
+			if fields, hasFields := result["fields"]; hasFields {
+				if fieldsSlice, ok := fields.([]any); ok {
+					errorObj.Fields = make([]api_formatter.FieldError, 0, len(fieldsSlice))
+					for _, field := range fieldsSlice {
+						if fieldMap, ok := field.(map[string]any); ok {
+							fe := api_formatter.FieldError{}
+							if f, ok := fieldMap["field"].(string); ok {
+								fe.Field = f
+							}
+							if c, ok := fieldMap["code"].(string); ok {
+								fe.Code = c
+							}
+							if m, ok := fieldMap["message"].(string); ok {
+								fe.Message = m
+							}
+							fe.Value = fieldMap["value"]
+							errorObj.Fields = append(errorObj.Fields, fe)
+						}
+					}
+				}
+			}
+			cr.Error = errorObj
+		}
+	} else {
+		// Unknown format, store entire result as data
+		cr.Status = "unknown"
+		cr.Data = result
+	}
+
+	return nil
 }
 
 // Example data

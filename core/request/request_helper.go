@@ -17,6 +17,14 @@ var (
 	jsonDecoder     = jsoniter.Config{TagKey: "json"}.Froze()
 )
 
+func unmarshalBody(data []byte, v any) error {
+	err := jsonBodyDecoder.Unmarshal(data, v)
+	if err == nil {
+		return jsonDecoder.Unmarshal(data, v)
+	}
+	return err
+}
+
 // RequestHelper contains helper methods for request handling
 type RequestHelper struct {
 	ctx *Context
@@ -245,7 +253,7 @@ func (h *RequestHelper) bindFormURLEncoded(v any) error {
 				return err
 			}
 			// Unmarshal into v
-			return jsonBodyDecoder.Unmarshal(b, v)
+			return unmarshalBody(b, v)
 		}
 	}
 
@@ -387,14 +395,8 @@ func (h *RequestHelper) BindBody(v any) error {
 		return nil // No body to bind
 	}
 
-	// Try body tag first, if no body tag fields found, try json tag
-	err := jsonBodyDecoder.Unmarshal(h.rawRequestBody, v)
-	if err == nil {
-		return nil // Successfully parsed with body tags
-	}
-
 	// Fallback to json tags
-	return jsonDecoder.Unmarshal(h.rawRequestBody, v)
+	return unmarshalBody(h.rawRequestBody, v)
 }
 
 // BindAll binds all request data (path, query, header, body) to struct
@@ -497,7 +499,7 @@ func (h *RequestHelper) BindBodySmart(v any) error {
 	}
 
 	// Default to JSON binding
-	return jsonBodyDecoder.Unmarshal(h.rawRequestBody, v)
+	return unmarshalBody(h.rawRequestBody, v)
 }
 
 // BindAllSmart binds all request data with smart content-type detection

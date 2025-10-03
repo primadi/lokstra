@@ -8,20 +8,6 @@ import (
 // Global configuration registry
 var configRegistry = make(map[string]any)
 
-// RegisterConfig registers a configuration value with a name
-func RegisterConfig(name string, value any, opts ...RegisterOption) {
-	var options registerOptions
-	for _, opt := range opts {
-		opt.apply(&options)
-	}
-	if !options.allowOverride {
-		if _, exists := configRegistry[name]; exists {
-			panic("config " + name + " already registered")
-		}
-	}
-	configRegistry[name] = value
-}
-
 // GetConfig retrieves a configuration value by name with type assertion and default value
 func GetConfig[T any](name string, defaultValue T) T {
 	if value, ok := configRegistry[name]; ok {
@@ -41,21 +27,6 @@ func GetConfig[T any](name string, defaultValue T) T {
 // SetConfig sets a configuration value (allows runtime changes)
 func SetConfig(name string, value any) {
 	configRegistry[name] = value
-}
-
-// GetConfigString is a convenience function for string configs
-func GetConfigString(name, defaultValue string) string {
-	return GetConfig(name, defaultValue)
-}
-
-// GetConfigInt is a convenience function for int configs
-func GetConfigInt(name string, defaultValue int) int {
-	return GetConfig(name, defaultValue)
-}
-
-// GetConfigBool is a convenience function for bool configs
-func GetConfigBool(name string, defaultValue bool) bool {
-	return GetConfig(name, defaultValue)
 }
 
 // ListConfigNames returns all registered configuration names

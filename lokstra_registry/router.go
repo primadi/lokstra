@@ -1,6 +1,8 @@
 package lokstra_registry
 
-import "github.com/primadi/lokstra/core/router"
+import (
+	"github.com/primadi/lokstra/core/router"
+)
 
 var routerRegistry = make(map[string]router.Router)
 

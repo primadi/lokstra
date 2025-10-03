@@ -15,6 +15,10 @@ type Router interface {
 	EngineType() string
 	// PathPrefix returns the path prefix of this router
 	PathPrefix() string
+	// SetPathPrefix sets the path prefix of this router
+	SetPathPrefix(prefix string) Router
+	// Create a shallow copy of this router (without routes and children)
+	Clone() Router
 
 	// route registration for GET method
 	//

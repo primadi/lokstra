@@ -1,5 +1,7 @@
 package api_formatter
 
+import "net/http"
+
 // ResponseFormatter defines interface for different response formatting strategies
 type ResponseFormatter interface {
 	// Formats successful response with data and optional message
@@ -19,6 +21,9 @@ type ResponseFormatter interface {
 
 	// Formats paginated list response
 	List(data any, meta *ListMeta) any
+
+	// Parses HTTP response into ClientResponse according to formatter's expected format
+	ParseClientResponse(resp *http.Response, cr *ClientResponse) error
 }
 
 // Registry for response formatters

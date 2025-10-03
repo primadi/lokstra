@@ -3,6 +3,9 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/primadi/lokstra/core/app/listener"
@@ -97,12 +100,12 @@ func (a *App) PrintStartInfo() {
 		panic("No router added to the app. Use AddRouter() to add at least one router.")
 	}
 
-	fmt.Println("Starting ["+a.name+"] app with", a.numRouters(), "router(s) on address",
-		a.listenerConfig["addr"], "###")
+	fmt.Println("Starting ["+a.name+"] with", a.numRouters(), "router(s) on address",
+		a.listenerConfig["addr"])
 	a.mainRouter.PrintRoutes()
 }
 
-// Start runs the HTTP server. It blocks until the app stops or returns an error.
+// Start the app. It blocks until the app stops or returns an error.
 // Shutdown must be called separately.
 func (a *App) Start() error {
 	a.listener = listener.CreateListener(a.listenerConfig, a.mainRouter)
@@ -115,4 +118,31 @@ func (a *App) Shutdown(timeout time.Duration) error {
 		return a.listener.Shutdown(timeout)
 	}
 	return nil
+}
+
+// Starts the app and blocks until a termination signal is received.
+// It shuts down gracefully with the given timeout.
+func (a *App) Run(timeout time.Duration) error {
+	// Run app in background
+	errCh := make(chan error, 1)
+	go func() {
+		if err := a.Start(); err != nil {
+			errCh <- err
+		}
+	}()
+
+	// Wait for signal or app error
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case sig := <-stop:
+		fmt.Println("Received shutdown signal:", sig)
+		if err := a.Shutdown(timeout); err != nil {
+			return fmt.Errorf("shutdown error: %w", err)
+		}
+		return nil
+	case err := <-errCh:
+		return fmt.Errorf("app error: %w", err)
+	}
 }

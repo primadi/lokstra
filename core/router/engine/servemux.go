@@ -12,10 +12,11 @@ type ServeMux struct {
 func (s *ServeMux) Handle(pattern string, h http.Handler) {
 	method, path := splitMethodPath(pattern)
 
+	smPath := convertToServeMuxPattern(path)
 	if method == "ANY" {
-		pattern = path
+		pattern = smPath
 	}
-	s.mux.Handle(pattern, h)
+	s.mux.Handle(method+" "+smPath, h)
 }
 
 // ServeHTTP implements RouterEngine.

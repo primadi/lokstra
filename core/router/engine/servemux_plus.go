@@ -36,18 +36,41 @@ func splitMethodPath(pattern string) (method, path string) {
 	return "ANY", pattern
 }
 
-func (m *ServeMuxPlus) Handle(pattern string, h http.Handler) {
-	method, path := splitMethodPath(pattern)
-
-	if method == "ANY" {
-		pattern = path
+// converts to ServeMux Go 1.22+ patterns
+// "/api/*" -> "/api/{path...}"
+// "/users/:id" -> "/users/{id}"
+func convertToServeMuxPattern(path string) string {
+	// Convert * wildcard to {path...}
+	if before, found := strings.CutSuffix(path, "/*"); found {
+		path = before + "/{path...}"
 	}
-	m.mux.Handle(pattern, h)
+
+	// Convert :param to {param}
+	if strings.Contains(path, ":") {
+		parts := strings.Split(path, "/")
+		for i := range parts {
+			if prefix, found := strings.CutPrefix(parts[i], ":"); found {
+				parts[i] = "{" + prefix + "}"
+			}
+		}
+		return strings.Join(parts, "/")
+	}
+	return path
 }
 
-func (m *ServeMuxPlus) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *ServeMuxPlus) Handle(pattern string, h http.Handler) {
+	method, path := splitMethodPath(pattern)
+
+	smPath := convertToServeMuxPattern(path)
+	if method == "ANY" {
+		pattern = smPath
+	}
+	s.mux.Handle(method+" "+smPath, h)
+}
+
+func (s *ServeMuxPlus) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	dbw := response_writer.NewBufferedBodyWriter(w)
-	m.mux.ServeHTTP(dbw, r)
+	s.mux.ServeHTTP(dbw, r)
 
 	// Ensure Allow header includes OPTIONS if applicable
 	allow := w.Header().Get("Allow")

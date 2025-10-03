@@ -152,17 +152,26 @@ func parseMethodPath(pattern string) (method, path string) {
 	return "ANY", pattern
 }
 
-// convertToChiPattern converts Go 1.22+ patterns to Chi patterns
+// converts Go 1.22+ patterns to Chi patterns
 // "/api/{path...}" -> "/api/*"
-// "/users/{id}" -> "/users/{id}" (unchanged)
+// "/users/:id" -> "/users/{id}"
 func convertToChiPattern(path string) string {
 	// Convert {path...} wildcard to Chi's * wildcard
-	if suffix, found := strings.CutSuffix(path, "/{path...}"); found {
-		return suffix + "/*"
+	if before, found := strings.CutSuffix(path, "/{path...}"); found {
+		path = before + "/*"
 	}
 
-	// Other patterns remain the same for now
-	// Chi uses {param} for single parameters, same as Go 1.22+
+	// Convert :param to {param}
+	if strings.Contains(path, ":") {
+		parts := strings.Split(path, "/")
+		for i := range parts {
+			if prefix, found := strings.CutPrefix(parts[i], ":"); found {
+				parts[i] = "{" + prefix + "}"
+			}
+		}
+		return strings.Join(parts, "/")
+	}
+
 	return path
 }
 
