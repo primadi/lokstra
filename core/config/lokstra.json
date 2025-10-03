@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lokstra Configuration Schema",
+  "description": "Schema for Lokstra framework YAML configuration files",
+  "type": "object",
+  "properties": {
+    "configs": {
+      "type": "array",
+      "description": "General configuration key-value pairs",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Configuration key name",
+            "minLength": 1
+          },
+          "value": {
+            "description": "Configuration value (can be string, number, bool, object, etc.)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "services": {
+      "type": "array",
+      "description": "Service configurations",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Service name",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "description": "Service type",
+            "minLength": 1
+          },
+          "enable": {
+            "type": "boolean",
+            "description": "Whether the service is enabled (default: true)",
+            "default": true
+          },
+          "config": {
+            "type": "object",
+            "description": "Service-specific configuration",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "middlewares": {
+      "type": "array",
+      "description": "Middleware configurations",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Middleware name",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "description": "Middleware type",
+            "minLength": 1
+          },
+          "enable": {
+            "type": "boolean",
+            "description": "Whether the middleware is enabled (default: true)",
+            "default": true
+          },
+          "config": {
+            "type": "object",
+            "description": "Middleware-specific configuration",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "servers": {
+      "type": "array",
+      "description": "Server configurations",
+      "items": {
+        "type": "object",
+        "required": ["name", "apps"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Server name",
+            "minLength": 1
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Base URL of the server (default: http://localhost)",
+            "pattern": "^https?://[^\\s/$.?#].[^\\s]*$"
+          },
+          "deployment-id": {
+            "type": "string",
+            "description": "Deployment ID for grouping servers"
+          },
+          "apps": {
+            "type": "array",
+            "description": "Applications within this server",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["addr"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "App name (auto-generated if not provided)"
+                },
+                "addr": {
+                  "type": "string",
+                  "description": "Listen address (e.g., :8080, localhost:3000)",
+                  "minLength": 1
+                },
+                "listener-type": {
+                  "type": "string",
+                  "description": "Listener type (default: default)",
+                  "default": "default"
+                },
+                "routers": {
+                  "type": "array",
+                  "description": "Router names to mount on this app",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

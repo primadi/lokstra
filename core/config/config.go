@@ -6,49 +6,49 @@ import (
 
 // Config represents the top-level YAML configuration structure
 type Config struct {
-	Configs     []*GeneralConfig `yaml:"configs,omitempty"`
-	Services    []*Service       `yaml:"services,omitempty"`
-	Middlewares []*Middleware    `yaml:"middlewares,omitempty"`
-	Servers     []*Server        `yaml:"servers,omitempty"`
+	Configs     []*GeneralConfig `yaml:"configs,omitempty" json:"configs,omitempty"`
+	Services    []*Service       `yaml:"services,omitempty" json:"services,omitempty"`
+	Middlewares []*Middleware    `yaml:"middlewares,omitempty" json:"middlewares,omitempty"`
+	Servers     []*Server        `yaml:"servers,omitempty" json:"servers,omitempty"`
 }
 
 // GeneralConfig represents general configuration key-value pairs
 // Used for hardcoded middleware, services, or any components that need configuration
 type GeneralConfig struct {
-	Name  string `yaml:"name"`  // Configuration key
-	Value any    `yaml:"value"` // Configuration value (can be string, number, bool, object, etc.)
+	Name  string `yaml:"name" json:"name"`   // Configuration key
+	Value any    `yaml:"value" json:"value"` // Configuration value (can be string, number, bool, object, etc.)
 }
 
 // Service configuration
 type Service struct {
-	Name   string         `yaml:"name"`
-	Type   string         `yaml:"type"`
-	Enable *bool          `yaml:"enable,omitempty"` // default: true
-	Config map[string]any `yaml:"config,omitempty"`
+	Name   string         `yaml:"name" json:"name"`
+	Type   string         `yaml:"type" json:"type"`
+	Enable *bool          `yaml:"enable,omitempty" json:"enable,omitempty"` // default: true
+	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
 }
 
 // Middleware configuration
 type Middleware struct {
-	Name   string         `yaml:"name"`
-	Type   string         `yaml:"type"`
-	Enable *bool          `yaml:"enable,omitempty"` // default: true
-	Config map[string]any `yaml:"config,omitempty"`
+	Name   string         `yaml:"name" json:"name"`
+	Type   string         `yaml:"type" json:"type"`
+	Enable *bool          `yaml:"enable,omitempty" json:"enable,omitempty"` // default: true
+	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
 }
 
 // Server configuration
 type Server struct {
-	Name         string `yaml:"name"`
-	BaseUrl      string `yaml:"baseUrl,omitempty"`       // Base URL of the server
-	DeploymentID string `yaml:"deployment-id,omitempty"` // Deployment ID for grouping servers
-	Apps         []*App `yaml:"apps"`
+	Name         string `yaml:"name" json:"name"`
+	BaseUrl      string `yaml:"baseUrl,omitempty" json:"baseUrl,omitempty"`             // Base URL of the server
+	DeploymentID string `yaml:"deployment-id,omitempty" json:"deployment-id,omitempty"` // Deployment ID for grouping servers
+	Apps         []*App `yaml:"apps" json:"apps"`
 }
 
 // App configuration within a server
 type App struct {
-	Name         string   `yaml:"name"`
-	Addr         string   `yaml:"addr"`
-	ListenerType string   `yaml:"listener-type,omitempty"` // default: "default"
-	Routers      []string `yaml:"routers,omitempty"`       // router names
+	Name         string   `yaml:"name" json:"name,omitempty"`
+	Addr         string   `yaml:"addr" json:"addr"`
+	ListenerType string   `yaml:"listener-type,omitempty" json:"listener-type,omitempty"` // default: "default"
+	Routers      []string `yaml:"routers,omitempty" json:"routers,omitempty"`             // router names
 }
 
 // creates a new empty Config

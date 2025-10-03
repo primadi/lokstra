@@ -1,0 +1,5 @@
+# Test invalid config - missing required field
+servers:
+  - baseUrl: http://localhost
+    apps:
+      - addr: :8080

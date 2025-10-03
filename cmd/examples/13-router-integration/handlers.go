@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 
-	"github.com/primadi/lokstra/common/cast"
+	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -69,28 +67,14 @@ type createOrderParam struct {
 var productClient *lokstra_registry.ClientRouter
 
 func getProduct(c *request.Context, productID string) (*Product, error) {
-	resp, err := productClient.GET("/products/" + productID)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to fetch product %s: %v", productID, err))
+	// Automatically resolves product-api location based on deployment configuration
+	// No need for manual RegisterRouterURL - auto-discovery handles this
+	productClient = lokstra_registry.GetClientRouter("product-api", productClient)
+	if productClient == nil {
+		return nil, c.Api.InternalError("Product service unavailable")
 	}
 
-	formatter := api_formatter.GetGlobalFormatter()
-
-	clientResp := &api_formatter.ClientResponse{}
-	if err := formatter.ParseClientResponse(resp, clientResp); err != nil {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to parse product response %s: %v", productID, err))
-	}
-
-	if clientResp.Status != "success" {
-		return nil, c.Api.BadRequest("PRODUCT_NOT_FOUND", fmt.Sprintf("Product %s not found", productID))
-	}
-
-	product := &Product{}
-	if err := cast.ToStruct(clientResp.Data, product, true); err != nil {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to cast product data %s: %v", productID, err))
-	}
-
-	return product, nil
+	return lokstra.FetchAndCast[Product](c, productClient, "/products/"+productID)
 }
 
 func createOrderHandler(c *request.Context, param *createOrderParam) error {
@@ -98,23 +82,11 @@ func createOrderHandler(c *request.Context, param *createOrderParam) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "UserID and ProductIDs are required")
 	}
 
-	// Automatically resolves product-api location based on deployment configuration
-	// No need for manual RegisterRouterURL - auto-discovery handles this
-	productClient = lokstra_registry.GetClientRouter("product-api", productClient)
-	if productClient == nil {
-		return c.Api.InternalError("Product service unavailable")
-	}
-
 	// Fetch product details
 	var orderProducts []*Product
 	var total float64
 
 	for _, productID := range param.ProductIDs {
-		resp, err := productClient.GET("/products/" + productID)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			return c.Api.InternalError(fmt.Sprintf("Failed to fetch product %s: %v", productID, err))
-		}
-
 		product, err := getProduct(c, productID)
 		if err != nil {
 			return err

@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
 # =============================================================================
 # LOKSTRA AUTO SERVICE DISCOVERY CONFIG
 # =============================================================================
@@ -11,7 +13,7 @@
 # =============================================================================
 configs:
   - name: server-name
-    value: monolith-single-port-server
+    value: ${SERVER_NAME:monolith-single-port-server}
 
 servers:
   # SCENARIO 1: Monolith Single Port

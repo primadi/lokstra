@@ -23,10 +23,17 @@ func LoadConfigFs(fsys fs.FS, fileName string, config *Config) error {
 		return fmt.Errorf("failed to read config file %s: %w", fileName, err)
 	}
 
+	expanded := expandVariables(string(data))
+
 	// Parse YAML
 	var tempConfig Config
-	if err := yaml.Unmarshal(data, &tempConfig); err != nil {
+	if err := yaml.Unmarshal([]byte(expanded), &tempConfig); err != nil {
 		return fmt.Errorf("failed to parse YAML in %s: %w", fileName, err)
+	}
+
+	// Validate against JSON schema
+	if err := ValidateConfig(&tempConfig); err != nil {
+		return fmt.Errorf("validation failed for %s: %w", fileName, err)
 	}
 
 	// Merge with existing config
@@ -80,10 +87,17 @@ func LoadConfigDirFs(fsys fs.FS, dirName string, config *Config) error {
 			return fmt.Errorf("failed to read config file %s: %w", file, err)
 		}
 
+		expanded := expandVariables(string(data))
+
 		// Parse YAML
 		var tempConfig Config
-		if err := yaml.Unmarshal(data, &tempConfig); err != nil {
+		if err := yaml.Unmarshal([]byte(expanded), &tempConfig); err != nil {
 			return fmt.Errorf("failed to parse YAML in %s: %w", file, err)
+		}
+
+		// Validate against JSON schema
+		if err := ValidateConfig(&tempConfig); err != nil {
+			return fmt.Errorf("validation failed for %s: %w", file, err)
 		}
 
 		// Merge with existing config
