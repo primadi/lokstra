@@ -68,6 +68,31 @@ type createOrderParam struct {
 
 var productClient *lokstra_registry.ClientRouter
 
+func getProduct(c *request.Context, productID string) (*Product, error) {
+	resp, err := productClient.GET("/products/" + productID)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return nil, c.Api.InternalError(fmt.Sprintf("Failed to fetch product %s: %v", productID, err))
+	}
+
+	formatter := api_formatter.GetGlobalFormatter()
+
+	clientResp := &api_formatter.ClientResponse{}
+	if err := formatter.ParseClientResponse(resp, clientResp); err != nil {
+		return nil, c.Api.InternalError(fmt.Sprintf("Failed to parse product response %s: %v", productID, err))
+	}
+
+	if clientResp.Status != "success" {
+		return nil, c.Api.BadRequest("PRODUCT_NOT_FOUND", fmt.Sprintf("Product %s not found", productID))
+	}
+
+	product := &Product{}
+	if err := cast.ToStruct(clientResp.Data, product, true); err != nil {
+		return nil, c.Api.InternalError(fmt.Sprintf("Failed to cast product data %s: %v", productID, err))
+	}
+
+	return product, nil
+}
+
 func createOrderHandler(c *request.Context, param *createOrderParam) error {
 	if param.UserID == "" || len(param.ProductIDs) == 0 {
 		return c.Api.BadRequest("INVALID_REQUEST", "UserID and ProductIDs are required")
@@ -90,20 +115,11 @@ func createOrderHandler(c *request.Context, param *createOrderParam) error {
 			return c.Api.InternalError(fmt.Sprintf("Failed to fetch product %s: %v", productID, err))
 		}
 
-		clientResp := &api_formatter.ClientResponse{}
-		formatter := api_formatter.CreateFormatter("default")
-		if err := formatter.ParseClientResponse(resp, clientResp); err != nil {
-			return c.Api.InternalError(fmt.Sprintf("Failed to parse product response %s: %v", productID, err))
+		product, err := getProduct(c, productID)
+		if err != nil {
+			return err
 		}
 
-		if clientResp.Status != "success" {
-			return c.Api.BadRequest("PRODUCT_NOT_FOUND", fmt.Sprintf("Product %s not found", productID))
-		}
-
-		product := &Product{}
-		if err := cast.ToStruct(clientResp.Data, product, true); err != nil {
-			return c.Api.InternalError(fmt.Sprintf("Failed to cast product data %s: %v", productID, err))
-		}
 		orderProducts = append(orderProducts, product)
 		total += product.Price
 	}

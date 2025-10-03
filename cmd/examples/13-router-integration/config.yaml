@@ -11,7 +11,7 @@
 # =============================================================================
 configs:
   - name: server-name
-    value: order-service
+    value: monolith-single-port-server
 
 servers:
   # SCENARIO 1: Monolith Single Port

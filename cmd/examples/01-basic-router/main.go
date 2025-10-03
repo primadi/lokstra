@@ -8,7 +8,35 @@ import (
 	"github.com/primadi/lokstra/core/route"
 )
 
-func createV1Group(r lokstra.Router) {
+// This example demonstrates creating a basic router with route groups
+// and chaining another router with a prefix.
+//
+// The main router has two groups: /v1 and /v2, each with their own routes.
+// Additionally, another router (r2) is created and chained to the main router
+// with the prefix /r2.
+//
+// The server listens on port 8080.
+func main() {
+	// create main router
+	mainRouter := createBasicRouter()
+
+	// add v1 and v2 groups
+	addV1Group(mainRouter)
+	addV2Group(mainRouter)
+
+	// create another router r2
+	r2 := createR2Router()
+
+	// chain r2 to mainRouter with /r2 prefix
+	mainRouter.SetNextChainWithPrefix(r2, "/r2")
+
+	fmt.Println("starting server at :8080")
+	mainRouter.PrintRoutes()
+
+	http.ListenAndServe(":8080", mainRouter)
+}
+
+func addV1Group(r lokstra.Router) {
 	// group v1, with its own routes
 	r.Group("/v1", func(g lokstra.Router) {
 		g.GET("/hello", func(c *lokstra.RequestContext) error {
@@ -28,7 +56,7 @@ func createV1Group(r lokstra.Router) {
 	})
 }
 
-func createV2Group(r lokstra.Router) {
+func addV2Group(r lokstra.Router) {
 	// group v2, using AddGroup
 	gv2 := r.AddGroup("/v2")
 	gv2.GET("/hello", func(c *lokstra.RequestContext) error {
@@ -58,7 +86,7 @@ func createR2Router() lokstra.Router {
 	return r2
 }
 
-func main() {
+func createBasicRouter() lokstra.Router {
 	r := lokstra.NewRouter("basic-router")
 
 	// incoming request logging middleware
@@ -77,16 +105,5 @@ func main() {
 		return c.Api.Ok("Hello, " + name + "!")
 	}, route.WithNameOption("hello-route"))
 
-	createV1Group(r)
-	createV2Group(r)
-
-	r2 := createR2Router()
-
-	// chain r2 to r with /r2 prefix
-	r.SetNextChainWithPrefix(r2, "/r2")
-
-	fmt.Println("starting server at :8080")
-	r.PrintRoutes()
-
-	http.ListenAndServe(":8080", r)
+	return r
 }
