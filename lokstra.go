@@ -1,16 +1,11 @@
 package lokstra
 
 import (
-	"fmt"
-	"net/http"
-
-	"github.com/primadi/lokstra/common/cast"
+	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
-	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 type Server = server.Server
@@ -43,22 +38,7 @@ func NewServer(name string, apps ...*app.App) *server.Server {
 	return server.New(name, apps...)
 }
 
-func FetchAndCast[T any](c *request.Context, client *lokstra_registry.ClientRouter, path string) (*T, error) {
-	resp, err := client.GET(path)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to fetch: %v", err))
-	}
-	formatter := api_formatter.GetGlobalFormatter()
-	clientResp := &api_formatter.ClientResponse{}
-	if err := formatter.ParseClientResponse(resp, clientResp); err != nil {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to parse response: %v", err))
-	}
-	if clientResp.Status != "success" {
-		return nil, c.Api.BadRequest("NOT_FOUND", "Resource not found")
-	}
-	var result T
-	if err := cast.ToStruct(clientResp.Data, &result, true); err != nil {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to cast data: %v", err))
-	}
-	return &result, nil
+func FetchAndCast[T any](c *request.Context, client *api_client.ClientRouter, path string,
+	opts ...api_client.FetchOption) (*T, error) {
+	return api_client.FetchAndCast[T](c, client, path, opts...)
 }

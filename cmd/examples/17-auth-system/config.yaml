@@ -1,0 +1,142 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
+# =============================================================================
+# Lokstra Auth System - Configuration
+# =============================================================================
+# This example demonstrates a complete authentication and authorization system
+# with multi-tenant support, JWT tokens, and role-based access control.
+
+# services configuration
+# lokstra_registry.RegisterLazyService(name, type, config)
+services:
+  # Database connection pool (PostgreSQL)
+  - name: dbpool_pg
+    config:
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:lokstra_auth_demo}
+      username: ${DB_USER:postgres}
+      password: ${DB_PASSWORD:postgres}
+
+      min_conns: ${DB_MIN_CONNS:2}
+      max_conns: ${DB_MAX_CONNS:10}
+      max_idle_time: ${DB_MAX_IDLE_TIME:10m}
+      max_lifetime: ${DB_MAX_LIFETIME:1h}
+      sslmode: ${DB_SSLMODE:disable}
+
+  # Redis connection pool
+  - name: redis
+    config:
+      addr: ${REDIS_ADDR:localhost:6379}
+      password: ${REDIS_PASSWORD:}
+      db: ${REDIS_DB:0}
+      pool_size: ${REDIS_POOL_SIZE:10}
+      min_idle_conns: ${REDIS_MIN_IDLE_CONNS:2}
+
+  # Token Issuer (JWT)
+  - name: auth_service
+    config:
+      flows:
+        - password
+        - otp
+        - refresh
+      issuer:
+        name: "lokstra-auth-system"
+        access_token_ttl: 900      # 15 minutes
+        refresh_token_ttl: 604800  # 7 days
+        secret_key: "your-secret-key-change-in-production"
+      session:
+        enabled: true
+        store: "redis"
+        store_key: "redis"
+        ttl: 86400                # 24 hours
+      enabled: true
+      store: "redis"           # Use Redis for session storage
+      store_key: "default"     # Use default Redis connection
+      ttl: 86400              # 24 hours
+
+  # Auth Validator (for JWT token validation)
+  - name: auth_validator
+    config:
+      secret_key: "your-secret-key-change-in-production"
+      issuer: "lokstra-auth-system"
+      leeway: 60  # 60 seconds clock skew tolerance
+
+  # Auth User Repository
+  - name: auth_user_repo
+    type: auth_user_repo_pg
+    config:
+      db_pool_service_name: "dbpool_pg"
+      table_name: "users"
+
+  # Auth Refresh Token Repository
+  - name: auth_refresh_token_repo
+    type: auth_refresh_token_repo_redis
+    config:
+      kvstore_service_name: "redis"
+      key_prefix: "refresh_token:"
+
+  # KvStore (using Redis)
+  - name: redis_kvstore
+    type: kvstore_redis
+    config:
+      redis_service_name: "redis"
+      key_prefix: "kv:"
+
+# Server Configuration
+servers:
+  - name: auth-server
+    baseUrl: http://localhost
+    apps:
+      - addr: :8080
+        routers: ["auth-api", "user-api", "admin-api", "public-api"]
+
+# Middleware Configuration
+middlewares:
+  # JWT Authentication Middleware
+  - name: jwt-auth
+    type: jwtauth
+    config:
+      default:
+        validator_key: "default"
+        skip_paths:
+          - "/api/health"
+          - "/api/info"
+          - "/api/auth/register"
+          - "/api/auth/login"
+          - "/api/auth/otp/generate"
+          - "/api/auth/otp/verify"
+  
+  # Access Control Middleware
+  - name: access-control
+    type: accesscontrol
+    config:
+      admin:
+        allowed_roles:
+          - "admin"
+          - "superadmin"
+        deny_message: "Administrator access required"
+      moderator:
+        allowed_roles:
+          - "admin"
+          - "superadmin"
+          - "moderator"
+        deny_message: "Moderator or higher access required"        
+
+  # CORS Middleware
+  - name: cors
+    config:
+      allowed_origins:
+        - "http://localhost:3000"
+        - "http://localhost:8080"
+  
+  # Request Logger
+  - name: request-logger
+    type: request_logger
+    config:
+      skip_paths: ["/api/health"]
+  
+  # Recovery Middleware
+  - name: recovery
+    config:
+      print_stack: true

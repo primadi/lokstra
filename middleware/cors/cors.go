@@ -1,13 +1,20 @@
-package middleware
+package cors
 
 import (
 	"net/http"
 	"slices"
 
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-func Cors(allowOrigins []string) request.HandlerFunc {
+const CORS_TYPE = "cors"
+const PARAMS_ALLOW_ORIGINS = "allow_origins"
+
+// CORS middleware to handle CORS requests
+// allowOrigins can be a list of allowed origins or ["*"] to allow all
+func Middleware(allowOrigins []string) request.HandlerFunc {
 	AllOrigins := slices.Contains(allowOrigins, "*")
 	return request.HandlerFunc(func(c *request.Context) error {
 		origin := c.R.Header.Get("Origin")
@@ -35,4 +42,18 @@ func Cors(allowOrigins []string) request.HandlerFunc {
 		}
 		return c.Next()
 	})
+}
+
+func MiddlewareFactory(params map[string]any) request.HandlerFunc {
+	if params == nil {
+		return Middleware([]string{"*"})
+	}
+
+	allowOrigins := utils.GetValueFromMap(params, PARAMS_ALLOW_ORIGINS, []string{})
+	return Middleware(allowOrigins)
+}
+
+func Register() {
+	lokstra_registry.RegisterMiddlewareFactory(CORS_TYPE, MiddlewareFactory,
+		lokstra_registry.AllowOverride(true))
 }

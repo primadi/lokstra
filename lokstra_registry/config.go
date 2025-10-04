@@ -17,14 +17,22 @@ func RegisterConfig(c *config.Config) {
 	// Apply services
 	for _, svc := range c.Services {
 		if svc.IsEnabled() {
-			RegisterLazyService(svc.Name, svc.Type,
+			svcType := svc.Type
+			if svcType == "" {
+				svcType = svc.Name
+			}
+			RegisterLazyService(svc.Name, svcType,
 				svc.Config, AllowOverride(true))
 		}
 	}
 	// Apply middlewares
 	for _, mw := range c.Middlewares {
 		if mw.IsEnabled() {
-			RegisterMiddlewareName(mw.Name, mw.Type,
+			mwType := mw.Type
+			if mwType == "" {
+				mwType = mw.Name
+			}
+			RegisterMiddlewareName(mw.Name, mwType,
 				mw.Config, AllowOverride(true))
 		}
 	}
@@ -38,7 +46,7 @@ func RegisterConfig(c *config.Config) {
 					clonedRouter := r.Clone()
 					routers = append(routers, clonedRouter)
 					RegisterClientRouter(clonedRouter.Name(),
-						srvConfig.Name, srvConfig.BaseUrl, appConfig.Addr)
+						srvConfig.Name, srvConfig.BaseUrl, appConfig.Addr, 0)
 				} else {
 					panic("router " + routerName + " not found for app " + appConfig.Name)
 				}

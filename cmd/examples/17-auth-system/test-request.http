@@ -1,0 +1,286 @@
+###
+# Lokstra Auth System - API Test Requests
+# Use REST Client extension in VS Code to run these requests
+###
+
+@baseUrl = http://localhost:8080
+@tenantId = tenant1
+
+### Variables (will be set from responses)
+# @accessToken = <set-from-login-response>
+# @refreshToken = <set-from-login-response>
+# @userId = <set-from-register-response>
+
+# =============================================================================
+# PUBLIC ENDPOINTS
+# =============================================================================
+
+### Health Check
+GET {{baseUrl}}/api/health
+
+### System Info
+GET {{baseUrl}}/api/info
+
+# =============================================================================
+# AUTH ENDPOINTS - Registration & Login
+# =============================================================================
+
+### 1. Register New User (Regular User)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "alice",
+  "email": "alice@example.com",
+  "full_name": "Alice Smith",
+  "password": "password123",
+  "role": "user"
+}
+
+### 2. Register Admin User
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "bob_admin",
+  "email": "bob@example.com",
+  "full_name": "Bob Admin",
+  "password": "admin123",
+  "role": "admin"
+}
+
+### 3. Login (Regular User)
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "alice",
+  "password": "password123"
+}
+
+### 4. Login (Admin User)
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "bob_admin",
+  "password": "admin123"
+}
+
+### 5. Login (Pre-seeded Admin - if available)
+# @name seedAdminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "admin",
+  "password": "admin123"
+}
+
+# =============================================================================
+# AUTH ENDPOINTS - Token Management
+# =============================================================================
+
+### 6. Refresh Access Token
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "YOUR_REFRESH_TOKEN_HERE"
+}
+
+### 7. Get Current User
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+### 8. Logout
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+{
+  "refresh_token": "YOUR_REFRESH_TOKEN_HERE"
+}
+
+# =============================================================================
+# AUTH ENDPOINTS - OTP Flow
+# =============================================================================
+
+### 9. Generate OTP
+POST {{baseUrl}}/api/auth/otp/generate
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "alice"
+}
+
+### 10. Verify OTP and Login
+POST {{baseUrl}}/api/auth/otp/verify
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "alice",
+  "otp": "123456"
+}
+
+# =============================================================================
+# USER ENDPOINTS (Requires Authentication)
+# =============================================================================
+
+### 11. Get User Profile
+GET {{baseUrl}}/api/user/profile
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+### 12. Update User Profile
+PUT {{baseUrl}}/api/user/profile
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+{
+  "email": "alice.new@example.com",
+  "full_name": "Alice Johnson"
+}
+
+### 13. Change Password
+POST {{baseUrl}}/api/user/password/change
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+{
+  "old_password": "password123",
+  "new_password": "newpassword456"
+}
+
+### 14. Get User Orders
+GET {{baseUrl}}/api/user/orders
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+### 15. Create Order
+POST {{baseUrl}}/api/user/orders
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+{
+  "items": [
+    {
+      "product_id": "prod-001",
+      "name": "Product 1",
+      "quantity": 2,
+      "price": 50.00
+    },
+    {
+      "product_id": "prod-002",
+      "name": "Product 2",
+      "quantity": 1,
+      "price": 75.50
+    }
+  ],
+  "total": 175.50
+}
+
+# =============================================================================
+# ADMIN ENDPOINTS (Requires Admin Role)
+# =============================================================================
+
+### 16. List All Users (Admin Only)
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer ADMIN_ACCESS_TOKEN_HERE
+
+### 17. Get User By ID (Admin Only)
+GET {{baseUrl}}/api/admin/users/user-001
+Authorization: Bearer ADMIN_ACCESS_TOKEN_HERE
+
+### 18. Activate User (Admin Only)
+POST {{baseUrl}}/api/admin/users/user-001/activate
+Authorization: Bearer ADMIN_ACCESS_TOKEN_HERE
+
+### 19. Deactivate User (Admin Only)
+POST {{baseUrl}}/api/admin/users/user-001/deactivate
+Authorization: Bearer ADMIN_ACCESS_TOKEN_HERE
+
+### 20. Delete User (Admin Only)
+DELETE {{baseUrl}}/api/admin/users/user-001
+Authorization: Bearer ADMIN_ACCESS_TOKEN_HERE
+
+### 21. Get System Stats (Admin Only)
+GET {{baseUrl}}/api/admin/stats
+Authorization: Bearer ADMIN_ACCESS_TOKEN_HERE
+
+# =============================================================================
+# ERROR CASES - For Testing Error Handling
+# =============================================================================
+
+### Test: Login with Wrong Password
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "alice",
+  "password": "wrongpassword"
+}
+
+### Test: Access Protected Route Without Token
+GET {{baseUrl}}/api/user/profile
+
+### Test: Access Admin Route with User Token
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer USER_ACCESS_TOKEN_HERE
+
+### Test: Register Duplicate Username
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "alice",
+  "email": "duplicate@example.com",
+  "full_name": "Duplicate User",
+  "password": "password123"
+}
+
+### Test: Invalid Token Format
+GET {{baseUrl}}/api/user/profile
+Authorization: Bearer invalid-token-format
+
+### Test: Missing Required Fields
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "tenant_id": "{{tenantId}}",
+  "username": "incomplete"
+}
+
+# =============================================================================
+# USAGE NOTES
+# =============================================================================
+#
+# 1. Run "Health Check" first to ensure the server is running
+#
+# 2. Register users using "Register New User" and "Register Admin User"
+#
+# 3. Login to get access_token and refresh_token
+#    Copy the tokens from the response
+#
+# 4. Replace YOUR_ACCESS_TOKEN_HERE with the actual access token
+#    Replace ADMIN_ACCESS_TOKEN_HERE with admin's access token
+#
+# 5. Test user endpoints with regular user token
+#    Test admin endpoints with admin user token
+#
+# 6. Access tokens expire in 15 minutes (configurable)
+#    Use "Refresh Access Token" to get a new access token
+#
+# 7. To test different tenants, change @tenantId variable
+#
+# =============================================================================

@@ -39,3 +39,8 @@ func (lw *writerWrapper) Write(b []byte) (int, error) {
 func (lw *writerWrapper) ManualWritten() bool {
 	return lw.wroteHeader || lw.wroteBody
 }
+
+// StatusCode returns the status code that was written
+func (lw *writerWrapper) StatusCode() int {
+	return lw.statusCode
+}

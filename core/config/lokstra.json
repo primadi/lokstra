@@ -28,7 +28,7 @@
       "description": "Service configurations",
       "items": {
         "type": "object",
-        "required": ["name", "type"],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string",
@@ -37,8 +37,7 @@
           },
           "type": {
             "type": "string",
-            "description": "Service type",
-            "minLength": 1
+            "description": "Service type, if empty same as name"
           },
           "enable": {
             "type": "boolean",
@@ -51,7 +50,36 @@
             "additionalProperties": true
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        
+        "if": {
+          "anyOf": [
+            {
+              "properties": {
+                "type": { "const": "dbpool_pg" }
+              },
+              "required": ["type"]
+            },
+            {
+              "properties": {
+                "name": { "const": "dbpool_pg" }
+              },
+              "required": ["name"],
+              "not": {
+                "properties": {
+                  "type": { "minLength": 1 }
+                },
+                "required": ["type"]
+              }
+            }
+          ]
+        },
+        "then": {
+          "required": ["config"],
+          "properties": {
+            "config": { "$ref": "#/definitions/dbpool_pg" }
+          }
+        }
       }
     },
     "middlewares": {
@@ -59,7 +87,7 @@
       "description": "Middleware configurations",
       "items": {
         "type": "object",
-        "required": ["name", "type"],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string",
@@ -68,8 +96,7 @@
           },
           "type": {
             "type": "string",
-            "description": "Middleware type",
-            "minLength": 1
+            "description": "Middleware type, if empty same as name"
           },
           "enable": {
             "type": "boolean",
@@ -145,5 +172,42 @@
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+
+
+
+
+  "definitions": {
+    "dbpool_pg": {
+      "$id": "dbpool_pg",
+      "type": "object",
+      "properties": {
+        "dsn": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": ["string", "integer"] },
+        "database": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "min_conns": { "type": ["integer", "string"] },
+        "max_conns": { "type": ["integer", "string"] },
+        "max_idle_time": { "type": "string" },
+        "max_lifetime": { "type": "string" },
+        "sslmode": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "dsn": { "not": { "minLength": 1 } }
+            },
+            "required": []
+          },
+          "then": {
+            "required": ["host", "port", "database"]
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
 }

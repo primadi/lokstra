@@ -24,6 +24,16 @@ func NewFsFallback(fses ...fs.FS) *FsFallback {
 	return &FsFallback{FSList: fses}
 }
 
+// adds a new fs.FS to the end of the list (lowest priority)
+func (f *FsFallback) AddFs(fsys fs.FS) {
+	f.FSList = append(f.FSList, fsys)
+}
+
+// adds a new fs.FS to the start of the list (highest priority)
+func (f *FsFallback) AddFirstFs(fsys fs.FS) {
+	f.FSList = append([]fs.FS{fsys}, f.FSList...)
+}
+
 // ---- fs.FS ----
 func (f *FsFallback) Open(name string) (fs.File, error) {
 	for _, filesystem := range f.FSList {

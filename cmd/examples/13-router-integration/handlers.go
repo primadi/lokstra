@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
@@ -64,7 +65,7 @@ type createOrderParam struct {
 	ProductIDs []string `json:"product_ids"`
 }
 
-var productClient *lokstra_registry.ClientRouter
+var productClient *api_client.ClientRouter
 
 func getProduct(c *request.Context, productID string) (*Product, error) {
 	// Automatically resolves product-api location based on deployment configuration
@@ -74,7 +75,7 @@ func getProduct(c *request.Context, productID string) (*Product, error) {
 		return nil, c.Api.InternalError("Product service unavailable")
 	}
 
-	return lokstra.FetchAndCast[Product](c, productClient, "/products/"+productID)
+	return lokstra.FetchAndCast[Product](c, productClient, "/products/"+productID, nil)
 }
 
 func createOrderHandler(c *request.Context, param *createOrderParam) error {
