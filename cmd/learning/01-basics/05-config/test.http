@@ -1,0 +1,101 @@
+### Lokstra YAML Configuration Demo
+### This demonstrates loading configuration from YAML file
+
+@baseUrl = http://localhost:8080
+
+### ============================================
+### Health Check
+### ============================================
+
+GET {{baseUrl}}/health
+
+### ============================================
+### Users API
+### ============================================
+
+### Get all users
+GET {{baseUrl}}/users
+
+### Create a new user
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "age": 30
+}
+
+### Create another user
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane@example.com",
+  "age": 25
+}
+
+### Get user by ID
+GET {{baseUrl}}/users/1
+
+### Get another user
+GET {{baseUrl}}/users/2
+
+### ============================================
+### Admin Stats - Demonstrates route options
+### ============================================
+
+GET {{baseUrl}}/admin/stats
+
+### ============================================
+### Testing Validation
+### ============================================
+
+### Test validation - name too short
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "AB",
+  "email": "test@example.com",
+  "age": 25
+}
+
+### Test validation - invalid email
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "not-an-email",
+  "age": 25
+}
+
+### Test validation - age out of range
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "age": 150
+}
+
+### ============================================
+### Testing CORS Middleware
+### The CORS middleware is loaded from config.yaml!
+### ============================================
+
+OPTIONS {{baseUrl}}/users
+Origin: http://localhost:3000
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type
+
+### ============================================
+### Notes
+### - Middleware (CORS, Request Logger, Recovery) loaded from YAML
+### - No database service in this example (simplified for learning)
+### - See config.yaml for middleware configuration
+### - Try editing config.yaml and restarting the server
+### ============================================

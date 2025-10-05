@@ -10,7 +10,7 @@ Each folder is a runnable example that can be executed directly, so you can both
 
 ```
 cmd/learning/
-  01-basic-routing/
+  01-basics/
   02-services/
   03-middleware/
   04-modules/

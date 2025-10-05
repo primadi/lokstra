@@ -32,7 +32,12 @@ func adaptSmart(path string, v any) request.HandlerFunc {
 		return func(ctx *request.Context) error {
 			paramPtr := reflect.New(paramType.Elem()).Interface()
 			if err := ctx.Req.BindAllAutoContentType(paramPtr); err != nil {
-				// return ctx.Resp.WithStatus(400).Json(map[string]string{"error": err.Error()})
+				// Check if it's a ValidationError with multiple field errors
+				if valErr, ok := err.(*request.ValidationError); ok {
+					// Use the structured field errors directly
+					return ctx.Api.ValidationError("Binding failed", valErr.FieldErrors)
+				}
+				// For other binding errors, wrap in a single field error
 				return ctx.Api.ValidationError("Binding failed", []api_formatter.FieldError{
 					{
 						Field:   "request",
@@ -49,7 +54,7 @@ func adaptSmart(path string, v any) request.HandlerFunc {
 		}
 	}
 	msg := "Invalid handler type for path [" + path +
-		"], it must be request.HandlerFunc, http.HandlerFunc, http.Handler, or func(*Context, *T) error"
+		"], it must be request.HandlerFunc, string, http.HandlerFunc, http.Handler, or func(*Context, *T) error"
 	fmt.Println(msg)
 	panic(msg)
 }
@@ -80,6 +85,9 @@ func adaptHandler(path string, h any) request.HandlerFunc {
 			v.ServeHTTP(c.W, c.R)
 			return nil
 		}
+	case string:
+		// return lokstra_registry.CreateMiddleware(v)
+		return nil
 	default:
 		return adaptSmart(path, v) // Smart binding for complex handlers
 	}

@@ -50,24 +50,44 @@ func setValue(field reflect.Value, raw string, isUnmarshalJSON bool) error {
 	case reflect.String:
 		field.SetString(raw)
 	case reflect.Bool:
+		// Empty string defaults to false for bool
+		if raw == "" {
+			field.SetBool(false)
+			return nil
+		}
 		b, err := strconv.ParseBool(raw)
 		if err != nil {
 			return err
 		}
 		field.SetBool(b)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		// Empty string defaults to 0 for integers
+		if raw == "" {
+			field.SetInt(0)
+			return nil
+		}
 		i, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
 			return err
 		}
 		field.SetInt(i)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		// Empty string defaults to 0 for unsigned integers
+		if raw == "" {
+			field.SetUint(0)
+			return nil
+		}
 		u, err := strconv.ParseUint(raw, 10, 64)
 		if err != nil {
 			return err
 		}
 		field.SetUint(u)
 	case reflect.Float32, reflect.Float64:
+		// Empty string defaults to 0.0 for floats
+		if raw == "" {
+			field.SetFloat(0.0)
+			return nil
+		}
 		f, err := strconv.ParseFloat(raw, 64)
 		if err != nil {
 			return err

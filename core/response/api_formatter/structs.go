@@ -20,7 +20,7 @@ type Error struct {
 // FieldError represents validation error for specific field
 type FieldError struct {
 	Field   string `json:"field"`           // Field name
-	Code    string `json:"code"`            // Error code (e.g. "REQUIRED")
+	Code    string `json:"code,omitempty"`  // Error code (e.g. "REQUIRED")
 	Message string `json:"message"`         // Error message
 	Value   any    `json:"value,omitempty"` // Invalid value provided
 }
