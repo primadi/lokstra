@@ -31,7 +31,7 @@ func adaptSmart(path string, v any) request.HandlerFunc {
 
 		return func(ctx *request.Context) error {
 			paramPtr := reflect.New(paramType.Elem()).Interface()
-			if err := ctx.Req.BindAllSmart(paramPtr); err != nil {
+			if err := ctx.Req.BindAllAutoContentType(paramPtr); err != nil {
 				// return ctx.Resp.WithStatus(400).Json(map[string]string{"error": err.Error()})
 				return ctx.Api.ValidationError("Binding failed", []api_formatter.FieldError{
 					{

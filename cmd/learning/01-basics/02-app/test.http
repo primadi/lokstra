@@ -1,0 +1,25 @@
+### 02-app: Multiple Routers in App
+### Test different routers combined in one app
+
+@baseUrl = http://localhost:8080
+
+### Users Router - List all users
+GET {{baseUrl}}/users
+
+### Users Router - Get specific user
+GET {{baseUrl}}/users/123
+
+### Users Router - Create user
+POST {{baseUrl}}/users
+
+### Products Router - List all products
+GET {{baseUrl}}/products
+
+### Products Router - Get specific product
+GET {{baseUrl}}/products/456
+
+### Admin Router - Get stats
+GET {{baseUrl}}/admin/stats
+
+### Admin Router - Health check
+GET {{baseUrl}}/admin/health

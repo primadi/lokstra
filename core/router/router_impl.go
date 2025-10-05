@@ -116,6 +116,9 @@ func (r *routerImpl) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (r *routerImpl) handle(method string, path string, h any, middleware []any) Router {
 	r.assertNotBuilt()
 
+	if path == "" {
+		path = "/"
+	}
 	rt := &route.Route{
 		Method: method,
 		Path:   path,
@@ -169,11 +172,7 @@ func (r *routerImpl) Clone() Router {
 		middlewares:      r.middlewares,
 		overrideParentMw: r.overrideParentMw,
 		children:         r.children,
-		isChained:        r.isChained,
-		nextChain:        r.nextChain,
-		isRoot:           r.isRoot,
-		isBuilt:          r.isBuilt,
-		routerEngine:     r.routerEngine,
+		isRoot:           true,
 	}
 }
 

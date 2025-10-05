@@ -37,7 +37,8 @@ func NewWithConfig(name string, addr string, listenerType string,
 	cfg["listener-type"] = listenerType
 
 	var mainRouter router.Router
-	for _, r := range routers {
+	for _, rt := range routers {
+		r := rt.Clone()
 		if mainRouter == nil {
 			mainRouter = r
 		} else {
@@ -75,7 +76,11 @@ func (a *App) AddRouter(r router.Router) {
 	if a.mainRouter == nil {
 		a.mainRouter = r
 	} else {
-		a.mainRouter.SetNextChain(r)
+		curr := a.mainRouter
+		for curr.GetNextChain() != nil {
+			curr = curr.GetNextChain()
+		}
+		curr.SetNextChain(r)
 	}
 }
 

@@ -1,0 +1,17 @@
+### Variables
+@baseUrl=http://localhost:8080
+
+### Simple Routes
+GET {{baseUrl}}/hello
+
+### GET Request with Path Parameters
+GET {{baseUrl}}/hello/John
+
+### POST Request
+POST {{baseUrl}}/greet
+
+### PUT Request
+PUT {{baseUrl}}/update/123
+
+### DELETE Request
+DELETE {{baseUrl}}/delete/123

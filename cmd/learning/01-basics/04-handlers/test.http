@@ -1,0 +1,363 @@
+### Handler Patterns Demo - Testing All Three Approaches
+### Run the server: go run main.go
+
+@baseUrl = http://localhost:8080
+
+### ============================================
+### INFO - Get comparison of all approaches
+### ============================================
+GET {{baseUrl}}/
+
+### ============================================
+### 1️⃣  MANUAL PARAMETER ACCESS
+### ============================================
+
+### Get user by ID with query parameters
+GET {{baseUrl}}/manual/users/123?format=json&details=true
+
+### Get user with default values
+GET {{baseUrl}}/manual/users/456
+
+### Create user with manual JSON parsing
+POST {{baseUrl}}/manual/users
+Content-Type: application/json
+
+{
+  "name": "Alice Johnson",
+  "email": "alice@example.com"
+}
+
+### Test validation - missing name
+POST {{baseUrl}}/manual/users
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### Test validation - missing email
+POST {{baseUrl}}/manual/users
+Content-Type: application/json
+
+{
+  "name": "Bob"
+}
+
+### ============================================
+### 2️⃣  MANUAL BINDING
+### ============================================
+
+### Create user with struct binding and validation
+POST {{baseUrl}}/bind/users
+Content-Type: application/json
+
+{
+  "name": "Charlie Brown",
+  "email": "charlie@example.com",
+  "age": 30,
+  "role": "user"
+}
+
+### Test validation - invalid email
+POST {{baseUrl}}/bind/users
+Content-Type: application/json
+
+{
+  "name": "Dave",
+  "email": "not-an-email",
+  "age": 25,
+  "role": "user"
+}
+
+### Test validation - age out of range
+POST {{baseUrl}}/bind/users
+Content-Type: application/json
+
+{
+  "name": "Eve",
+  "email": "eve@example.com",
+  "age": 150,
+  "role": "user"
+}
+
+### Test validation - invalid role
+POST {{baseUrl}}/bind/users
+Content-Type: application/json
+
+{
+  "name": "Frank",
+  "email": "frank@example.com",
+  "age": 25,
+  "role": "superuser"
+}
+
+### Get users list with query parameter validation
+GET {{baseUrl}}/bind/users?page=1&page_size=10&sort=name&order=asc
+
+### Test query validation - invalid sort field
+GET {{baseUrl}}/bind/users?page=1&page_size=10&sort=invalid&order=asc
+
+### Test query validation - page_size too large
+GET {{baseUrl}}/bind/users?page=1&page_size=200&sort=name&order=asc
+
+### Get user's post with path parameter binding
+GET {{baseUrl}}/bind/users/123/posts/456
+
+### ============================================
+### 3️⃣  SMART BINDING (RECOMMENDED!)
+### ============================================
+
+### Create product with smart binding (cleanest code!)
+POST {{baseUrl}}/smart/products
+Content-Type: application/json
+
+{
+  "name": "Laptop Pro 2024",
+  "description": "High-performance laptop for developers",
+  "price": 1299.99,
+  "stock": 50
+}
+
+### Test smart binding - validation failure (negative price)
+POST {{baseUrl}}/smart/products
+Content-Type: application/json
+
+{
+  "name": "Invalid Product",
+  "description": "This will fail",
+  "price": -100,
+  "stock": 10
+}
+
+### Test smart binding - missing required field
+POST {{baseUrl}}/smart/products
+Content-Type: application/json
+
+{
+  "description": "Missing name and price",
+  "stock": 5
+}
+
+### Update product with combined path + body in ONE struct
+# Path parameter: :id
+# Body: JSON with name, price, etc.
+# All combined in UpdateProductRequest struct!
+PUT {{baseUrl}}/smart/products/789
+Content-Type: application/json
+
+{
+  "name": "Laptop Pro 2024 Updated",
+  "price": 1199.99
+}
+
+### Update product - partial update (only description)
+PUT {{baseUrl}}/smart/products/789
+Content-Type: application/json
+
+{
+  "description": "Now with even better performance!"
+}
+
+### Search products with smart query binding
+GET {{baseUrl}}/smart/products/search?q=laptop&category=electronics&min_price=500&max_price=2000&page=1
+
+### Search products - missing required query param
+GET {{baseUrl}}/smart/products/search?category=electronics&page=1
+
+### Search products - invalid price range
+GET {{baseUrl}}/smart/products/search?q=laptop&min_price=-100&page=1
+
+### ⭐ ADVANCED: Combining ALL sources in ONE struct
+# This demonstrates the power of Smart Binding!
+# - product ID from path (:id)
+# - action and notify from query string
+# - API key from header
+# - reason and comment from body JSON
+# ALL in ONE struct parameter!
+POST {{baseUrl}}/smart/products/999/actions?action=activate&notify=true
+Content-Type: application/json
+X-API-Key: my-secret-api-key-123
+
+{
+  "reason": "Regular maintenance completed",
+  "comment": "Product is ready for sale"
+}
+
+### Test advanced - missing header
+POST {{baseUrl}}/smart/products/999/actions?action=deactivate&notify=false
+Content-Type: application/json
+
+{
+  "reason": "Out of stock"
+}
+
+### Test advanced - invalid action
+POST {{baseUrl}}/smart/products/999/actions?action=invalid&notify=true
+Content-Type: application/json
+X-API-Key: my-secret-api-key-123
+
+{
+  "reason": "Test"
+}
+
+### ============================================
+### 4️⃣  CUSTOM VALIDATORS
+### Custom validators: uuid, startswith, alphanum, url
+### ============================================
+
+### Create product with custom validators - valid data
+POST {{baseUrl}}/custom/products
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "code": "PRD-2024-001",
+  "name": "Gaming Laptop",
+  "sku": "GMLPT2024",
+  "price": 1499.99,
+  "quantity": 25
+}
+
+### Test UUID validator - invalid UUID format
+POST {{baseUrl}}/custom/products
+Content-Type: application/json
+
+{
+  "id": "not-a-valid-uuid",
+  "code": "PRD-2024-002",
+  "name": "Office Laptop",
+  "sku": "OFLPT2024",
+  "price": 899.99,
+  "quantity": 50
+}
+
+### Test startswith validator - code must start with PRD-
+POST {{baseUrl}}/custom/products
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "code": "PRODUCT-2024-001",
+  "name": "Budget Laptop",
+  "sku": "BDLPT2024",
+  "price": 599.99,
+  "quantity": 100
+}
+
+### Test alphanum validator - SKU must be alphanumeric (no special chars or spaces)
+POST {{baseUrl}}/custom/products
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440002",
+  "code": "PRD-2024-003",
+  "name": "Designer Laptop",
+  "sku": "DL-2024-001",
+  "price": 1999.99,
+  "quantity": 10
+}
+
+### Test multiple validation errors
+POST {{baseUrl}}/custom/products
+Content-Type: application/json
+
+{
+  "id": "invalid-uuid",
+  "code": "WRONG-PREFIX",
+  "name": "X",
+  "sku": "ABC-123",
+  "price": -100,
+  "quantity": 0
+}
+
+### Register website with custom validators - valid data
+POST {{baseUrl}}/custom/websites
+Content-Type: application/json
+
+{
+  "name": "TechBlog",
+  "url": "https://techblog.example.com",
+  "owner": "johnsmith123",
+  "admin_id": "550e8400-e29b-41d4-a716-446655440010"
+}
+
+### Test URL validator - must start with http:// or https://
+POST {{baseUrl}}/custom/websites
+Content-Type: application/json
+
+{
+  "name": "MyBlog",
+  "url": "myblog.com",
+  "owner": "alice",
+  "admin_id": "550e8400-e29b-41d4-a716-446655440011"
+}
+
+### Test alphanum validator - owner must be alphanumeric
+POST {{baseUrl}}/custom/websites
+Content-Type: application/json
+
+{
+  "name": "DevPortal",
+  "url": "https://devportal.example.com",
+  "owner": "bob-builder",
+  "admin_id": "550e8400-e29b-41d4-a716-446655440012"
+}
+
+### Test combined custom validators - multiple errors
+POST {{baseUrl}}/custom/websites
+Content-Type: application/json
+
+{
+  "name": "X",
+  "url": "not-a-url",
+  "owner": "user@name",
+  "admin_id": "not-a-uuid"
+}
+
+### ============================================
+### COMPARISON TESTS
+### Test the same operation across all three approaches
+### ============================================
+
+### Manual approach
+POST {{baseUrl}}/manual/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com"
+}
+
+### Manual binding approach
+POST {{baseUrl}}/bind/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "age": 25,
+  "role": "user"
+}
+
+### Smart binding approach (cleanest!)
+POST {{baseUrl}}/smart/products
+Content-Type: application/json
+
+{
+  "name": "Test Product",
+  "description": "Testing smart binding",
+  "price": 99.99,
+  "stock": 100
+}
+
+### ============================================
+### Key Observations:
+###
+### 1. Manual params - Simple but requires manual validation
+### 2. Manual binding - Better validation, but need explicit bind call
+### 3. Smart binding - Best DX, automatic validation, cleanest code!
+###    IMPORTANT: Only ONE struct parameter allowed!
+###    But can combine path, query, header, body in that struct
+###
+### Recommendation: Use Smart Binding for all new code!
+### ============================================

@@ -10,6 +10,8 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/primadi/lokstra/common/json"
+	"github.com/primadi/lokstra/common/validator"
+	"github.com/primadi/lokstra/core/response/api_formatter"
 )
 
 var (
@@ -278,7 +280,8 @@ func (h *RequestHelper) BindPath(v any) error {
 		}
 	}
 
-	return nil
+	// Validate after binding
+	return h.validateStruct(v)
 }
 
 // BindQuery binds query parameters to struct
@@ -331,7 +334,8 @@ func (h *RequestHelper) BindQuery(v any) error {
 		}
 	}
 
-	return nil
+	// Validate after binding
+	return h.validateStruct(v)
 }
 
 // BindHeader binds header values to struct
@@ -382,7 +386,8 @@ func (h *RequestHelper) BindHeader(v any) error {
 		}
 	}
 
-	return nil
+	// Validate after binding
+	return h.validateStruct(v)
 }
 
 // BindBody binds request body to struct
@@ -396,10 +401,15 @@ func (h *RequestHelper) BindBody(v any) error {
 	}
 
 	// Fallback to json tags
-	return unmarshalBody(h.rawRequestBody, v)
+	if err := unmarshalBody(h.rawRequestBody, v); err != nil {
+		return err
+	}
+
+	// Validate after binding
+	return h.validateStruct(v)
 }
 
-// BindAll binds all request data (path, query, header, body) to struct
+// binds all request data (path, query, header, body) to struct
 func (h *RequestHelper) BindAll(v any) error {
 	// If v is pointer to map[string]any, perform map-merge binding
 	t := reflect.TypeOf(v)
@@ -478,11 +488,13 @@ func (h *RequestHelper) BindAll(v any) error {
 	if err := h.BindBody(v); err != nil {
 		return err
 	}
-	return nil
+
+	// Validate after binding
+	return h.validateStruct(v)
 }
 
-// BindBodySmart binds request body with smart content-type detection
-func (h *RequestHelper) BindBodySmart(v any) error {
+// binds request body with smart content-type detection
+func (h *RequestHelper) BindBodyAutoContentType(v any) error {
 	h.cacheRequestBody()
 	if h.requestBodyErr != nil {
 		return h.requestBodyErr
@@ -502,8 +514,8 @@ func (h *RequestHelper) BindBodySmart(v any) error {
 	return unmarshalBody(h.rawRequestBody, v)
 }
 
-// BindAllSmart binds all request data with smart content-type detection
-func (h *RequestHelper) BindAllSmart(v any) error {
+// binds all request data with auto content-type detection
+func (h *RequestHelper) BindAllAutoContentType(v any) error {
 	// If v is pointer to map[string]any, perform map-merge binding
 	t := reflect.TypeOf(v)
 	if t != nil && t.Kind() == reflect.Pointer {
@@ -547,7 +559,7 @@ func (h *RequestHelper) BindAllSmart(v any) error {
 			}
 
 			// Merge body (overrides previous keys) - reuse BindBodySmart for parsing
-			if err := h.BindBodySmart(v); err != nil {
+			if err := h.BindBodyAutoContentType(v); err != nil {
 				return err
 			}
 
@@ -578,8 +590,46 @@ func (h *RequestHelper) BindAllSmart(v any) error {
 		}
 	}
 
-	if err := h.BindBodySmart(v); err != nil {
+	if err := h.BindBodyAutoContentType(v); err != nil {
 		return err
 	}
+
+	// Validate after binding
+	return h.validateStruct(v)
+}
+
+// validateStruct validates a struct using validator.ValidateStruct
+// Returns ValidationError if validation fails
+func (h *RequestHelper) validateStruct(v any) error {
+	fieldErrors, err := validator.ValidateStruct(v)
+	if err != nil {
+		// System error
+		return err
+	}
+
+	if len(fieldErrors) > 0 {
+		// Return ValidationError with formatted message
+		return &ValidationError{
+			FieldErrors: fieldErrors,
+		}
+	}
+
 	return nil
+}
+
+// ValidationError represents validation errors from struct validation
+type ValidationError struct {
+	FieldErrors []api_formatter.FieldError
+}
+
+func (e *ValidationError) Error() string {
+	if len(e.FieldErrors) == 0 {
+		return "validation failed"
+	}
+
+	messages := make([]string, len(e.FieldErrors))
+	for i, fe := range e.FieldErrors {
+		messages[i] = fmt.Sprintf("%s: %s", fe.Field, fe.Message)
+	}
+	return strings.Join(messages, "; ")
 }
