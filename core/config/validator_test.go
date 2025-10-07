@@ -83,15 +83,14 @@ servers:
 			errorMsg:  "baseUrl",
 		},
 		{
-			name: "missing service type",
+			name: "service without type (valid - defaults to name)",
 			yamlInput: `
 services:
   - name: database
     config:
       host: localhost
 `,
-			wantError: true,
-			errorMsg:  "type",
+			wantError: false,
 		},
 		{
 			name: "empty server apps array",

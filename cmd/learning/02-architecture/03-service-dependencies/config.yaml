@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
+# =============================================================================
+# SERVICE DEPENDENCIES CONFIGURATION
+# =============================================================================
+# This example shows how services can depend on other services.
+#
+# Dependency Tree:
+# - db-service (no dependencies)
+# - cache-service (no dependencies)
+# - user-service → depends on: db-service, cache-service
+# - order-service → depends on: db-service, user-service
+
+configs:
+  - name: server-name
+    value: ${SERVER_NAME:dependency-demo-server}
+
+# Layer 1: Infrastructure services (no dependencies)
+services:
+  - name: db-service
+    type: db
+    config:
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:ecommerce}
+
+  - name: cache-service
+    type: cache
+    config:
+      host: ${CACHE_HOST:localhost}
+      port: ${CACHE_PORT:6379}
+
+  # Layer 2: Domain services (depend on layer 1)
+  # BEST PRACTICE: Explicitly declare dependencies in config
+  # This makes dependencies visible and allows flexible service naming
+  
+  - name: user-service
+    type: user
+    config:
+      db_service: db-service       # Which DB to use (default: db-service)
+      cache_service: cache-service # Which cache to use (default: cache-service)
+
+  - name: order-service
+    type: order
+    config:
+      db_service: db-service       # Which DB to use
+      user_service: user-service   # Which user service to use
+
+servers:
+  - name: dependency-demo-server
+    baseUrl: http://localhost
+    apps:
+      - addr: ":8080"
+        routers: [user-api, order-api, health-api]

@@ -1,0 +1,62 @@
+# Monolith Multi Port Deployment
+# All services on same server, different ports
+# Best for: Staging, testing service isolation
+# Performance: Fast (local HTTP calls, no external network)
+
+services:
+  # Infrastructure Layer
+  db:
+    factory: DBService
+  
+  cache:
+    factory: CacheService
+  
+  # Repository Layer
+  product-repo:
+    factory: ProductRepository
+    lazy: true
+  
+  order-repo:
+    factory: OrderRepository
+    lazy: true
+  
+  # Business Logic Layer
+  product-svc:
+    factory: ProductService
+    lazy: true
+  
+  order-svc:
+    factory: OrderService
+    lazy: true
+
+servers:
+  - name: product-server
+    deploymentId: product-monolith
+    protocol: http
+    host: 0.0.0.0
+    port: 8081
+    routers:
+      - name: product-api
+        basePath: /api
+      - name: health-api
+        basePath: ""
+  
+  - name: order-server
+    deploymentId: order-monolith
+    protocol: http
+    host: 0.0.0.0
+    port: 8082
+    routers:
+      - name: order-api
+        basePath: /api
+      - name: health-api
+        basePath: ""
+
+clientRouters:
+  - name: product-api
+    deploymentId: product-monolith
+    baseUrl: ${PRODUCT_URL:http://localhost:8081/api}
+  
+  - name: order-api
+    deploymentId: order-monolith
+    baseUrl: ${ORDER_URL:http://localhost:8082/api}

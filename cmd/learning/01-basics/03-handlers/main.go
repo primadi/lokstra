@@ -369,6 +369,12 @@ func main() {
 		})
 	})
 
+	// ========================================
+	// 5. SERVICE CONTAINER PATTERN
+	// ========================================
+	// See services_example.go for the implementation
+	setupServiceRoutes(router)
+
 	// Create and run the app
 	app := lokstra.NewApp("handlers-demo", ":8080", router)
 

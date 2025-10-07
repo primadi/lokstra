@@ -12,6 +12,7 @@ import (
 )
 
 // LoadConfigFs loads a single YAML configuration file from any filesystem
+// Variable expansion (including two-pass for CFG resolver) is handled automatically
 func LoadConfigFs(fsys fs.FS, fileName string, config *Config) error {
 	if config == nil {
 		return fmt.Errorf("config cannot be nil")
@@ -23,6 +24,7 @@ func LoadConfigFs(fsys fs.FS, fileName string, config *Config) error {
 		return fmt.Errorf("failed to read config file %s: %w", fileName, err)
 	}
 
+	// Expand all variables (two-pass expansion for CFG is automatic)
 	expanded := expandVariables(string(data))
 
 	// Parse YAML
@@ -44,11 +46,19 @@ func LoadConfigFs(fsys fs.FS, fileName string, config *Config) error {
 
 // LoadConfigFile loads a single YAML configuration file from OS filesystem
 func LoadConfigFile(fileName string, config *Config) error {
-	// Use OS filesystem for backward compatibility
+	// Check if path is absolute
+	if filepath.IsAbs(fileName) {
+		// For absolute paths, use os.DirFS from the root directory
+		dir := filepath.Dir(fileName)
+		base := filepath.Base(fileName)
+		return LoadConfigFs(os.DirFS(dir), base, config)
+	}
+	// Use OS filesystem for relative paths
 	return LoadConfigFs(os.DirFS("."), fileName, config)
 }
 
 // LoadConfigDirFs loads and merges multiple YAML configuration files from a filesystem directory
+// Variable expansion (including two-pass for CFG resolver) is handled automatically
 func LoadConfigDirFs(fsys fs.FS, dirName string, config *Config) error {
 	if config == nil {
 		return fmt.Errorf("config cannot be nil")
@@ -79,7 +89,7 @@ func LoadConfigDirFs(fsys fs.FS, dirName string, config *Config) error {
 	// Sort files for consistent loading order
 	sort.Strings(yamlFiles)
 
-	// Load each file without individual validation (will validate at the end)
+	// Load each file
 	for _, file := range yamlFiles {
 		// Read file from filesystem
 		data, err := fs.ReadFile(fsys, file)
@@ -87,6 +97,7 @@ func LoadConfigDirFs(fsys fs.FS, dirName string, config *Config) error {
 			return fmt.Errorf("failed to read config file %s: %w", file, err)
 		}
 
+		// Expand all variables (two-pass expansion for CFG is automatic)
 		expanded := expandVariables(string(data))
 
 		// Parse YAML

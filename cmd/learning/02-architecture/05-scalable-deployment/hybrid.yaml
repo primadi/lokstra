@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
+# Hybrid Deployment
+# Public API + Private Internal APIs
+# Best for: Production with security layers
+# Public: Gateway on :8080 (external access)
+# Private: Internal services on :8081/:8082 (internal network only)
+
+services:
+  # Infrastructure Layer (shared)
+  - name: db-service
+    type: db
+    config:
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ecommerce
+  
+  - name: cache-service
+    type: cache
+    config:
+      host: ${CACHE_HOST:localhost}
+      port: ${CACHE_PORT:6379}
+  
+  # Repository Layer
+  - name: product-repository
+    type: product-repo
+    config:
+      db_service: db-service
+      cache_service: cache-service
+  
+  - name: order-repository
+    type: order-repo
+    config:
+      db_service: db-service
+  
+  # Business Logic Layer
+  - name: product-service
+    type: product-svc
+    config:
+      repo_service: product-repository
+  
+  - name: order-service
+    type: order-svc
+    config:
+      repo_service: order-repository
+
+servers:
+  # Public Gateway (external access)
+  - name: public-gateway
+    baseUrl: ${PUBLIC_URL:http://localhost}
+    deployment-id: hybrid-ecommerce
+    apps:
+      - addr: ":8080"
+        routers: [health-api]
+  
+  # Private Product API (internal only)
+  - name: product-server
+    baseUrl: ${PRODUCT_URL:http://127.0.0.1}
+    deployment-id: hybrid-ecommerce
+    apps:
+      - addr: ":8081"
+        routers: [product-api]
+  
+  # Private Order API (internal only)
+  - name: order-server
+    baseUrl: ${ORDER_URL:http://127.0.0.1}
+    deployment-id: hybrid-ecommerce
+    apps:
+      - addr: ":8082"
+        routers: [order-api]

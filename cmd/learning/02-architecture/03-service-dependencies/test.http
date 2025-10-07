@@ -1,0 +1,63 @@
+### Service Dependencies - Test Endpoints
+
+@baseUrl = http://localhost:8080
+
+### 1. Health Check (shows all service connections)
+GET {{baseUrl}}/health
+
+### 2. Create User (uses DB + Cache)
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+  "name": "Alice Smith"
+}
+
+### 3. Get User (first call - from DB, then cached)
+GET {{baseUrl}}/api/users/123
+
+### 4. Get User Again (should come from cache)
+GET {{baseUrl}}/api/users/123
+
+### 5. Create Order (uses OrderService → UserService → DB + Cache)
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "123",
+  "product": "Laptop",
+  "amount": 1299.99
+}
+
+### 6. Get Order
+GET {{baseUrl}}/api/orders/order-1234567890
+
+### 7. Create Multiple Orders (demonstrates service reuse)
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "456",
+  "product": "Mouse",
+  "amount": 29.99
+}
+
+###
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "789",
+  "product": "Keyboard",
+  "amount": 79.99
+}
+
+### 8. Validation Error Test
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "123",
+  "product": "Invalid",
+  "amount": -50
+}

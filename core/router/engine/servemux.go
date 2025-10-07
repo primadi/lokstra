@@ -13,10 +13,13 @@ func (s *ServeMux) Handle(pattern string, h http.Handler) {
 	method, path := splitMethodPath(pattern)
 
 	smPath := convertToServeMuxPattern(path)
+	var fullPath string
 	if method == "ANY" {
-		pattern = smPath
+		fullPath = smPath
+	} else {
+		fullPath = method + " " + smPath
 	}
-	s.mux.Handle(method+" "+smPath, h)
+	s.mux.Handle(fullPath, h)
 }
 
 // ServeHTTP implements RouterEngine.

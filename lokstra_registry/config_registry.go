@@ -3,14 +3,20 @@ package lokstra_registry
 import (
 	"fmt"
 	"reflect"
+	"sync"
 )
 
 // Global configuration registry
 var configRegistry = make(map[string]any)
+var configMutex sync.RWMutex
 
 // GetConfig retrieves a configuration value by name with type assertion and default value
 func GetConfig[T any](name string, defaultValue T) T {
-	if value, ok := configRegistry[name]; ok {
+	configMutex.RLock()
+	value, ok := configRegistry[name]
+	configMutex.RUnlock()
+
+	if ok {
 		if typedValue, ok := value.(T); ok {
 			return typedValue
 		}
@@ -24,13 +30,29 @@ func GetConfig[T any](name string, defaultValue T) T {
 	return defaultValue
 }
 
+// GetConfigValue retrieves a configuration value by name (non-generic version)
+// Returns (value, found) for use with ConfigGetter interface
+func GetConfigValue(name string) (any, bool) {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
+	value, ok := configRegistry[name]
+	return value, ok
+}
+
 // SetConfig sets a configuration value (allows runtime changes)
 func SetConfig(name string, value any) {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
 	configRegistry[name] = value
 }
 
 // ListConfigNames returns all registered configuration names
 func ListConfigNames() []string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+
 	names := make([]string, 0, len(configRegistry))
 	for name := range configRegistry {
 		names = append(names, name)
@@ -61,4 +83,12 @@ func convertValue[T any](value any) (T, bool) {
 	}
 
 	return zero, false
+}
+
+// ConfigRegistryGetter is an adapter to make lokstra_registry compatible with ConfigGetter interface
+type ConfigRegistryGetter struct{}
+
+// GetConfig implements ConfigGetter interface
+func (g *ConfigRegistryGetter) GetConfig(key string) (any, bool) {
+	return GetConfigValue(key)
 }

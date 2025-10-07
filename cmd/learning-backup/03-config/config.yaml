@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../../../core/config/lokstra.json
+# yaml-language-server: $schema=../../../core/config/lokstra.json
 
 # =============================================================================
 # LOKSTRA YAML CONFIGURATION - 05-config Learning Example

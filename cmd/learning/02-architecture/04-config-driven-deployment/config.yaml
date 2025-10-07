@@ -1,0 +1,127 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
+# =============================================================================
+# COMPLETE CONFIG-DRIVEN APPLICATION
+# =============================================================================
+# This demonstrates a complete e-commerce application configured entirely
+# from YAML. Only factories and handlers are in code - everything else is config.
+#
+# What's configured in YAML:
+# - All services (DB, Cache, Email, User, Product, Order)
+# - All routers (Product API, Order API, User API, Health)
+# - Server and app configuration
+# - Environment-specific settings
+
+configs:
+  - name: server-name
+    value: ${SERVER_NAME:ecommerce-server}
+  
+  - name: app-env
+    value: ${APP_ENV:development}
+  
+  - name: app-version
+    value: ${APP_VERSION:1.0.0}
+
+# =============================================================================
+# SERVICES - Three layers
+# =============================================================================
+services:
+  # Layer 1: Infrastructure
+  - name: db-service
+    type: db
+    config:
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:ecommerce}
+      username: ${DB_USER:postgres}
+      password: ${DB_PASSWORD:postgres}
+
+  - name: cache-service
+    type: cache
+    config:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      db: ${REDIS_DB:0}
+
+  - name: email-service
+    type: email
+    config:
+      smtp_host: ${SMTP_HOST:smtp.gmail.com}
+      smtp_port: ${SMTP_PORT:587}
+      from: ${EMAIL_FROM:noreply@ecommerce.dev}
+      username: ${SMTP_USER:}
+      password: ${SMTP_PASSWORD:}
+
+  # Layer 2: Repositories (Data Access)
+  - name: user-repository
+    type: user-repo
+    config:
+      db_service: db-service
+
+  - name: product-repository
+    type: product-repo
+    config:
+      db_service: db-service
+      cache_service: cache-service
+
+  - name: order-repository
+    type: order-repo
+    config:
+      db_service: db-service
+
+  # Layer 3: Domain Services (Business Logic)
+  - name: user-service
+    type: user
+    config:
+      repository_service: user-repository
+      password_min_length: ${PASSWORD_MIN_LENGTH:8}
+
+  - name: product-service
+    type: product
+    config:
+      repository_service: product-repository
+      default_currency: ${DEFAULT_CURRENCY:USD}
+
+  - name: order-service
+    type: order
+    config:
+      repository_service: order-repository
+      product_service: product-service
+      user_service: user-service
+      email_service: email-service
+      tax_rate: ${TAX_RATE:0.10}
+      min_order_amount: ${MIN_ORDER_AMOUNT:10.00}
+
+# =============================================================================
+# SERVER CONFIGURATION
+# =============================================================================
+servers:
+  - name: ecommerce-server
+    baseUrl: ${BASE_URL:http://localhost}
+    apps:
+      - addr: ":8080"
+        routers: [product-api, order-api, user-api, health-api]
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# Run with:
+#   go run .
+#
+# Override with environment variables:
+#   APP_ENV=production DB_HOST=prod-db.example.com go run .
+#
+# LAZY LOADING PATTERN:
+# - All dependencies are specified in config (visible and explicit)
+# - Services are created ONLY when first used (not at registration)
+# - Cached after first creation (singleton pattern)
+# - No registration order dependency
+#
+# Dependency tree (all lazy loaded):
+#   order-service
+#   ├─→ order-repository → db-service
+#   ├─→ product-service → product-repository
+#   │                     ├─→ db-service
+#   │                     └─→ cache-service
+#   ├─→ user-service → user-repository → db-service
+#   └─→ email-service

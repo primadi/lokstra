@@ -9,7 +9,7 @@ import (
 
 // Applies the configuration to the lokstra_registry
 func RegisterConfig(c *config.Config) {
-	// Apply general configs
+	// apply general configs
 	for _, gc := range c.Configs {
 		SetConfig(gc.Name, gc.Value)
 	}

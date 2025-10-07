@@ -1,0 +1,33 @@
+goos: windows
+goarch: amd64
+pkg: github.com/primadi/lokstra/core/router/engine
+cpu: AMD Ryzen 9 5900HX with Radeon Graphics        
+BenchmarkStaticRoute_ServeMux-16              	13047541	       186.4 ns/op	       7 B/op	       1 allocs/op
+BenchmarkStaticRoute_ServeMuxPlus-16          	 7853458	       297.2 ns/op	     134 B/op	       3 allocs/op
+BenchmarkStaticRoute_ChiRouter-16             	 6413942	       344.9 ns/op	     375 B/op	       3 allocs/op
+BenchmarkPathParam_ServeMux-16                	 8713940	       310.0 ns/op	      31 B/op	       2 allocs/op
+BenchmarkPathParam_ServeMuxPlus-16            	 6147066	       427.2 ns/op	     162 B/op	       4 allocs/op
+BenchmarkPathParam_ChiRouter-16               	 3618571	       635.1 ns/op	     721 B/op	       5 allocs/op
+BenchmarkWildcard_ServeMux-16                 	 3011468	       694.0 ns/op	     156 B/op	       6 allocs/op
+BenchmarkWildcard_ServeMuxPlus-16             	 2633214	       858.1 ns/op	     290 B/op	       8 allocs/op
+BenchmarkWildcard_ChiRouter-16                	 3991389	       631.9 ns/op	     704 B/op	       4 allocs/op
+BenchmarkOPTIONS_ServeMux-16                  	  839344	      2525 ns/op	     576 B/op	      27 allocs/op
+BenchmarkOPTIONS_ServeMuxPlus-16              	  816784	      2936 ns/op	     712 B/op	      31 allocs/op
+BenchmarkOPTIONS_ChiRouter-16                 	 3616290	       725.9 ns/op	     720 B/op	       5 allocs/op
+BenchmarkMixedRoutes_ServeMux-16              	 4077996	       629.2 ns/op	     107 B/op	       5 allocs/op
+BenchmarkMixedRoutes_ServeMuxPlus-16          	 2789338	       821.5 ns/op	     237 B/op	       7 allocs/op
+BenchmarkMixedRoutes_ChiRouter-16             	 2971672	       709.3 ns/op	     590 B/op	       4 allocs/op
+BenchmarkLargeRouteTable_ServeMux-16          	 5970518	       371.6 ns/op	      35 B/op	       2 allocs/op
+BenchmarkLargeRouteTable_ServeMuxPlus-16      	 4697350	       482.5 ns/op	     159 B/op	       4 allocs/op
+BenchmarkLargeRouteTable_ChiRouter-16         	 2831203	       759.8 ns/op	     724 B/op	       5 allocs/op
+BenchmarkRouterCreation_ServeMux-16           	615700358	         4.025 ns/op	       0 B/op	       0 allocs/op
+BenchmarkRouterCreation_ServeMuxPlus-16       	595240309	         4.089 ns/op	       0 B/op	       0 allocs/op
+BenchmarkRouterCreation_ChiRouter-16          	135937286	        21.18 ns/op	       0 B/op	       0 allocs/op
+BenchmarkRouteRegistration_ServeMux-16        	  198733	     13013 ns/op	    1617 B/op	      20 allocs/op
+BenchmarkRouteRegistration_ServeMuxPlus-16    	  592402	      5760 ns/op	    1617 B/op	      20 allocs/op
+BenchmarkRouteRegistration_ChiRouter-16       	  408128	      5812 ns/op	    1864 B/op	      33 allocs/op
+BenchmarkParallel_ServeMux-16                 	52339402	        46.61 ns/op	      34 B/op	       2 allocs/op
+BenchmarkParallel_ServeMuxPlus-16             	30605680	        74.28 ns/op	     160 B/op	       4 allocs/op
+BenchmarkParallel_ChiRouter-16                	11747974	       195.6 ns/op	     723 B/op	       5 allocs/op
+PASS
+ok  	github.com/primadi/lokstra/core/router/engine	93.396s

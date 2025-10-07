@@ -1,0 +1,73 @@
+# Monolith Multi Port Configuration
+# All services run in one process but on different ports
+# Better separation while staying monolithic
+
+configs:
+  - name: server-name
+    value: ${SERVER_NAME:monolith-multi-server}
+  
+  - name: deployment-strategy
+    value: monolith-multi-port
+
+# All services (same as single-port)
+services:
+  - name: db-service
+    type: db
+    config:
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:ecommerce}
+
+  - name: cache-service
+    type: cache
+    config:
+      host: ${CACHE_HOST:localhost}
+      port: ${CACHE_PORT:6379}
+
+  - name: product-service
+    type: product
+    config: {}
+
+  - name: order-service
+    type: order
+    config: {}
+
+  - name: user-service
+    type: user
+    config: {}
+
+# Single server, multiple apps on different ports
+# Each app can have different middleware/configuration
+servers:
+  - name: monolith-multi-server
+    baseUrl: http://localhost
+    deployment-id: monolith-multi-port
+    apps:
+      # Public API - port 8080
+      - addr: ":8080"
+        routers: [product-api, health-api]
+      
+      # Internal API - port 8081
+      - addr: ":8081"
+        routers: [order-api, user-api]
+
+# Benefits:
+# ✅ Logical separation of concerns
+# ✅ Different middleware per app
+# ✅ Different rate limits per port
+# ✅ Still single deployment
+# ✅ Can scale apps independently (multiple processes)
+#
+# Use when:
+# - Need different security policies per API
+# - Want to expose only some APIs publicly
+# - Traffic differs between API groups
+# - Preparing for microservices migration
+#
+# Communication:
+# - Same process: Local (httptest) - zero network
+# - Different apps: HTTP to localhost:port - minimal overhead
+#
+# Example:
+# - product-api calls order-api → HTTP to localhost:8081
+# - order-api calls user-api → Local (same app)

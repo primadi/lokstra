@@ -1,0 +1,41 @@
+# Microservices Configuration - Order Service
+# Separate microservice for order management
+
+configs:
+  - name: server-name
+    value: ${SERVER_NAME:order-service}
+  
+  - name: deployment-strategy
+    value: microservice
+
+# Only services needed for orders
+services:
+  - name: db-service
+    type: db
+    config:
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:orders}
+
+  - name: order-service
+    type: order
+    config: {}
+
+# Order microservice configuration
+servers:
+  - name: order-service
+    baseUrl: ${ORDER_SERVICE_URL:http://localhost}
+    deployment-id: microservice
+    apps:
+      - addr: ":8081"
+        routers: [order-api, health-api]
+
+# This service will call:
+# - product-service (to get product info)
+# - user-service (to get user info)
+# - email-service (to send confirmation)
+#
+# Service Discovery:
+# Framework automatically resolves service locations based on deployment-id
+# - Monolith: Local calls (zero network overhead)
+# - Microservice: HTTP calls to baseUrl

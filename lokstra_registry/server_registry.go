@@ -1,6 +1,8 @@
 package lokstra_registry
 
 import (
+	"sync"
+
 	"github.com/primadi/lokstra/core/server"
 )
 
@@ -12,6 +14,7 @@ type ServerInterface interface {
 }
 
 var serverRegistry = make(map[string]*server.Server)
+var serverMutex sync.RWMutex
 
 // Register a server with a name.
 // If a server with the same name already exists,
@@ -21,6 +24,10 @@ func RegisterServer(name string, srv *server.Server, opts ...RegisterOption) {
 	for _, opt := range opts {
 		opt.apply(&options)
 	}
+
+	serverMutex.Lock()
+	defer serverMutex.Unlock()
+
 	if !options.allowOverride {
 		if _, exists := serverRegistry[name]; exists {
 			panic("server " + name + " already registered")
@@ -32,6 +39,9 @@ func RegisterServer(name string, srv *server.Server, opts ...RegisterOption) {
 // Retrieve a server by name.
 // If the server does not exist, it returns nil.
 func GetServer(name string) *server.Server {
+	serverMutex.RLock()
+	defer serverMutex.RUnlock()
+
 	if srv, ok := serverRegistry[name]; ok {
 		return srv
 	}
@@ -40,6 +50,9 @@ func GetServer(name string) *server.Server {
 
 // List all registered server names
 func ListServerNames() []string {
+	serverMutex.RLock()
+	defer serverMutex.RUnlock()
+
 	names := make([]string, 0, len(serverRegistry))
 	for name := range serverRegistry {
 		names = append(names, name)

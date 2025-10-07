@@ -1,0 +1,65 @@
+### Config-Driven Deployment - Complete E-Commerce API
+
+@baseUrl = http://localhost:8080
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. List Products
+GET {{baseUrl}}/api/products
+
+### 3. Get Product by ID
+GET {{baseUrl}}/api/products/1
+
+### 4. Register User
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alice Smith",
+  "email": "alice@example.com",
+  "password": "SecurePass123"
+}
+
+### 5. Register User - Password Too Short (validation error)
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Bob Jones",
+  "email": "bob@example.com",
+  "password": "123"
+}
+
+### 6. Get User
+GET {{baseUrl}}/api/users/user-123
+
+### 7. Create Order (triggers DB, Cache, Email)
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "product_id": "1",
+  "quantity": 2
+}
+
+### 8. Create Order - Below Minimum (validation error)
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "product_id": "2",
+  "quantity": 1
+}
+
+### 9. Multiple Orders Test
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "user-456",
+  "product_id": "3",
+  "quantity": 5
+}

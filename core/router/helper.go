@@ -31,7 +31,7 @@ func adaptSmart(path string, v any) request.HandlerFunc {
 
 		return func(ctx *request.Context) error {
 			paramPtr := reflect.New(paramType.Elem()).Interface()
-			if err := ctx.Req.BindAllAutoContentType(paramPtr); err != nil {
+			if err := ctx.Req.BindAllAuto(paramPtr); err != nil {
 				// Check if it's a ValidationError with multiple field errors
 				if valErr, ok := err.(*request.ValidationError); ok {
 					// Use the structured field errors directly

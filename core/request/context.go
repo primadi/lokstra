@@ -22,14 +22,18 @@ type Context struct {
 	W *writerWrapper
 	R *http.Request
 
+	// Internal index to track middleware/handler execution
 	index    int
 	handlers []HandlerFunc
+
+	value map[string]any
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request, handlers []HandlerFunc) *Context {
 	resp := &response.Response{}
 
 	ctx := &Context{
+		Context:  context.Background(),
 		W:        newWriterWrapper(w),
 		R:        r,
 		handlers: handlers,
@@ -72,4 +76,32 @@ func (c *Context) FinalizeResponse(err error) {
 
 func (c *Context) executeHandler() error {
 	return c.Next()
+}
+
+// Adds a value to the context storage
+func (c *Context) Set(key string, value any) {
+	if c.value == nil {
+		c.value = make(map[string]any)
+	}
+	c.value[key] = value
+}
+
+// Retrieves a value from the context storage
+func (c *Context) Get(key string) any {
+	return c.value[key]
+}
+
+// Adds a value to the context
+type contextKey string
+
+func (c *Context) SetContextValue(key string, value any) {
+	c.Context = context.WithValue(c.Context, contextKey(key), value)
+}
+
+// Retrieves a value from the context
+func (c *Context) GetContextValue(key string) any {
+	if c.Context == nil {
+		return nil
+	}
+	return c.Context.Value(contextKey(key))
 }

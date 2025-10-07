@@ -1,0 +1,43 @@
+# Order Service Deployment (Microservice)
+# Only order service running
+# Calls product service via HTTP
+# Best for: Production microservices deployment
+# Performance: Network overhead for cross-service calls
+
+services:
+  # Infrastructure Layer
+  db:
+    factory: DBService
+  
+  cache:
+    factory: CacheService
+  
+  # Repository Layer
+  order-repo:
+    factory: OrderRepository
+    lazy: true
+  
+  # Business Logic Layer
+  order-svc:
+    factory: OrderService
+    lazy: true
+
+servers:
+  - name: order-server
+    deploymentId: order-microservice
+    protocol: http
+    host: 0.0.0.0
+    port: 8082
+    routers:
+      - name: order-api
+        basePath: /api
+      - name: health-api
+        basePath: ""
+
+clientRouters:
+  - name: product-api
+    baseUrl: ${PRODUCT_URL:http://localhost:8081/api}
+  
+  - name: order-api
+    deploymentId: order-microservice
+    baseUrl: ${ORDER_URL:http://localhost:8082/api}

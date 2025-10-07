@@ -1,0 +1,44 @@
+### Registry Basics - Test Endpoints
+
+@baseUrl = http://localhost:8080
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Send Email
+POST {{baseUrl}}/api/email/send
+Content-Type: application/json
+
+{
+  "to": "user@example.com",
+  "subject": "Test Email from Registry",
+  "body": "This email was sent using a service from the registry!"
+}
+
+### 3. Send Email - Validation Error (invalid email)
+POST {{baseUrl}}/api/email/send
+Content-Type: application/json
+
+{
+  "to": "invalid-email",
+  "subject": "Test",
+  "body": "Test"
+}
+
+### 4. Increment Counter
+POST {{baseUrl}}/api/counter/increment
+
+### 5. Increment Counter Again (should show 102)
+POST {{baseUrl}}/api/counter/increment
+
+### 6. Get Counter Value
+GET {{baseUrl}}/api/counter/value
+
+### 7. Test Multiple Increments
+POST {{baseUrl}}/api/counter/increment
+###
+POST {{baseUrl}}/api/counter/increment
+###
+POST {{baseUrl}}/api/counter/increment
+###
+GET {{baseUrl}}/api/counter/value

@@ -12,6 +12,7 @@ import (
 // Difference with Service Mux:
 //   - HEAD method does not return BODY, only update Content-Length
 //   - automatic insert OPTIONS in Allow Header when needed
+//   - return 204 (http.StatusNoContent) for OPTIONS method if route exists
 type ServeMuxPlus struct {
 	mux *http.ServeMux
 }
@@ -62,10 +63,13 @@ func (s *ServeMuxPlus) Handle(pattern string, h http.Handler) {
 	method, path := splitMethodPath(pattern)
 
 	smPath := convertToServeMuxPattern(path)
+	var fullPath string
 	if method == "ANY" {
-		pattern = smPath
+		fullPath = smPath
+	} else {
+		fullPath = method + " " + smPath
 	}
-	s.mux.Handle(method+" "+smPath, h)
+	s.mux.Handle(fullPath, h)
 }
 
 func (s *ServeMuxPlus) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +94,10 @@ func (s *ServeMuxPlus) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// change not found to no content for OPTIONS
 		w.WriteHeader(http.StatusNoContent)
 		return
+	}
+
+	if dbw.Code == 0 {
+		dbw.Code = http.StatusOK
 	}
 
 	// Auto Handling for HEAD, discard body but set Content-Length

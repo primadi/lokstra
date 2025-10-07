@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
+# =============================================================================
+# CONFIG-DRIVEN ARCHITECTURE
+# =============================================================================
+# This example demonstrates loading services from config.yaml instead of
+# hardcoding them in main.go. This enables environment-specific configuration.
+
+# Environment variables with defaults: ${VAR_NAME:default_value}
+configs:
+  - name: server-name
+    value: ${SERVER_NAME:config-demo-server}
+  
+  - name: app-env
+    value: ${APP_ENV:development}
+
+# Services defined in YAML
+services:
+  # Email Service - Production SMTP
+  - name: email-service
+    type: email
+    config:
+      smtp_host: ${SMTP_HOST:smtp.gmail.com}
+      smtp_port: ${SMTP_PORT:587}
+      from: ${EMAIL_FROM:demo@lokstra.dev}
+
+  # Counter Service - With environment-specific seed
+  - name: counter-service
+    type: counter
+    config:
+      name: ${COUNTER_NAME:yaml-counter}
+      seed: ${COUNTER_SEED:200}
+
+  # Logger Service - Different settings per environment
+  - name: logger-service
+    type: logger
+    config:
+      level: ${LOG_LEVEL:info}
+      format: ${LOG_FORMAT:json}
+      output: ${LOG_OUTPUT:stdout}
+
+# Server configuration
+servers:
+  - name: config-demo-server
+    baseUrl: http://localhost
+    apps:
+      - addr: ":8080"
+        routers: [email-api, counter-api, logger-api, health-api]

@@ -2,9 +2,11 @@ package lokstra_registry
 
 import (
 	"fmt"
+	"sync"
 )
 
 var serviceRegistry = make(map[string]any)
+var serviceMutex sync.RWMutex
 
 type lazyServiceConfig struct {
 	serviceType string
@@ -12,6 +14,7 @@ type lazyServiceConfig struct {
 }
 
 var lazyServiceConfigRegistry = make(map[string]lazyServiceConfig)
+var lazyServiceConfigMutex sync.RWMutex
 
 // Registers a service instance with a given name.
 // If the same service name already exists,
@@ -21,6 +24,10 @@ func RegisterService(svcName string, svcInstance any, opts ...RegisterOption) {
 	for _, opt := range opts {
 		opt.apply(&options)
 	}
+
+	serviceMutex.Lock()
+	defer serviceMutex.Unlock()
+
 	if !options.allowOverride {
 		if _, exists := serviceRegistry[svcName]; exists {
 			panic("service " + svcName + " already registered")
@@ -40,11 +47,20 @@ func RegisterLazyService(svcName string, svcType string,
 	for _, opt := range opts {
 		opt.apply(&options)
 	}
+
+	// Check both registries with proper locking
+	serviceMutex.RLock()
+	_, serviceExists := serviceRegistry[svcName]
+	serviceMutex.RUnlock()
+
+	lazyServiceConfigMutex.Lock()
+	defer lazyServiceConfigMutex.Unlock()
+
 	if !options.allowOverride {
 		if _, exists := lazyServiceConfigRegistry[svcName]; exists {
 			panic("lazy service " + svcName + " already registered")
 		}
-		if _, exists := serviceRegistry[svcName]; exists {
+		if serviceExists {
 			panic("service " + svcName + " already registered")
 		}
 	}
@@ -82,8 +98,12 @@ func TryGetService[T comparable](svcName string, current T) (T, bool) {
 		return current, true
 	}
 
-	// lookup in registry
-	if svc, ok := serviceRegistry[svcName]; ok {
+	// lookup in registry (read lock)
+	serviceMutex.RLock()
+	svc, ok := serviceRegistry[svcName]
+	serviceMutex.RUnlock()
+
+	if ok {
 		if typed, ok := svc.(T); ok {
 			return typed, true
 		}
@@ -92,10 +112,30 @@ func TryGetService[T comparable](svcName string, current T) (T, bool) {
 	}
 
 	// not found, check if lazy config exists
-	if lazyCfg, ok := lazyServiceConfigRegistry[svcName]; ok {
+	lazyServiceConfigMutex.RLock()
+	lazyCfg, lazyExists := lazyServiceConfigRegistry[svcName]
+	lazyServiceConfigMutex.RUnlock()
+
+	if lazyExists {
 		if factory := GetServiceFactory(lazyCfg.serviceType); factory != nil {
 			if svc := factory(lazyCfg.config); svc != nil {
-				return svc.(T), true
+				// Write lock to register the created service
+				serviceMutex.Lock()
+				// Double-check if another goroutine already created it
+				if existing, exists := serviceRegistry[svcName]; exists {
+					serviceMutex.Unlock()
+					if typed, ok := existing.(T); ok {
+						return typed, true
+					}
+					return zero, false
+				}
+				serviceRegistry[svcName] = svc
+				serviceMutex.Unlock()
+
+				if typed, ok := svc.(T); ok {
+					return typed, true
+				}
+				return zero, false
 			}
 		}
 	}

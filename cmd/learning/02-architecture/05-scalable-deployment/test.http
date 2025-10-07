@@ -1,0 +1,154 @@
+### ========================================
+### 04-scalable-deployment - HTTP Tests
+### ========================================
+### This file demonstrates the same API working across all deployment patterns.
+### 
+### Deployment Modes:
+### 1. monolith-single (all on :8080)
+### 2. monolith-multi (product :8081, order :8082)
+### 3. microservices (separate processes)
+### 4. hybrid (public :8080, private :8081/:8082)
+###
+### To run:
+### 1. Start the server: go run . monolith-single
+### 2. Use VS Code REST Client extension or curl
+### ========================================
+
+@baseUrl = http://localhost:8080/api
+
+### ========================================
+### Health Check
+### ========================================
+
+### Get Service Health
+GET http://localhost:8080/health HTTP/1.1
+
+
+### ========================================
+### Product API Tests
+### ========================================
+
+### Get All Products
+GET {{baseUrl}}/products HTTP/1.1
+
+
+### Get Specific Product
+GET {{baseUrl}}/products/prod-001 HTTP/1.1
+
+
+### Get Non-Existent Product (Should return 404)
+GET {{baseUrl}}/products/prod-999 HTTP/1.1
+
+
+### ========================================
+### Order API Tests
+### ========================================
+
+### Create Order (Cross-Router Call: order-api → product-api)
+### This demonstrates router integration:
+### - In monolith-single: Uses httptest (zero overhead)
+### - In monolith-multi: Uses HTTP to localhost
+### - In microservices: Uses HTTP to different servers
+POST {{baseUrl}}/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": "user-123",
+  "productIds": ["prod-001", "prod-002"]
+}
+
+
+### Create Order with Missing Fields (Should return 400)
+POST {{baseUrl}}/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": "user-123"
+}
+
+
+### Create Order with Non-Existent Product (Should return 400)
+POST {{baseUrl}}/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": "user-123",
+  "productIds": ["prod-999"]
+}
+
+
+### Get Order Details
+GET {{baseUrl}}/orders/order-001 HTTP/1.1
+
+
+### Get Non-Existent Order (Should return 404)
+GET {{baseUrl}}/orders/order-999 HTTP/1.1
+
+
+### ========================================
+### Monolith Multi-Port Tests
+### ========================================
+### Run: go run . monolith-multi
+### ========================================
+
+@productUrl = http://localhost:8081/api
+@orderUrl = http://localhost:8082/api
+
+### Get Products (Port 8081)
+GET {{productUrl}}/products HTTP/1.1
+
+
+### Create Order (Port 8082, calls Port 8081)
+POST {{orderUrl}}/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": "user-456",
+  "productIds": ["prod-001", "prod-003"]
+}
+
+
+### ========================================
+### Microservices Tests
+### ========================================
+### Run in separate terminals:
+###   Terminal 1: go run . product-service
+###   Terminal 2: go run . order-service
+### ========================================
+
+### Get Products from Product Service
+GET http://localhost:8081/api/products HTTP/1.1
+
+
+### Create Order in Order Service (calls Product Service)
+POST http://localhost:8082/api/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": "user-789",
+  "productIds": ["prod-001", "prod-002", "prod-003"]
+}
+
+
+### ========================================
+### Performance Comparison
+### ========================================
+### Test the same endpoint across different deployments:
+###
+### 1. Monolith Single Port (go run . monolith-single)
+###    - Fastest: Zero network overhead (httptest)
+###    - GET http://localhost:8080/api/products
+###
+### 2. Monolith Multi Port (go run . monolith-multi)
+###    - Fast: Local HTTP calls
+###    - GET http://localhost:8081/api/products
+###
+### 3. Microservices (separate processes)
+###    - Network overhead for cross-service calls
+###    - GET http://localhost:8081/api/products
+###
+### 4. Hybrid Deployment (go run . hybrid)
+###    - Public gateway + private APIs
+###    - GET http://localhost:8080/health (public)
+###    - GET http://localhost:8081/api/products (private)
+### ========================================

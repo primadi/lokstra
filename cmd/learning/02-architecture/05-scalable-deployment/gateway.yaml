@@ -1,0 +1,22 @@
+# Gateway Service Deployment
+# API Gateway that routes to microservices
+# No local routers, all calls via HTTP
+# Best for: Production API gateway pattern
+# Performance: All calls have network overhead
+
+services:
+  # only infrastructure services if needed (e.g., auth, logging) can be added here
+
+servers:
+  - name: gateway
+    port: 8080
+    reverse-proxies:
+      - name: product-api
+        base-path: /api/products
+        skip-prefix: /api/products
+        target-url: ${PRODUCT_URL:http://localhost:8081/api}
+      - name: order-api
+        base-path: /api/orders
+        skip-prefix: /api/orders
+        target-url: ${ORDER_URL:http://localhost:8082/api}
+

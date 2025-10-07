@@ -88,11 +88,14 @@ func (r *routerImpl) Build() {
 			rt.FullPath = fullPath
 			if rt.Name == "" {
 				pref := ""
-				if strings.HasSuffix(rt.FullPath, "/") {
+				if rt.FullPath != "/" && strings.HasSuffix(rt.FullPath, "/") {
 					pref = "PREF:"
 				}
-				rt.Name = strings.Join([]string{rt.Method, "[", pref, strings.ReplaceAll(
-					strings.Trim(fullPath, "/"), "/", "_"), "]"}, "")
+				nm := strings.ReplaceAll(strings.Trim(fullPath, "/"), "/", "_")
+				if nm == "" {
+					nm = "root"
+				}
+				rt.Name = strings.Join([]string{rt.Method, "[", pref, nm, "]"}, "")
 				rt.FullName += rt.Name
 			}
 			var fullMw []request.HandlerFunc

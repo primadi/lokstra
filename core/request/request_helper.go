@@ -493,8 +493,8 @@ func (h *RequestHelper) BindAll(v any) error {
 	return h.validateStruct(v)
 }
 
-// binds request body with smart content-type detection
-func (h *RequestHelper) BindBodyAutoContentType(v any) error {
+// binds request body with auto content-type detection
+func (h *RequestHelper) BindBodyAuto(v any) error {
 	h.cacheRequestBody()
 	if h.requestBodyErr != nil {
 		return h.requestBodyErr
@@ -515,7 +515,7 @@ func (h *RequestHelper) BindBodyAutoContentType(v any) error {
 }
 
 // binds all request data with auto content-type detection
-func (h *RequestHelper) BindAllAutoContentType(v any) error {
+func (h *RequestHelper) BindAllAuto(v any) error {
 	// If v is pointer to map[string]any, perform map-merge binding
 	t := reflect.TypeOf(v)
 	if t != nil && t.Kind() == reflect.Pointer {
@@ -559,7 +559,7 @@ func (h *RequestHelper) BindAllAutoContentType(v any) error {
 			}
 
 			// Merge body (overrides previous keys) - reuse BindBodySmart for parsing
-			if err := h.BindBodyAutoContentType(v); err != nil {
+			if err := h.BindBodyAuto(v); err != nil {
 				return err
 			}
 
@@ -590,7 +590,7 @@ func (h *RequestHelper) BindAllAutoContentType(v any) error {
 		}
 	}
 
-	if err := h.BindBodyAutoContentType(v); err != nil {
+	if err := h.BindBodyAuto(v); err != nil {
 		return err
 	}
 

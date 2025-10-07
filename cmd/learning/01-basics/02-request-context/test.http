@@ -1,0 +1,125 @@
+### Request Context Examples
+### Run server first: go run .
+
+### 1. Query Parameters - c.Req.QueryParam()
+GET http://localhost:8080/api/hello?name=John
+
+###
+GET http://localhost:8080/api/hello
+# Uses default value "Guest"
+
+### 2. Path Parameters - c.Req.PathParam()
+GET http://localhost:8080/api/user/123
+
+###
+GET http://localhost:8080/api/user/alice
+
+### 3. Body Binding - c.Req.BindBody()
+POST http://localhost:8080/api/create
+Content-Type: application/json
+
+{
+  "name": "Alice",
+  "age": 25
+}
+
+###
+POST http://localhost:8080/api/create
+Content-Type: application/json
+
+{
+  "name": "Bo",
+  "age": 25
+}
+# Validation error: name min=3
+
+###
+POST http://localhost:8080/api/create
+Content-Type: application/json
+
+{
+  "name": "Bob",
+  "age": 150
+}
+# Validation error: age max=120
+
+### 4. Smart Binding - c.Req.BindAll() (path + query + header + body)
+PUT http://localhost:8080/api/update/99?page=2
+Authorization: Bearer token123
+Content-Type: application/json
+
+{
+  "name": "Bob",
+  "age": 30
+}
+
+###
+PUT http://localhost:8080/api/update/88?page=5
+Content-Type: application/json
+
+{
+  "name": "Charlie"
+}
+# Missing Authorization header (but won't fail binding)
+
+### 5. Response Types - c.Resp vs c.Api
+
+# c.Resp.Json - Custom structure
+GET http://localhost:8080/
+
+###
+# c.Resp.Html - HTML response
+GET http://localhost:8080/admin
+
+###
+# c.Api.Ok - Standard API response
+GET http://localhost:8080/api/list
+
+### 6. API Error Responses - c.Api.*
+
+# 404 Not Found
+GET http://localhost:8080/api/error?type=notfound
+
+###
+# 400 Bad Request
+GET http://localhost:8080/api/error?type=badrequest
+
+###
+# 401 Unauthorized
+GET http://localhost:8080/api/error?type=unauthorized
+
+###
+# 403 Forbidden
+GET http://localhost:8080/api/error?type=forbidden
+
+###
+# 500 Internal Error
+GET http://localhost:8080/api/error?type=internal
+
+###
+# Custom status code
+GET http://localhost:8080/api/error?type=teapot
+
+### 7. Context Storage - c.Set() and c.Value()
+
+# Without Authorization header - will fail
+GET http://localhost:8080/api/profile
+
+###
+# With Authorization header - will succeed
+GET http://localhost:8080/api/profile
+Authorization: Bearer token123
+
+### 8. Middleware Chain - c.Next()
+
+# Logging middleware wraps the handler
+GET http://localhost:8080/api/slow
+# Check server logs for timing
+
+### 9. Direct HTTP Access - c.R and c.W
+
+GET http://localhost:8080/api/info
+User-Agent: MyCustomAgent/1.0
+
+### 10. Welcome Page
+GET http://localhost:8080/

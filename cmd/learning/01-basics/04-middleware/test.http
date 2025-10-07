@@ -1,0 +1,109 @@
+### Middleware Examples
+### Run server first: go run .
+
+### 1. Public Endpoint (with logging middleware)
+GET http://localhost:8080/api/public
+
+### 2. Protected Endpoint - No Auth (should fail with 401)
+GET http://localhost:8080/api/protected
+
+###
+### Protected Endpoint - With Auth (should succeed)
+GET http://localhost:8080/api/protected
+Authorization: Bearer mytoken
+
+###
+### Protected Endpoint - Invalid Token Format
+GET http://localhost:8080/api/protected
+Authorization: InvalidFormat
+
+###
+### Protected Endpoint - Invalid Token Value
+GET http://localhost:8080/api/protected
+Authorization: Bearer invalid
+
+### 3. Admin Endpoint - No Auth (should fail with 401)
+GET http://localhost:8080/api/admin
+
+###
+### Admin Endpoint - With Auth (should succeed)
+GET http://localhost:8080/api/admin
+Authorization: Bearer mytoken
+
+### 4. Rate Limited Endpoint
+### Run this 6+ times quickly to trigger rate limit
+GET http://localhost:8080/api/limited
+
+###
+GET http://localhost:8080/api/limited
+
+###
+GET http://localhost:8080/api/limited
+
+###
+GET http://localhost:8080/api/limited
+
+###
+GET http://localhost:8080/api/limited
+
+###
+GET http://localhost:8080/api/limited
+# This 6th request should fail with 429 Rate Limit Exceeded
+
+### 5. Panic Recovery
+### Without panic - should work
+GET http://localhost:8080/api/panic?panic=false
+
+###
+### With panic - should be recovered by middleware
+GET http://localhost:8080/api/panic?panic=true
+# Check server logs to see panic recovery
+
+### 6. Slow Endpoint (logging shows duration)
+GET http://localhost:8080/api/slow?duration=100
+
+###
+GET http://localhost:8080/api/slow?duration=500
+
+###
+GET http://localhost:8080/api/slow?duration=1000
+
+### 7. CORS Endpoint
+GET http://localhost:8080/api/cors
+# Check response headers for CORS settings
+
+###
+### CORS Preflight
+OPTIONS http://localhost:8080/api/cors
+
+### 8. Secure Endpoint (all middleware stacked)
+### No auth - should fail
+POST http://localhost:8080/api/secure
+Content-Type: application/json
+
+{
+  "data": "test"
+}
+
+###
+### With auth - should succeed
+POST http://localhost:8080/api/secure
+Authorization: Bearer mytoken
+Content-Type: application/json
+
+{
+  "data": "secure data"
+}
+
+###
+### With auth but invalid JSON
+POST http://localhost:8080/api/secure
+Authorization: Bearer mytoken
+Content-Type: application/json
+
+{
+  "invalid": "no data field"
+}
+
+### 9. Home Page
+GET http://localhost:8080/

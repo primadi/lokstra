@@ -126,8 +126,22 @@
           },
           "baseUrl": {
             "type": "string",
-            "description": "Base URL of the server (default: http://localhost)",
-            "pattern": "^https?://[^\\s/$.?#].[^\\s]*$"
+            "description": "Base URL of the server (default: http://localhost). Supports plain URLs and environment variable placeholders: ${KEY}, ${KEY:default}, ${@RESOLVER:KEY}, ${@RESOLVER:KEY:default}. Use @ prefix for custom resolvers (AWS, VAULT, etc.).",
+            "pattern": "^([A-Za-z][A-Za-z0-9+.-]*://[^\\s]+|\\$\\{(@[A-Za-z_][A-Za-z0-9_]*:)?[A-Za-z_][A-Za-z0-9_]*(:[^}]*)?\\})$",
+            "examples": [
+              "http://localhost",
+              "https://api.example.com",
+              "unix:///var/run/app.sock",
+              "${BASE_URL}",
+              "${BASE_URL:http://localhost}",
+              "${BASE_URL:http://localhost:8080}",
+              "${API_URL:https://api.example.com/v1}",
+              "${@ENV:BASE_URL}",
+              "${@ENV:BASE_URL:http://localhost}",
+              "${@AWS:base-url-secret}",
+              "${@AWS:base-url-secret:http://fallback}",
+              "${@VAULT:path/to/url:https://default.com}"
+            ]
           },
           "deployment-id": {
             "type": "string",

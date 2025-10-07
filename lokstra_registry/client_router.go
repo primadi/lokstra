@@ -1,6 +1,7 @@
 package lokstra_registry
 
 import (
+	"sync"
 	"time"
 
 	"github.com/primadi/lokstra/api_client"
@@ -8,19 +9,27 @@ import (
 
 // clientRouterRegistry now uses composite key: routerName@serverName
 var clientRouterRegistry = make(map[string]*api_client.ClientRouter)
+var clientRouterMutex sync.RWMutex
 
 // runningClientRouterRegistry maps routerName to selected *ClientRouter for runtime use
 // Built by buildRunningClientRouterRegistry() before Start/Run
 var runningClientRouterRegistry = make(map[string]*api_client.ClientRouter)
+var runningClientRouterMutex sync.RWMutex
+
 var currentServerName = ""
+var currentServerMutex sync.RWMutex
 
 // sets the name of the currently running server
 func SetCurrentServerName(serverName string) {
+	currentServerMutex.Lock()
+	defer currentServerMutex.Unlock()
 	currentServerName = serverName
 }
 
 // gets the name of the currently running server
 func GetCurrentServerName() string {
+	currentServerMutex.RLock()
+	defer currentServerMutex.RUnlock()
 	return currentServerName
 }
 
@@ -42,37 +51,55 @@ func buildRunningClientRouterRegistry() {
 	currentDeploymentID := GetCurrentDeploymentId()
 
 	// Clear existing running registry
+	runningClientRouterMutex.Lock()
 	runningClientRouterRegistry = make(map[string]*api_client.ClientRouter)
+	runningClientRouterMutex.Unlock()
+
+	currentServerMutex.RLock()
+	currentSrv := currentServerName
+	currentServerMutex.RUnlock()
 
 	// First pass: Add routers from currentServerName (priority)
+	clientRouterMutex.RLock()
 	for _, cr := range clientRouterRegistry {
-		if cr.ServerName == currentServerName {
+		if cr.ServerName == currentSrv {
 			srv := GetServer(cr.ServerName)
 			if srv != nil && srv.DeploymentID == currentDeploymentID {
+				runningClientRouterMutex.Lock()
 				runningClientRouterRegistry[cr.RouterName] = cr
+				runningClientRouterMutex.Unlock()
 			}
 		}
 	}
 
 	// Second pass: Add routers from other servers with same deployment-id
 	for _, cr := range clientRouterRegistry {
-		// Skip if already added in first pass
-		if _, exists := runningClientRouterRegistry[cr.RouterName]; exists {
+		// Check if already added in first pass
+		runningClientRouterMutex.RLock()
+		_, exists := runningClientRouterRegistry[cr.RouterName]
+		runningClientRouterMutex.RUnlock()
+
+		if exists {
 			continue
 		}
 
 		// Check if server has same deployment-id
 		srv := GetServer(cr.ServerName)
 		if srv != nil && srv.DeploymentID == currentDeploymentID {
+			runningClientRouterMutex.Lock()
 			runningClientRouterRegistry[cr.RouterName] = cr
+			runningClientRouterMutex.Unlock()
 		}
 	}
+	clientRouterMutex.RUnlock()
 }
 
 // registers where a router can be accessed
 // Uses composite key: routerName@serverName to allow multiple servers to have same router name
 func RegisterClientRouter(routerName, serverName, baseURL, addr string, timeout time.Duration) {
+	currentServerMutex.RLock()
 	isLocal := (serverName == currentServerName)
+	currentServerMutex.RUnlock()
 
 	cr := &api_client.ClientRouter{
 		RouterName: routerName,
@@ -91,6 +118,9 @@ func RegisterClientRouter(routerName, serverName, baseURL, addr string, timeout 
 
 	// Use composite key: routerName@serverName
 	key := routerName + "@" + serverName
+
+	clientRouterMutex.Lock()
+	defer clientRouterMutex.Unlock()
 	clientRouterRegistry[key] = cr
 }
 
@@ -106,7 +136,10 @@ func GetClientRouter(routerName string, current *api_client.ClientRouter) *api_c
 	}
 
 	// Direct lookup from running registry (O(1))
+	runningClientRouterMutex.RLock()
 	cr, exists := runningClientRouterRegistry[routerName]
+	runningClientRouterMutex.RUnlock()
+
 	if !exists {
 		return nil
 	}
@@ -124,7 +157,10 @@ func GetClientRouterOnServer(routerName, serverName string, current *api_client.
 	}
 
 	// Check if router exists in running registry first (deployment-id validation)
+	runningClientRouterMutex.RLock()
 	runningCr, exists := runningClientRouterRegistry[routerName]
+	runningClientRouterMutex.RUnlock()
+
 	if !exists {
 		return nil
 	}
@@ -136,7 +172,11 @@ func GetClientRouterOnServer(routerName, serverName string, current *api_client.
 
 	// Look for specific server in full registry
 	key := routerName + "@" + serverName
+
+	clientRouterMutex.RLock()
 	cr, exists := clientRouterRegistry[key]
+	clientRouterMutex.RUnlock()
+
 	if !exists {
 		return nil
 	}
