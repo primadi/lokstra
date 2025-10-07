@@ -5,6 +5,9 @@
 ### 1. Health Check (shows all service connections)
 GET {{baseUrl}}/health
 
+### 1b. Health Check with App Prefix
+GET {{baseUrl}}/check/health
+
 ### 2. Create User (uses DB + Cache)
 POST {{baseUrl}}/api/users
 Content-Type: application/json

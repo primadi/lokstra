@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
 # Monolith Multi Port Deployment
 # All services on same server, different ports
 # Best for: Staging, testing service isolation
@@ -5,58 +7,46 @@
 
 services:
   # Infrastructure Layer
-  db:
-    factory: DBService
-  
-  cache:
-    factory: CacheService
-  
+  - name: db
+    type: DBService
+
+  - name: cache
+    type: CacheService
+
   # Repository Layer
-  product-repo:
-    factory: ProductRepository
-    lazy: true
-  
-  order-repo:
-    factory: OrderRepository
-    lazy: true
+  - name: product-repo
+    type: ProductRepository
+    config:
+      db_service: db
+      cache_service: cache
+
+  - name: order-repo
+    type: OrderRepository
+    config:
+      db_service: db
   
   # Business Logic Layer
-  product-svc:
-    factory: ProductService
-    lazy: true
-  
-  order-svc:
-    factory: OrderService
-    lazy: true
+  - name: product-svc
+    type: ProductService
+    config:
+      repo_service: product-repo
+
+  - name: order-svc
+    type: OrderService
+    config:
+      repo_service: order-repo
 
 servers:
   - name: product-server
-    deploymentId: product-monolith
-    protocol: http
-    host: 0.0.0.0
-    port: 8081
-    routers:
-      - name: product-api
-        basePath: /api
-      - name: health-api
-        basePath: ""
+    deployment-id: product-monolith
+    baseUrl: "http://localhost:8081"
+    apps:
+      - addr: :8081
+        routers: [product-api, health-api]
   
   - name: order-server
-    deploymentId: order-monolith
-    protocol: http
-    host: 0.0.0.0
-    port: 8082
-    routers:
-      - name: order-api
-        basePath: /api
-      - name: health-api
-        basePath: ""
-
-clientRouters:
-  - name: product-api
-    deploymentId: product-monolith
-    baseUrl: ${PRODUCT_URL:http://localhost:8081/api}
-  
-  - name: order-api
-    deploymentId: order-monolith
-    baseUrl: ${ORDER_URL:http://localhost:8082/api}
+    deployment-id: order-monolith
+    baseUrl: "http://localhost:8082"
+    apps:
+      - addr: :8082
+        routers: [order-api, health-api]

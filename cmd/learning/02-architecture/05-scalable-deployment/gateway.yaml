@@ -12,11 +12,11 @@ servers:
     port: 8080
     reverse-proxies:
       - name: product-api
-        base-path: /api/products
+        prefix: /api/products
         skip-prefix: /api/products
         target-url: ${PRODUCT_URL:http://localhost:8081/api}
       - name: order-api
-        base-path: /api/orders
+        prefix: /api/orders
         skip-prefix: /api/orders
         target-url: ${ORDER_URL:http://localhost:8082/api}
 

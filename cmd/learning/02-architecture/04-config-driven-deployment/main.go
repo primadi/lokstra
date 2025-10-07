@@ -201,6 +201,12 @@ func (r *ProductRepository) getCache() *CacheService {
 	return r.cacheCache
 }
 
+var productList = []map[string]any{
+	{"id": "1", "name": "Laptop", "price": 1299.99},
+	{"id": "2", "name": "Mouse", "price": 5.00},
+	{"id": "3", "name": "Keyboard", "price": 79.99},
+}
+
 func (r *ProductRepository) FindByID(id string) map[string]any {
 	cache := r.getCache()
 	cacheKey := "product:" + id
@@ -210,20 +216,19 @@ func (r *ProductRepository) FindByID(id string) map[string]any {
 
 	db := r.getDB()
 	db.Query("SELECT * FROM products WHERE id = " + id)
-	product := map[string]any{"id": id, "name": "Product " + id, "price": 99.99}
-
-	cache.Set(cacheKey, product, 5*time.Minute)
-	return product
+	for _, product := range productList {
+		if product["id"] == id {
+			cache.Set(cacheKey, product, 5*time.Minute)
+			return product
+		}
+	}
+	return nil
 }
 
 func (r *ProductRepository) List() []map[string]any {
 	db := r.getDB()
 	db.Query("SELECT * FROM products")
-	return []map[string]any{
-		{"id": "1", "name": "Laptop", "price": 1299.99},
-		{"id": "2", "name": "Mouse", "price": 29.99},
-		{"id": "3", "name": "Keyboard", "price": 79.99},
-	}
+	return productList
 }
 
 func NewProductRepository(cfg map[string]any) any {
@@ -473,13 +478,13 @@ func setupFactories() {
 func setupRouters() {
 	// Product API
 	productRouter := lokstra.NewRouter("product-router")
-
-	productRouter.GET("/api/products", func(c *lokstra.RequestContext) error {
+	productRouter.SetPathPrefix("/api/products")
+	productRouter.GET("/", func(c *lokstra.RequestContext) error {
 		products := services.GetProduct().ListProducts()
 		return c.Api.Ok(products)
 	})
 
-	productRouter.GET("/api/products/{id}", func(c *lokstra.RequestContext) error {
+	productRouter.GET("/{id}", func(c *lokstra.RequestContext) error {
 		id := c.Req.PathParam("id", "")
 		product := services.GetProduct().GetProduct(id)
 		return c.Api.Ok(product)
@@ -488,17 +493,14 @@ func setupRouters() {
 	// Order API
 	orderRouter := lokstra.NewRouter("order-router")
 
-	orderRouter.POST("/api/orders", func(c *lokstra.RequestContext) error {
-		var req struct {
-			UserID    string `json:"user_id" binding:"required"`
-			ProductID string `json:"product_id" binding:"required"`
-			Quantity  int    `json:"quantity" binding:"required,gt=0"`
-		}
+	type createOrderRequest struct {
+		UserID    string `json:"user_id" binding:"required"`
+		ProductID string `json:"product_id" binding:"required"`
+		Quantity  int    `json:"quantity" binding:"required,gt=0"`
+	}
 
-		if err := c.Req.BindBody(&req); err != nil {
-			return c.Api.BadRequest("INVALID_INPUT", err.Error())
-		}
-
+	orderRouter.POST("/api/orders", func(c *lokstra.RequestContext,
+		req *createOrderRequest) error {
 		order, err := services.GetOrder().CreateOrder(req.UserID, req.ProductID, req.Quantity)
 		if err != nil {
 			return c.Api.BadRequest("ORDER_ERROR", err.Error())

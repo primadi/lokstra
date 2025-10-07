@@ -176,6 +176,28 @@
                     "type": "string",
                     "minLength": 1
                   }
+                },
+                "routers-with-prefix": {
+                  "type": "array",
+                  "description": "Routers with custom path prefix",
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "prefix"],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Router name",
+                        "minLength": 1
+                      },
+                      "prefix": {
+                        "type": "string",
+                        "description": "Path prefix for this router (e.g., /api, /v2)",
+                        "pattern": "^/[a-zA-Z0-9/_-]*$",
+                        "examples": ["/api", "/v1", "/v2", "/admin"]
+                      }
+                    },
+                    "additionalProperties": false
+                  }
                 }
               },
               "additionalProperties": false

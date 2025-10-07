@@ -43,12 +43,19 @@ type Server struct {
 	Apps         []*App `yaml:"apps" json:"apps"`
 }
 
+// RouterWithPrefix defines a router with its path prefix
+type RouterWithPrefix struct {
+	Name   string `yaml:"name" json:"name"`
+	Prefix string `yaml:"prefix" json:"prefix"`
+}
+
 // App configuration within a server
 type App struct {
-	Name         string   `yaml:"name" json:"name,omitempty"`
-	Addr         string   `yaml:"addr" json:"addr"`
-	ListenerType string   `yaml:"listener-type,omitempty" json:"listener-type,omitempty"` // default: "default"
-	Routers      []string `yaml:"routers,omitempty" json:"routers,omitempty"`             // router names
+	Name              string              `yaml:"name" json:"name,omitempty"`
+	Addr              string              `yaml:"addr" json:"addr"`
+	ListenerType      string              `yaml:"listener-type,omitempty" json:"listener-type,omitempty"`             // default: "default"
+	Routers           []string            `yaml:"routers,omitempty" json:"routers,omitempty"`                         // router names
+	RoutersWithPrefix []*RouterWithPrefix `yaml:"routers-with-prefix,omitempty" json:"routers-with-prefix,omitempty"` // routers with custom prefix
 }
 
 // creates a new empty Config

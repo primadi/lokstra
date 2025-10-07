@@ -17,25 +17,24 @@ services:
   - name: product-repo
     type: ProductRepository
     config:
-      db: db
-      cache: cache
+      db_service: db
+      cache_service: cache
 
   - name: order-repo
     type: OrderRepository
     config:
-      db: db
-      cache: cache
+      db_service: db
   
   # Business Logic Layer
   - name: product-svc
     type: ProductService
     config:
-      repo: product-repo
+      repo_service: product-repo
 
   - name: order-svc
     type: OrderService
     config:
-      repo: order-repo
+      repo_service: order-repo
 
 servers:
   - name: monolith

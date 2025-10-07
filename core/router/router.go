@@ -11,11 +11,11 @@ type Router interface {
 
 	// Router Name for identification
 	Name() string
-	// EngineType returns the underlying engine type, e.g. "default", "servemux", etc.
+	// returns the underlying engine type, e.g. "default", "servemux", etc.
 	EngineType() string
-	// PathPrefix returns the path prefix of this router
+	// returns the path prefix of this router
 	PathPrefix() string
-	// SetPathPrefix sets the path prefix of this router
+	// sets the path prefix of this router
 	SetPathPrefix(prefix string) Router
 	// Create a shallow copy of this router (without routes and children)
 	Clone() Router

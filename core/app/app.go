@@ -36,21 +36,15 @@ func NewWithConfig(name string, addr string, listenerType string,
 	cfg["addr"] = addr
 	cfg["listener-type"] = listenerType
 
-	var mainRouter router.Router
-	for _, rt := range routers {
-		r := rt.Clone()
-		if mainRouter == nil {
-			mainRouter = r
-		} else {
-			mainRouter.SetNextChain(r)
-		}
-	}
-
-	return &App{
+	app := &App{
 		name:           name,
 		listenerConfig: cfg,
-		mainRouter:     mainRouter,
 	}
+
+	for _, rt := range routers {
+		app.AddRouter(rt)
+	}
+	return app
 }
 
 // Get the app name
@@ -72,15 +66,18 @@ func (a *App) GetRouter() router.Router {
 }
 
 // Add a router to the app. If there's already a router, it will be chained.
-func (a *App) AddRouter(r router.Router) {
+func (a *App) AddRouter(rt router.Router) {
+	a.AddRouterWithPrefix(rt, "")
+}
+
+// Add a router to the app with a prefix. If there's already a router, it will be chained.
+func (a *App) AddRouterWithPrefix(rt router.Router, appPrefix string) {
+	// each router is cloned to avoid side effects
+	r := rt.Clone()
 	if a.mainRouter == nil {
 		a.mainRouter = r
 	} else {
-		curr := a.mainRouter
-		for curr.GetNextChain() != nil {
-			curr = curr.GetNextChain()
-		}
-		curr.SetNextChain(r)
+		a.mainRouter.SetNextChainWithPrefix(r, appPrefix)
 	}
 }
 

@@ -40,7 +40,9 @@ func RegisterConfig(c *config.Config) {
 	for _, srvConfig := range c.Servers {
 		apps := make([]*app.App, 0, len(srvConfig.Apps))
 		for i, appConfig := range srvConfig.Apps {
-			routers := make([]router.Router, 0, len(appConfig.Routers))
+			routers := make([]router.Router, 0, len(appConfig.Routers)+len(appConfig.RoutersWithPrefix))
+
+			// Add routers without prefix
 			for _, routerName := range appConfig.Routers {
 				r := GetRouter(routerName)
 				if r == nil {
@@ -48,6 +50,21 @@ func RegisterConfig(c *config.Config) {
 				}
 				routers = append(routers, r)
 			}
+
+			// Add routers with custom prefix
+			for _, rwp := range appConfig.RoutersWithPrefix {
+				r := GetRouter(rwp.Name)
+				if r == nil {
+					panic("router " + rwp.Name + " not found for app " + appConfig.Name)
+				}
+				// Clone router to avoid side effects when used in multiple places
+				clonedRouter := r.Clone()
+				// Combine app prefix from config with router's existing prefix
+				combinedPrefix := rwp.Prefix + clonedRouter.PathPrefix()
+				clonedRouter.SetPathPrefix(combinedPrefix)
+				routers = append(routers, clonedRouter)
+			}
+
 			a := app.New(appConfig.GetName(i), appConfig.Addr, routers...)
 			r := a.GetRouter()
 			for r != nil {

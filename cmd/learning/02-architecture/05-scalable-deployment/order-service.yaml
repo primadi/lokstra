@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
 # Order Service Deployment (Microservice)
 # Only order service running
 # Calls product service via HTTP
@@ -6,38 +8,28 @@
 
 services:
   # Infrastructure Layer
-  db:
-    factory: DBService
-  
-  cache:
-    factory: CacheService
-  
+  - name: db
+    type: DBService
+
+  - name: cache
+    type: CacheService
+
   # Repository Layer
-  order-repo:
-    factory: OrderRepository
-    lazy: true
+  - name: order-repo
+    type: OrderRepository
+    config:
+      db_service: db
   
   # Business Logic Layer
-  order-svc:
-    factory: OrderService
-    lazy: true
+  - name: order-svc
+    type: OrderService
+    config:
+      repo_service: order-repo
 
 servers:
   - name: order-server
-    deploymentId: order-microservice
-    protocol: http
-    host: 0.0.0.0
-    port: 8082
-    routers:
-      - name: order-api
-        basePath: /api
-      - name: health-api
-        basePath: ""
-
-clientRouters:
-  - name: product-api
-    baseUrl: ${PRODUCT_URL:http://localhost:8081/api}
-  
-  - name: order-api
-    deploymentId: order-microservice
-    baseUrl: ${ORDER_URL:http://localhost:8082/api}
+    deployment-id: order-microservice
+    baseUrl: "${ORDER_URL:http://localhost:8082}"
+    apps:
+      - addr: :8082
+        routers: [order-api, health-api]

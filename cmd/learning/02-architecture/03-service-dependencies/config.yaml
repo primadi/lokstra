@@ -52,3 +52,6 @@ servers:
     apps:
       - addr: ":8080"
         routers: [user-api, order-api, health-api]
+        routers-with-prefix:
+          - name: health-api
+            prefix: /check
