@@ -1,0 +1,79 @@
+### Health Check
+GET http://localhost:8080/health
+
+### List All Products
+GET http://localhost:8080/api/products
+
+### Get Product by ID
+GET http://localhost:8080/api/products/1
+
+### Get Product by ID (Mouse)
+GET http://localhost:8080/api/products/2
+
+### Get User
+GET http://localhost:8080/api/users/123
+
+### Register User
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "securepassword123"
+}
+
+### Register User (Invalid Password - too short)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "short"
+}
+
+### Create Order
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "123",
+  "product_id": "1",
+  "quantity": 2
+}
+
+### Create Order (Minimum Amount Test - Mouse $5)
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "123",
+  "product_id": "2",
+  "quantity": 1
+}
+
+### Create Order (Above Minimum - Keyboard $79.99)
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+
+{
+  "user_id": "123",
+  "product_id": "3",
+  "quantity": 1
+}
+
+###
+# COMPARISON NOTES
+# ================
+# Both config-simple.yaml and config-layered.yaml produce the SAME API behavior.
+# The difference is only in:
+# 1. How services are configured (flat vs layered)
+# 2. How dependencies are declared (implicit vs explicit)
+# 3. How much code is needed in factories (15 lines vs 3 lines)
+#
+# Try:
+#   go run . simple   → Run with simple services
+#   go run . layered  → Run with layered services
+#
+# Then use the same API calls above - they work identically!

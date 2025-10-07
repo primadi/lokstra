@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=https://lokstra.dev/schema/lokstra.json
+
+# =============================================================================
+# SIMPLE SERVICES (BACKWARD COMPATIBLE)
+# =============================================================================
+# This is the traditional flat array format for services.
+# Dependencies are IMPLICIT - only visible in factory code.
+#
+# Run with: go run . simple
+
+configs:
+  - name: server-name
+    value: ${SERVER_NAME:ecommerce-server}
+  
+  - name: app-env
+    value: ${APP_ENV:development}
+  
+  - name: app-version
+    value: ${APP_VERSION:1.0.0}
+
+# =============================================================================
+# SERVICES - Flat Array (No Layers)
+# =============================================================================
+services:
+  # Infrastructure services
+  - name: db-service
+    type: db
+    config:
+      host: ${DB_HOST:localhost}
+      port: ${DB_PORT:5432}
+      database: ${DB_NAME:ecommerce}
+      username: ${DB_USER:postgres}
+      password: ${DB_PASSWORD:postgres}
+
+  - name: cache-service
+    type: cache
+    config:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      db: ${REDIS_DB:0}
+
+  - name: email-service
+    type: email
+    config:
+      smtp_host: ${SMTP_HOST:smtp.gmail.com}
+      smtp_port: ${SMTP_PORT:587}
+      from: ${EMAIL_FROM:noreply@ecommerce.dev}
+      username: ${SMTP_USER:}
+      password: ${SMTP_PASSWORD:}
+
+  # Repository services (depend on infrastructure)
+  - name: user-repository
+    type: user-repo
+    config:
+      db_service: db-service  # String reference (implicit dependency)
+
+  - name: product-repository
+    type: product-repo
+    config:
+      db_service: db-service         # String reference
+      cache_service: cache-service   # String reference
+
+  - name: order-repository
+    type: order-repo
+    config:
+      db_service: db-service  # String reference
+
+  # Domain services (depend on repositories)
+  - name: user-service
+    type: user
+    config:
+      repository_service: user-repository  # String reference
+      password_min_length: ${PASSWORD_MIN_LENGTH:8}
+
+  - name: product-service
+    type: product
+    config:
+      repository_service: product-repository  # String reference
+      default_currency: ${DEFAULT_CURRENCY:USD}
+
+  - name: order-service
+    type: order
+    config:
+      repository_service: order-repository    # String reference
+      product_service: product-service        # String reference
+      user_service: user-service              # String reference
+      email_service: email-service            # String reference
+      tax_rate: ${TAX_RATE:0.10}
+      min_order_amount: ${MIN_ORDER_AMOUNT:10.00}
+
+# =============================================================================
+# SERVER CONFIGURATION
+# =============================================================================
+servers:
+  - name: ecommerce-server
+    baseUrl: ${BASE_URL:http://localhost}
+    apps:
+      - addr: ":8080"
+        routers: [product-api, order-api, user-api, health-api]
+
+# =============================================================================
+# NOTES
+# =============================================================================
+# PROBLEMS WITH SIMPLE SERVICES:
+# 1. Dependencies are hidden (only visible in factory code)
+# 2. No validation - typos in service names cause runtime errors
+# 3. No architecture visibility - can't see layers
+# 4. Verbose factory code - manual lazy loading + caching
+#
+# Example: order-service depends on 4 services, but you can only see this
+# by reading the factory code or config values.
+#
+# Dependency tree (IMPLICIT - not validated):
+#   order-service
+#   ├─→ order-repository → db-service
+#   ├─→ product-service → product-repository
+#   │                     ├─→ db-service
+#   │                     └─→ cache-service
+#   ├─→ user-service → user-repository → db-service
+#   └─→ email-service

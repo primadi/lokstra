@@ -130,11 +130,51 @@ func mergeConfigs(target *Config, source *Config) {
 	target.Configs = append(target.Configs, source.Configs...)
 
 	// Merge services
-	target.Services = append(target.Services, source.Services...)
+	mergeServices(&target.Services, &source.Services)
 
 	// Merge middlewares
 	target.Middlewares = append(target.Middlewares, source.Middlewares...)
 
 	// Merge servers
 	target.Servers = append(target.Servers, source.Servers...)
+}
+
+// mergeServices merges source services into target services
+func mergeServices(target *ServicesConfig, source *ServicesConfig) {
+	// If target is empty (no services at all), just copy source
+	if len(target.Simple) == 0 && len(target.Layered) == 0 {
+		*target = *source
+		return
+	}
+
+	// Both simple: merge arrays
+	if target.IsSimple() && source.IsSimple() {
+		target.Simple = append(target.Simple, source.Simple...)
+		return
+	}
+
+	// Both layered: merge layers
+	if target.IsLayered() && source.IsLayered() {
+		if target.Layered == nil {
+			target.Layered = make(map[string][]*Service)
+		}
+		for layerName, services := range source.Layered {
+			target.Layered[layerName] = append(target.Layered[layerName], services...)
+		}
+		// Merge layer order (keep target order, add new layers from source)
+		existingLayers := make(map[string]bool)
+		for _, layer := range target.Order {
+			existingLayers[layer] = true
+		}
+		for _, layer := range source.Order {
+			if !existingLayers[layer] {
+				target.Order = append(target.Order, layer)
+			}
+		}
+		return
+	}
+
+	// Mixed mode: cannot merge simple and layered
+	// This is a configuration error - for now, we'll keep target unchanged
+	// In the future, we could panic or return an error
 }

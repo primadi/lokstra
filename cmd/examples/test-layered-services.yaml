@@ -1,0 +1,67 @@
+# Test configuration for layered services
+# This demonstrates the new layered service format with explicit dependencies
+
+# Simple services (no layers, no dependencies)
+services:
+  # Infrastructure layer: databases, caches, external APIs
+  infrastructure:
+    - name: postgres
+      type: dbpool_pg
+      config:
+        connection_string: ${CFG:DATABASE_URL}
+        max_connections: 20
+
+    - name: redis
+      type: redis
+      config:
+        address: ${CFG:REDIS_URL}
+        max_idle: 10
+
+  # Repository layer: depends on infrastructure
+  repository:
+    - name: user-repo
+      type: UserRepository
+      depends-on: [postgres]
+      config:
+        db_service: postgres  # This will be injected as GenericLazyService
+
+    - name: product-repo
+      type: ProductRepository
+      depends-on: [postgres, redis]
+      config:
+        db_service: postgres
+        cache_service: redis
+
+  # Domain service layer: depends on repositories
+  domain:
+    - name: user-domain
+      type: UserDomainService
+      depends-on: [user-repo]
+      config:
+        repo_service: user-repo
+
+    - name: product-domain
+      type: ProductDomainService
+      depends-on: [product-repo, user-repo]
+      config:
+        product_repo: product-repo
+        user_repo: user-repo
+
+# Routers
+routers:
+  - name: user-api
+    type: UserRouter
+
+  - name: product-api
+    type: ProductRouter
+
+# Apps and Servers
+servers:
+  - name: api-server
+    base_url: http://localhost:8080
+    apps:
+      - name: main-app
+        addr: :8080
+        routers:
+          - user-api
+          - product-api

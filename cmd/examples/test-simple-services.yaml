@@ -1,0 +1,43 @@
+# Test configuration for simple (array) services
+# This demonstrates backward compatibility with the existing format
+
+services:
+  - name: postgres
+    type: dbpool_pg
+    config:
+      connection_string: ${CFG:DATABASE_URL}
+      max_connections: 20
+
+  - name: redis
+    type: redis
+    config:
+      address: ${CFG:REDIS_URL}
+      max_idle: 10
+
+  - name: user-repo
+    type: UserRepository
+    config:
+      db_service: postgres  # String reference (old style)
+
+  - name: product-repo
+    type: ProductRepository
+    config:
+      db_service: postgres
+      cache_service: redis
+
+routers:
+  - name: user-api
+    type: UserRouter
+
+  - name: product-api
+    type: ProductRouter
+
+servers:
+  - name: api-server
+    base_url: http://localhost:8080
+    apps:
+      - name: main-app
+        addr: :8080
+        routers:
+          - user-api
+          - product-api

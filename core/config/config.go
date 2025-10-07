@@ -1,15 +1,107 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Config represents the top-level YAML configuration structure
 type Config struct {
 	Configs     []*GeneralConfig `yaml:"configs,omitempty" json:"configs,omitempty"`
-	Services    []*Service       `yaml:"services,omitempty" json:"services,omitempty"`
+	Services    ServicesConfig   `yaml:"services,omitempty" json:"services,omitempty"`
 	Middlewares []*Middleware    `yaml:"middlewares,omitempty" json:"middlewares,omitempty"`
 	Servers     []*Server        `yaml:"servers,omitempty" json:"servers,omitempty"`
+}
+
+// ServicesConfig supports both simple (array) and layered (map) service definitions
+type ServicesConfig struct {
+	Simple  []*Service            // Simple mode: flat array of services
+	Layered map[string][]*Service // Layered mode: services grouped by layer name
+	Order   []string              // Order of layers (for layered mode)
+}
+
+// MarshalJSON implements custom JSON marshaling to output only the active mode
+func (sc ServicesConfig) MarshalJSON() ([]byte, error) {
+	if sc.IsSimple() {
+		return json.Marshal(sc.Simple)
+	}
+	if sc.IsLayered() {
+		return json.Marshal(sc.Layered)
+	}
+	// Empty config
+	return []byte("[]"), nil
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling to support both array and map formats
+func (sc *ServicesConfig) UnmarshalYAML(node *yaml.Node) error {
+	// Try to unmarshal as array (simple mode)
+	var simpleServices []*Service
+	errSimple := node.Decode(&simpleServices)
+	if errSimple == nil {
+		sc.Simple = simpleServices
+		sc.Layered = nil
+		sc.Order = nil
+		return nil
+	}
+
+	// Try to unmarshal as map (layered mode)
+	var layeredServices map[string][]*Service
+	errLayered := node.Decode(&layeredServices)
+	if errLayered == nil {
+		sc.Layered = layeredServices
+		sc.Simple = nil
+
+		// Preserve order from YAML
+		sc.Order = make([]string, 0, len(layeredServices))
+		for i := 0; i < len(node.Content); i += 2 {
+			if i < len(node.Content) {
+				layerName := node.Content[i].Value
+				sc.Order = append(sc.Order, layerName)
+			}
+		}
+
+		return nil
+	}
+
+	// Both parsing attempts failed
+	return fmt.Errorf("services must be either an array or a map; array error: %v; map error: %v", errSimple, errLayered)
+}
+
+// MarshalYAML implements custom YAML marshaling
+func (sc ServicesConfig) MarshalYAML() (interface{}, error) {
+	if sc.Layered != nil {
+		return sc.Layered, nil
+	}
+	return sc.Simple, nil
+}
+
+// IsSimple returns true if using simple (array) mode
+func (sc *ServicesConfig) IsSimple() bool {
+	return len(sc.Simple) > 0
+}
+
+// IsLayered returns true if using layered (map) mode
+func (sc *ServicesConfig) IsLayered() bool {
+	return len(sc.Layered) > 0
+}
+
+// GetAllServices returns all services in registration order (simple or layered)
+func (sc *ServicesConfig) GetAllServices() []*Service {
+	if sc.IsSimple() {
+		return sc.Simple
+	}
+
+	if sc.IsLayered() {
+		var all []*Service
+		for _, layerName := range sc.Order {
+			all = append(all, sc.Layered[layerName]...)
+		}
+		return all
+	}
+
+	return nil
 }
 
 // GeneralConfig represents general configuration key-value pairs
@@ -21,10 +113,11 @@ type GeneralConfig struct {
 
 // Service configuration
 type Service struct {
-	Name   string         `yaml:"name" json:"name"`
-	Type   string         `yaml:"type" json:"type"`
-	Enable *bool          `yaml:"enable,omitempty" json:"enable,omitempty"` // default: true
-	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
+	Name      string         `yaml:"name" json:"name"`
+	Type      string         `yaml:"type" json:"type"`
+	Enable    *bool          `yaml:"enable,omitempty" json:"enable,omitempty"` // default: true
+	DependsOn []string       `yaml:"depends-on,omitempty" json:"depends-on,omitempty"`
+	Config    map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
 }
 
 // Middleware configuration

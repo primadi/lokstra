@@ -34,7 +34,7 @@ func main() {
 	// Print summary
 	fmt.Printf("Summary:\n")
 	fmt.Printf("  - Configs: %d\n", len(cfg.Configs))
-	fmt.Printf("  - Services: %d\n", len(cfg.Services))
+	fmt.Printf("  - Services: %d\n", len(cfg.Services.GetAllServices()))
 	fmt.Printf("  - Middlewares: %d\n", len(cfg.Middlewares))
 	fmt.Printf("  - Servers: %d\n", len(cfg.Servers))
 

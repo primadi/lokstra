@@ -73,10 +73,11 @@ services:
 	}
 
 	// Verify service config expanded correctly
-	if len(config.Services) != 1 {
-		t.Fatalf("Expected 1 service, got %d", len(config.Services))
+	allServices := config.Services.GetAllServices()
+	if len(allServices) != 1 {
+		t.Fatalf("Expected 1 service, got %d", len(allServices))
 	}
-	serviceConfig := config.Services[0].Config
+	serviceConfig := allServices[0].Config
 	if serviceConfig == nil {
 		t.Fatalf("Service config is nil")
 	}
@@ -251,10 +252,11 @@ services:
 	}
 
 	// Verify nested CFG paths in service config
-	if len(config.Services) != 1 {
-		t.Fatalf("Expected 1 service, got %d", len(config.Services))
+	allServices := config.Services.GetAllServices()
+	if len(allServices) != 1 {
+		t.Fatalf("Expected 1 service, got %d", len(allServices))
 	}
-	serviceConfig := config.Services[0].Config
+	serviceConfig := allServices[0].Config
 
 	primary, ok := serviceConfig["primary"].(string)
 	if !ok {
@@ -331,10 +333,11 @@ services:
 	}
 
 	// Verify service config
-	if len(config.Services) != 1 {
-		t.Fatalf("Expected 1 service, got %d", len(config.Services))
+	allServices := config.Services.GetAllServices()
+	if len(allServices) != 1 {
+		t.Fatalf("Expected 1 service, got %d", len(allServices))
 	}
-	serviceConfig := config.Services[0].Config
+	serviceConfig := allServices[0].Config
 
 	dbHost, ok := serviceConfig["db_host"].(string)
 	if !ok {

@@ -24,63 +24,40 @@
       }
     },
     "services": {
-      "type": "array",
-      "description": "Service configurations",
-      "items": {
-        "type": "object",
-        "required": ["name"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Service name",
-            "minLength": 1
-          },
-          "type": {
-            "type": "string",
-            "description": "Service type, if empty same as name"
-          },
-          "enable": {
-            "type": "boolean",
-            "description": "Whether the service is enabled (default: true)",
-            "default": true
-          },
-          "config": {
-            "type": "object",
-            "description": "Service-specific configuration",
-            "additionalProperties": true
-          }
+      "oneOf": [
+        {
+          "type": "array",
+          "description": "Simple mode: Flat array of service configurations",
+          "items": { "$ref": "#/definitions/service" }
         },
-        "additionalProperties": false,
-        
-        "if": {
-          "anyOf": [
+        {
+          "type": "object",
+          "description": "Layered mode: Services grouped by layer name. Each layer can only depend on previous layers.",
+          "minProperties": 1,
+          "patternProperties": {
+            ".*": {
+              "type": "array",
+              "description": "Services in this layer",
+              "items": { "$ref": "#/definitions/service-layered" },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "examples": [
             {
-              "properties": {
-                "type": { "const": "dbpool_pg" }
-              },
-              "required": ["type"]
-            },
-            {
-              "properties": {
-                "name": { "const": "dbpool_pg" }
-              },
-              "required": ["name"],
-              "not": {
-                "properties": {
-                  "type": { "minLength": 1 }
-                },
-                "required": ["type"]
-              }
+              "infrastructure": [
+                { "name": "db", "type": "Database" }
+              ],
+              "repository": [
+                { "name": "user-repo", "type": "UserRepository", "depends-on": ["db"], "config": { "db_service": "db" } }
+              ],
+              "business": [
+                { "name": "user-service", "type": "UserService", "depends-on": ["user-repo"], "config": { "repo_service": "user-repo" } }
+              ]
             }
           ]
-        },
-        "then": {
-          "required": ["config"],
-          "properties": {
-            "config": { "$ref": "#/definitions/dbpool_pg" }
-          }
         }
-      }
+      ]
     },
     "middlewares": {
       "type": "array",
@@ -243,6 +220,74 @@
           }
         }
       ],
+      "additionalProperties": false
+    },
+
+    "service": {
+      "$id": "service",
+      "type": "object",
+      "required": ["name"],
+      "description": "Service configuration (simple mode)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Service name",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Service type, if empty same as name"
+        },
+        "enable": {
+          "type": "boolean",
+          "description": "Whether the service is enabled (default: true)",
+          "default": true
+        },
+        "config": {
+          "type": "object",
+          "description": "Service-specific configuration",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "service-layered": {
+      "$id": "service-layered",
+      "type": "object",
+      "required": ["name"],
+      "description": "Service configuration (layered mode with depends-on)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Service name",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Service type, if empty same as name"
+        },
+        "enable": {
+          "type": "boolean",
+          "description": "Whether the service is enabled (default: true)",
+          "default": true
+        },
+        "depends-on": {
+          "type": "array",
+          "description": "Services this service depends on (must be from previous layers or simple services). All dependencies must be used in config.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "examples": [["db", "cache"], ["user-repo"]]
+        },
+        "config": {
+          "type": "object",
+          "description": "Service-specific configuration. Values matching service names must be in depends-on.",
+          "additionalProperties": true
+        }
+      },
       "additionalProperties": false
     }
   }
