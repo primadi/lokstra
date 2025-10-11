@@ -38,7 +38,7 @@ func NewServer(name string, apps ...*app.App) *server.Server {
 	return server.New(name, apps...)
 }
 
-func FetchAndCast[T any](c *request.Context, client *api_client.ClientRouter, path string,
-	opts ...api_client.FetchOption) (*T, error) {
-	return api_client.FetchAndCast[T](c, client, path, opts...)
+func FetchAndCast[T any](client *api_client.ClientRouter, path string,
+	opts ...api_client.FetchOption) (T, error) {
+	return api_client.FetchAndCast[T](client, path, opts...)
 }

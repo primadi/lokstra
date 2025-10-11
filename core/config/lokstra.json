@@ -89,6 +89,36 @@
         "additionalProperties": false
       }
     },
+    "routers": {
+      "type": "array",
+      "description": "Router configurations (independent of servers)",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Router name",
+            "minLength": 1
+          },
+          "path-prefix": {
+            "type": "string",
+            "description": "Path prefix for this router (e.g., /api/v1, /admin)",
+            "pattern": "^/[a-zA-Z0-9/_-]*$",
+            "examples": ["/api/v1", "/admin", "/public"]
+          },
+          "middlewares": {
+            "type": "array",
+            "description": "Middleware names to apply to this router",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "servers": {
       "type": "array",
       "description": "Server configurations",
@@ -101,7 +131,7 @@
             "description": "Server name",
             "minLength": 1
           },
-          "baseUrl": {
+          "base-url": {
             "type": "string",
             "description": "Base URL of the server (default: http://localhost). Supports plain URLs and environment variable placeholders: ${KEY}, ${KEY:default}, ${@RESOLVER:KEY}, ${@RESOLVER:KEY:default}. Use @ prefix for custom resolvers (AWS, VAULT, etc.).",
             "pattern": "^([A-Za-z][A-Za-z0-9+.-]*://[^\\s]+|\\$\\{(@[A-Za-z_][A-Za-z0-9_]*:)?[A-Za-z_][A-Za-z0-9_]*(:[^}]*)?\\})$",
@@ -154,26 +184,12 @@
                     "minLength": 1
                   }
                 },
-                "routers-with-prefix": {
+                "services": {
                   "type": "array",
-                  "description": "Routers with custom path prefix",
+                  "description": "Service names hosted by this app (for auto local/remote detection)",
                   "items": {
-                    "type": "object",
-                    "required": ["name", "prefix"],
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "description": "Router name",
-                        "minLength": 1
-                      },
-                      "prefix": {
-                        "type": "string",
-                        "description": "Path prefix for this router (e.g., /api, /v2)",
-                        "pattern": "^/[a-zA-Z0-9/_-]*$",
-                        "examples": ["/api", "/v1", "/v2", "/admin"]
-                      }
-                    },
-                    "additionalProperties": false
+                    "type": "string",
+                    "minLength": 1
                   }
                 }
               },
@@ -243,10 +259,75 @@
           "description": "Whether the service is enabled (default: true)",
           "default": true
         },
+        "depends-on": {
+          "type": "array",
+          "description": "Services this service depends on (for dependency injection)",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
         "config": {
           "type": "object",
           "description": "Service-specific configuration",
           "additionalProperties": true
+        },
+        "auto-router": {
+          "type": "object",
+          "description": "Auto-router configuration for generating HTTP routes from service",
+          "properties": {
+            "convention": {
+              "type": "string",
+              "description": "Router convention (e.g., rest, rpc, graphql)",
+              "default": "rest",
+              "examples": ["rest", "rpc", "graphql"]
+            },
+            "path-prefix": {
+              "type": "string",
+              "description": "Path prefix for this service's routes",
+              "pattern": "^/[a-zA-Z0-9/_-]*$",
+              "examples": ["/api/v1", "/admin", "/public"]
+            },
+            "resource-name": {
+              "type": "string",
+              "description": "Resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["user", "order", "product"]
+            },
+            "plural-resource-name": {
+              "type": "string",
+              "description": "Plural resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["users", "orders", "products"]
+            },            
+            "routes": {
+              "type": "array",
+              "description": "Route overrides for specific methods",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Method/function name to override",
+                    "minLength": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method override",
+                    "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path override (relative to path-prefix)",
+                    "pattern": "^/[a-zA-Z0-9/_{}:-]*$"
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -286,6 +367,62 @@
           "type": "object",
           "description": "Service-specific configuration. Values matching service names must be in depends-on.",
           "additionalProperties": true
+        },
+        "auto-router": {
+          "type": "object",
+          "description": "Auto-router configuration for generating HTTP routes from service",
+          "properties": {
+            "convention": {
+              "type": "string",
+              "description": "Router convention (e.g., rest, rpc, graphql)",
+              "default": "rest",
+              "examples": ["rest", "rpc", "graphql"]
+            },
+            "path-prefix": {
+              "type": "string",
+              "description": "Path prefix for this service's routes",
+              "pattern": "^/[a-zA-Z0-9/_-]*$",
+              "examples": ["/api/v1", "/admin", "/public"]
+            },
+            "resource-name": {
+              "type": "string",
+              "description": "Resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["user", "order", "product"]
+            },
+            "plural-resource-name": {
+              "type": "string",
+              "description": "Plural resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["users", "orders", "products"]
+            },
+            "routes": {
+              "type": "array",
+              "description": "Route overrides for specific methods",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Method/function name to override",
+                    "minLength": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method override",
+                    "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path override (relative to path-prefix)",
+                    "pattern": "^/[a-zA-Z0-9/_{}:-]*$"
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

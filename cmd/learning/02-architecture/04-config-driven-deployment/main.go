@@ -58,24 +58,22 @@ func main() {
 	fmt.Println()
 
 	// Step 3: Register config with framework
-	lokstra_registry.RegisterConfig(cfg)
-
-	// Step 4: Set current server
-	serverName := lokstra_registry.GetConfig("server-name", "ecommerce-server")
-	lokstra_registry.SetCurrentServerName(serverName)
+	lokstra_registry.RegisterConfig(cfg, "")
 
 	// Print application info
 	fmt.Println("📋 Application Info:")
 	fmt.Printf("   Name: E-Commerce API\n")
 	fmt.Printf("   Version: %s\n", lokstra_registry.GetConfig("app-version", "unknown"))
 	fmt.Printf("   Environment: %s\n", lokstra_registry.GetConfig("app-env", "unknown"))
-	fmt.Printf("   Server: %s\n", serverName)
+	fmt.Printf("   Server: %s\n", lokstra_registry.GetCurrentServerName())
 	fmt.Println()
 
-	// Step 5: Start server (framework does the rest)
+	// Step 4: Start server (framework does the rest)
 	fmt.Println("🚀 Starting server...")
 	lokstra_registry.PrintServerStartInfo()
-	lokstra_registry.StartServer()
+	if err := lokstra_registry.StartServer(); err != nil {
+		fmt.Printf("❌ Server error: %v\n", err)
+	}
 }
 
 // =============================================================================
@@ -161,7 +159,7 @@ type UserRepository struct {
 }
 
 func (r *UserRepository) getDB() *DBService {
-	r.dbCache = lokstra_registry.GetService(r.dbServiceName, r.dbCache)
+	r.dbCache = lokstra_registry.GetServiceCached(r.dbServiceName, r.dbCache)
 	return r.dbCache
 }
 
@@ -192,12 +190,12 @@ type ProductRepository struct {
 }
 
 func (r *ProductRepository) getDB() *DBService {
-	r.dbCache = lokstra_registry.GetService(r.dbServiceName, r.dbCache)
+	r.dbCache = lokstra_registry.GetServiceCached(r.dbServiceName, r.dbCache)
 	return r.dbCache
 }
 
 func (r *ProductRepository) getCache() *CacheService {
-	r.cacheCache = lokstra_registry.GetService(r.cacheServiceName, r.cacheCache)
+	r.cacheCache = lokstra_registry.GetServiceCached(r.cacheServiceName, r.cacheCache)
 	return r.cacheCache
 }
 
@@ -245,7 +243,7 @@ type OrderRepository struct {
 }
 
 func (r *OrderRepository) getDB() *DBService {
-	r.dbCache = lokstra_registry.GetService(r.dbServiceName, r.dbCache)
+	r.dbCache = lokstra_registry.GetServiceCached(r.dbServiceName, r.dbCache)
 	return r.dbCache
 }
 
@@ -280,7 +278,7 @@ type UserService struct {
 }
 
 func (s *UserService) getRepo() *UserRepository {
-	s.repoCache = lokstra_registry.GetService(s.repoServiceName, s.repoCache)
+	s.repoCache = lokstra_registry.GetServiceCached(s.repoServiceName, s.repoCache)
 	return s.repoCache
 }
 
@@ -312,7 +310,7 @@ type ProductService struct {
 }
 
 func (s *ProductService) getRepo() *ProductRepository {
-	s.repoCache = lokstra_registry.GetService(s.repoServiceName, s.repoCache)
+	s.repoCache = lokstra_registry.GetServiceCached(s.repoServiceName, s.repoCache)
 	return s.repoCache
 }
 
@@ -354,22 +352,22 @@ type OrderService struct {
 }
 
 func (s *OrderService) getRepo() *OrderRepository {
-	s.repoCache = lokstra_registry.GetService(s.repoServiceName, s.repoCache)
+	s.repoCache = lokstra_registry.GetServiceCached(s.repoServiceName, s.repoCache)
 	return s.repoCache
 }
 
 func (s *OrderService) getProductService() *ProductService {
-	s.productServiceCache = lokstra_registry.GetService(s.productServiceName, s.productServiceCache)
+	s.productServiceCache = lokstra_registry.GetServiceCached(s.productServiceName, s.productServiceCache)
 	return s.productServiceCache
 }
 
 func (s *OrderService) getUserService() *UserService {
-	s.userServiceCache = lokstra_registry.GetService(s.userServiceName, s.userServiceCache)
+	s.userServiceCache = lokstra_registry.GetServiceCached(s.userServiceName, s.userServiceCache)
 	return s.userServiceCache
 }
 
 func (s *OrderService) getEmailService() *EmailService {
-	s.emailServiceCache = lokstra_registry.GetService(s.emailServiceName, s.emailServiceCache)
+	s.emailServiceCache = lokstra_registry.GetServiceCached(s.emailServiceName, s.emailServiceCache)
 	return s.emailServiceCache
 }
 
@@ -432,17 +430,17 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetService("user-service", sc.userCache)
+	sc.userCache = lokstra_registry.GetServiceCached("user-service", sc.userCache)
 	return sc.userCache
 }
 
 func (sc *ServiceContainer) GetProduct() *ProductService {
-	sc.productCache = lokstra_registry.GetService("product-service", sc.productCache)
+	sc.productCache = lokstra_registry.GetServiceCached("product-service", sc.productCache)
 	return sc.productCache
 }
 
 func (sc *ServiceContainer) GetOrder() *OrderService {
-	sc.orderCache = lokstra_registry.GetService("order-service", sc.orderCache)
+	sc.orderCache = lokstra_registry.GetServiceCached("order-service", sc.orderCache)
 	return sc.orderCache
 }
 

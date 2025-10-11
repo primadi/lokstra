@@ -73,7 +73,7 @@ func (s *FastHttp) ListenAndServe() error {
 		var err error
 		listener, err = net.Listen("tcp", s.addr)
 		if err != nil {
-			return fmt.Errorf("failed to listen on TCP address %s: %w", s.addr, err)
+			return wrapListenError(s.addr, err)
 		}
 		// fmt.Printf("[FastHttp] Starting server on TCP %s\n", addr)
 	}

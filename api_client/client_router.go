@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"time"
 
 	"github.com/primadi/lokstra/core/router"
@@ -111,8 +112,11 @@ func (c *ClientRouter) makeRemoteRequest(method, path string, body any,
 	}
 
 	// Create HTTP request
-	url := c.FullURL + path
-	req, err := http.NewRequest(method, url, bodyReader)
+	urlPath, err := url.JoinPath(c.FullURL, path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to join URL path: %w", err)
+	}
+	req, err := http.NewRequest(method, urlPath, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

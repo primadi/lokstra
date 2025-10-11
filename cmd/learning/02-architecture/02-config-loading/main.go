@@ -98,17 +98,17 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
-	sc.emailCache = lokstra_registry.GetService("email-service", sc.emailCache)
+	sc.emailCache = lokstra_registry.GetServiceCached("email-service", sc.emailCache)
 	return sc.emailCache
 }
 
 func (sc *ServiceContainer) GetCounter() *CounterService {
-	sc.counterCache = lokstra_registry.GetService("counter-service", sc.counterCache)
+	sc.counterCache = lokstra_registry.GetServiceCached("counter-service", sc.counterCache)
 	return sc.counterCache
 }
 
 func (sc *ServiceContainer) GetLogger() *LoggerService {
-	sc.loggerCache = lokstra_registry.GetService("logger-service", sc.loggerCache)
+	sc.loggerCache = lokstra_registry.GetServiceCached("logger-service", sc.loggerCache)
 	return sc.loggerCache
 }
 
@@ -269,18 +269,17 @@ func main() {
 	fmt.Println()
 
 	// Step 3: Register config and set server name
-	lokstra_registry.RegisterConfig(cfg)
-
-	serverName := lokstra_registry.GetConfig("server-name", "config-demo-server")
-	lokstra_registry.SetCurrentServerName(serverName)
+	lokstra_registry.RegisterConfig(cfg, "")
 
 	fmt.Println("🔍 Configuration loaded:")
-	fmt.Printf("   Server: %s\n", serverName)
+	fmt.Printf("   Server: %s\n", lokstra_registry.GetCurrentServerName())
 	fmt.Printf("   Environment: %s\n", lokstra_registry.GetConfig("app-env", "unknown"))
 	fmt.Println()
 
 	// Step 4: Start server (config-driven)
 	fmt.Println("🚀 Starting config-driven server...")
 	lokstra_registry.PrintServerStartInfo()
-	lokstra_registry.StartServer()
+	if err := lokstra_registry.StartServer(); err != nil {
+		fmt.Printf("❌ Server error: %v\n", err)
+	}
 }

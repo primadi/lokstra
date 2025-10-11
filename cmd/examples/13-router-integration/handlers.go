@@ -70,12 +70,12 @@ var productClient *api_client.ClientRouter
 func getProduct(c *request.Context, productID string) (*Product, error) {
 	// Automatically resolves product-api location based on deployment configuration
 	// No need for manual RegisterRouterURL - auto-discovery handles this
-	productClient = lokstra_registry.GetClientRouter("product-api", productClient)
+	productClient = lokstra_registry.GetClientRouterCached("product-api", productClient)
 	if productClient == nil {
 		return nil, c.Api.InternalError("Product service unavailable")
 	}
 
-	return lokstra.FetchAndCast[Product](c, productClient, "/products/"+productID, nil)
+	return lokstra.FetchAndCast[*Product](productClient, "/products/"+productID, nil)
 }
 
 func createOrderHandler(c *request.Context, param *createOrderParam) error {

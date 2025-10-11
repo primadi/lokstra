@@ -16,8 +16,7 @@ type ValidatorFunc func(fieldName string, fieldValue reflect.Value, ruleValue st
 
 var (
 	// validatorRegistry stores registered validator functions
-	validatorRegistry     = make(map[string]ValidatorFunc)
-	validatorRegistryLock sync.RWMutex
+	validatorRegistry sync.Map // map[string]ValidatorFunc
 
 	validatorMetaCache sync.Map // map[reflect.Type]*validatorMeta
 )
@@ -26,17 +25,16 @@ var (
 // name: validator name (e.g., "uuid", "url")
 // fn: validator function
 func RegisterValidator(name string, fn ValidatorFunc) {
-	validatorRegistryLock.Lock()
-	defer validatorRegistryLock.Unlock()
-	validatorRegistry[name] = fn
+	validatorRegistry.Store(name, fn)
 }
 
 // getValidator retrieves a validator function by name
 func getValidator(name string) (ValidatorFunc, bool) {
-	validatorRegistryLock.RLock()
-	defer validatorRegistryLock.RUnlock()
-	fn, ok := validatorRegistry[name]
-	return fn, ok
+	fn, ok := validatorRegistry.Load(name)
+	if !ok {
+		return nil, false
+	}
+	return fn.(ValidatorFunc), true
 }
 
 func init() {
@@ -173,7 +171,7 @@ func ValidateStruct(structData any) ([]api_formatter.FieldError, error) {
 	}
 
 	val := reflect.ValueOf(structData)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return nil, fmt.Errorf("structData pointer cannot be nil")
 		}
@@ -211,7 +209,7 @@ func ValidateStruct(structData any) ([]api_formatter.FieldError, error) {
 
 func validateRule(fieldName string, fieldValue reflect.Value, rule validationRule) error {
 	// Handle pointer fields
-	if fieldValue.Kind() == reflect.Ptr {
+	if fieldValue.Kind() == reflect.Pointer {
 		if fieldValue.IsNil() {
 			// Check if required
 			if rule.Name == "required" {

@@ -194,11 +194,11 @@ func ServiceFactory(params map[string]any) any {
 
 	// Get UserRepository service from registry
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService(cfg.UserRepoServiceName, userRepo)
+	userRepo = lokstra_registry.GetServiceCached(cfg.UserRepoServiceName, userRepo)
 
 	// Get KvStore service from registry
 	var kvStore serviceapi.KvStore
-	kvStore = lokstra_registry.GetService(cfg.KvStoreServiceName, kvStore)
+	kvStore = lokstra_registry.GetServiceCached(cfg.KvStoreServiceName, kvStore)
 
 	return Service(cfg, userRepo, kvStore)
 }

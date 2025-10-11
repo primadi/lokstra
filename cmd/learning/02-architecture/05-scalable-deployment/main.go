@@ -33,11 +33,7 @@ func main() {
 		return
 	}
 
-	lokstra_registry.RegisterConfig(cfg)
-
-	// Get server name from config
-	serverName := lokstra_registry.GetConfig("server-name", "default-server")
-	lokstra_registry.SetCurrentServerName(serverName)
+	lokstra_registry.RegisterConfig(cfg, "")
 
 	// Print deployment info
 	printDeploymentInfo(deploymentMode)
@@ -46,7 +42,9 @@ func main() {
 	fmt.Println("\n🌐 Starting Server...")
 	fmt.Println("=====================================")
 	lokstra_registry.PrintServerStartInfo()
-	lokstra_registry.StartServer()
+	if err := lokstra_registry.StartServer(); err != nil {
+		fmt.Printf("❌ Server error: %v\n", err)
+	}
 }
 
 func getConfigFile(mode string) string {

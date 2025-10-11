@@ -1,0 +1,34 @@
+### Example 20: Service Router with Struct-Based Parameters
+
+### 1. GET /users/{dep}/{id} - Get specific user in department
+GET http://localhost:3000/users/engineering/1
+
+### 2. GET /users/{dep} - List users in department
+GET http://localhost:3000/users/engineering
+
+### 3. GET /users/{dep}?q=alice - List users with search query
+GET http://localhost:3000/users/engineering?q=alice&page=1
+
+### 4. POST /users/{dep} - Create user in department
+POST http://localhost:3000/users/engineering
+Content-Type: application/json
+
+{
+  "name": "David",
+  "email": "david@example.com"
+}
+
+### 5. PUT /users/{dep}/{id} - Update user
+PUT http://localhost:3000/users/engineering/1
+Content-Type: application/json
+
+{
+  "name": "Alice Updated",
+  "email": "alice.updated@example.com"
+}
+
+### 6. DELETE /users/{dep}/{id} - Delete user
+DELETE http://localhost:3000/users/engineering/2
+
+### Test with sales department
+GET http://localhost:3000/users/sales/3

@@ -13,8 +13,7 @@ type ServerInterface interface {
 	Shutdown(timeout interface{}) error
 }
 
-var serverRegistry = make(map[string]*server.Server)
-var serverMutex sync.RWMutex
+var serverRegistry sync.Map
 
 // Register a server with a name.
 // If a server with the same name already exists,
@@ -25,37 +24,29 @@ func RegisterServer(name string, srv *server.Server, opts ...RegisterOption) {
 		opt.apply(&options)
 	}
 
-	serverMutex.Lock()
-	defer serverMutex.Unlock()
-
 	if !options.allowOverride {
-		if _, exists := serverRegistry[name]; exists {
+		if _, exists := serverRegistry.Load(name); exists {
 			panic("server " + name + " already registered")
 		}
 	}
-	serverRegistry[name] = srv
+	serverRegistry.Store(name, srv)
 }
 
 // Retrieve a server by name.
 // If the server does not exist, it returns nil.
 func GetServer(name string) *server.Server {
-	serverMutex.RLock()
-	defer serverMutex.RUnlock()
-
-	if srv, ok := serverRegistry[name]; ok {
-		return srv
+	if srvAny, ok := serverRegistry.Load(name); ok {
+		return srvAny.(*server.Server)
 	}
 	return nil
 }
 
 // List all registered server names
 func ListServerNames() []string {
-	serverMutex.RLock()
-	defer serverMutex.RUnlock()
-
-	names := make([]string, 0, len(serverRegistry))
-	for name := range serverRegistry {
-		names = append(names, name)
-	}
+	names := make([]string, 0)
+	serverRegistry.Range(func(key, value any) bool {
+		names = append(names, key.(string))
+		return true
+	})
 	return names
 }

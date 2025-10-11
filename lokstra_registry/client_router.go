@@ -8,28 +8,21 @@ import (
 )
 
 // clientRouterRegistry now uses composite key: routerName@serverName
-var clientRouterRegistry = make(map[string]*api_client.ClientRouter)
-var clientRouterMutex sync.RWMutex
+var clientRouterRegistry sync.Map
 
 // runningClientRouterRegistry maps routerName to selected *ClientRouter for runtime use
 // Built by buildRunningClientRouterRegistry() before Start/Run
-var runningClientRouterRegistry = make(map[string]*api_client.ClientRouter)
-var runningClientRouterMutex sync.RWMutex
+var runningClientRouterRegistry sync.Map
 
 var currentServerName = ""
-var currentServerMutex sync.RWMutex
 
 // sets the name of the currently running server
 func SetCurrentServerName(serverName string) {
-	currentServerMutex.Lock()
-	defer currentServerMutex.Unlock()
 	currentServerName = serverName
 }
 
 // gets the name of the currently running server
 func GetCurrentServerName() string {
-	currentServerMutex.RLock()
-	defer currentServerMutex.RUnlock()
 	return currentServerName
 }
 
@@ -51,55 +44,48 @@ func buildRunningClientRouterRegistry() {
 	currentDeploymentID := GetCurrentDeploymentId()
 
 	// Clear existing running registry
-	runningClientRouterMutex.Lock()
-	runningClientRouterRegistry = make(map[string]*api_client.ClientRouter)
-	runningClientRouterMutex.Unlock()
+	runningClientRouterRegistry = sync.Map{}
 
-	currentServerMutex.RLock()
 	currentSrv := currentServerName
-	currentServerMutex.RUnlock()
 
 	// First pass: Add routers from currentServerName (priority)
-	clientRouterMutex.RLock()
-	for _, cr := range clientRouterRegistry {
+	clientRouterRegistry.Range(func(key, value any) bool {
+		cr := value.(*api_client.ClientRouter)
 		if cr.ServerName == currentSrv {
+			// If server is registered, check deployment-id
+			// If not registered yet (early call), add anyway since RegisterClientRouter
+			// only called for current deployment
 			srv := GetServer(cr.ServerName)
-			if srv != nil && srv.DeploymentID == currentDeploymentID {
-				runningClientRouterMutex.Lock()
-				runningClientRouterRegistry[cr.RouterName] = cr
-				runningClientRouterMutex.Unlock()
+			if srv == nil || srv.DeploymentID == currentDeploymentID || srv.DeploymentID == "" {
+				runningClientRouterRegistry.Store(cr.RouterName, cr)
 			}
 		}
-	}
+		return true
+	})
 
 	// Second pass: Add routers from other servers with same deployment-id
-	for _, cr := range clientRouterRegistry {
-		// Check if already added in first pass
-		runningClientRouterMutex.RLock()
-		_, exists := runningClientRouterRegistry[cr.RouterName]
-		runningClientRouterMutex.RUnlock()
+	clientRouterRegistry.Range(func(key, value any) bool {
+		cr := value.(*api_client.ClientRouter)
 
-		if exists {
-			continue
+		// Check if already added in first pass
+		if _, exists := runningClientRouterRegistry.Load(cr.RouterName); exists {
+			return true
 		}
 
 		// Check if server has same deployment-id
+		// If server not registered yet, add anyway (will be from same deployment)
 		srv := GetServer(cr.ServerName)
-		if srv != nil && srv.DeploymentID == currentDeploymentID {
-			runningClientRouterMutex.Lock()
-			runningClientRouterRegistry[cr.RouterName] = cr
-			runningClientRouterMutex.Unlock()
+		if srv == nil || srv.DeploymentID == currentDeploymentID || srv.DeploymentID == "" {
+			runningClientRouterRegistry.Store(cr.RouterName, cr)
 		}
-	}
-	clientRouterMutex.RUnlock()
+		return true
+	})
 }
 
 // registers where a router can be accessed
 // Uses composite key: routerName@serverName to allow multiple servers to have same router name
 func RegisterClientRouter(routerName, serverName, baseURL, addr string, timeout time.Duration) {
-	currentServerMutex.RLock()
 	isLocal := (serverName == currentServerName)
-	currentServerMutex.RUnlock()
 
 	cr := &api_client.ClientRouter{
 		RouterName: routerName,
@@ -111,7 +97,7 @@ func RegisterClientRouter(routerName, serverName, baseURL, addr string, timeout 
 
 	// If it's local, try to get the actual router instance
 	if isLocal {
-		if localRouter, exists := routerRegistry[routerName]; exists {
+		if localRouter := GetRouter(routerName); localRouter != nil {
 			cr.Router = localRouter
 		}
 	}
@@ -119,51 +105,55 @@ func RegisterClientRouter(routerName, serverName, baseURL, addr string, timeout 
 	// Use composite key: routerName@serverName
 	key := routerName + "@" + serverName
 
-	clientRouterMutex.Lock()
-	defer clientRouterMutex.Unlock()
-	clientRouterRegistry[key] = cr
+	clientRouterRegistry.Store(key, cr)
 }
 
 // gets a client to communicate with a router (local or remote)
 // Uses runningClientRouterRegistry which is pre-built with deployment-id filtering
 // and priority selection (currentServer first, then other servers with same deployment-id)
-// Results are cached in current parameter
 // Note: buildRunningClientRouterRegistry() should be called before Start/Run
-func GetClientRouter(routerName string, current *api_client.ClientRouter) *api_client.ClientRouter {
+func GetClientRouter(routerName string) *api_client.ClientRouter {
+	// Direct lookup from running registry (O(1))
+	crAny, exists := runningClientRouterRegistry.Load(routerName)
+
+	// DEBUG: List available routers if not found
+	if !exists {
+		// runningClientRouterMutex.RLock()
+		// availableRouters := make([]string, 0, len(runningClientRouterRegistry))
+		// for name := range runningClientRouterRegistry {
+		// 	availableRouters = append(availableRouters, name)
+		// }
+		// runningClientRouterMutex.RUnlock()
+		// fmt.Printf("[DEBUG GetClientRouter] Router '%s' not found. Available: %v\n", routerName, availableRouters)
+		return nil
+	}
+
+	return crAny.(*api_client.ClientRouter)
+}
+
+// GetClientRouterCached gets a client with optional caching (legacy compatibility)
+// Deprecated: Use GetClientRouter instead, caching is not needed for one-time service registration
+func GetClientRouterCached(routerName string, current *api_client.ClientRouter) *api_client.ClientRouter {
 	// If current is provided and matches, reuse it (cache hit)
 	if current != nil && current.RouterName == routerName {
 		return current
 	}
 
-	// Direct lookup from running registry (O(1))
-	runningClientRouterMutex.RLock()
-	cr, exists := runningClientRouterRegistry[routerName]
-	runningClientRouterMutex.RUnlock()
-
-	if !exists {
-		return nil
-	}
-
-	return cr
+	return GetClientRouter(routerName)
 }
 
 // GetClientRouterOnServer gets a ClientRouter on a specific server
 // This allows explicit server targeting
 // Only returns router if it's in the runningClientRouterRegistry (same deployment-id)
-func GetClientRouterOnServer(routerName, serverName string, current *api_client.ClientRouter) *api_client.ClientRouter {
-	// If current is provided and matches both router and server, reuse it (cache hit)
-	if current != nil && current.RouterName == routerName && current.ServerName == serverName {
-		return current
-	}
-
+func GetClientRouterOnServer(routerName, serverName string) *api_client.ClientRouter {
 	// Check if router exists in running registry first (deployment-id validation)
-	runningClientRouterMutex.RLock()
-	runningCr, exists := runningClientRouterRegistry[routerName]
-	runningClientRouterMutex.RUnlock()
+	runningCrAny, exists := runningClientRouterRegistry.Load(routerName)
 
 	if !exists {
 		return nil
 	}
+
+	runningCr := runningCrAny.(*api_client.ClientRouter)
 
 	// If the running router is already on the target server, return it
 	if runningCr.ServerName == serverName {
@@ -173,13 +163,13 @@ func GetClientRouterOnServer(routerName, serverName string, current *api_client.
 	// Look for specific server in full registry
 	key := routerName + "@" + serverName
 
-	clientRouterMutex.RLock()
-	cr, exists := clientRouterRegistry[key]
-	clientRouterMutex.RUnlock()
+	crAny, exists := clientRouterRegistry.Load(key)
 
 	if !exists {
 		return nil
 	}
+
+	cr := crAny.(*api_client.ClientRouter)
 
 	// Verify this server has same deployment-id
 	currentDeploymentID := GetCurrentDeploymentId()

@@ -132,7 +132,7 @@ var unmarshalJSONType = reflect.TypeOf((*interface {
 })(nil)).Elem()
 
 func implementsUnmarshalJSON(t reflect.Type) bool {
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 

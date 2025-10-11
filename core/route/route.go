@@ -12,6 +12,7 @@ type Route struct {
 	OverrideParentMw bool
 
 	// populated during Build()
+	RouterName     string // Name of the router this route belongs to
 	FullPath       string
 	FullName       string
 	FullMiddleware []request.HandlerFunc

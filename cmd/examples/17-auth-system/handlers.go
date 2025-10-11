@@ -38,7 +38,7 @@ func registerHandler(c *request.Context) error {
 
 	// Get user repository service
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService("user_repo", userRepo)
+	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	// Check if user already exists
 	if _, err := userRepo.GetUserByName(c.R.Context(), input.TenantID, input.Username); err == nil {
@@ -99,7 +99,7 @@ func loginHandler(c *request.Context) error {
 
 	// Get auth service
 	var authSvc auth.Service
-	authSvc = lokstra_registry.GetService("auth_service", authSvc)
+	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
 
 	// Login
 	resp, err := authSvc.Login(c.R.Context(), auth.LoginRequest{
@@ -135,7 +135,7 @@ func refreshTokenHandler(c *request.Context) error {
 
 	// Get auth service
 	var authSvc auth.Service
-	authSvc = lokstra_registry.GetService("auth_service", authSvc)
+	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
 
 	// Refresh token
 	resp, err := authSvc.RefreshToken(c.R.Context(), input.RefreshToken)
@@ -163,7 +163,7 @@ func logoutHandler(c *request.Context) error {
 
 	// Get auth service
 	var authSvc auth.Service
-	authSvc = lokstra_registry.GetService("auth_service", authSvc)
+	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
 
 	// Logout
 	if err := authSvc.Logout(c.R.Context(), input.RefreshToken); err != nil {
@@ -204,7 +204,7 @@ func generateOTPHandler(c *request.Context) error {
 
 	// Get user repository to verify user exists
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService("user_repo", userRepo)
+	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	user, err := userRepo.GetUserByName(c.R.Context(), input.TenantID, input.Username)
 	if err != nil {
@@ -239,7 +239,7 @@ func verifyOTPHandler(c *request.Context) error {
 
 	// Get auth service
 	var authSvc auth.Service
-	authSvc = lokstra_registry.GetService("auth_service", authSvc)
+	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
 
 	// Login with OTP
 	resp, err := authSvc.Login(c.R.Context(), auth.LoginRequest{
@@ -274,7 +274,7 @@ func getUserProfileHandler(c *request.Context) error {
 	}
 
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService("user_repo", userRepo)
+	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	user, err := userRepo.GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
 	if err != nil {
@@ -310,7 +310,7 @@ func updateUserProfileHandler(c *request.Context) error {
 	}
 
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService("user_repo", userRepo)
+	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	user, err := userRepo.GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
 	if err != nil {
@@ -352,7 +352,7 @@ func changePasswordHandler(c *request.Context) error {
 	}
 
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService("user_repo", userRepo)
+	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	user, err := userRepo.GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
 	if err != nil {
@@ -450,7 +450,7 @@ func listAllUsersHandler(c *request.Context) error {
 	}
 
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService("user_repo", userRepo)
+	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	users, err := userRepo.ListUsers(c.R.Context(), userInfo.TenantID)
 	if err != nil {
@@ -517,7 +517,7 @@ func getSystemStatsHandler(c *request.Context) error {
 	}
 
 	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetService("user_repo", userRepo)
+	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	users, _ := userRepo.ListUsers(c.R.Context(), userInfo.TenantID)
 

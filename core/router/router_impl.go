@@ -82,8 +82,9 @@ func (r *routerImpl) Build() {
 	}
 
 	r.routerEngine = engine.CreateEngine(r.engineType)
-	r.walkBuildRecursive("", "", nil,
-		func(rt *route.Route, fullName, fullPath string, fullMiddlewares []request.HandlerFunc) {
+	r.walkBuildRecursive("", "", nil, r.name,
+		func(rt *route.Route, fullName, fullPath string, fullMiddlewares []request.HandlerFunc, routerName string) {
+			rt.RouterName = routerName // Set the router name for this route
 			rt.FullName = fullName
 			rt.FullPath = fullPath
 			if rt.Name == "" {
@@ -289,8 +290,8 @@ func (r *routerImpl) WithOverrideParentMiddleware(override bool) Router {
 	return r
 }
 
-func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []request.HandlerFunc,
-	fn func(*route.Route, string, string, []request.HandlerFunc)) {
+func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []request.HandlerFunc, routerName string,
+	fn func(*route.Route, string, string, []request.HandlerFunc, string)) {
 	baseName := fullName
 	if r.isRoot {
 		baseName += r.name + "."
@@ -302,14 +303,19 @@ func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []re
 	} else {
 		baseMw = append(fullMw, r.middlewares...)
 	}
+	// Use current router name for routes directly in this router
+	currentRouterName := r.name
+	if currentRouterName == "" {
+		currentRouterName = routerName
+	}
 	for _, rt := range r.routes {
-		fn(rt, baseName+rt.Name, basePrefix+rt.Path, baseMw)
+		fn(rt, baseName+rt.Name, basePrefix+rt.Path, baseMw, currentRouterName)
 	}
 	for _, child := range r.children {
-		child.walkBuildRecursive(baseName, basePrefix, baseMw, fn)
+		child.walkBuildRecursive(baseName, basePrefix, baseMw, currentRouterName, fn)
 	}
 	if r.nextChain != nil {
-		r.nextChain.walkBuildRecursive(fullName, fullPrefix, fullMw, fn)
+		r.nextChain.walkBuildRecursive(fullName, fullPrefix, fullMw, routerName, fn)
 	}
 	r.isBuilt = true
 }
@@ -340,7 +346,11 @@ func (r *routerImpl) PrintRoutes() {
 		default:
 			mwDescr = fmt.Sprintf(" [with %d mw(s)]", mwLen)
 		}
-		fmt.Printf("[%s] %s %s -> %s%s\n", r.name, rt.Method, rt.FullPath, rt.FullName, mwDescr)
+		routerNameDisplay := rt.RouterName
+		if routerNameDisplay == "" {
+			routerNameDisplay = r.name
+		}
+		fmt.Printf("[%s] %s %s -> %s%s\n", routerNameDisplay, rt.Method, rt.FullPath, rt.FullName, mwDescr)
 	})
 }
 

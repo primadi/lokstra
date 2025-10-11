@@ -143,13 +143,13 @@ type UserService struct {
 
 // Lazy getter for DB - only calls GetService when needed
 func (s *UserService) getDB() *DBService {
-	s.dbCache = lokstra_registry.GetService(s.dbServiceName, s.dbCache)
+	s.dbCache = lokstra_registry.GetServiceCached(s.dbServiceName, s.dbCache)
 	return s.dbCache
 }
 
 // Lazy getter for Cache - only calls GetService when needed
 func (s *UserService) getCache() *CacheService {
-	s.cacheCache = lokstra_registry.GetService(s.cacheServiceName, s.cacheCache)
+	s.cacheCache = lokstra_registry.GetServiceCached(s.cacheServiceName, s.cacheCache)
 	return s.cacheCache
 }
 
@@ -216,12 +216,12 @@ type OrderService struct {
 
 // Lazy getters
 func (s *OrderService) getDB() *DBService {
-	s.dbCache = lokstra_registry.GetService(s.dbServiceName, s.dbCache)
+	s.dbCache = lokstra_registry.GetServiceCached(s.dbServiceName, s.dbCache)
 	return s.dbCache
 }
 
 func (s *OrderService) getUser() *UserService {
-	s.userCache = lokstra_registry.GetService(s.userServiceName, s.userCache)
+	s.userCache = lokstra_registry.GetServiceCached(s.userServiceName, s.userCache)
 	return s.userCache
 }
 
@@ -281,22 +281,22 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetDB() *DBService {
-	sc.dbCache = lokstra_registry.GetService("db-service", sc.dbCache)
+	sc.dbCache = lokstra_registry.GetServiceCached("db-service", sc.dbCache)
 	return sc.dbCache
 }
 
 func (sc *ServiceContainer) GetCache() *CacheService {
-	sc.cacheCache = lokstra_registry.GetService("cache-service", sc.cacheCache)
+	sc.cacheCache = lokstra_registry.GetServiceCached("cache-service", sc.cacheCache)
 	return sc.cacheCache
 }
 
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetService("user-service", sc.userCache)
+	sc.userCache = lokstra_registry.GetServiceCached("user-service", sc.userCache)
 	return sc.userCache
 }
 
 func (sc *ServiceContainer) GetOrder() *OrderService {
-	sc.orderCache = lokstra_registry.GetService("order-service", sc.orderCache)
+	sc.orderCache = lokstra_registry.GetServiceCached("order-service", sc.orderCache)
 	return sc.orderCache
 }
 
@@ -431,10 +431,7 @@ func main() {
 	fmt.Println("   ✓ Loaded config.yaml")
 	fmt.Println()
 
-	lokstra_registry.RegisterConfig(cfg)
-
-	serverName := lokstra_registry.GetConfig("server-name", "dependency-demo-server")
-	lokstra_registry.SetCurrentServerName(serverName)
+	lokstra_registry.RegisterConfig(cfg, "")
 
 	fmt.Println("🔍 Service dependency tree:")
 	fmt.Println("   db-service (no dependencies)")
@@ -445,5 +442,7 @@ func main() {
 
 	fmt.Println("🚀 Starting server...")
 	lokstra_registry.PrintServerStartInfo()
-	lokstra_registry.StartServer()
+	if err := lokstra_registry.StartServer(); err != nil {
+		fmt.Printf("❌ Server error: %v\n", err)
+	}
 }

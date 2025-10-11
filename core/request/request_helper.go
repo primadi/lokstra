@@ -24,7 +24,30 @@ func unmarshalBody(data []byte, v any) error {
 	if err == nil {
 		return jsonDecoder.Unmarshal(data, v)
 	}
-	return err
+
+	// Create a more user-friendly error message for JSON parsing errors
+	errMsg := err.Error()
+
+	// Try to detect common JSON parsing errors and provide better messages
+	userFriendlyMsg := "Invalid JSON format"
+	if strings.Contains(errMsg, "expect { or n, but found") {
+		userFriendlyMsg = "Invalid data type in request body. Expected an object but received a different type."
+	} else if strings.Contains(errMsg, "expects \" or n, but found") {
+		userFriendlyMsg = "Invalid data type in request body. Expected a string but received a different type."
+	} else if strings.Contains(errMsg, "readObjectStart") {
+		userFriendlyMsg = "Invalid array element format. Expected object notation but received a different type."
+	}
+
+	// Wrap JSON parsing error as validation error for better error handling
+	return &ValidationError{
+		FieldErrors: []api_formatter.FieldError{
+			{
+				Field:   "body",
+				Code:    "INVALID_JSON",
+				Message: userFriendlyMsg,
+			},
+		},
+	}
 }
 
 // RequestHelper contains helper methods for request handling

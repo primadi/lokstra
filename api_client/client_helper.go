@@ -3,9 +3,9 @@ package api_client
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/primadi/lokstra/common/cast"
-	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 )
 
@@ -55,7 +55,11 @@ func WithBody(body any) FetchOption {
 }
 
 // FetchAndCast is a flexible fetch helper with options (headers, formatter, method, body, custom func, etc)
-func FetchAndCast[T any](c *request.Context, client *ClientRouter, path string, opts ...FetchOption) (*T, error) {
+// Returns ApiError on HTTP errors to preserve status code information for proper error handling.
+//
+// Note: Reflection overhead for type checking is minimal (~8ns per call) and caching adds more overhead
+// than it saves. The code is kept simple and readable without premature optimization.
+func FetchAndCast[T any](client *ClientRouter, path string, opts ...FetchOption) (T, error) {
 	cfg := &fetchConfig{}
 	for _, opt := range opts {
 		opt(cfg)
@@ -66,9 +70,11 @@ func FetchAndCast[T any](c *request.Context, client *ClientRouter, path string, 
 		method = "GET"
 	}
 
+	var zero T
+
 	resp, err := client.Method(method, path, cfg.Body, cfg.Headers)
 	if err != nil {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to fetch: %v", err))
+		return zero, fmt.Errorf("failed to fetch: %v", err)
 	}
 
 	formatter := cfg.Formatter
@@ -78,32 +84,42 @@ func FetchAndCast[T any](c *request.Context, client *ClientRouter, path string, 
 
 	clientResp := &api_formatter.ClientResponse{}
 	if err := formatter.ParseClientResponse(resp, clientResp); err != nil {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to parse response: %v", err))
+		return zero, fmt.Errorf("failed to parse response: %v", err)
 	}
 
 	// If CustomFunc is provided, delegate all handling to it
 	if cfg.CustomFunc != nil {
 		customResult, err := cfg.CustomFunc(resp, clientResp)
 		if err != nil {
-			return nil, err
+			return zero, err
 		}
 
 		// If custom function returns nil, continue with default flow
 		if customResult != nil {
-			// Try direct type assertion first
-			if result, ok := customResult.(*T); ok {
+			if result, ok := customResult.(T); ok {
 				return result, nil
 			}
-			// Try value type assertion
-			if result, ok := customResult.(T); ok {
-				return &result, nil
-			}
-			// Fallback: try to cast using reflection
+
+			// Fallback: cast using reflection
 			var result T
-			if err := cast.ToStruct(customResult, &result, true); err != nil {
-				return nil, c.Api.InternalError(fmt.Sprintf("Failed to cast custom result: %v", err))
+			resultType := reflect.TypeOf((*T)(nil)).Elem()
+
+			if resultType.Kind() == reflect.Pointer {
+				elemType := resultType.Elem()
+				newValue := reflect.New(elemType)
+
+				if err := cast.ToStruct(customResult, newValue.Interface(), true); err != nil {
+					return zero, fmt.Errorf("failed to cast custom result: %v", err)
+				}
+
+				result = newValue.Interface().(T)
+			} else {
+				if err := cast.ToStruct(customResult, &result, true); err != nil {
+					return zero, fmt.Errorf("failed to cast custom result: %v", err)
+				}
 			}
-			return &result, nil
+
+			return result, nil
 		}
 	}
 
@@ -125,28 +141,32 @@ func FetchAndCast[T any](c *request.Context, client *ClientRouter, path string, 
 			}
 		}
 
-		// Return error based on HTTP status code
-		switch resp.StatusCode {
-		case http.StatusBadRequest:
-			return nil, c.Api.BadRequest(code, message)
-		case http.StatusUnauthorized:
-			return nil, c.Api.Unauthorized(message)
-		case http.StatusForbidden:
-			return nil, c.Api.Forbidden(message)
-		case http.StatusNotFound:
-			return nil, c.Api.NotFound(message)
-		default:
-			if resp.StatusCode >= 500 {
-				return nil, c.Api.InternalError(message)
-			}
-			// For other status codes, use BadRequest with code
-			return nil, c.Api.BadRequest(code, message)
+		// Return ApiError based on HTTP status code to preserve error information
+		return zero, &ApiError{
+			StatusCode: resp.StatusCode,
+			Code:       code,
+			Message:    message,
 		}
 	}
 
 	var result T
-	if err := cast.ToStruct(clientResp.Data, &result, true); err != nil {
-		return nil, c.Api.InternalError(fmt.Sprintf("Failed to cast data: %v", err))
+
+	// Check if T is a pointer type using reflection
+	resultType := reflect.TypeOf((*T)(nil)).Elem()
+	if resultType.Kind() == reflect.Pointer {
+		elemType := resultType.Elem()
+		newValue := reflect.New(elemType)
+
+		if err := cast.ToStruct(clientResp.Data, newValue.Interface(), true); err != nil {
+			return zero, fmt.Errorf("failed to cast data: %v", err)
+		}
+
+		result = newValue.Interface().(T)
+	} else {
+		if err := cast.ToStruct(clientResp.Data, &result, true); err != nil {
+			return zero, fmt.Errorf("failed to cast data: %v", err)
+		}
 	}
-	return &result, nil
+
+	return result, nil
 }

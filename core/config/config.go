@@ -12,6 +12,7 @@ type Config struct {
 	Configs     []*GeneralConfig `yaml:"configs,omitempty" json:"configs,omitempty"`
 	Services    ServicesConfig   `yaml:"services,omitempty" json:"services,omitempty"`
 	Middlewares []*Middleware    `yaml:"middlewares,omitempty" json:"middlewares,omitempty"`
+	Routers     []*Router        `yaml:"routers,omitempty" json:"routers,omitempty"`
 	Servers     []*Server        `yaml:"servers,omitempty" json:"servers,omitempty"`
 }
 
@@ -70,7 +71,7 @@ func (sc *ServicesConfig) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // MarshalYAML implements custom YAML marshaling
-func (sc ServicesConfig) MarshalYAML() (interface{}, error) {
+func (sc ServicesConfig) MarshalYAML() (any, error) {
 	if sc.Layered != nil {
 		return sc.Layered, nil
 	}
@@ -104,6 +105,26 @@ func (sc *ServicesConfig) GetAllServices() []*Service {
 	return nil
 }
 
+// Flatten converts layered services to flat array.
+// This is the preferred method for processing services, as it provides
+// a consistent interface regardless of the configuration format.
+// Returns simple array if already flat, or flattens layered structure while preserving order.
+func (sc *ServicesConfig) Flatten() []*Service {
+	if sc.IsSimple() {
+		return sc.Simple
+	}
+
+	if sc.IsLayered() {
+		var flattened []*Service
+		for _, layerName := range sc.Order {
+			flattened = append(flattened, sc.Layered[layerName]...)
+		}
+		return flattened
+	}
+
+	return nil
+}
+
 // GeneralConfig represents general configuration key-value pairs
 // Used for hardcoded middleware, services, or any components that need configuration
 type GeneralConfig struct {
@@ -113,11 +134,28 @@ type GeneralConfig struct {
 
 // Service configuration
 type Service struct {
-	Name      string         `yaml:"name" json:"name"`
-	Type      string         `yaml:"type" json:"type"`
-	Enable    *bool          `yaml:"enable,omitempty" json:"enable,omitempty"` // default: true
-	DependsOn []string       `yaml:"depends-on,omitempty" json:"depends-on,omitempty"`
-	Config    map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
+	Name       string         `yaml:"name" json:"name"`
+	Type       string         `yaml:"type" json:"type"`
+	Enable     *bool          `yaml:"enable,omitempty" json:"enable,omitempty"` // default: true
+	DependsOn  []string       `yaml:"depends-on,omitempty" json:"depends-on,omitempty"`
+	Config     map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
+	AutoRouter *AutoRouter    `yaml:"auto-router,omitempty" json:"auto-router,omitempty"` // Auto-router configuration
+}
+
+// AutoRouter configuration for auto-generating routes from service
+type AutoRouter struct {
+	Convention         string           `yaml:"convention,omitempty" json:"convention,omitempty"`                     // Convention name (e.g., "rest", "rpc")
+	PathPrefix         string           `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"`                   // Path prefix for routes
+	ResourceName       string           `yaml:"resource-name,omitempty" json:"resource-name,omitempty"`               // Resource name (singular) for convention (e.g., "user", "person")
+	PluralResourceName string           `yaml:"plural-resource-name,omitempty" json:"plural-resource-name,omitempty"` // Plural resource name override (e.g., "people" for "person")
+	Routes             []*RouteOverride `yaml:"routes,omitempty" json:"routes,omitempty"`                             // Route overrides
+}
+
+// RouteOverride allows overriding specific route behavior
+type RouteOverride struct {
+	Name   string `yaml:"name" json:"name"`                         // Function/method name
+	Method string `yaml:"method,omitempty" json:"method,omitempty"` // HTTP method override
+	Path   string `yaml:"path,omitempty" json:"path,omitempty"`     // Path override
 }
 
 // Middleware configuration
@@ -128,27 +166,28 @@ type Middleware struct {
 	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
 }
 
+// Router configuration
+type Router struct {
+	Name        string   `yaml:"name" json:"name"`
+	PathPrefix  string   `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"` // Path prefix (prepended to code prefix)
+	Middlewares []string `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Middleware names to apply
+}
+
 // Server configuration
 type Server struct {
 	Name         string `yaml:"name" json:"name"`
-	BaseUrl      string `yaml:"baseUrl,omitempty" json:"baseUrl,omitempty"`             // Base URL of the server
+	BaseUrl      string `yaml:"base-url,omitempty" json:"base-url,omitempty"`           // Base URL of the server
 	DeploymentID string `yaml:"deployment-id,omitempty" json:"deployment-id,omitempty"` // Deployment ID for grouping servers
 	Apps         []*App `yaml:"apps" json:"apps"`
 }
 
-// RouterWithPrefix defines a router with its path prefix
-type RouterWithPrefix struct {
-	Name   string `yaml:"name" json:"name"`
-	Prefix string `yaml:"prefix" json:"prefix"`
-}
-
 // App configuration within a server
 type App struct {
-	Name              string              `yaml:"name" json:"name,omitempty"`
-	Addr              string              `yaml:"addr" json:"addr"`
-	ListenerType      string              `yaml:"listener-type,omitempty" json:"listener-type,omitempty"`             // default: "default"
-	Routers           []string            `yaml:"routers,omitempty" json:"routers,omitempty"`                         // router names
-	RoutersWithPrefix []*RouterWithPrefix `yaml:"routers-with-prefix,omitempty" json:"routers-with-prefix,omitempty"` // routers with custom prefix
+	Name         string   `yaml:"name" json:"name,omitempty"`
+	Addr         string   `yaml:"addr" json:"addr"`
+	ListenerType string   `yaml:"listener-type,omitempty" json:"listener-type,omitempty"` // default: "default"
+	Services     []string `yaml:"services,omitempty" json:"services,omitempty"`           // service names deployed in this app
+	Routers      []string `yaml:"routers,omitempty" json:"routers,omitempty"`             // router names
 }
 
 // creates a new empty Config
@@ -193,4 +232,53 @@ func (s *Server) GetBaseUrl() string {
 
 func (s *Server) GetDeploymentID() string {
 	return s.DeploymentID
+}
+
+// Service convention helper methods
+
+func (s *Service) GetConvention(globalDefault string) string {
+	// Priority: AutoRouter > legacy field > global default > fallback
+	if s.AutoRouter != nil && s.AutoRouter.Convention != "" {
+		return s.AutoRouter.Convention
+	}
+	if globalDefault != "" {
+		return globalDefault
+	}
+	return "rest" // Final fallback
+}
+
+func (s *Service) GetPathPrefix() string {
+	// Priority: AutoRouter > legacy field
+	if s.AutoRouter != nil && s.AutoRouter.PathPrefix != "" {
+		return s.AutoRouter.PathPrefix
+	}
+	return "" // Default is empty
+}
+
+func (s *Service) GetResourceName() string {
+	// Priority: AutoRouter > derived from type
+	if s.AutoRouter != nil && s.AutoRouter.ResourceName != "" {
+		return s.AutoRouter.ResourceName
+	}
+	// Extract resource name from service type if not explicitly set
+	// E.g., "user_service" -> "user"
+	if s.Type != "" {
+		return extractResourceNameFromType(s.Type)
+	}
+	return s.Name
+}
+
+func (s *Service) GetPluralResourceName() string {
+	// Only check AutoRouter (no legacy field for plural)
+	if s.AutoRouter != nil && s.AutoRouter.PluralResourceName != "" {
+		return s.AutoRouter.PluralResourceName
+	}
+	return "" // Empty means will be auto-pluralized from ResourceName
+}
+
+func (s *Service) GetRouteOverrides() []*RouteOverride {
+	if s.AutoRouter != nil {
+		return s.AutoRouter.Routes
+	}
+	return nil
 }

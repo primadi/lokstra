@@ -47,7 +47,7 @@ type ClientRouterContainer struct {
 }
 
 func (crc *ClientRouterContainer) GetProductAPI() *api_client.ClientRouter {
-	crc.productAPICache = lokstra_registry.GetClientRouter("product-api", crc.productAPICache)
+	crc.productAPICache = lokstra_registry.GetClientRouterCached("product-api", crc.productAPICache)
 	return crc.productAPICache
 }
 
@@ -79,16 +79,14 @@ func createOrder(c *request.Context, req *createOrderRequest) error {
 		fmt.Printf("   Fetching product %s from product-api...\n", productID)
 
 		// Use FetchAndCast helper for type-safe cross-router calls
-		prd, err := lokstra.FetchAndCast[map[string]any](c, productClient, "/products/"+productID, nil)
+		prd, err := lokstra.FetchAndCast[map[string]any](productClient, "/products/"+productID, nil)
 		if err != nil {
 			fmt.Printf("   ❌ Failed to get product %s: %v\n", productID, err)
 			continue
 		}
-		product := *prd
-
-		if price, ok := product["price"].(float64); ok {
+		if price, ok := prd["price"].(float64); ok {
 			totalAmount += price
-			validProducts = append(validProducts, product)
+			validProducts = append(validProducts, prd)
 			fmt.Printf("   ✅ Product %s: $%.2f\n", productID, price)
 		}
 	}

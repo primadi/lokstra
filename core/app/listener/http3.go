@@ -52,7 +52,7 @@ func (s *Http3) ListenAndServe() error {
 
 	// Start serving
 	if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
-		return err
+		return wrapListenError(s.server.Addr, err)
 	}
 	return nil
 }

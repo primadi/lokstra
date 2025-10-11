@@ -1,20 +1,21 @@
 package lokstra_registry
 
 import (
-	"fmt"
 	"sync"
+
+	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/utils"
 )
 
-var serviceRegistry = make(map[string]any)
-var serviceMutex sync.RWMutex
+var serviceRegistry sync.Map
 
 type lazyServiceConfig struct {
-	serviceType string
+	serviceName string // Service instance name (e.g., "user-service")
+	serviceType string // Service type/factory name (e.g., "user_service")
 	config      map[string]any
 }
 
-var lazyServiceConfigRegistry = make(map[string]lazyServiceConfig)
-var lazyServiceConfigMutex sync.RWMutex
+var lazyServiceConfigRegistry sync.Map
 
 // Registers a service instance with a given name.
 // If the same service name already exists,
@@ -25,16 +26,13 @@ func RegisterService(svcName string, svcInstance any, opts ...RegisterOption) {
 		opt.apply(&options)
 	}
 
-	serviceMutex.Lock()
-	defer serviceMutex.Unlock()
-
 	if !options.allowOverride {
-		if _, exists := serviceRegistry[svcName]; exists {
+		if _, exists := serviceRegistry.Load(svcName); exists {
 			panic("service " + svcName + " already registered")
 		}
 	}
 
-	serviceRegistry[svcName] = svcInstance
+	serviceRegistry.Store(svcName, svcInstance)
 }
 
 // Registers a lazy service configuration with a given name.
@@ -49,99 +47,107 @@ func RegisterLazyService(svcName string, svcType string,
 	}
 
 	// Check both registries with proper locking
-	serviceMutex.RLock()
-	_, serviceExists := serviceRegistry[svcName]
-	serviceMutex.RUnlock()
-
-	lazyServiceConfigMutex.Lock()
-	defer lazyServiceConfigMutex.Unlock()
+	_, serviceExists := serviceRegistry.Load(svcName)
 
 	if !options.allowOverride {
-		if _, exists := lazyServiceConfigRegistry[svcName]; exists {
+		if _, exists := lazyServiceConfigRegistry.Load(svcName); exists {
 			panic("lazy service " + svcName + " already registered")
 		}
 		if serviceExists {
 			panic("service " + svcName + " already registered")
 		}
 	}
-	lazyServiceConfigRegistry[svcName] = lazyServiceConfig{
+	lazyServiceConfigRegistry.Store(svcName, lazyServiceConfig{
+		serviceName: svcName,
 		serviceType: svcType,
 		config:      config,
-	}
+	})
 }
 
-// Tries to resolve a service from the registry and assign it to current.
-//
-// If current is already set (non-nil), it will be returned as is.
-// Otherwise, it will attempt to get from registry and set it.
-// If current is nil and not found in registry, it tries to create from lazy config if exists.
-// If fail to create, it will panic.
-// It will panic if the type in registry does not match T.
-func GetService[T comparable](name string, current T) T {
-	s, ok := TryGetService(name, current)
-	if !ok {
-		panic(fmt.Sprintf("service %s not found or type mismatch", name))
+// Tries to resolve a service from the current and registry,
+// if fail to find, it will retun zero value of T.
+func GetServiceCached[T any](name string, current T) T {
+	// if current is already set (non-zero), return as is
+	if !utils.IsNil(current) {
+		return current
+	}
+
+	return GetService[T](name)
+}
+
+// Tries to resolve a service from the current and registry,
+// if fail to find, it will panic.
+func MustGetServiceCached[T any](name string, current T) T {
+	s := GetServiceCached(name, current)
+	if utils.IsNil(s) {
+		panic("service " + name + " not found or type mismatch")
 	}
 	return s
 }
 
 // Tries to resolve a service from the registry.
-//
-// If current != nil, it will be returned immediately with ok=true.
-// If current is nil and found in registry with correct type, it will be returned with ok=true.
-// If not found or type mismatch, it tries to create from lazy config if exists.
-// If still not found, it returns zero value of T with ok=false.
-func TryGetService[T comparable](svcName string, current T) (T, bool) {
-	// if current is already set (non-nil), return as is
-	var zero T
-	if current != zero {
-		return current, true
-	}
-
+func GetService[T any](svcName string) T {
 	// lookup in registry (read lock)
-	serviceMutex.RLock()
-	svc, ok := serviceRegistry[svcName]
-	serviceMutex.RUnlock()
+	svc, ok := serviceRegistry.Load(svcName)
+	var zero T
 
 	if ok {
 		if typed, ok := svc.(T); ok {
-			return typed, true
+			return typed
 		}
 		// type mismatch
-		return zero, false
+		panic("type mismatch for service " + svcName)
 	}
 
 	// not found, check if lazy config exists
-	lazyServiceConfigMutex.RLock()
-	lazyCfg, lazyExists := lazyServiceConfigRegistry[svcName]
-	lazyServiceConfigMutex.RUnlock()
+	lazyCfgAny, lazyExists := lazyServiceConfigRegistry.Load(svcName)
 
 	if lazyExists {
-		if factory := GetServiceFactory(lazyCfg.serviceType); factory != nil {
+		lazyCfg := lazyCfgAny.(lazyServiceConfig)
+		if factory := GetServiceFactory(lazyCfg.serviceType, lazyCfg.serviceName); factory != nil {
 			if svc := factory(lazyCfg.config); svc != nil {
-				// Write lock to register the created service
-				serviceMutex.Lock()
 				// Double-check if another goroutine already created it
-				if existing, exists := serviceRegistry[svcName]; exists {
-					serviceMutex.Unlock()
+				if existing, loaded := serviceRegistry.LoadOrStore(svcName, svc); loaded {
+					// Another goroutine created it first, use that
 					if typed, ok := existing.(T); ok {
-						return typed, true
+						return typed
 					}
-					return zero, false
+					return zero
 				}
-				serviceRegistry[svcName] = svc
-				serviceMutex.Unlock()
 
+				// We successfully stored it
 				if typed, ok := svc.(T); ok {
-					return typed, true
+					return typed
 				}
-				return zero, false
+				return zero
 			}
 		}
 	}
 
 	// not found
-	return zero, false
+	return zero
+}
+
+// Tries to resolve a service from the registry
+func TryGetService[T any](svcName string) (T, bool) {
+	s := GetService[T](svcName)
+	return s, !utils.IsNil(s)
+}
+
+// Tries to resolve a service from the current and registry.
+//
+// If current != nil, it will be returned immediately with ok=true.
+// If current is nil and found in registry with correct type, it will be returned with ok=true.
+// If not found or type mismatch, it tries to create from lazy config if exists.
+// If still not found, it returns zero value of T with ok=false.
+func TryGetServiceCached[T any](svcName string, current T) (T, bool) {
+	// if current is already set (non-zero), return as is
+	if !utils.IsNil(current) {
+		return current, true
+	}
+
+	s := GetService[T](svcName)
+	return s, !utils.IsNil(s)
 }
 
 // Create a new service using registered factory, register it, and return it.
@@ -151,7 +157,7 @@ func TryGetService[T comparable](svcName string, current T) (T, bool) {
 // the RegisterOption allowOverride is set to true.
 func NewService[T any](svcName, svcType string, config map[string]any,
 	opts ...RegisterOption) T {
-	if factory := GetServiceFactory(svcType); factory != nil {
+	if factory := GetServiceFactory(svcType, svcName); factory != nil {
 		if svc := factory(config); svc != nil {
 			RegisterService(svcName, svc, opts...)
 			return svc.(T)
@@ -159,4 +165,85 @@ func NewService[T any](svcName, svcType string, config map[string]any,
 	}
 	var zero T
 	return zero
+}
+
+// ==============================================================================
+// Remote Service Helper
+// ==============================================================================
+
+// GetRemoteService creates an api_client.RemoteService from configuration map.
+// This simplifies remote service factory functions by handling router resolution
+// and path-prefix extraction automatically.
+//
+// Configuration keys:
+//   - "router": Router name for client lookup (required)
+//   - "path-prefix": API path prefix (optional, defaults to "/")
+//   - "convention": Convention for path generation (optional, defaults to "rest")
+//   - "resource-name": Resource name singular (optional)
+//   - "plural-resource-name": Resource name plural (optional)
+//   - "routes": Array of route overrides with {name, method, path} (optional)
+//
+// Example usage in service factories:
+//
+//	func CreateAuthServiceRemote(cfg map[string]any) any {
+//	    return &authServiceRemote{
+//	        client: lokstra_registry.GetRemoteService(cfg),
+//	    }
+//	}
+//
+// This replaces the manual pattern:
+//
+//	routerName := utils.GetValueFromMap(cfg, "router", "service-name")
+//	pathPrefix := utils.GetValueFromMap(cfg, "path-prefix", "/path")
+//	clientRouter := lokstra_registry.GetClientRouter(routerName)
+//	client := api_client.NewRemoteService(clientRouter, pathPrefix)
+func GetRemoteService(cfg map[string]any) *api_client.RemoteService {
+	routerName := utils.GetValueFromMap(cfg, "router", "")
+	if routerName == "" {
+		panic("GetRemoteService: 'router' field is required in config")
+	}
+
+	pathPrefix := utils.GetValueFromMap(cfg, "path-prefix", "/")
+	convention := utils.GetValueFromMap(cfg, "convention", "rest")
+	resourceName := utils.GetValueFromMap(cfg, "resource-name", "")
+	pluralResourceName := utils.GetValueFromMap(cfg, "plural-resource-name", "")
+
+	// Resolve router using existing GetClientRouter
+	clientRouter := GetClientRouter(routerName)
+
+	// Create RemoteService with basic config
+	remoteService := api_client.NewRemoteService(clientRouter, pathPrefix)
+
+	// Apply convention and resource names if provided
+	if convention != "" {
+		remoteService.WithConvention(convention)
+	}
+	if resourceName != "" {
+		remoteService.WithResourceName(resourceName)
+	}
+	if pluralResourceName != "" {
+		remoteService.WithPluralResourceName(pluralResourceName)
+	}
+
+	// Apply route overrides if provided
+	if routesRaw, ok := cfg["routes"]; ok {
+		if routes, ok := routesRaw.([]any); ok {
+			for _, routeRaw := range routes {
+				if routeMap, ok := routeRaw.(map[string]any); ok {
+					name := utils.GetValueFromMap(routeMap, "name", "")
+					method := utils.GetValueFromMap(routeMap, "method", "")
+					path := utils.GetValueFromMap(routeMap, "path", "")
+
+					if name != "" && path != "" {
+						remoteService.WithRouteOverride(name, path)
+					}
+					if name != "" && method != "" {
+						remoteService.WithMethodOverride(name, method)
+					}
+				}
+			}
+		}
+	}
+
+	return remoteService
 }

@@ -81,7 +81,7 @@ func (s *NetHttp) ListenAndServe() error {
 		var err error
 		listener, err = net.Listen("tcp", s.server.Addr)
 		if err != nil {
-			return fmt.Errorf("failed to listen on TCP address %s: %w", s.server.Addr, err)
+			return wrapListenError(s.server.Addr, err)
 		}
 		// fmt.Printf("[NETHTTP] Starting server on TCP %s\n", addr)
 	}

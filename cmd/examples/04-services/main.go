@@ -5,6 +5,7 @@ import (
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -32,11 +33,10 @@ func CounterFactory(cfg map[string]any) any {
 func createAdminRouter() lokstra.Router {
 	r := lokstra.NewRouter("main-router")
 
-	var myCounter *CounterService
+	myCounter := service.LazyLoad[*CounterService]("my-counter")
+
 	r.GET("/count", func(c *lokstra.RequestContext) error {
-		// Lazy load the service, it will be created only on first request
-		myCounter = lokstra_registry.GetService("my-counter", myCounter)
-		return c.Api.Ok(myCounter.Increment())
+		return c.Api.Ok(myCounter.Get().Increment())
 	})
 	return r
 }

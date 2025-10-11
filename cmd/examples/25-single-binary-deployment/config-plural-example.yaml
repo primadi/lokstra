@@ -1,0 +1,106 @@
+# Example: Using plural-resource-name for irregular plurals
+# Demonstrates how to override automatic pluralization
+
+services:
+  # Example 1: Irregular plural (person → people)
+  - name: person-service
+    type: person_service
+    auto-router:
+      convention: rest
+      path-prefix: /api/v1
+      resource-name: person
+      plural-resource-name: people  # Override default "persons"
+    config:
+      storage: memory
+  
+  # Example 2: Regular plural (auto-pluralization works fine)
+  - name: user-service
+    type: user_service
+    auto-router:
+      convention: rest
+      path-prefix: /api/v1
+      resource-name: user
+      # No plural-resource-name needed, will auto-pluralize to "users"
+    config:
+      storage: memory
+  
+  # Example 3: Uncountable noun (data)
+  - name: data-service
+    type: data_service
+    auto-router:
+      convention: rest
+      path-prefix: /api/v1
+      resource-name: data
+      plural-resource-name: data  # data is already plural
+    config:
+      storage: memory
+  
+  # Example 4: Another irregular plural (child → children)
+  - name: child-service
+    type: child_service
+    auto-router:
+      convention: rest
+      path-prefix: /api/v1
+      resource-name: child
+      plural-resource-name: children  # Override default "childs"
+    config:
+      storage: memory
+  
+  # Example 5: Non-English resource (Indonesian)
+  - name: produk-service
+    type: produk_service
+    auto-router:
+      convention: rest
+      path-prefix: /api/v1/id
+      resource-name: produk
+      plural-resource-name: produk  # Indonesian: same for singular/plural
+    config:
+      storage: memory
+
+# Expected Routes Generated:
+# 
+# Person Service (irregular plural override):
+#   GET    /api/v1/people        → ListPersons()
+#   GET    /api/v1/people/{id}   → GetPerson()
+#   POST   /api/v1/people        → CreatePerson()
+#   PUT    /api/v1/people/{id}   → UpdatePerson()
+#   DELETE /api/v1/people/{id}   → DeletePerson()
+#
+# User Service (auto-pluralized):
+#   GET    /api/v1/users         → ListUsers()
+#   GET    /api/v1/users/{id}    → GetUser()
+#   POST   /api/v1/users         → CreateUser()
+#   PUT    /api/v1/users/{id}    → UpdateUser()
+#   DELETE /api/v1/users/{id}    → DeleteUser()
+#
+# Data Service (uncountable):
+#   GET    /api/v1/data          → ListData()
+#   GET    /api/v1/data/{id}     → GetData()
+#   POST   /api/v1/data          → CreateData()
+#   PUT    /api/v1/data/{id}     → UpdateData()
+#   DELETE /api/v1/data/{id}     → DeleteData()
+#
+# Child Service (irregular plural override):
+#   GET    /api/v1/children      → ListChildren()
+#   GET    /api/v1/children/{id} → GetChild()
+#   POST   /api/v1/children      → CreateChild()
+#   PUT    /api/v1/children/{id} → UpdateChild()
+#   DELETE /api/v1/children/{id} → DeleteChild()
+#
+# Produk Service (Indonesian, same singular/plural):
+#   GET    /api/v1/id/produk        → ListProduk()
+#   GET    /api/v1/id/produk/{id}   → GetProduk()
+#   POST   /api/v1/id/produk        → CreateProduk()
+#   PUT    /api/v1/id/produk/{id}   → UpdateProduk()
+#   DELETE /api/v1/id/produk/{id}   → DeleteProduk()
+
+servers:
+  - name: monolith-server
+    apps:
+      - addr: :8080
+        services:
+          - person-service
+          - user-service
+          - data-service
+          - child-service
+          - produk-service

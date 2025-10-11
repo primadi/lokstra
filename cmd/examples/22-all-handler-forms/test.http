@@ -1,0 +1,104 @@
+### Test All Handler Forms
+### Run the server first: go run main.go
+### Then click "Send Request" above each request
+
+@baseUrl = http://localhost:3000
+
+### ============================================================================
+### FORM 1: func() error
+### Handler tanpa parameter, return error
+### ============================================================================
+
+GET {{baseUrl}}/form1
+
+### ============================================================================
+### FORM 2: func() (data, error)
+### Handler tanpa parameter, return data + error
+### ============================================================================
+
+GET {{baseUrl}}/form2
+
+### ============================================================================
+### FORM 3: func(*T) error
+### Handler dengan struct parameter, return error
+### Struct diisi dari path param + query param
+### ============================================================================
+
+GET {{baseUrl}}/form3/user123?name=Alice
+
+### ============================================================================
+### FORM 4: func(*T) (data, error)
+### Handler dengan struct parameter, return data + error
+### ============================================================================
+
+GET {{baseUrl}}/form4/user456?name=Bob
+
+### ============================================================================
+### FORM 5: func(*request.Context) error
+### Handler dengan context, return error
+### ============================================================================
+
+GET {{baseUrl}}/form5/ctx789
+
+### ============================================================================
+### FORM 6: func(*request.Context) (data, error)
+### Handler dengan context, return data + error
+### ============================================================================
+
+GET {{baseUrl}}/form6/ctx999
+
+### ============================================================================
+### FORM 7: func(*request.Context, *T) error
+### Handler dengan context + struct, return error
+### ============================================================================
+
+POST {{baseUrl}}/form7/post123?name=Charlie
+Content-Type: application/json
+
+### ============================================================================
+### FORM 8: func(*request.Context, *T) (data, error)
+### Handler dengan context + struct, return data + error
+### Body JSON akan di-bind ke struct
+### ============================================================================
+
+POST {{baseUrl}}/form8/post456
+Content-Type: application/json
+
+{
+  "name": "Diana"
+}
+
+### ============================================================================
+### FORM 9: http.HandlerFunc (standard Go handler)
+### Compatibility dengan standard Go http.HandlerFunc
+### ============================================================================
+
+GET {{baseUrl}}/form9
+
+### ============================================================================
+### Test All Forms Sequentially (uncomment to run all)
+### ============================================================================
+
+# GET {{baseUrl}}/form1
+# ###
+# GET {{baseUrl}}/form2
+# ###
+# GET {{baseUrl}}/form3/user123?name=Alice
+# ###
+# GET {{baseUrl}}/form4/user456?name=Bob
+# ###
+# GET {{baseUrl}}/form5/ctx789
+# ###
+# GET {{baseUrl}}/form6/ctx999
+# ###
+# POST {{baseUrl}}/form7/post123?name=Charlie
+# Content-Type: application/json
+# ###
+# POST {{baseUrl}}/form8/post456
+# Content-Type: application/json
+# 
+# {
+#   "name": "Diana"
+# }
+# ###
+# GET {{baseUrl}}/form9

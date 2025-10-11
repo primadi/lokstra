@@ -26,11 +26,13 @@ func main() {
 		}
 	}
 
-	lokstra_registry.RegisterConfig(cfg)
+	lokstra_registry.RegisterConfig(cfg, "")
 
 	serverName := lokstra_registry.GetConfig("server-name", "monolith-single-port-server")
 	lokstra_registry.SetCurrentServerName(serverName)
 
 	lokstra_registry.PrintServerStartInfo()
-	lokstra_registry.StartServer()
+	if err := lokstra_registry.StartServer(); err != nil {
+		fmt.Printf("❌ Server error: %v\n", err)
+	}
 }

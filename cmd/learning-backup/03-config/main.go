@@ -77,7 +77,7 @@ func main() {
 	// - Middlewares (accessible via CreateMiddleware or router.Use)
 	// - Servers (with apps and routers)
 
-	lokstra_registry.RegisterConfig(cfg)
+	lokstra_registry.RegisterConfig(cfg, "")
 
 	fmt.Println("✅ Configuration registered with lokstra_registry")
 
@@ -111,5 +111,7 @@ func main() {
 	lokstra_registry.PrintServerStartInfo()
 
 	// Start the server (blocks until shutdown)
-	lokstra_registry.StartServer()
+	if err := lokstra_registry.StartServer(); err != nil {
+		fmt.Printf("❌ Server error: %v\n", err)
+	}
 }

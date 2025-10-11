@@ -16,17 +16,9 @@ type TestCounterService struct {
 // Test concurrent access to service registry - verifies thread-safety
 func TestConcurrentServiceAccess(t *testing.T) {
 	// Clear registries
-	serviceMutex.Lock()
-	serviceRegistry = make(map[string]any)
-	serviceMutex.Unlock()
-
-	lazyServiceConfigMutex.Lock()
-	lazyServiceConfigRegistry = make(map[string]lazyServiceConfig)
-	lazyServiceConfigMutex.Unlock()
-
-	serviceFactoryMutex.Lock()
-	serviceFactoryRegistry = make(map[string]ServiceFactory)
-	serviceFactoryMutex.Unlock()
+	serviceRegistry = sync.Map{}
+	lazyServiceConfigRegistry = sync.Map{}
+	serviceFactoryRegistry = sync.Map{}
 
 	// Register factory
 	RegisterServiceFactory("counter", func(cfg map[string]any) any {
@@ -47,7 +39,7 @@ func TestConcurrentServiceAccess(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func(idx int) {
 			defer wg.Done()
-			svc := GetService("counter-svc", (*TestCounterService)(nil))
+			svc := GetServiceCached("counter-svc", (*TestCounterService)(nil))
 			results[idx] = svc
 		}(i)
 	}
@@ -68,17 +60,9 @@ func TestConcurrentServiceAccess(t *testing.T) {
 // Test concurrent registration of different services
 func TestConcurrentServiceRegistration(t *testing.T) {
 	// Clear registries
-	serviceMutex.Lock()
-	serviceRegistry = make(map[string]any)
-	serviceMutex.Unlock()
-
-	lazyServiceConfigMutex.Lock()
-	lazyServiceConfigRegistry = make(map[string]lazyServiceConfig)
-	lazyServiceConfigMutex.Unlock()
-
-	serviceFactoryMutex.Lock()
-	serviceFactoryRegistry = make(map[string]ServiceFactory)
-	serviceFactoryMutex.Unlock()
+	serviceRegistry = sync.Map{}
+	lazyServiceConfigRegistry = sync.Map{}
+	serviceFactoryRegistry = sync.Map{}
 
 	// Register factory
 	RegisterServiceFactory("counter", func(cfg map[string]any) any {
@@ -101,9 +85,11 @@ func TestConcurrentServiceRegistration(t *testing.T) {
 	wg.Wait()
 
 	// Verify all services are registered
-	lazyServiceConfigMutex.RLock()
-	count := len(lazyServiceConfigRegistry)
-	lazyServiceConfigMutex.RUnlock()
+	count := 0
+	lazyServiceConfigRegistry.Range(func(key, value any) bool {
+		count++
+		return true
+	})
 
 	if count != numServices {
 		t.Errorf("Expected %d services, got %d", numServices, count)
@@ -115,9 +101,7 @@ func TestConcurrentServiceRegistration(t *testing.T) {
 // Test concurrent config access
 func TestConcurrentConfigAccess(t *testing.T) {
 	// Clear config registry
-	configMutex.Lock()
-	configRegistry = make(map[string]any)
-	configMutex.Unlock()
+	configRegistry = sync.Map{}
 
 	const numGoroutines = 50
 	var wg sync.WaitGroup
@@ -145,9 +129,11 @@ func TestConcurrentConfigAccess(t *testing.T) {
 	wg.Wait()
 
 	// Verify all configs are written
-	configMutex.RLock()
-	count := len(configRegistry)
-	configMutex.RUnlock()
+	count := 0
+	configRegistry.Range(func(key, value any) bool {
+		count++
+		return true
+	})
 
 	if count != numGoroutines {
 		t.Errorf("Expected %d configs, got %d", numGoroutines, count)
@@ -159,13 +145,8 @@ func TestConcurrentConfigAccess(t *testing.T) {
 // Test concurrent middleware access
 func TestConcurrentMiddlewareAccess(t *testing.T) {
 	// Clear middleware registries
-	mwFactoryMutex.Lock()
-	mwFactoryRegistry = make(map[string]MiddlewareFactory)
-	mwFactoryMutex.Unlock()
-
-	mwEntryMutex.Lock()
-	mwEntryRegistry = make(map[string]middlewareEntry)
-	mwEntryMutex.Unlock()
+	mwFactoryRegistry = sync.Map{}
+	mwEntryRegistry = sync.Map{}
 
 	// Register middleware factory
 	RegisterMiddlewareFactory("test-mw", func(cfg map[string]any) request.HandlerFunc {

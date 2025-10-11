@@ -10,13 +10,12 @@ type Shutdownable interface {
 
 // Gracefully shutdown all services that implement the Shutdownable interface.
 func ShutdownServices() {
-	serviceMutex.RLock()
-	// Create a snapshot to avoid holding lock during shutdown
-	snapshot := make(map[string]any, len(serviceRegistry))
-	for k, v := range serviceRegistry {
-		snapshot[k] = v
-	}
-	serviceMutex.RUnlock()
+	// Create a snapshot to avoid issues during shutdown
+	snapshot := make(map[string]any)
+	serviceRegistry.Range(func(key, value any) bool {
+		snapshot[key.(string)] = value
+		return true
+	})
 
 	for name, svc := range snapshot {
 		if shutdownable, ok := svc.(Shutdownable); ok {

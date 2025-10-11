@@ -1,0 +1,171 @@
+###
+### Monolith Deployment Testing
+### All services running on single port 8080
+### Run: go run main.go -config config-monolith-v2.yaml -server monolith-multi-port
+###
+
+### =============================================================================
+### User Service (on monolith)
+### =============================================================================
+
+@baseUrl1 = http://localhost:8081/api/v1
+@baseUrl2 = http://localhost:8082/api/v1
+
+### Create User 1
+POST {{baseUrl1}}/users
+Content-Type: application/json
+
+{
+  "username": "john_doe",
+  "email": "john@example.com"
+}
+
+### Create User 2
+POST {{baseUrl1}}/users
+Content-Type: application/json
+
+{
+  "username": "jane_smith",
+  "email": "jane@example.com"
+}
+
+### Get User (use user_id from create response)
+GET {{baseUrl1}}/users/user_1
+Content-Type: application/json
+
+### =============================================================================
+### Auth Service (on monolith)
+### =============================================================================
+
+### Login
+POST {{baseUrl1}}/login
+Content-Type: application/json
+
+{
+  "username": "john_doe",
+  "password": "password123"
+}
+
+### Validate Token (use token from login response)
+POST {{baseUrl1}}/validate-token
+Content-Type: application/json
+
+{
+  "token": "token_john_doe_3600"
+}
+
+### =============================================================================
+### Order Service (on monolith) - Cross-service call to User Service
+### =============================================================================
+
+### Create Order (will verify user exists via user-service)
+POST {{baseUrl1}}/orders
+Content-Type: application/json
+
+{
+  "user_id": "user_1",
+  "items": [
+    { "product_id": "item_laptop",
+      "quantity": 1,
+      "price": 1299.99
+    },
+    { "product_id": "item_mouse",
+      "quantity": 2,
+      "price": 49.99
+    },
+    { "product_id": "item_keyboard",
+      "quantity": 1,
+      "price": 89.99
+    }
+  ]
+}
+
+### Get Order
+GET {{baseUrl1}}/orders/order_1
+Content-Type: application/json
+
+### =============================================================================
+### Cart Service (on monolith)
+### =============================================================================
+
+### Add to Cart
+POST {{baseUrl2}}/carts
+Content-Type: application/json
+
+{
+  "user_id": "user_1",
+  "item_id": "item_laptop",
+  "quantity": 1,
+  "price": 1299.99
+}
+
+### Add another item
+POST {{baseUrl2}}/carts
+Content-Type: application/json
+
+{
+  "user_id": "user_1",
+  "item_id": "item_mouse",
+  "quantity": 2,
+  "price": 49.99
+}
+
+### Get Cart
+GET {{baseUrl2}}/carts/user_1
+Content-Type: application/json
+
+### =============================================================================
+### Payment Service (on monolith)
+### =============================================================================
+
+### Process Payment
+POST {{baseUrl2}}/payments
+Content-Type: application/json
+
+{
+  "order_id": "order_1",
+  "amount": 1299.99
+}
+
+### Get Payment
+GET {{baseUrl2}}/payments/payment_1
+Content-Type: application/json
+
+### =============================================================================
+### Invoice Service (on monolith) - Cross-service call to Payment Service
+### =============================================================================
+
+### Generate Invoice (will fetch payment details via payment-service)
+POST {{baseUrl2}}/invoices
+Content-Type: application/json
+
+{
+  "payment_id": "payment_1"
+}
+
+### Get Invoice
+GET {{baseUrl2}}/invoices/invoice_1
+Content-Type: application/json
+
+### =============================================================================
+### Test Config Usage
+### =============================================================================
+
+### Test max_items_per_order limit (should fail with > 100 items)
+POST {{baseUrl1}}/orders
+Content-Type: application/json
+
+{
+  "user_id": "user_1",
+  "items": ["item1", "item2", "item3", "item4", "item5", "item6", "item7", "item8", "item9", "item10",
+            "item11", "item12", "item13", "item14", "item15", "item16", "item17", "item18", "item19", "item20",
+            "item21", "item22", "item23", "item24", "item25", "item26", "item27", "item28", "item29", "item30",
+            "item31", "item32", "item33", "item34", "item35", "item36", "item37", "item38", "item39", "item40",
+            "item41", "item42", "item43", "item44", "item45", "item46", "item47", "item48", "item49", "item50",
+            "item51", "item52", "item53", "item54", "item55", "item56", "item57", "item58", "item59", "item60",
+            "item61", "item62", "item63", "item64", "item65", "item66", "item67", "item68", "item69", "item70",
+            "item71", "item72", "item73", "item74", "item75", "item76", "item77", "item78", "item79", "item80",
+            "item81", "item82", "item83", "item84", "item85", "item86", "item87", "item88", "item89", "item90",
+            "item91", "item92", "item93", "item94", "item95", "item96", "item97", "item98", "item99", "item100",
+            "item101"]
+}

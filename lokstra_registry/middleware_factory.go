@@ -13,11 +13,9 @@ type middlewareEntry struct {
 	config map[string]any
 }
 
-var mwFactoryRegistry = make(map[string]MiddlewareFactory)
-var mwFactoryMutex sync.RWMutex
+var mwFactoryRegistry sync.Map
 
-var mwEntryRegistry = make(map[string]middlewareEntry)
-var mwEntryMutex sync.RWMutex
+var mwEntryRegistry sync.Map
 
 // Registers a middleware factory function for a given middleware type.
 // If allowOverride is false and a factory for the same type already exists, it panics.
@@ -28,15 +26,12 @@ func RegisterMiddlewareFactory(mwType string, factory MiddlewareFactory,
 		opt.apply(&options)
 	}
 
-	mwFactoryMutex.Lock()
-	defer mwFactoryMutex.Unlock()
-
 	if !options.allowOverride {
-		if _, exists := mwFactoryRegistry[mwType]; exists {
+		if _, exists := mwFactoryRegistry.Load(mwType); exists {
 			panic("middleware factory for type " + mwType + " already registered")
 		}
 	}
-	mwFactoryRegistry[mwType] = factory
+	mwFactoryRegistry.Store(mwType, factory)
 }
 
 // Registers a middleware entry by name, associating it with a type and config.
@@ -48,33 +43,28 @@ func RegisterMiddlewareName(mwName string, mwType string, config map[string]any,
 		opt.apply(&options)
 	}
 
-	mwEntryMutex.Lock()
-	defer mwEntryMutex.Unlock()
-
 	if !options.allowOverride {
-		if _, exists := mwEntryRegistry[mwName]; exists {
+		if _, exists := mwEntryRegistry.Load(mwName); exists {
 			panic("middleware name " + mwName + " already registered")
 		}
 	}
-	mwEntryRegistry[mwName] = middlewareEntry{
+	mwEntryRegistry.Store(mwName, middlewareEntry{
 		mwType: mwType,
 		config: config,
-	}
+	})
 }
 
 // Creates a middleware instance by name using the registered factory and config.
 // Returns nil if the name or type is not found.
 func CreateMiddleware(mwName string) request.HandlerFunc {
-	mwEntryMutex.RLock()
-	entry, entryExists := mwEntryRegistry[mwName]
-	mwEntryMutex.RUnlock()
+	entryAny, entryExists := mwEntryRegistry.Load(mwName)
 
 	if entryExists {
-		mwFactoryMutex.RLock()
-		factory, factoryExists := mwFactoryRegistry[entry.mwType]
-		mwFactoryMutex.RUnlock()
+		entry := entryAny.(middlewareEntry)
+		factoryAny, factoryExists := mwFactoryRegistry.Load(entry.mwType)
 
 		if factoryExists {
+			factory := factoryAny.(MiddlewareFactory)
 			return factory(entry.config)
 		}
 	}

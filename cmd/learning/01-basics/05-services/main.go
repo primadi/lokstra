@@ -109,7 +109,7 @@ func NewUserService(db *DBService) *UserService {
 func UserServiceFactory(params map[string]any) any {
 	// Get dependency - lazy loaded
 	var db *DBService
-	db = lokstra_registry.GetService("db", db)
+	db = lokstra_registry.GetServiceCached("db", db)
 	return NewUserService(db)
 }
 
@@ -153,22 +153,22 @@ type ServiceContainer struct {
 
 // Getters with caching (CRITICAL PATTERN!)
 func (sc *ServiceContainer) GetEmail() *EmailService {
-	sc.emailCache = lokstra_registry.GetService("email", sc.emailCache)
+	sc.emailCache = lokstra_registry.GetServiceCached("email", sc.emailCache)
 	return sc.emailCache
 }
 
 func (sc *ServiceContainer) GetDB() *DBService {
-	sc.dbCache = lokstra_registry.GetService("db", sc.dbCache)
+	sc.dbCache = lokstra_registry.GetServiceCached("db", sc.dbCache)
 	return sc.dbCache
 }
 
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetService("user", sc.userCache)
+	sc.userCache = lokstra_registry.GetServiceCached("user", sc.userCache)
 	return sc.userCache
 }
 
 func (sc *ServiceContainer) GetLogger() *ConsoleLogger {
-	sc.loggerCache = lokstra_registry.GetService("logger", sc.loggerCache)
+	sc.loggerCache = lokstra_registry.GetServiceCached("logger", sc.loggerCache)
 	return sc.loggerCache
 }
 

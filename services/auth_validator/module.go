@@ -96,12 +96,12 @@ func ServiceFactory(params map[string]any) any {
 
 	// Get TokenIssuer service from registry
 	var tokenIssuer auth.TokenIssuer
-	tokenIssuer = lokstra_registry.GetService(cfg.TokenIssuerServiceName, tokenIssuer)
+	tokenIssuer = lokstra_registry.GetServiceCached(cfg.TokenIssuerServiceName, tokenIssuer)
 
 	// Get UserRepository service from registry (optional)
 	var userRepo auth.UserRepository
 	if cfg.UserRepoServiceName != "" {
-		userRepo = lokstra_registry.GetService(cfg.UserRepoServiceName, userRepo)
+		userRepo = lokstra_registry.GetServiceCached(cfg.UserRepoServiceName, userRepo)
 	}
 
 	return Service(cfg, tokenIssuer, userRepo)

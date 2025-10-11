@@ -65,9 +65,18 @@ func (c *Context) FinalizeResponse(err error) {
 	}
 
 	if err != nil {
-		st := c.Resp.RespStatusCode
-		if st == 0 || st < http.StatusBadRequest {
-			c.Resp.WithStatus(http.StatusInternalServerError).Json(map[string]string{"error": err.Error()})
+		// Check if error is ValidationError
+		if valErr, ok := err.(*ValidationError); ok {
+			// Use Api helper to format validation error properly
+			c.Api.ValidationError("Validation failed", valErr.FieldErrors)
+		} else {
+			// Handle other errors
+			st := c.Resp.RespStatusCode
+			if st == 0 || st < http.StatusBadRequest {
+				c.Api.InternalError(err.Error())
+				// c.Resp.WithStatus(http.StatusInternalServerError).
+				//   Json(map[string]string{"error": err.Error()})
+			}
 		}
 	}
 

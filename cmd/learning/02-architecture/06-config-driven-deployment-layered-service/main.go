@@ -100,27 +100,25 @@ func main() {
 	fmt.Println()
 
 	// Step 3: Register config with framework
-	lokstra_registry.RegisterConfig(cfg)
-
-	// Step 4: Set current server
-	serverName := lokstra_registry.GetConfig("server-name", "ecommerce-server")
-	lokstra_registry.SetCurrentServerName(serverName)
+	lokstra_registry.RegisterConfig(cfg, "")
 
 	// Print application info
 	fmt.Println("📋 Application Info:")
 	fmt.Printf("   Name: E-Commerce API\n")
 	fmt.Printf("   Version: %s\n", lokstra_registry.GetConfig("app-version", "unknown"))
 	fmt.Printf("   Environment: %s\n", lokstra_registry.GetConfig("app-env", "unknown"))
-	fmt.Printf("   Server: %s\n", serverName)
+	fmt.Printf("   Server: %s\n", lokstra_registry.GetCurrentServerName())
 	fmt.Println()
 
 	// Print pattern comparison
 	printPatternComparison(mode)
 
-	// Step 5: Start server
+	// Step 4: Start server
 	fmt.Println("🚀 Starting server...")
 	lokstra_registry.PrintServerStartInfo()
-	lokstra_registry.StartServer()
+	if err := lokstra_registry.StartServer(); err != nil {
+		fmt.Printf("❌ Server error: %v\n", err)
+	}
 }
 
 func printPatternComparison(mode string) {
@@ -240,7 +238,7 @@ func (r *UserRepository) Create(name, email, password string) map[string]any {
 func NewUserRepository(cfg map[string]any) any {
 	fmt.Println("   🏗️  Creating UserRepository (Lazy[T] pattern)")
 	return &UserRepository{
-		db: service.GetLazyService[DBService](cfg, "db_service"), // ✨ 1 line vs 15!
+		db: service.MustLazyLoadFromConfig[DBService](cfg, "db_service"), // ✨ 1 line vs 15!
 	}
 }
 
@@ -282,8 +280,8 @@ func (r *ProductRepository) List() []map[string]any {
 func NewProductRepository(cfg map[string]any) any {
 	fmt.Println("   🏗️  Creating ProductRepository (Lazy[T] pattern)")
 	return &ProductRepository{
-		db:    service.GetLazyService[DBService](cfg, "db_service"),       // ✨ Type-safe
-		cache: service.GetLazyService[CacheService](cfg, "cache_service"), // ✨ No casts
+		db:    service.MustLazyLoadFromConfig[DBService](cfg, "db_service"),       // ✨ Type-safe
+		cache: service.MustLazyLoadFromConfig[CacheService](cfg, "cache_service"), // ✨ No casts
 	}
 }
 
@@ -307,7 +305,7 @@ func (r *OrderRepository) Create(userID, productID string, quantity int, amount 
 func NewOrderRepository(cfg map[string]any) any {
 	fmt.Println("   🏗️  Creating OrderRepository (Lazy[T] pattern)")
 	return &OrderRepository{
-		db: service.GetLazyService[DBService](cfg, "db_service"),
+		db: service.MustLazyLoadFromConfig[DBService](cfg, "db_service"),
 	}
 }
 
@@ -336,7 +334,7 @@ func (s *UserService) Register(name, email, password string) (map[string]any, er
 func NewUserService(cfg map[string]any) any {
 	fmt.Println("   🏗️  Creating UserService (Lazy[T] pattern)")
 	return &UserService{
-		repo:              service.GetLazyService[UserRepository](cfg, "repository_service"), // ✨ Clean!
+		repo:              service.MustLazyLoadFromConfig[UserRepository](cfg, "repository_service"), // ✨ Clean!
 		passwordMinLength: utils.GetValueFromMap(cfg, "password_min_length", 8),
 	}
 }
@@ -365,16 +363,16 @@ func (s *ProductService) ListProducts() []map[string]any {
 func NewProductService(cfg map[string]any) any {
 	fmt.Println("   🏗️  Creating ProductService (Lazy[T] pattern)")
 	return &ProductService{
-		repo:            service.GetLazyService[ProductRepository](cfg, "repository_service"),
+		repo:            service.MustLazyLoadFromConfig[ProductRepository](cfg, "repository_service"),
 		defaultCurrency: utils.GetValueFromMap(cfg, "default_currency", "USD"),
 	}
 }
 
 type OrderService struct {
-	repo           *service.Lazy[OrderRepository] // ✨ 4 dependencies
-	product        *service.Lazy[ProductService]  // ✨ Only 4 lines of code!
-	user           *service.Lazy[UserService]     // ✨ vs ~60 lines in old pattern
-	email          *service.Lazy[EmailService]    // ✨ 93% reduction in boilerplate
+	repo           *service.Lazy[*OrderRepository] // ✨ 4 dependencies
+	product        *service.Lazy[*ProductService]  // ✨ Only 4 lines of code!
+	user           *service.Lazy[*UserService]     // ✨ vs ~60 lines in old pattern
+	email          *service.Lazy[*EmailService]    // ✨ 93% reduction in boilerplate
 	taxRate        float64
 	minOrderAmount float64
 }
@@ -414,10 +412,10 @@ func NewOrderService(cfg map[string]any) any {
 	fmt.Println("   🏗️  Creating OrderService (Lazy[T] pattern)")
 	// ✨ Compare this to 60+ lines in simple pattern!
 	return &OrderService{
-		repo:           service.GetLazyService[OrderRepository](cfg, "repository_service"),
-		product:        service.GetLazyService[ProductService](cfg, "product_service"),
-		user:           service.GetLazyService[UserService](cfg, "user_service"),
-		email:          service.GetLazyService[EmailService](cfg, "email_service"),
+		repo:           service.MustLazyLoadFromConfig[*OrderRepository](cfg, "repository_service"),
+		product:        service.MustLazyLoadFromConfig[*ProductService](cfg, "product_service"),
+		user:           service.MustLazyLoadFromConfig[*UserService](cfg, "user_service"),
+		email:          service.MustLazyLoadFromConfig[*EmailService](cfg, "email_service"),
 		taxRate:        utils.GetValueFromMap(cfg, "tax_rate", 0.10),
 		minOrderAmount: utils.GetValueFromMap(cfg, "min_order_amount", 10.0),
 	}
@@ -434,17 +432,17 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetService("user-service", sc.userCache)
+	sc.userCache = lokstra_registry.GetServiceCached("user-service", sc.userCache)
 	return sc.userCache
 }
 
 func (sc *ServiceContainer) GetProduct() *ProductService {
-	sc.productCache = lokstra_registry.GetService("product-service", sc.productCache)
+	sc.productCache = lokstra_registry.GetServiceCached("product-service", sc.productCache)
 	return sc.productCache
 }
 
 func (sc *ServiceContainer) GetOrder() *OrderService {
-	sc.orderCache = lokstra_registry.GetService("order-service", sc.orderCache)
+	sc.orderCache = lokstra_registry.GetServiceCached("order-service", sc.orderCache)
 	return sc.orderCache
 }
 

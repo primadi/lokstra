@@ -116,7 +116,7 @@ func (s *Server) Start() error {
 }
 
 // Shutdown gracefully all apps within the given timeout.
-func (s *Server) Shutdown(timeout interface{}) error {
+func (s *Server) Shutdown(timeout any) error {
 	// Convert timeout to time.Duration
 	var duration time.Duration
 	switch t := timeout.(type) {
@@ -198,14 +198,14 @@ func (s *Server) Run(timeout time.Duration) error {
 		}
 		return nil
 	case err := <-errCh:
-		return fmt.Errorf("server error: %w", err)
+		return err
 	}
 }
 
 type ServerInterface interface {
 	GetName() string
 	Start() error
-	Shutdown(timeout interface{}) error
+	Shutdown(timeout any) error
 }
 
 var _ ServerInterface = (*Server)(nil)

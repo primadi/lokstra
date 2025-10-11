@@ -158,17 +158,17 @@ func ServiceFactory(params map[string]any) any {
 
 	// Get TokenIssuer service from registry
 	var tokenIssuer auth.TokenIssuer
-	tokenIssuer = lokstra_registry.GetService(cfg.TokenIssuerServiceName, tokenIssuer)
+	tokenIssuer = lokstra_registry.GetServiceCached(cfg.TokenIssuerServiceName, tokenIssuer)
 
 	// Get Session service from registry
 	var session auth.Session
-	session = lokstra_registry.GetService(cfg.SessionServiceName, session)
+	session = lokstra_registry.GetServiceCached(cfg.SessionServiceName, session)
 
 	// Get Flow services from registry
 	flows := make(map[string]auth.Flow)
 	for flowName, serviceName := range cfg.FlowServiceNames {
 		var flow auth.Flow
-		flow = lokstra_registry.GetService(serviceName, flow)
+		flow = lokstra_registry.GetServiceCached(serviceName, flow)
 		flows[flowName] = flow
 	}
 

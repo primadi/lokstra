@@ -40,7 +40,7 @@ func ToStruct(val any, structOut any, strict bool) error {
 	}
 
 	v := reflect.ValueOf(structOut)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
+	if v.Kind() != reflect.Pointer || v.IsNil() {
 		return fmt.Errorf("structOut must be a non-nil pointer to struct")
 	}
 	v = v.Elem()
@@ -113,7 +113,7 @@ func assignValue(field reflect.Value, raw any, strict bool) error {
 	}
 
 	// case 4: pointer to struct
-	if ft.Kind() == reflect.Ptr && ft.Elem().Kind() == reflect.Struct {
+	if ft.Kind() == reflect.Pointer && ft.Elem().Kind() == reflect.Struct {
 		if m, ok := raw.(map[string]any); ok {
 			ptr := reflect.New(ft.Elem())
 			if err := ToStruct(m, ptr.Interface(), strict); err != nil {

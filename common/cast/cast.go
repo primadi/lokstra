@@ -228,7 +228,7 @@ func IsEmpty(val any) bool {
 		return v.Float() == 0
 	case reflect.Slice, reflect.Map, reflect.Array:
 		return v.Len() == 0
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		return v.IsNil()
 	case reflect.Struct:
 		// Optionally: check if all fields in struct are empty

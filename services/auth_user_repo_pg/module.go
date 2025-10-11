@@ -200,7 +200,7 @@ func ServiceFactory(params map[string]any) any {
 
 	// Get DbPool service from registry
 	var dbPool serviceapi.DbPool
-	dbPool = lokstra_registry.GetService(cfg.DbPoolServiceName, dbPool)
+	dbPool = lokstra_registry.GetServiceCached(cfg.DbPoolServiceName, dbPool)
 
 	return Service(cfg, dbPool)
 }

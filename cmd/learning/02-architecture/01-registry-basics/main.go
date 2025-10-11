@@ -84,12 +84,12 @@ type ServiceContainer struct {
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
 	// GetService will create the service on first call, then cache it
-	sc.emailCache = lokstra_registry.GetService("email-service", sc.emailCache)
+	sc.emailCache = lokstra_registry.GetServiceCached("email-service", sc.emailCache)
 	return sc.emailCache
 }
 
 func (sc *ServiceContainer) GetCounter() *CounterService {
-	sc.counterCache = lokstra_registry.GetService("counter-service", sc.counterCache)
+	sc.counterCache = lokstra_registry.GetServiceCached("counter-service", sc.counterCache)
 	return sc.counterCache
 }
 

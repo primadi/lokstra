@@ -57,12 +57,12 @@ type ServiceContainer struct {
 
 // Lazy-loaded getters with caching
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetService("user", sc.userCache)
+	sc.userCache = lokstra_registry.GetServiceCached("user", sc.userCache)
 	return sc.userCache
 }
 
 func (sc *ServiceContainer) GetCache() *CacheService {
-	sc.cacheCache = lokstra_registry.GetService("cache", sc.cacheCache)
+	sc.cacheCache = lokstra_registry.GetServiceCached("cache", sc.cacheCache)
 	return sc.cacheCache
 }
 

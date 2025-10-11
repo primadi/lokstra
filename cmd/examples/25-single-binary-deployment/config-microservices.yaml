@@ -1,0 +1,98 @@
+# Microservices Deployment Configuration
+# Services distributed across separate processes
+# Best for: Production, true microservices with independent scaling
+
+configs:
+  - name: app_name
+    value: "E-Commerce Microservices"
+  - name: deployment_mode
+    value: "microservices"
+
+# Same service definitions
+services:
+  - name: user-service
+    type: user_service
+    config:
+      storage: memory
+      
+  - name: auth-service
+    type: auth_service
+    depends-on: [user-service]
+    config:
+      jwt_secret: production-secret-key-change-me
+      token_expiry: 3600
+
+  - name: order-service
+    type: order_service
+    depends-on: [user-service, payment-service]  # Cross-server dependencies!
+    config:
+      storage: memory
+      max_items_per_order: 100
+    
+  - name: cart-service
+    type: cart_service
+    depends-on: [user-service]  # Cross-server dependency!
+    config:
+      storage: memory
+      session_timeout: 1800
+
+  - name: payment-service
+    type: payment_service
+    depends-on: [user-service]  # Cross-server dependency!
+    config:
+      storage: memory
+      currency: USD
+    
+  - name: invoice-service
+    type: invoice_service
+    depends-on: [payment-service]
+    config:
+      storage: memory
+
+middlewares:
+  - name: logger
+    type: request_logger
+    config:
+      format: "json"
+      log_level: "info"
+
+# Separate servers (run as separate processes)
+servers:
+  - name: auth-server
+    base-url: http://localhost:8081
+    deployment-id: e-commerce-prod
+    apps:
+      - name: auth-app
+        addr: ":8081"
+        services: [user-service, auth-service]
+        middlewares: [logger]
+
+  - name: order-server
+    base-url: http://localhost:8082
+    deployment-id: e-commerce-prod
+    apps:
+      - name: order-app
+        addr: ":8082"
+        services: [order-service, cart-service]
+        middlewares: [logger]
+
+  - name: payment-server
+    base-url: http://localhost:8083
+    deployment-id: e-commerce-prod
+    apps:
+      - name: payment-app
+        addr: ":8083"
+        services: [payment-service, invoice-service]
+        middlewares: [logger]
+
+# Service Location Map (auto-built by framework):
+# When order-server runs:
+#   - user-service: REMOTE (http://localhost:8081)
+#   - order-service: LOCAL (in-process)
+#   - cart-service: LOCAL (in-process)
+#   - payment-service: REMOTE (http://localhost:8083)
+#
+# Framework automatically:
+#   1. Detects service location from apps.services
+#   2. Registers LOCAL or REMOTE factory
+#   3. Routes calls transparently (in-process or HTTP)

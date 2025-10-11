@@ -34,7 +34,7 @@ type Config struct {
 // It validates the JWT token and adds user info to the request context
 func Middleware(cfg *Config) request.HandlerFunc {
 	var validator auth.Validator
-	validator = lokstra_registry.GetService(cfg.ValidatorServiceName, validator)
+	validator = lokstra_registry.GetServiceCached(cfg.ValidatorServiceName, validator)
 
 	return request.HandlerFunc(func(c *request.Context) error {
 		// Check if path should skip auth
