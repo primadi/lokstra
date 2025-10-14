@@ -2,10 +2,18 @@ package lokstra_registry
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
+
+	"github.com/primadi/lokstra/common/json"
 )
 
+// Service factory support 3 forms service factory function:
+// 1. func (config map[string]any) any
+// 2. func (config any) any
+// 3. func () any  - no config
 type ServiceFactory = func(config map[string]any) any
+type AnyServiceFactory = any
 
 // Service factory registry - separate for local and remote
 type serviceFactoryEntry struct {
@@ -15,7 +23,8 @@ type serviceFactoryEntry struct {
 
 var serviceFactoryRegistry sync.Map
 
-func RegisterServiceFactoryLocalAndRemote(serviceType string, localFactory, remoteFactory ServiceFactory,
+func RegisterServiceFactoryLocalAndRemote(serviceType string,
+	localFactory, remoteFactory AnyServiceFactory,
 	opts ...RegisterOption) {
 	var options registerOptions
 	for _, opt := range opts {
@@ -34,22 +43,22 @@ func RegisterServiceFactoryLocalAndRemote(serviceType string, localFactory, remo
 		}
 	}
 
-	entry.localFactory = localFactory
-	entry.remoteFactory = remoteFactory
+	entry.localFactory = adaptServiceFactory(localFactory)
+	entry.remoteFactory = adaptServiceFactory(remoteFactory)
 
 	serviceFactoryRegistry.Store(serviceType, entry)
 }
 
 // RegisterServiceFactory registers BOTH local and remote factory (backward compatibility)
 // Deprecated: Use RegisterServiceFactoryLocal and RegisterServiceFactoryRemote instead
-func RegisterServiceFactory(serviceType string, factory ServiceFactory,
+func RegisterServiceFactory(serviceType string, factory AnyServiceFactory,
 	opts ...RegisterOption) {
 	RegisterServiceFactoryLocal(serviceType, factory, opts...)
 }
 
 // RegisterServiceFactoryLocal registers a factory for creating LOCAL service instances
 // This factory will be used when the service needs to run in the same process
-func RegisterServiceFactoryLocal(serviceType string, factory ServiceFactory,
+func RegisterServiceFactoryLocal(serviceType string, factory AnyServiceFactory,
 	opts ...RegisterOption) {
 	var options registerOptions
 	for _, opt := range opts {
@@ -68,13 +77,13 @@ func RegisterServiceFactoryLocal(serviceType string, factory ServiceFactory,
 		}
 	}
 
-	entry.localFactory = factory
+	entry.localFactory = adaptServiceFactory(factory)
 	serviceFactoryRegistry.Store(serviceType, entry)
 }
 
 // RegisterServiceFactoryRemote registers a factory for creating REMOTE service client instances
 // This factory will be used when the service needs to call a remote instance via HTTP
-func RegisterServiceFactoryRemote(serviceType string, factory ServiceFactory,
+func RegisterServiceFactoryRemote(serviceType string, factory AnyServiceFactory,
 	opts ...RegisterOption) {
 	var options registerOptions
 	for _, opt := range opts {
@@ -93,7 +102,7 @@ func RegisterServiceFactoryRemote(serviceType string, factory ServiceFactory,
 		}
 	}
 
-	entry.remoteFactory = factory
+	entry.remoteFactory = adaptServiceFactory(factory)
 	serviceFactoryRegistry.Store(serviceType, entry)
 }
 
@@ -165,4 +174,76 @@ func GetServiceFactoryRemote(serviceType string) ServiceFactory {
 		return entry.remoteFactory
 	}
 	return nil
+}
+
+func adaptServiceFactory(factory any) ServiceFactory {
+	switch f := factory.(type) {
+	case func(map[string]any) any:
+		return f
+	case func() any:
+		return func(_ map[string]any) any {
+			return f()
+		}
+	default:
+		t := reflect.TypeOf(factory)
+		if t.Kind() != reflect.Func {
+			panic("service factory must be a function, got: " + t.String())
+		}
+
+		if t.NumIn() != 1 {
+			panic(fmt.Sprintf("service factory must have exactly 1 input parameter, got: %d", t.NumIn()))
+		}
+
+		if t.NumOut() != 1 {
+			panic("service factory must return exactly one value, got: " + t.String())
+		}
+
+		paramType := t.In(0)
+		paramIsPtr := paramType.Kind() == reflect.Ptr
+		structType := paramType
+		if paramIsPtr {
+			structType = paramType.Elem()
+		}
+
+		if structType.Kind() != reflect.Struct {
+			panic(fmt.Sprintf("service factory parameter must be a struct or pointer to struct, got: %s", paramType))
+		}
+
+		// validate all exported fields have json tag
+		for i := 0; i < structType.NumField(); i++ {
+			field := structType.Field(i)
+			if field.PkgPath != "" { // unexported
+				continue
+			}
+			if field.Tag.Get("json") == "" {
+				panic(fmt.Sprintf("field %s in %s must have json tag", field.Name, structType.Name()))
+			}
+		}
+
+		return func(config map[string]any) any {
+			fVal := reflect.ValueOf(factory)
+
+			// Convert config map to struct using JSON marshal/unmarshal
+			b, err := json.Marshal(config)
+			if err != nil {
+				panic(fmt.Errorf("failed to marshal config: %w", err))
+			}
+
+			argPtr := reflect.New(structType).Interface()
+			if err := json.Unmarshal(b, argPtr); err != nil {
+				panic(fmt.Errorf("failed to unmarshal config: %w", err))
+			}
+
+			// prepare input parameter
+			var in []reflect.Value
+			if paramIsPtr {
+				in = []reflect.Value{reflect.ValueOf(argPtr)}
+			} else {
+				in = []reflect.Value{reflect.ValueOf(argPtr).Elem()}
+			}
+
+			out := fVal.Call(in)
+			return out[0].Interface()
+		}
+	}
 }

@@ -63,7 +63,7 @@ func ToStruct(val any, structOut any, strict bool) error {
 			if strict {
 				return fmt.Errorf("unknown field: %s", name)
 			}
-			continue // skip kalau non-strict
+			continue // skip if non-strict
 		}
 
 		field := v.Field(idx)
