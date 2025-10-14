@@ -32,13 +32,13 @@ var (
 //	func (s *UserService) ListUsers(ctx *request.Context) ([]*User, error) { ... }
 //
 //	router := router.NewFromService(&UserService{}, router.DefaultServiceRouterOptions())
-func NewFromService(service any, opts ServiceRouterOptions) Router {
+func NewFromService(service any, opts *ServiceRouterOptions) Router {
 	return NewFromServiceWithEngine(service, "default", opts)
 }
 
 // NewFromServiceWithEngine creates a Router with a custom engine type.
 // Allows using specific engine types like "default", "servemux", etc.
-func NewFromServiceWithEngine(service any, engineType string, opts ServiceRouterOptions) Router {
+func NewFromServiceWithEngine(service any, engineType string, opts *ServiceRouterOptions) Router {
 	// Extract resource name for router name
 	serviceType := reflect.TypeOf(service)
 
@@ -82,15 +82,17 @@ func NewFromServiceWithEngine(service any, engineType string, opts ServiceRouter
 		if override, exists := opts.RouteOverrides[method.Name]; exists {
 			handler := createServiceMethodHandler(service, method)
 			path := override.Path
+			httpMethod := override.HTTPMethod
+
 			if path == "" {
 				// Use convention to generate path
-				httpMethod, genPath, err := parser.ParseMethodName(method.Name)
+				genMethod, genPath, err := parser.ParseMethodName(method.Name)
 				if err != nil {
 					continue
 				}
 				path = genPath
-				if override.HTTPMethod == "" {
-					override.HTTPMethod = httpMethod
+				if httpMethod == "" {
+					httpMethod = genMethod
 				}
 			}
 
@@ -99,8 +101,13 @@ func NewFromServiceWithEngine(service any, engineType string, opts ServiceRouter
 				path = strings.TrimSuffix(opts.Prefix, "/") + "/" + strings.TrimPrefix(path, "/")
 			}
 
-			// Register route with method name
-			registerRouteByMethod(r, override.HTTPMethod, path, handler, method.Name)
+			// Ensure MethodName is set for route naming
+			if override.MethodName == "" {
+				override.MethodName = method.Name
+			}
+
+			// Register route with override meta
+			registerRouteByMethod(r, httpMethod, path, handler, override)
 			continue
 		}
 
@@ -141,8 +148,13 @@ func NewFromServiceWithEngine(service any, engineType string, opts ServiceRouter
 		// Create handler
 		handler := createServiceMethodHandler(service, method)
 
+		// Create basic RouteMeta for convention-based routes
+		meta := RouteMeta{
+			MethodName: method.Name,
+		}
+
 		// Register route with method name
-		registerRouteByMethod(r, httpMethod, path, handler, method.Name)
+		registerRouteByMethod(r, httpMethod, path, handler, meta)
 	}
 
 	return r
@@ -174,29 +186,48 @@ func pluralizeName(name string) string {
 	return name + "s"
 }
 
-// registers a route based on HTTP method with route name
-func registerRouteByMethod(r Router, httpMethod, path string, handler any, methodName string) {
-	// Use method name as route name for better debugging and introspection
-	nameOption := route.WithNameOption(methodName)
+// registers a route based on HTTP method with route options
+// Converts RouteMeta to route.RouteHandlerOption(s) and applies them along with middleware
+func registerRouteByMethod(r Router, httpMethod, path string, handler any, meta RouteMeta) {
+	// Build route options from RouteMeta
+	var options []any
+
+	// Add name option (use RouteMeta.Name if provided, otherwise use MethodName)
+	if meta.Name != "" {
+		options = append(options, route.WithNameOption(meta.Name))
+	} else if meta.MethodName != "" {
+		options = append(options, route.WithNameOption(meta.MethodName))
+	}
+
+	// Add description option if provided
+	if meta.Description != "" {
+		options = append(options, route.WithDescriptionOption(meta.Description))
+	}
+
+	// Add override parent middleware option if set
+	if meta.OverrideParentMw {
+		options = append(options, route.WithOverrideParentMwOption(true))
+	}
+
+	// Add middlewares
+	options = append(options, meta.Middlewares...)
 
 	switch strings.ToUpper(httpMethod) {
 	case "GET":
-		r.GET(path, handler, nameOption)
+		r.GET(path, handler, options...)
 	case "POST":
-		r.POST(path, handler, nameOption)
+		r.POST(path, handler, options...)
 	case "PUT":
-		r.PUT(path, handler, nameOption)
+		r.PUT(path, handler, options...)
 	case "PATCH":
-		r.PATCH(path, handler, nameOption)
+		r.PATCH(path, handler, options...)
 	case "DELETE":
-		r.DELETE(path, handler, nameOption)
+		r.DELETE(path, handler, options...)
 	default:
 		// Fallback to ANY
-		r.ANY(path, handler, nameOption)
+		r.ANY(path, handler, options...)
 	}
-}
-
-// creates a handler function that calls the service method
+} // creates a handler function that calls the service method
 func createServiceMethodHandler(service any, method reflect.Method) any {
 	serviceValue := reflect.ValueOf(service)
 	methodValue := serviceValue.MethodByName(method.Name)

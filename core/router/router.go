@@ -22,17 +22,19 @@ type Router interface {
 
 	// route registration for GET method
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -40,17 +42,19 @@ type Router interface {
 	GET(path string, h any, middleware ...any) Router
 	// route registration for POST method
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -58,17 +62,19 @@ type Router interface {
 	POST(path string, h any, middleware ...any) Router
 	// route registration for PUT method
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -76,17 +82,19 @@ type Router interface {
 	PUT(path string, h any, middleware ...any) Router
 	// route registration for DELETE metod
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -94,17 +102,19 @@ type Router interface {
 	DELETE(path string, h any, middleware ...any) Router
 	// route registration for PATCH method
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -112,17 +122,19 @@ type Router interface {
 	PATCH(path string, h any, middleware ...any) Router
 	// route registration for ANY method (all methods)
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -131,17 +143,19 @@ type Router interface {
 
 	// route registration for GET method with prefix match
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -149,17 +163,19 @@ type Router interface {
 	GETPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for POST method with prefix match
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -167,17 +183,19 @@ type Router interface {
 	POSTPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for PUT method with prefix match
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -185,17 +203,19 @@ type Router interface {
 	PUTPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for DELETE method with prefix match
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -203,17 +223,19 @@ type Router interface {
 	DELETEPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for PATCH method with prefix match
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
@@ -221,17 +243,19 @@ type Router interface {
 	PATCHPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for ANY method with prefix match
 	//
-	// h can be:
-	//  - func(*lokstra.RequestContext) error
-	//  - request.HandlerFunc
-	//  - http.HandlerFunc
-	//  - http.Handler
-	//  - func(*lokstra.RequestContext, any) error
-	//  - func() error
-	//  - func() (any, error)
-	//  - func(any) error
-	//  - func(any) (any, error)
-	//
+	// h param can be:
+	//  - no param
+	//  - *lokstra.RequestContext
+	//  - *lokstra.RequestContext, struct for binding
+	//  - struct for binding
+	// and h return type can be:
+	//  - error
+	//  - *response.Response
+	//  - *response.ApiHelper
+	//  - any
+	//  - (*response.Response, error) or (response.Response, error)
+	//  - (*response.ApiHelper, error) or (response.ApiHelper, error)
+	//  - (any, error)
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
