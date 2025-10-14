@@ -25,8 +25,12 @@ type ApiHelper struct {
 }
 
 // NewApiHelper creates a new API helper instance
-func NewApiHelper(resp *Response) *ApiHelper {
-	return &ApiHelper{resp: resp}
+func NewApiHelper() *ApiHelper {
+	return &ApiHelper{resp: NewResponse()}
+}
+
+func (a *ApiHelper) Resp() *Response {
+	return a.resp
 }
 
 // Ok sends a successful response with data using configured formatter

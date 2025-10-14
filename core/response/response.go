@@ -12,3 +12,7 @@ type Response struct {
 	RespContentType string                          // MIME type (default: application/json)
 	WriterFunc      func(http.ResponseWriter) error // custom writer (streaming/file)
 }
+
+func NewResponse() *Response {
+	return &Response{}
+}

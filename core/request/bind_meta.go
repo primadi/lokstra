@@ -9,7 +9,7 @@ type bindFieldMeta struct {
 	Field           reflect.StructField
 	Index           []int
 	Name            string // param name
-	Tag             string // path/query/header
+	Tag             string // path/query/header/json
 	IsSlice         bool
 	IsUnmarshalJSON bool
 
@@ -17,6 +17,7 @@ type bindFieldMeta struct {
 	IndexKey          []int
 	IndexValue        []int
 	IsMap             bool
+	IsWildcard        bool // true if json:"*" - captures all body as map
 }
 
 type bindMeta struct {
@@ -47,7 +48,7 @@ func getOrBuildBindMeta(t reflect.Type) *bindMeta {
 	for i := range numField {
 		field := t.Field(i)
 
-		tagType, paramName := parseBindingTag(field)
+		tagType, paramName, isWildcard := parseBindingTag(field)
 		if tagType == "" {
 			continue
 		}
@@ -80,17 +81,15 @@ func getOrBuildBindMeta(t reflect.Type) *bindMeta {
 			}
 		}
 
-		// Check if it's a map[string]string
-		// used for map binding in query/header
+		// Check if it's a map[string]string or map[string]any
+		// used for map binding in query/header/body
 		// e.g. ?meta[foo]=bar&meta[baz]=qux
 		// will be bound to map[string]string{
 		//   "foo": "bar",
 		//   "baz": "qux",
 		// }
 		isMap := false
-		if field.Type.Kind() == reflect.Map &&
-			field.Type.Key().Kind() == reflect.String &&
-			field.Type.Elem().Kind() == reflect.String {
+		if field.Type.Kind() == reflect.Map && field.Type.Key().Kind() == reflect.String {
 			isMap = true
 		}
 
@@ -105,6 +104,7 @@ func getOrBuildBindMeta(t reflect.Type) *bindMeta {
 			IndexKey:          indexKey,
 			IndexValue:        indexValue,
 			IsMap:             isMap,
+			IsWildcard:        isWildcard,
 		}
 
 		bm.Fields = append(bm.Fields, fieldMeta)
@@ -117,16 +117,25 @@ func getOrBuildBindMeta(t reflect.Type) *bindMeta {
 	return bm
 }
 
-func parseBindingTag(field reflect.StructField) (tagType, paramName string) {
+func parseBindingTag(field reflect.StructField) (tagType, paramName string, isWildcard bool) {
+	// Check for path, query, header tags
 	for _, key := range []string{"path", "query", "header"} {
 		if val, ok := field.Tag.Lookup(key); ok && val != "" {
-			return key, val
+			return key, val, false
 		}
 	}
-	return "", ""
-}
 
-// unmarshalJSONType represents the interface type for json.Unmarshaler
+	// Check for json tag (for body binding)
+	if val, ok := field.Tag.Lookup("json"); ok && val != "" {
+		// Check for wildcard: json:"*"
+		if val == "*" {
+			return "json", "", true
+		}
+		return "json", val, false
+	}
+
+	return "", "", false
+} // unmarshalJSONType represents the interface type for json.Unmarshaler
 var unmarshalJSONType = reflect.TypeOf((*interface {
 	UnmarshalJSON([]byte) error
 })(nil)).Elem()

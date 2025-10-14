@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/primadi/lokstra/cmd/examples/25-single-binary-deployment/services"
+	"github.com/primadi/lokstra/cmd_draft/examples/25-single-binary-deployment/services"
 	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/lokstra_registry"
 )

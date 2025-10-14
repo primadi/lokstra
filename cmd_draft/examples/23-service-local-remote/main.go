@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/primadi/lokstra/cmd/examples/23-service-local-remote/user_service"
+	"github.com/primadi/lokstra/cmd_draft/examples/23-service-local-remote/user_service"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/route"
 	"github.com/primadi/lokstra/core/router"

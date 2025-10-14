@@ -1,0 +1,51 @@
+# Runnable Test Configuration
+# App1 (port 9090) - Backend service 1
+# App2 (port 9091) - Backend service 2
+# App3 (port 8080) - API Gateway with reverse proxy
+
+services:
+  # Backend Service 1
+  - name: user-service
+    type: user_service
+    enable: true
+    auto-router:
+      convention: rest
+      resource-name: user
+
+  # Backend Service 2
+  - name: product-service
+    type: product_service
+    enable: true
+    auto-router:
+      convention: rest
+      resource-name: product
+
+servers:
+  # API Gateway - Routes to backend services
+  - name: demo-api-gateway
+    base-url: http://localhost
+    apps:
+      - name: gateway
+        addr: ":8080"
+        reverse-proxies:
+          # Forward /users/* to App1 (port 9090)
+          - prefix: /users
+            strip-prefix: true
+            target: http://localhost:9090
+
+          # Forward /products/* to App2 (port 9091)
+          - prefix: /products
+            strip-prefix: true
+            target: http://localhost:9091
+      - name: app1
+        addr: ":9090"
+        routers:
+          - user-service
+        services:
+          - user-service
+      - name: app2
+        addr: ":9091"
+        routers:
+          - product-service
+        services:
+          - product-service

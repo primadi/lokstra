@@ -15,14 +15,13 @@ import (
 )
 
 var (
-	jsonBodyDecoder = jsoniter.Config{TagKey: "body"}.Froze()
-	jsonDecoder     = jsoniter.Config{TagKey: "json"}.Froze()
+	jsonDecoder = jsoniter.ConfigCompatibleWithStandardLibrary
 )
 
 func unmarshalBody(data []byte, v any) error {
-	err := jsonBodyDecoder.Unmarshal(data, v)
+	err := jsonDecoder.Unmarshal(data, v)
 	if err == nil {
-		return jsonDecoder.Unmarshal(data, v)
+		return nil
 	}
 
 	// Create a more user-friendly error message for JSON parsing errors
@@ -423,7 +422,57 @@ func (h *RequestHelper) BindBody(v any) error {
 		return nil // No body to bind
 	}
 
-	// Fallback to json tags
+	// Check if v is a struct with wildcard fields
+	t := reflect.TypeOf(v)
+	if t != nil && t.Kind() == reflect.Pointer && t.Elem().Kind() == reflect.Struct {
+		bm := getOrBuildBindMeta(t)
+
+		// Check if any field has wildcard binding
+		hasWildcard := false
+		var wildcardField *bindFieldMeta
+		for i := range bm.Fields {
+			if bm.Fields[i].IsWildcard && bm.Fields[i].Tag == "json" {
+				hasWildcard = true
+				wildcardField = &bm.Fields[i]
+				break
+			}
+		}
+
+		if hasWildcard {
+			// Bind wildcard field - unmarshal entire body into the map field
+			rv := reflect.ValueOf(v).Elem()
+			mapField := rv.FieldByIndex(wildcardField.Index)
+
+			// Ensure the field is a map type
+			if mapField.Kind() == reflect.Map {
+				// Unmarshal body directly into the map
+				mapPtr := reflect.New(mapField.Type())
+				if err := jsonDecoder.Unmarshal(h.rawRequestBody, mapPtr.Interface()); err != nil {
+					return &ValidationError{
+						FieldErrors: []api_formatter.FieldError{
+							{
+								Field:   wildcardField.Field.Name,
+								Code:    "INVALID_JSON",
+								Message: "Failed to parse body as map: " + err.Error(),
+							},
+						},
+					}
+				}
+
+				mapField.Set(mapPtr.Elem())
+			}
+
+			// Also bind other json/body fields normally
+			if err := unmarshalBody(h.rawRequestBody, v); err != nil {
+				return err
+			}
+
+			// Validate after binding
+			return h.validateStruct(v)
+		}
+	}
+
+	// Normal struct binding (no wildcard)
 	if err := unmarshalBody(h.rawRequestBody, v); err != nil {
 		return err
 	}
@@ -492,6 +541,11 @@ func (h *RequestHelper) BindAll(v any) error {
 	query := h.ctx.R.URL.Query()
 
 	for _, fieldMeta := range bm.Fields {
+		// Skip wildcard fields - they will be handled by BindBody
+		if fieldMeta.IsWildcard {
+			continue
+		}
+
 		switch fieldMeta.Tag {
 		case "query":
 			if err := h.bindQueryField(fieldMeta, rv, query); err != nil {

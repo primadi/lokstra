@@ -6,6 +6,7 @@ import (
 	"maps"
 	"strings"
 
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/router"
@@ -483,17 +484,36 @@ func RegisterConfig(c *config.Config, serverName string) {
 						r.SetPathPrefix(combinedPrefix)
 					}
 
-					// TODO: Apply middlewares from router config
-					// for _, mwName := range routerCfg.Middlewares {
-					//     middleware := GetMiddleware(mwName)
-					//     r.Use(middleware)
-					// }
+					// Apply middlewares from router config
+					r.Use(utils.ToAnySlice(routerCfg.Middlewares)...)
 				}
 
 				routers = append(routers, r)
 			}
 
 			a := app.New(appConfig.GetName(i), appConfig.Addr, routers...)
+
+			// Add reverse proxies if configured
+			if len(appConfig.ReverseProxies) > 0 {
+				proxies := make([]*app.ReverseProxyConfig, len(appConfig.ReverseProxies))
+				for j, rp := range appConfig.ReverseProxies {
+					proxy := &app.ReverseProxyConfig{
+						Prefix:      rp.Prefix,
+						StripPrefix: rp.StripPrefix,
+						Target:      rp.Target,
+					}
+					// Add rewrite config if specified
+					if rp.Rewrite != nil && rp.Rewrite.From != "" {
+						proxy.Rewrite = &app.ReverseProxyRewrite{
+							From: rp.Rewrite.From,
+							To:   rp.Rewrite.To,
+						}
+					}
+					proxies[j] = proxy
+				}
+				a.AddReverseProxies(proxies)
+			}
+
 			r := a.GetRouter()
 			for r != nil {
 				RegisterClientRouter(r.Name(), srvConfig.Name,

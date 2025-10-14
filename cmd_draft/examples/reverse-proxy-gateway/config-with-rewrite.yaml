@@ -1,0 +1,61 @@
+# Example Configuration with Reverse Proxy and Path Rewrite
+# This demonstrates how to configure reverse proxies with path rewriting
+
+servers:
+  - name: api-gateway
+    base-url: http://localhost:8080
+    apps:
+      - addr: :8080
+        reverse-proxies:
+          # Example 1: Simple reverse proxy with rewrite
+          # /api/v1/users -> http://api-v2-server:8080/v2/users
+          - prefix: /api
+            strip-prefix: false
+            target: http://api-v2-server:8080
+            rewrite:
+              from: "^/v1"
+              to: "/v2"
+          
+          # Example 2: Strip prefix and rewrite
+          # /legacy/api/users -> http://new-api:9000/v2/users
+          - prefix: /legacy
+            strip-prefix: true  # removes /legacy, leaving /api/users
+            target: http://new-api:9000
+            rewrite:
+              from: "^/api"     # matches /api in the remaining path
+              to: "/v2"         # replaces with /v2
+          
+          # Example 3: Complex path transformation
+          # /old/service/action -> http://backend:8081/new-service/action
+          - prefix: /old
+            strip-prefix: false
+            target: http://backend:8081
+            rewrite:
+              from: "^/old/service"
+              to: "/new-service"
+          
+          # Example 4: No rewrite, just simple proxy
+          # /static/* -> http://cdn:8082/static/*
+          - prefix: /static
+            strip-prefix: false
+            target: http://cdn:8082
+
+# Path transformation flow:
+# 
+# 1. Original request: /api/v1/users
+#    - Prefix matches: /api
+#    - Strip prefix: no (still /api/v1/users)
+#    - Apply rewrite: ^/v1 -> /v2 (becomes /api/v2/users)
+#    - Forward to: http://api-v2-server:8080/api/v2/users
+#
+# 2. Original request: /legacy/api/users
+#    - Prefix matches: /legacy
+#    - Strip prefix: yes (becomes /api/users)
+#    - Apply rewrite: ^/api -> /v2 (becomes /v2/users)
+#    - Forward to: http://new-api:9000/v2/users
+#
+# 3. Original request: /old/service/action
+#    - Prefix matches: /old
+#    - Strip prefix: no (still /old/service/action)
+#    - Apply rewrite: ^/old/service -> /new-service (becomes /new-service/action)
+#    - Forward to: http://backend:8081/new-service/action

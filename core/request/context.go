@@ -30,15 +30,15 @@ type Context struct {
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request, handlers []HandlerFunc) *Context {
-	resp := &response.Response{}
+	api := response.NewApiHelper()
 
 	ctx := &Context{
 		Context:  context.Background(),
 		W:        newWriterWrapper(w),
 		R:        r,
 		handlers: handlers,
-		Resp:     resp,                        // Direct assignment to Resp
-		Api:      response.NewApiHelper(resp), // Initialize API helper
+		Resp:     api.Resp(), // Direct assignment to Resp
+		Api:      api,        // Initialize API helper
 	}
 
 	// Initialize request helper

@@ -191,6 +191,48 @@
                     "type": "string",
                     "minLength": 1
                   }
+                },
+                "reverse-proxies": {
+                  "type": "array",
+                  "description": "Reverse proxy configurations for this app",
+                  "items": {
+                    "type": "object",
+                    "required": ["prefix", "target"],
+                    "properties": {
+                      "prefix": {
+                        "type": "string",
+                        "description": "Path prefix to match for proxying",
+                        "pattern": "^/[a-zA-Z0-9/_-]*$",
+                        "minLength": 1
+                      },
+                      "target": {
+                        "type": "string",
+                        "description": "Target URL to proxy requests to",
+                        "minLength": 1
+                      },
+                      "strip-prefix": {
+                        "type": "boolean",
+                        "description": "Whether to strip the matched path prefix before forwarding",
+                        "default": false
+                      },
+                      "rewrite": {
+                        "type": "object",
+                        "description": "Path rewrite rules",
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "description": "Pattern to match in path"
+                          },
+                          "to": {
+                            "type": "string",
+                            "description": "Replacement pattern"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  }
                 }
               },
               "additionalProperties": false

@@ -7,25 +7,41 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/response"
 )
 
 var (
-	typeOfContext = reflect.TypeOf((*request.Context)(nil))
-	typeOfError   = reflect.TypeOf((*error)(nil)).Elem()
+	typeOfContext      = reflect.TypeOf((*request.Context)(nil))
+	typeOfError        = reflect.TypeOf((*error)(nil)).Elem()
+	typeOfResponse     = reflect.TypeOf((*response.Response)(nil))
+	typeOfApiHelper    = reflect.TypeOf((*response.ApiHelper)(nil))
+	typeOfResponseVal  = reflect.TypeOf(response.Response{})
+	typeOfApiHelperVal = reflect.TypeOf(response.ApiHelper{})
 )
 
 // handlerMetadata contains signature information extracted during registration
 type handlerMetadata struct {
-	hasContext      bool // Whether first parameter is *request.Context
-	startParamIndex int  // Index where non-Context parameters start (0 or 1)
-	numIn           int  // Total number of input parameters
-	numOut          int  // Total number of return values
+	hasContext       bool // Whether first parameter is *request.Context
+	startParamIndex  int  // Index where non-Context parameters start (0 or 1)
+	numIn            int  // Total number of input parameters
+	numOut           int  // Total number of return values
+	returnsResponse  bool // Whether first return is *response.Response or response.Response
+	returnsApiHelper bool // Whether first return is *response.ApiHelper or response.ApiHelper
+	isResponsePtr    bool // Whether returns *response.Response (vs response.Response)
+	isApiHelperPtr   bool // Whether returns *response.ApiHelper (vs response.ApiHelper)
 }
 
 // paramExtractorFunc extracts a parameter from context
 // Optimized: pathParamNames captured in closure, not passed per call
 type paramExtractorFunc func(*request.Context) (reflect.Value, error)
 
+// use reflection to adapt various handler signatures to request.HandlerFunc
+// OPTIMIZATION: Pre-compiles metadata and extractors during registration
+// Supports handler signatures:
+//   - func() error
+//   - func() (any, error)
+//   - func(any) error
+//   - func(any) (any, error)
 func adaptSmart(path string, v any) request.HandlerFunc {
 	fnVal := reflect.ValueOf(v)
 	fnType := fnVal.Type()
@@ -73,24 +89,130 @@ func adaptSmart(path string, v any) request.HandlerFunc {
 		// Handle return values
 		// OPTIMIZATION: Branch prediction helps here (most common case first)
 		if meta.numOut == 2 {
-			// Two return values: (data, error) - most common case
-			if !results[1].IsNil() {
-				return results[1].Interface().(error)
+			// Two return values: (data/response, error)
+			errResult := results[1]
+
+			// Check if error is non-nil - error always takes precedence
+			if !errResult.IsNil() {
+				return errResult.Interface().(error)
 			}
-			// Success - wrap data in response
-			return ctx.Api.Ok(results[0].Interface())
+
+			// No error, check first return value type
+			firstResult := results[0]
+
+			// Case 1: Returns *response.Response or response.Response
+			if meta.returnsResponse {
+				// Check for nil pointer (only if it's a pointer type)
+				if meta.isResponsePtr && firstResult.IsNil() {
+					// Nil response pointer - send default success
+					return ctx.Api.Ok(nil)
+				}
+
+				var resp *response.Response
+				if meta.isResponsePtr {
+					resp = firstResult.Interface().(*response.Response)
+				} else {
+					// response.Response value - get address
+					respVal := firstResult.Interface().(response.Response)
+					resp = &respVal
+				}
+
+				// Use the Response directly by copying it to ctx.Resp
+				*ctx.Resp = *resp
+				return nil
+			}
+
+			// Case 2: Returns *response.ApiHelper or response.ApiHelper
+			if meta.returnsApiHelper {
+				// Check for nil pointer (only if it's a pointer type)
+				if meta.isApiHelperPtr && firstResult.IsNil() {
+					// Nil ApiHelper pointer - send default success
+					return ctx.Api.Ok(nil)
+				}
+
+				var apiHelper *response.ApiHelper
+				if meta.isApiHelperPtr {
+					apiHelper = firstResult.Interface().(*response.ApiHelper)
+				} else {
+					// response.ApiHelper value - get address
+					apiHelperVal := firstResult.Interface().(response.ApiHelper)
+					apiHelper = &apiHelperVal
+				}
+
+				// Extract Response from ApiHelper and copy to ctx.Resp
+				*ctx.Resp = *apiHelper.Resp()
+				return nil
+			}
+
+			// Case 3: Regular data return - wrap in API response
+			return ctx.Api.Ok(firstResult.Interface())
 		}
 
-		// Only error return
-		if !results[0].IsNil() {
-			return results[0].Interface().(error)
+		// Single return value
+		firstResult := results[0]
+
+		// Check if it's an error return
+		if firstResult.Type().Implements(typeOfError) {
+			// Only error return
+			if !firstResult.IsNil() {
+				return firstResult.Interface().(error)
+			}
+			// Success with no data - check if handler wrote response
+			if meta.hasContext && ctx.Resp.WriterFunc != nil {
+				return nil
+			}
+			// Send default success response
+			return ctx.Api.Ok(nil)
 		}
-		// Success with no data - check if handler wrote response
-		if meta.hasContext && ctx.Resp.WriterFunc != nil {
+
+		// Single non-error return: data, *Response, or *ApiHelper
+
+		// Case 1: Returns *response.Response or response.Response
+		if meta.returnsResponse {
+			// Check for nil pointer (only if it's a pointer type)
+			if meta.isResponsePtr && firstResult.IsNil() {
+				// Nil response pointer - send default success
+				return ctx.Api.Ok(nil)
+			}
+
+			var resp *response.Response
+			if meta.isResponsePtr {
+				resp = firstResult.Interface().(*response.Response)
+			} else {
+				// response.Response value - get address
+				respVal := firstResult.Interface().(response.Response)
+				resp = &respVal
+			}
+
+			// Use the Response directly by copying it to ctx.Resp
+			*ctx.Resp = *resp
 			return nil
 		}
-		// Send default success response
-		return ctx.Api.Ok(nil)
+
+		// Case 2: Returns *response.ApiHelper or response.ApiHelper
+		if meta.returnsApiHelper {
+			// Check for nil pointer (only if it's a pointer type)
+			if meta.isApiHelperPtr && firstResult.IsNil() {
+				// Nil ApiHelper pointer - send default success
+				return ctx.Api.Ok(nil)
+			}
+
+			var apiHelper *response.ApiHelper
+			if meta.isApiHelperPtr {
+				apiHelper = firstResult.Interface().(*response.ApiHelper)
+			} else {
+				// response.ApiHelper value - get address
+				apiHelperVal := firstResult.Interface().(response.ApiHelper)
+				apiHelper = &apiHelperVal
+			}
+
+			// Extract Response from ApiHelper and copy to ctx.Resp
+			*ctx.Resp = *apiHelper.Resp()
+			return nil
+		}
+
+		// Case 3: Regular data return - wrap in API response
+		return ctx.Api.Ok(firstResult.Interface())
 	}
 }
 
@@ -106,9 +228,20 @@ func buildHandlerMetadata(fnType reflect.Type, path string) *handlerMetadata {
 		panic(invalidHandlerMsg(path))
 	}
 
-	// Last return value must be error
-	if !fnType.Out(numOut - 1).Implements(typeOfError) {
-		panic(invalidHandlerMsg(path))
+	// Check if last return value is error (for numOut == 2)
+	// If numOut == 1, it can be either error OR any (response/data)
+	hasErrorReturn := false
+	if numOut == 2 {
+		// Two returns: must be (data, error)
+		if !fnType.Out(1).Implements(typeOfError) {
+			panic(invalidHandlerMsg(path))
+		}
+		hasErrorReturn = true
+	} else {
+		// One return: check if it's error
+		if fnType.Out(0).Implements(typeOfError) {
+			hasErrorReturn = true
+		}
 	}
 
 	// Detect if first param is *request.Context
@@ -119,11 +252,60 @@ func buildHandlerMetadata(fnType reflect.Type, path string) *handlerMetadata {
 		startParamIndex = 1
 	}
 
+	// Detect return type
+	returnsResponse := false
+	returnsApiHelper := false
+	isResponsePtr := false
+	isApiHelperPtr := false
+
+	// Check first return value (or only return value if numOut == 1)
+	if numOut > 0 && !hasErrorReturn {
+		// numOut == 1 and not error, so it's a data/response return
+		firstReturnType := fnType.Out(0)
+
+		switch firstReturnType {
+		case typeOfResponse:
+			returnsResponse = true
+			isResponsePtr = true
+		case typeOfResponseVal:
+			returnsResponse = true
+			isResponsePtr = false
+		case typeOfApiHelper:
+			returnsApiHelper = true
+			isApiHelperPtr = true
+		case typeOfApiHelperVal:
+			returnsApiHelper = true
+			isApiHelperPtr = false
+		}
+	} else if numOut == 2 {
+		// numOut == 2: (data, error) - check first return
+		firstReturnType := fnType.Out(0)
+
+		switch firstReturnType {
+		case typeOfResponse:
+			returnsResponse = true
+			isResponsePtr = true
+		case typeOfResponseVal:
+			returnsResponse = true
+			isResponsePtr = false
+		case typeOfApiHelper:
+			returnsApiHelper = true
+			isApiHelperPtr = true
+		case typeOfApiHelperVal:
+			returnsApiHelper = true
+			isApiHelperPtr = false
+		}
+	}
+
 	return &handlerMetadata{
-		hasContext:      hasContext,
-		startParamIndex: startParamIndex,
-		numIn:           numIn,
-		numOut:          numOut,
+		hasContext:       hasContext,
+		startParamIndex:  startParamIndex,
+		numIn:            numIn,
+		numOut:           numOut,
+		returnsResponse:  returnsResponse,
+		returnsApiHelper: returnsApiHelper,
+		isResponsePtr:    isResponsePtr,
+		isApiHelperPtr:   isApiHelperPtr,
 	}
 }
 
@@ -134,7 +316,7 @@ func makeParameterExtractors(fnType reflect.Type, startParamIndex int) []paramEx
 	numParams := fnType.NumIn() - startParamIndex
 	extractors := make([]paramExtractorFunc, numParams)
 
-	for i := 0; i < numParams; i++ {
+	for i := range numParams {
 		paramType := fnType.In(startParamIndex + i)
 
 		if paramType.Kind() == reflect.Pointer && paramType.Elem().Kind() == reflect.Struct {
@@ -169,47 +351,286 @@ func invalidHandlerMsg(path string) string {
 	return "Invalid handler type for path [" + path + "]. Supported signatures:\n" +
 		"  - func(*Context) error\n" +
 		"  - func(*Context) (data, error)\n" +
+		"  - func(*Context) data\n" +
+		"  - func(*Context) (*Response, error)\n" +
+		"  - func(*Context) *Response\n" +
+		"  - func(*Context) (*ApiHelper, error)\n" +
+		"  - func(*Context) *ApiHelper\n" +
 		"  - func(*Context, *Struct) error\n" +
 		"  - func(*Context, *Struct) (data, error)\n" +
+		"  - func(*Context, *Struct) data\n" +
+		"  - func(*Context, *Struct) (*Response, error)\n" +
+		"  - func(*Context, *Struct) *Response\n" +
+		"  - func(*Context, *Struct) (*ApiHelper, error)\n" +
+		"  - func(*Context, *Struct) *ApiHelper\n" +
 		"  - func(*Struct) error\n" +
 		"  - func(*Struct) (data, error)\n" +
+		"  - func(*Struct) data\n" +
+		"  - func(*Struct) (*Response, error)\n" +
+		"  - func(*Struct) *Response\n" +
+		"  - func(*Struct) (*ApiHelper, error)\n" +
+		"  - func(*Struct) *ApiHelper\n" +
+		"  - func() error\n" +
+		"  - func() (data, error)\n" +
+		"  - func() data\n" +
+		"  - func() (*Response, error)\n" +
+		"  - func() *Response\n" +
+		"  - func() (*ApiHelper, error)\n" +
+		"  - func() *ApiHelper\n" +
 		"  - request.HandlerFunc\n" +
 		"  - http.HandlerFunc\n" +
 		"  - http.Handler\n" +
-		"Note: Direct path parameters (string, int) not supported. Use struct with 'path' tags."
+		"Note: Direct path parameters (string, int) not supported. Use struct with 'path' tags.\n" +
+		"Note: Handlers can return data/Response/ApiHelper with or without error.\n" +
+		"Note: *Response and *ApiHelper returns allow full control over response (status, headers, body)."
 }
 
 // adaptHandler converts various handler types to request.HandlerFunc.
-// TODO: Consider dual-path architecture for pure http.Handler chains in future versions.
+// OPTIMIZATION: Fast paths for common signatures avoid reflection overhead.
+// Performance tiers:
+//   - Tier 0 (0ns): Direct function return, zero wrapper
+//   - Tier 1 (~10ns): Lightweight wrapper, no reflection
+//   - Tier 2 (~80ns): Smart adapter with reflection (fallback)
 func adaptHandler(path string, h any) request.HandlerFunc {
 	switch v := h.(type) {
+	// ========================================================================
+	// TIER 0: ZERO-COST HANDLERS (Direct return, no wrapper)
+	// ========================================================================
 	case func(*request.Context) error:
-		return v // Zero-cost for Lokstra handlers
+		return v // Direct function, no wrapper needed
 	case request.HandlerFunc:
-		return v // Zero-cost for Lokstra handlers
+		return v // Already the right type
+
+	// ========================================================================
+	// TIER 1: FAST PATH - Common Patterns with *Context (No Reflection)
+	// These cover ~80% of real-world use cases
+	// ========================================================================
+
+	// Pattern: func(*Context) (any, error)
+	// Most common production pattern
+	case func(*request.Context) (any, error):
+		return func(c *request.Context) error {
+			data, err := v(c)
+			if err != nil {
+				return err
+			}
+			return c.Api.Ok(data)
+		}
+
+	// Pattern: func(*Context) (*Response, error)
+	// For handlers needing full response control
+	case func(*request.Context) (*response.Response, error):
+		return func(c *request.Context) error {
+			resp, err := v(c)
+			if err != nil {
+				return err
+			}
+			if resp == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *resp
+			return nil
+		}
+
+	// Pattern: func(*Context) (*ApiHelper, error)
+	// For REST API handlers with helper methods
+	case func(*request.Context) (*response.ApiHelper, error):
+		return func(c *request.Context) error {
+			api, err := v(c)
+			if err != nil {
+				return err
+			}
+			if api == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *api.Resp()
+			return nil
+		}
+
+	// Pattern: func(*Context) any
+	// Simple handlers without error (mock/test)
+	case func(*request.Context) any:
+		return func(c *request.Context) error {
+			data := v(c)
+			return c.Api.Ok(data)
+		}
+
+	// Pattern: func(*Context) *Response
+	// Full control handlers without error
+	case func(*request.Context) *response.Response:
+		return func(c *request.Context) error {
+			resp := v(c)
+			if resp == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *resp
+			return nil
+		}
+
+	// Pattern: func(*Context) *ApiHelper
+	// API helpers without error
+	case func(*request.Context) *response.ApiHelper:
+		return func(c *request.Context) error {
+			api := v(c)
+			if api == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *api.Resp()
+			return nil
+		}
+
+	// Pattern: func(*Context) (Response, error) - value return
+	// Less common but supported for flexibility
+	case func(*request.Context) (response.Response, error):
+		return func(c *request.Context) error {
+			resp, err := v(c)
+			if err != nil {
+				return err
+			}
+			*c.Resp = resp
+			return nil
+		}
+
+	// Pattern: func(*Context) (ApiHelper, error) - value return
+	case func(*request.Context) (response.ApiHelper, error):
+		return func(c *request.Context) error {
+			api, err := v(c)
+			if err != nil {
+				return err
+			}
+			*c.Resp = *api.Resp()
+			return nil
+		}
+
+	// Pattern: func(*Context) Response - value return, no error
+	case func(*request.Context) response.Response:
+		return func(c *request.Context) error {
+			resp := v(c)
+			*c.Resp = resp
+			return nil
+		}
+
+	// Pattern: func(*Context) ApiHelper - value return, no error
+	case func(*request.Context) response.ApiHelper:
+		return func(c *request.Context) error {
+			api := v(c)
+			*c.Resp = *api.Resp()
+			return nil
+		}
+
+	// ========================================================================
+	// TIER 1: FAST PATH - Simple handlers without Context
+	// For stateless/mock handlers
+	// ========================================================================
+
+	// Pattern: func() (any, error)
+	case func() (any, error):
+		return func(c *request.Context) error {
+			data, err := v()
+			if err != nil {
+				return err
+			}
+			return c.Api.Ok(data)
+		}
+
+	// Pattern: func() (*Response, error)
+	case func() (*response.Response, error):
+		return func(c *request.Context) error {
+			resp, err := v()
+			if err != nil {
+				return err
+			}
+			if resp == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *resp
+			return nil
+		}
+
+	// Pattern: func() (*ApiHelper, error)
+	case func() (*response.ApiHelper, error):
+		return func(c *request.Context) error {
+			api, err := v()
+			if err != nil {
+				return err
+			}
+			if api == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *api.Resp()
+			return nil
+		}
+
+	// Pattern: func() any
+	case func() any:
+		return func(c *request.Context) error {
+			data := v()
+			return c.Api.Ok(data)
+		}
+
+	// Pattern: func() *Response
+	case func() *response.Response:
+		return func(c *request.Context) error {
+			resp := v()
+			if resp == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *resp
+			return nil
+		}
+
+	// Pattern: func() *ApiHelper
+	case func() *response.ApiHelper:
+		return func(c *request.Context) error {
+			api := v()
+			if api == nil {
+				return c.Api.Ok(nil)
+			}
+			*c.Resp = *api.Resp()
+			return nil
+		}
+
+	// Pattern: func() error
+	case func() error:
+		return func(c *request.Context) error {
+			return v()
+		}
+
+	// ========================================================================
+	// TIER 1: COMPATIBILITY - Standard HTTP handlers
+	// ========================================================================
 	case http.HandlerFunc:
-		// Lightweight wrapper for standard handlers
 		return func(c *request.Context) error {
 			v(c.W, c.R)
 			return nil
 		}
+
 	case func(http.ResponseWriter, *http.Request):
-		// Lightweight wrapper for standard handlers
 		return func(c *request.Context) error {
 			v(c.W, c.R)
 			return nil
 		}
+
 	case http.Handler:
-		// Lightweight wrapper for standard handlers
 		return func(c *request.Context) error {
 			v.ServeHTTP(c.W, c.R)
 			return nil
 		}
+
+	// ========================================================================
+	// TIER 2: SMART ADAPTER (Reflection-based fallback)
+	// Handles:
+	//   - func(*Struct) (any, error) - struct parameter binding
+	//   - func(*Context, *Struct) (any, error) - context + struct
+	//   - All other complex combinations
+	// ========================================================================
 	case string:
-		// return lokstra_registry.CreateMiddleware(v)
+		// Middleware by name (future feature)
 		return nil
+
 	default:
-		return adaptSmart(path, v) // Smart binding for complex handlers
+		// Fallback to reflection-based adapter for complex signatures
+		return adaptSmart(path, v)
 	}
 }
 

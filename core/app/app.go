@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,11 +9,10 @@ import (
 
 	"github.com/primadi/lokstra/core/app/listener"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/lokstra_handler"
 )
 
 type App struct {
-	http.Handler
-
 	name           string
 	mainRouter     router.Router
 	listenerConfig map[string]any
@@ -81,6 +79,73 @@ func (a *App) AddRouterWithPrefix(rt router.Router, appPrefix string) {
 	}
 }
 
+// ReverseProxyRewrite represents path rewrite rules for reverse proxy
+type ReverseProxyRewrite struct {
+	From string // Pattern to match in path (regex supported)
+	To   string // Replacement pattern
+}
+
+// ReverseProxyConfig represents a single reverse proxy configuration
+type ReverseProxyConfig struct {
+	Prefix      string               // URL prefix to match (e.g., "/api")
+	StripPrefix bool                 // Whether to strip the prefix before forwarding
+	Target      string               // Target backend URL (e.g., "http://api-server:8080")
+	Rewrite     *ReverseProxyRewrite // Path rewrite rules
+}
+
+// AddReverseProxies creates a router for reverse proxies and mounts them.
+// This is typically called from the config loader when reverse-proxies are defined in YAML.
+// Reverse proxy router is prepended (mounted first) before other routers.
+func (a *App) AddReverseProxies(proxies []*ReverseProxyConfig) {
+	if len(proxies) == 0 {
+		return
+	}
+
+	fmt.Printf("📦 [%s] Adding %d reverse proxy(ies)...\n", a.name, len(proxies))
+
+	// Create a dedicated router for reverse proxies
+	proxyRouter := router.New(a.name + "-reverse-proxy")
+
+	for _, proxy := range proxies {
+		stripPrefix := ""
+		if proxy.StripPrefix {
+			stripPrefix = proxy.Prefix
+		}
+
+		// Prepare rewrite config if specified
+		var rewrite *lokstra_handler.ReverseProxyRewrite
+		if proxy.Rewrite != nil && proxy.Rewrite.From != "" {
+			rewrite = &lokstra_handler.ReverseProxyRewrite{
+				From: proxy.Rewrite.From,
+				To:   proxy.Rewrite.To,
+			}
+			fmt.Printf("   🔄 %s -> %s (strip: %v, rewrite: %s -> %s)\n",
+				proxy.Prefix, proxy.Target, proxy.StripPrefix, proxy.Rewrite.From, proxy.Rewrite.To)
+		} else {
+			fmt.Printf("   🔄 %s -> %s (strip: %v)\n",
+				proxy.Prefix, proxy.Target, proxy.StripPrefix)
+		}
+
+		handler := lokstra_handler.MountReverseProxy(stripPrefix, proxy.Target, rewrite)
+		proxyRouter.ANYPrefix(proxy.Prefix, handler)
+	}
+
+	// Prepend proxy router (make it the first router)
+	if a.mainRouter != nil {
+		// Save existing router chain
+		existingRouter := a.mainRouter
+		// Set proxy router as main
+		a.mainRouter = proxyRouter
+		// Chain existing routers after proxy router
+		a.mainRouter.SetNextChainWithPrefix(existingRouter, "")
+	} else {
+		// No existing router, just set proxy router as main
+		a.mainRouter = proxyRouter
+	}
+
+	fmt.Printf("✅ [%s] Reverse proxies added successfully\n", a.name)
+}
+
 func (a *App) numRouters() int {
 	if a.mainRouter == nil {
 		return 0
@@ -99,7 +164,10 @@ func (a *App) numRouters() int {
 // Print app start information, including the number of routers and their routes
 func (a *App) PrintStartInfo() {
 	if a.mainRouter == nil {
-		panic("No router added to the app. Use AddRouter() to add at least one router.")
+		// App may have no routers (e.g., static file server only)
+		fmt.Println("Starting [" + a.name + "] with 0 router(s) on address " +
+			a.listenerConfig["addr"].(string))
+		return
 	}
 
 	fmt.Println("Starting ["+a.name+"] with", a.numRouters(), "router(s) on address",

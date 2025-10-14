@@ -35,7 +35,7 @@ func createMainApp(addr string) *lokstra.App {
 	//   /say/hello          -> http://localhost:8081/hello
 	//   /say/admin/hello    -> http://localhost:8081/admin/hello
 	r.ANYPrefix("/say", lokstra_handler.
-		MountReverseProxy("/say", "http://localhost:8081"))
+		MountReverseProxy("/say", "http://localhost:8081", nil))
 
 	app := lokstra.NewApp("main-app", addr, r)
 	return app

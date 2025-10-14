@@ -100,6 +100,10 @@ func createBasicRouter() lokstra.Router {
 		return c.Api.Ok("pong")
 	}, route.WithNameOption("ping-route"))
 
+	r.GET("/ping2", func() (string, error) {
+		return "pong2", nil
+	}, route.WithNameOption("ping2-route"))
+
 	r.GET("/hello", func(c *lokstra.RequestContext) error {
 		name := c.Req.QueryParam("name", "stranger")
 		return c.Api.Ok("Hello, " + name + "!")

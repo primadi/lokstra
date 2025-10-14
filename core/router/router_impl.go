@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/route"
@@ -27,6 +28,7 @@ type routerImpl struct {
 
 	isBuilt      bool
 	routerEngine engine.RouterEngine
+	startServe   sync.Once
 }
 
 func New(name string) Router {
@@ -113,7 +115,10 @@ func (r *routerImpl) Build() {
 
 // ServeHTTP implements Router.
 func (r *routerImpl) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	r.Build()
+	r.startServe.Do(func() {
+		// build router on first serve, do only once
+		r.Build()
+	})
 	r.routerEngine.ServeHTTP(w, req)
 }
 

@@ -27,91 +27,215 @@ type Router interface {
 	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
 	//
 	// middleware can be:
-	//  - [same as above]
-	//  - route.HandlerOption (e.g. route.WithNameOption,
-	//    route.WithDescriptionOption, route.WithOverrideParentMwOption)
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	GET(path string, h any, middleware ...any) Router
 	// route registration for POST method
 	//
-	// middleware can be:
+	// h can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
-	//  - route.HandlerOption
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	POST(path string, h any, middleware ...any) Router
 	// route registration for PUT method
 	//
-	// middleware can be:
+	// h can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
-	//  - route.HandlerOption
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	PUT(path string, h any, middleware ...any) Router
 	// route registration for DELETE metod
 	//
-	// middleware can be:
+	// h can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
-	//  - route.HandlerOption
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	DELETE(path string, h any, middleware ...any) Router
 	// route registration for PATCH method
 	//
-	// middleware can be:
+	// h can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
-	//  - route.HandlerOption
-	PATCH(path string, h any, middleware ...any) Router
-	// route registration for ANY method (all methods)
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
 	//
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
+	PATCH(path string, h any, middleware ...any) Router
+	// route registration for ANY method (all methods)
+	//
+	// h can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
-	//  - route.HandlerOption
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	ANY(path string, h any, middleware ...any) Router
 
 	// route registration for GET method with prefix match
 	//
-	// middleware can be:
+	// h can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
-	//  - route.HandlerOption
-	GETPrefix(prefix string, h any, middleware ...any) Router
-	// route registration for POST method with prefix match
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
 	//
 	// middleware can be:
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
+	GETPrefix(prefix string, h any, middleware ...any) Router
+	// route registration for POST method with prefix match
+	//
+	// h can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
 	//  - http.HandlerFunc
 	//  - http.Handler
-	//  - func(*lokstra.RequestContext, *T) error
-	//  - route.HandlerOption
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	POSTPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for PUT method with prefix match
+	//
+	// h can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	PUTPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for DELETE method with prefix match
+	//
+	// h can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	DELETEPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for PATCH method with prefix match
+	//
+	// h can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	PATCHPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for ANY method with prefix match
+	//
+	// h can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - http.HandlerFunc
+	//  - http.Handler
+	//  - func(*lokstra.RequestContext, any) error
+	//  - func() error
+	//  - func() (any, error)
+	//  - func(any) error
+	//  - func(any) (any, error)
+	//
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
 	ANYPrefix(prefix string, h any, middleware ...any) Router
 
 	// create a sub- router with prefix, and call the fn to register routes on it

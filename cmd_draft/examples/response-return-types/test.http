@@ -1,0 +1,343 @@
+### Response Return Types - Test Suite
+### Make sure the server is running: go run main.go
+### Server: http://localhost:8080
+
+#########################################
+# Group 1: Regular Data Returns
+#########################################
+
+### Get single user (regular data return)
+GET http://localhost:8080/regular/user
+Accept: application/json
+
+### Get users list (regular data return)
+GET http://localhost:8080/regular/users
+Accept: application/json
+
+
+#########################################
+# Group 2: Response Pointer Returns
+#########################################
+
+### Custom 201 status code
+POST http://localhost:8080/response/created
+Content-Type: application/json
+
+### Plain text response
+GET http://localhost:8080/response/text
+Accept: text/plain
+
+### HTML response
+GET http://localhost:8080/response/html
+Accept: text/html
+
+### Server-sent events (streaming)
+# Note: This will stream data for a few seconds
+GET http://localhost:8080/response/stream
+Accept: text/event-stream
+
+### Response with custom headers
+# Check the response headers for X-Custom-Header, X-Request-ID, etc.
+GET http://localhost:8080/response/custom-headers
+Accept: application/json
+
+### Nil response (should return default success)
+GET http://localhost:8080/response/nil
+Accept: application/json
+
+
+#########################################
+# Group 3: ApiHelper Returns
+#########################################
+
+### Standard success response
+GET http://localhost:8080/api-helper/success
+Accept: application/json
+
+### Created response (201)
+POST http://localhost:8080/api-helper/create
+Content-Type: application/json
+
+### List with pagination metadata
+GET http://localhost:8080/api-helper/list
+Accept: application/json
+
+### 404 Not Found error
+GET http://localhost:8080/api-helper/not-found
+Accept: application/json
+
+### 401 Unauthorized error
+GET http://localhost:8080/api-helper/unauthorized
+Accept: application/json
+
+### Validation error with field details
+GET http://localhost:8080/api-helper/validation-error
+Accept: application/json
+
+### ApiHelper with custom headers
+# Check response headers for X-API-Version, X-Resource-ID
+GET http://localhost:8080/api-helper/custom-headers
+Accept: application/json
+
+
+#########################################
+# Group 4: Error Handling Priority
+#########################################
+
+### Error takes precedence over Response
+# Even though Response has status 200, error should be returned
+GET http://localhost:8080/error-priority/response-error
+Accept: application/json
+
+### Error takes precedence over ApiHelper
+# Even though ApiHelper has success response, error should be returned
+GET http://localhost:8080/error-priority/api-error
+Accept: application/json
+
+
+#########################################
+# Group 5: Without Context Parameter
+#########################################
+
+### Greet with name parameter (struct-only handler)
+GET http://localhost:8080/no-context/greet?name=Alice
+Accept: application/json
+
+### Greet without name (should use default "Guest")
+GET http://localhost:8080/no-context/greet
+Accept: application/json
+
+### Ping (no parameters at all)
+GET http://localhost:8080/no-context/ping
+Accept: application/json
+
+
+#########################################
+# Group 6: Mixed Examples
+#########################################
+
+### Response value (not pointer)
+GET http://localhost:8080/mixed/response-value
+Accept: application/json
+
+### ApiHelper value (not pointer)
+GET http://localhost:8080/mixed/api-value
+Accept: application/json
+
+### Conditional response - HTML format
+GET http://localhost:8080/mixed/conditional?format=html
+Accept: text/html
+
+### Conditional response - Text format
+GET http://localhost:8080/mixed/conditional?format=text
+Accept: text/plain
+
+### Conditional response - JSON format (default)
+GET http://localhost:8080/mixed/conditional?format=json
+Accept: application/json
+
+### Conditional response - No format (should default to JSON)
+GET http://localhost:8080/mixed/conditional
+Accept: application/json
+
+
+#########################################
+# Advanced Testing Scenarios
+#########################################
+
+### Test all custom headers from Response
+# Expected headers: X-Custom-Header, X-Request-ID, X-Rate-Limit, X-Rate-Remaining
+GET http://localhost:8080/response/custom-headers
+Accept: application/json
+
+###
+
+### Test all custom headers from ApiHelper
+# Expected headers: X-API-Version, X-Resource-ID
+GET http://localhost:8080/api-helper/custom-headers
+Accept: application/json
+
+###
+
+### Compare regular vs ApiHelper response structure
+# Regular (wrapped by Api.Ok)
+GET http://localhost:8080/regular/user
+
+###
+
+# ApiHelper (explicit formatting)
+GET http://localhost:8080/api-helper/success
+
+###
+
+
+#########################################
+# Error Scenarios Testing
+#########################################
+
+### Not Found Example
+GET http://localhost:8080/api-helper/not-found
+Accept: application/json
+
+###
+
+### Unauthorized Example
+GET http://localhost:8080/api-helper/unauthorized
+Accept: application/json
+
+###
+
+### Validation Error Example
+GET http://localhost:8080/api-helper/validation-error
+Accept: application/json
+
+###
+
+
+#########################################
+# Content-Type Testing
+#########################################
+
+### JSON Response
+GET http://localhost:8080/regular/user
+Accept: application/json
+
+###
+
+### Plain Text Response
+GET http://localhost:8080/response/text
+Accept: text/plain
+
+###
+
+### HTML Response
+GET http://localhost:8080/response/html
+Accept: text/html
+
+###
+
+### Streaming Response (SSE)
+GET http://localhost:8080/response/stream
+Accept: text/event-stream
+
+###
+
+
+#########################################
+# Pagination Testing
+#########################################
+
+### Get paginated list
+# Check response for pagination metadata: page, page_size, total, total_pages
+GET http://localhost:8080/api-helper/list
+Accept: application/json
+
+###
+
+
+#########################################
+# Parameter Binding Testing
+#########################################
+
+### Query parameter binding (struct-only handler)
+GET http://localhost:8080/no-context/greet?name=John
+Accept: application/json
+
+###
+
+### Query parameter binding - special characters
+GET http://localhost:8080/no-context/greet?name=José García
+Accept: application/json
+
+###
+
+### Query parameter binding - empty (should use default)
+GET http://localhost:8080/no-context/greet?name=
+Accept: application/json
+
+###
+
+
+#########################################
+# Edge Cases
+#########################################
+
+### Nil response pointer (should return default success)
+GET http://localhost:8080/response/nil
+Accept: application/json
+
+###
+
+### Error priority - Response with 200 but error returned
+# Should NOT return 200, error should take precedence
+GET http://localhost:8080/error-priority/response-error
+Accept: application/json
+
+###
+
+### Error priority - ApiHelper with success but error returned
+# Should NOT return success, error should take precedence
+GET http://localhost:8080/error-priority/api-error
+Accept: application/json
+
+###
+
+
+#########################################
+# Performance Testing (Sequential)
+#########################################
+
+### Test 1: Regular handler
+GET http://localhost:8080/regular/user
+
+###
+
+### Test 2: Response handler
+GET http://localhost:8080/response/custom-headers
+
+###
+
+### Test 3: ApiHelper handler
+GET http://localhost:8080/api-helper/success
+
+###
+
+### Test 4: No-context handler
+GET http://localhost:8080/no-context/ping
+
+###
+
+
+#########################################
+# Quick Smoke Test (All Groups)
+#########################################
+
+### 1. Regular
+GET http://localhost:8080/regular/user
+
+###
+
+### 2. Response
+GET http://localhost:8080/response/text
+
+###
+
+### 3. ApiHelper
+GET http://localhost:8080/api-helper/success
+
+###
+
+### 4. Error Priority
+GET http://localhost:8080/error-priority/response-error
+
+###
+
+### 5. No Context
+GET http://localhost:8080/no-context/ping
+
+###
+
+### 6. Mixed
+GET http://localhost:8080/mixed/conditional?format=json
+
+###

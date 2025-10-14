@@ -181,13 +181,28 @@ type Server struct {
 	Apps         []*App `yaml:"apps" json:"apps"`
 }
 
+// ReverseProxyRewrite represents path rewrite rules for reverse proxy
+type ReverseProxyRewrite struct {
+	From string `yaml:"from" json:"from"` // Pattern to match in path (regex supported)
+	To   string `yaml:"to" json:"to"`     // Replacement pattern
+}
+
+// ReverseProxyConfig represents reverse proxy configuration for an app
+type ReverseProxyConfig struct {
+	Prefix      string               `yaml:"prefix" json:"prefix"`                                 // URL prefix to match (e.g., "/api")
+	StripPrefix bool                 `yaml:"strip-prefix,omitempty" json:"strip-prefix,omitempty"` // Whether to strip the prefix before forwarding
+	Target      string               `yaml:"target" json:"target"`                                 // Target backend URL (e.g., "http://api-server:8080")
+	Rewrite     *ReverseProxyRewrite `yaml:"rewrite,omitempty" json:"rewrite,omitempty"`           // Path rewrite rules
+}
+
 // App configuration within a server
 type App struct {
-	Name         string   `yaml:"name" json:"name,omitempty"`
-	Addr         string   `yaml:"addr" json:"addr"`
-	ListenerType string   `yaml:"listener-type,omitempty" json:"listener-type,omitempty"` // default: "default"
-	Services     []string `yaml:"services,omitempty" json:"services,omitempty"`           // service names deployed in this app
-	Routers      []string `yaml:"routers,omitempty" json:"routers,omitempty"`             // router names
+	Name           string                `yaml:"name" json:"name,omitempty"`
+	Addr           string                `yaml:"addr" json:"addr"`
+	ListenerType   string                `yaml:"listener-type,omitempty" json:"listener-type,omitempty"`     // default: "default"
+	Services       []string              `yaml:"services,omitempty" json:"services,omitempty"`               // service names deployed in this app
+	Routers        []string              `yaml:"routers,omitempty" json:"routers,omitempty"`                 // router names
+	ReverseProxies []*ReverseProxyConfig `yaml:"reverse-proxies,omitempty" json:"reverse-proxies,omitempty"` // reverse proxy configurations
 }
 
 // creates a new empty Config
