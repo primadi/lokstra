@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/serviceapi/auth"
@@ -27,8 +28,8 @@ type Config struct {
 
 type otpFlow struct {
 	cfg      *Config
-	userRepo auth.UserRepository
-	kvStore  serviceapi.KvStore
+	userRepo *service.Cached[auth.UserRepository]
+	kvStore  *service.Cached[serviceapi.KvStore]
 }
 
 var _ auth.Flow = (*otpFlow)(nil)
@@ -57,7 +58,7 @@ func (f *otpFlow) Authenticate(ctx context.Context, payload map[string]any) (*au
 	}
 
 	// Get user from repository
-	user, err := f.userRepo.GetUserByName(ctx, tenantID, username)
+	user, err := f.userRepo.MustGet().GetUserByName(ctx, tenantID, username)
 	if err != nil {
 		return nil, auth.ErrInvalidCredentials
 	}
@@ -70,7 +71,7 @@ func (f *otpFlow) Authenticate(ctx context.Context, payload map[string]any) (*au
 	// Verify OTP
 	otpKey := f.getOTPKey(tenantID, username)
 	var storedOTP string
-	if err := f.kvStore.Get(ctx, otpKey, &storedOTP); err != nil {
+	if err := f.kvStore.MustGet().Get(ctx, otpKey, &storedOTP); err != nil {
 		return nil, fmt.Errorf("OTP not found or expired")
 	}
 
@@ -81,7 +82,7 @@ func (f *otpFlow) Authenticate(ctx context.Context, payload map[string]any) (*au
 	}
 
 	// Delete used OTP
-	f.kvStore.Delete(ctx, otpKey)
+	f.kvStore.MustGet().Delete(ctx, otpKey)
 	f.deleteAttempts(ctx, tenantID, username)
 
 	// Return auth result
@@ -100,7 +101,7 @@ func (f *otpFlow) Authenticate(ctx context.Context, payload map[string]any) (*au
 // GenerateOTP generates a new OTP for the user
 func (f *otpFlow) GenerateOTP(ctx context.Context, tenantID, username string) (string, error) {
 	// Check if user exists
-	user, err := f.userRepo.GetUserByName(ctx, tenantID, username)
+	user, err := f.userRepo.MustGet().GetUserByName(ctx, tenantID, username)
 	if err != nil {
 		return "", fmt.Errorf("user not found")
 	}
@@ -124,7 +125,7 @@ func (f *otpFlow) GenerateOTP(ctx context.Context, tenantID, username string) (s
 	// Store OTP in KvStore with TTL
 	otpKey := f.getOTPKey(tenantID, username)
 	ttl := time.Duration(f.cfg.OTPTTLSeconds) * time.Second
-	if err := f.kvStore.Set(ctx, otpKey, otp, ttl); err != nil {
+	if err := f.kvStore.MustGet().Set(ctx, otpKey, otp, ttl); err != nil {
 		return "", err
 	}
 
@@ -155,7 +156,7 @@ func (f *otpFlow) getAttemptsKey(tenantID, username string) string {
 func (f *otpFlow) getAttempts(ctx context.Context, tenantID, username string) int {
 	var attempts int
 	key := f.getAttemptsKey(tenantID, username)
-	f.kvStore.Get(ctx, key, &attempts)
+	f.kvStore.MustGet().Get(ctx, key, &attempts)
 	return attempts
 }
 
@@ -163,19 +164,20 @@ func (f *otpFlow) incrementAttempts(ctx context.Context, tenantID, username stri
 	attempts := f.getAttempts(ctx, tenantID, username)
 	key := f.getAttemptsKey(tenantID, username)
 	ttl := time.Duration(f.cfg.OTPTTLSeconds) * time.Second
-	f.kvStore.Set(ctx, key, attempts+1, ttl)
+	f.kvStore.MustGet().Set(ctx, key, attempts+1, ttl)
 }
 
 func (f *otpFlow) deleteAttempts(ctx context.Context, tenantID, username string) {
 	key := f.getAttemptsKey(tenantID, username)
-	f.kvStore.Delete(ctx, key)
+	f.kvStore.MustGet().Delete(ctx, key)
 }
 
 func (f *otpFlow) Shutdown() error {
 	return nil
 }
 
-func Service(cfg *Config, userRepo auth.UserRepository, kvStore serviceapi.KvStore) *otpFlow {
+func Service(cfg *Config, userRepo *service.Cached[auth.UserRepository],
+	kvStore *service.Cached[serviceapi.KvStore]) *otpFlow {
 	return &otpFlow{
 		cfg:      cfg,
 		userRepo: userRepo,
@@ -193,12 +195,10 @@ func ServiceFactory(params map[string]any) any {
 	}
 
 	// Get UserRepository service from registry
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached(cfg.UserRepoServiceName, userRepo)
+	userRepo := service.LazyLoad[auth.UserRepository](cfg.UserRepoServiceName)
 
 	// Get KvStore service from registry
-	var kvStore serviceapi.KvStore
-	kvStore = lokstra_registry.GetServiceCached(cfg.KvStoreServiceName, kvStore)
+	kvStore := service.LazyLoad[serviceapi.KvStore](cfg.KvStoreServiceName)
 
 	return Service(cfg, userRepo, kvStore)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi/auth"
 	"golang.org/x/crypto/bcrypt"
@@ -21,7 +22,7 @@ type Config struct {
 
 type passwordFlow struct {
 	cfg      *Config
-	userRepo auth.UserRepository
+	userRepo *service.Cached[auth.UserRepository]
 }
 
 var _ auth.Flow = (*passwordFlow)(nil)
@@ -48,7 +49,7 @@ func (f *passwordFlow) Authenticate(ctx context.Context, payload map[string]any)
 	}
 
 	// Get user from repository
-	user, err := f.userRepo.GetUserByName(ctx, tenantID, username)
+	user, err := f.userRepo.MustGet().GetUserByName(ctx, tenantID, username)
 	if err != nil {
 		return nil, auth.ErrInvalidCredentials
 	}
@@ -80,7 +81,7 @@ func (f *passwordFlow) Shutdown() error {
 	return nil
 }
 
-func Service(cfg *Config, userRepo auth.UserRepository) *passwordFlow {
+func Service(cfg *Config, userRepo *service.Cached[auth.UserRepository]) *passwordFlow {
 	return &passwordFlow{
 		cfg:      cfg,
 		userRepo: userRepo,
@@ -89,12 +90,12 @@ func Service(cfg *Config, userRepo auth.UserRepository) *passwordFlow {
 
 func ServiceFactory(params map[string]any) any {
 	cfg := &Config{
-		UserRepoServiceName: utils.GetValueFromMap(params, "user_repo_service_name", "auth_user_repo_pg"),
+		UserRepoServiceName: utils.GetValueFromMap(params,
+			"user_repo_service_name", "auth_user_repo_pg"),
 	}
 
 	// Get UserRepository service from registry
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached(cfg.UserRepoServiceName, userRepo)
+	userRepo := service.LazyLoad[auth.UserRepository](cfg.UserRepoServiceName)
 
 	return Service(cfg, userRepo)
 }

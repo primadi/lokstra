@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -62,18 +63,16 @@ func CacheServiceFactory(cfg map[string]any) any {
 type ProductRepository struct {
 	dbServiceName    string
 	cacheServiceName string
-	dbCache          *DBService
-	cacheCache       *CacheService
+	dbCache          *service.Cached[*DBService]
+	cacheCache       *service.Cached[*CacheService]
 }
 
 func (r *ProductRepository) getDB() *DBService {
-	r.dbCache = lokstra_registry.GetServiceCached(r.dbServiceName, r.dbCache)
-	return r.dbCache
+	return r.dbCache.MustGet()
 }
 
 func (r *ProductRepository) getCache() *CacheService {
-	r.cacheCache = lokstra_registry.GetServiceCached(r.cacheServiceName, r.cacheCache)
-	return r.cacheCache
+	return r.cacheCache.MustGet()
 }
 
 func (r *ProductRepository) FindByID(id string) map[string]any {
@@ -111,12 +110,11 @@ func ProductRepositoryFactory(cfg map[string]any) any {
 
 type OrderRepository struct {
 	dbServiceName string
-	dbCache       *DBService
+	dbCache       *service.Cached[*DBService]
 }
 
 func (r *OrderRepository) getDB() *DBService {
-	r.dbCache = lokstra_registry.GetServiceCached(r.dbServiceName, r.dbCache)
-	return r.dbCache
+	return r.dbCache.MustGet()
 }
 
 func (r *OrderRepository) Create(userID string, items []map[string]any, total float64) map[string]any {
@@ -152,12 +150,11 @@ func OrderRepositoryFactory(cfg map[string]any) any {
 
 type ProductService struct {
 	repoServiceName string
-	repoCache       *ProductRepository
+	repoCache       *service.Cached[*ProductRepository]
 }
 
 func (s *ProductService) getRepo() *ProductRepository {
-	s.repoCache = lokstra_registry.GetServiceCached(s.repoServiceName, s.repoCache)
-	return s.repoCache
+	return s.repoCache.MustGet()
 }
 
 func (s *ProductService) GetProduct(id string) map[string]any {
@@ -178,12 +175,11 @@ func ProductServiceFactory(cfg map[string]any) any {
 
 type OrderService struct {
 	repoServiceName string
-	repoCache       *OrderRepository
+	repoCache       *service.Cached[*OrderRepository]
 }
 
 func (s *OrderService) getRepo() *OrderRepository {
-	s.repoCache = lokstra_registry.GetServiceCached(s.repoServiceName, s.repoCache)
-	return s.repoCache
+	return s.repoCache.MustGet()
 }
 
 func (s *OrderService) CreateOrder(userID string, productIDs []string, total float64) map[string]any {
@@ -214,18 +210,16 @@ func OrderServiceFactory(cfg map[string]any) any {
 // =============================================================================
 
 type ServiceContainer struct {
-	productCache *ProductService
-	orderCache   *OrderService
+	productCache *service.Cached[*ProductService]
+	orderCache   *service.Cached[*OrderService]
 }
 
 func (sc *ServiceContainer) GetProduct() *ProductService {
-	sc.productCache = lokstra_registry.GetServiceCached("product-service", sc.productCache)
-	return sc.productCache
+	return sc.productCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetOrder() *OrderService {
-	sc.orderCache = lokstra_registry.GetServiceCached("order-service", sc.orderCache)
-	return sc.orderCache
+	return sc.orderCache.MustGet()
 }
 
 var services = &ServiceContainer{}

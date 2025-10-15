@@ -7,6 +7,7 @@ import (
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/config"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -92,24 +93,21 @@ func LoggerServiceFactory(cfg map[string]any) any {
 // =============================================================================
 
 type ServiceContainer struct {
-	emailCache   *EmailService
-	counterCache *CounterService
-	loggerCache  *LoggerService
+	emailCache   *service.Cached[*EmailService]
+	counterCache *service.Cached[*CounterService]
+	loggerCache  *service.Cached[*LoggerService]
 }
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
-	sc.emailCache = lokstra_registry.GetServiceCached("email-service", sc.emailCache)
-	return sc.emailCache
+	return sc.emailCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetCounter() *CounterService {
-	sc.counterCache = lokstra_registry.GetServiceCached("counter-service", sc.counterCache)
-	return sc.counterCache
+	return sc.counterCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetLogger() *LoggerService {
-	sc.loggerCache = lokstra_registry.GetServiceCached("logger-service", sc.loggerCache)
-	return sc.loggerCache
+	return sc.loggerCache.MustGet()
 }
 
 var services = &ServiceContainer{}

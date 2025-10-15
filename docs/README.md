@@ -13,6 +13,7 @@ Welcome to Lokstra! This documentation will guide you from your first "Hello Wor
 - **Building your first API?** → Follow [Essentials](01-essentials/README.md)
 - **Need advanced features?** → Explore [Deep Dive](02-deep-dive/README.md)
 - **API Reference?** → Check [API Reference](03-api-reference/README.md)
+- **What's coming?** → See [Roadmap](ROADMAP.md) 🗺️
 
 ---
 

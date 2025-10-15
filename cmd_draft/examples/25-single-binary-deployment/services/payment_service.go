@@ -53,7 +53,7 @@ type GetPaymentResponse struct {
 type paymentServiceLocal struct {
 	storage     string
 	currency    string
-	userService *service.Lazy[UserService] // Cross-server dependency
+	userService *service.Cached[UserService] // Cross-server dependency
 	payments    map[string]*GetPaymentResponse
 }
 

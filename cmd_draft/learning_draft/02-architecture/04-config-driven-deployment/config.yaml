@@ -97,7 +97,7 @@ services:
 # =============================================================================
 servers:
   - name: ecommerce-server
-    baseUrl: ${BASE_URL:http://localhost}
+    base-url: ${BASE_URL:http://localhost}
     apps:
       - addr: ":8080"
         routers: [product-api, order-api, user-api, health-api]

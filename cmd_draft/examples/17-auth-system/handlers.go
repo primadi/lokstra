@@ -7,7 +7,7 @@ import (
 	"github.com/primadi/lokstra/common/customtype"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/middleware/jwtauth"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
@@ -25,6 +25,9 @@ type registerRequest struct {
 	Role     string `json:"role"` // optional, defaults to "user"
 }
 
+var userRepo = service.LazyLoad[auth.UserRepository]("user_repo")
+var authSvc = service.LazyLoad[auth.Service]("auth_service")
+
 func registerHandler(c *request.Context) error {
 	var input registerRequest
 	if err := c.Req.BindBody(&input); err != nil {
@@ -37,11 +40,9 @@ func registerHandler(c *request.Context) error {
 	}
 
 	// Get user repository service
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
 
 	// Check if user already exists
-	if _, err := userRepo.GetUserByName(c.R.Context(), input.TenantID, input.Username); err == nil {
+	if _, err := userRepo.MustGet().GetUserByName(c.R.Context(), input.TenantID, input.Username); err == nil {
 		return c.Api.BadRequest("USER_EXISTS", "user already exists")
 	}
 
@@ -73,7 +74,7 @@ func registerHandler(c *request.Context) error {
 		},
 	}
 
-	if err := userRepo.CreateUser(c.R.Context(), user); err != nil {
+	if err := userRepo.MustGet().CreateUser(c.R.Context(), user); err != nil {
 		return c.Api.InternalError("failed to create user")
 	}
 
@@ -97,12 +98,8 @@ func loginHandler(c *request.Context) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "invalid request body")
 	}
 
-	// Get auth service
-	var authSvc auth.Service
-	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
-
 	// Login
-	resp, err := authSvc.Login(c.R.Context(), auth.LoginRequest{
+	resp, err := authSvc.MustGet().Login(c.R.Context(), auth.LoginRequest{
 		Flow: "password",
 		Payload: map[string]any{
 			"tenant_id": input.TenantID,
@@ -133,12 +130,8 @@ func refreshTokenHandler(c *request.Context) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "invalid request body")
 	}
 
-	// Get auth service
-	var authSvc auth.Service
-	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
-
 	// Refresh token
-	resp, err := authSvc.RefreshToken(c.R.Context(), input.RefreshToken)
+	resp, err := authSvc.MustGet().RefreshToken(c.R.Context(), input.RefreshToken)
 	if err != nil {
 		return c.Api.Unauthorized("token refresh failed")
 	}
@@ -161,12 +154,8 @@ func logoutHandler(c *request.Context) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "invalid request body")
 	}
 
-	// Get auth service
-	var authSvc auth.Service
-	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
-
 	// Logout
-	if err := authSvc.Logout(c.R.Context(), input.RefreshToken); err != nil {
+	if err := authSvc.MustGet().Logout(c.R.Context(), input.RefreshToken); err != nil {
 		return c.Api.InternalError("logout failed")
 	}
 
@@ -202,11 +191,7 @@ func generateOTPHandler(c *request.Context) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "invalid request body")
 	}
 
-	// Get user repository to verify user exists
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
-
-	user, err := userRepo.GetUserByName(c.R.Context(), input.TenantID, input.Username)
+	user, err := userRepo.MustGet().GetUserByName(c.R.Context(), input.TenantID, input.Username)
 	if err != nil {
 		return c.Api.BadRequest("USER_NOT_FOUND", "user not found")
 	}
@@ -237,12 +222,8 @@ func verifyOTPHandler(c *request.Context) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "invalid request body")
 	}
 
-	// Get auth service
-	var authSvc auth.Service
-	authSvc = lokstra_registry.GetServiceCached("auth_service", authSvc)
-
 	// Login with OTP
-	resp, err := authSvc.Login(c.R.Context(), auth.LoginRequest{
+	resp, err := authSvc.MustGet().Login(c.R.Context(), auth.LoginRequest{
 		Flow: "otp",
 		Payload: map[string]any{
 			"tenant_id": input.TenantID,
@@ -273,10 +254,7 @@ func getUserProfileHandler(c *request.Context) error {
 		return c.Api.Unauthorized("user not authenticated")
 	}
 
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
-
-	user, err := userRepo.GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
+	user, err := userRepo.MustGet().GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
 	if err != nil {
 		return c.Api.NotFound("user not found")
 	}
@@ -309,10 +287,7 @@ func updateUserProfileHandler(c *request.Context) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "invalid request body")
 	}
 
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
-
-	user, err := userRepo.GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
+	user, err := userRepo.MustGet().GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
 	if err != nil {
 		return c.Api.NotFound("user not found")
 	}
@@ -326,7 +301,7 @@ func updateUserProfileHandler(c *request.Context) error {
 	}
 	user.UpdatedAt = customtype.DateTime{Time: time.Now()}
 
-	if err := userRepo.UpdateUser(c.R.Context(), user); err != nil {
+	if err := userRepo.MustGet().UpdateUser(c.R.Context(), user); err != nil {
 		return c.Api.InternalError("failed to update profile")
 	}
 
@@ -351,10 +326,7 @@ func changePasswordHandler(c *request.Context) error {
 		return c.Api.BadRequest("INVALID_REQUEST", "invalid request body")
 	}
 
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
-
-	user, err := userRepo.GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
+	user, err := userRepo.MustGet().GetUserByName(c.R.Context(), userInfo.TenantID, userInfo.Username)
 	if err != nil {
 		return c.Api.NotFound("user not found")
 	}
@@ -373,7 +345,7 @@ func changePasswordHandler(c *request.Context) error {
 	user.PasswordHash = newHash
 	user.UpdatedAt = customtype.DateTime{Time: time.Now()}
 
-	if err := userRepo.UpdateUser(c.R.Context(), user); err != nil {
+	if err := userRepo.MustGet().UpdateUser(c.R.Context(), user); err != nil {
 		return c.Api.InternalError("failed to update password")
 	}
 
@@ -449,10 +421,7 @@ func listAllUsersHandler(c *request.Context) error {
 		return c.Api.Unauthorized("user not authenticated")
 	}
 
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
-
-	users, err := userRepo.ListUsers(c.R.Context(), userInfo.TenantID)
+	users, err := userRepo.MustGet().ListUsers(c.R.Context(), userInfo.TenantID)
 	if err != nil {
 		return c.Api.InternalError("failed to list users")
 	}
@@ -516,10 +485,7 @@ func getSystemStatsHandler(c *request.Context) error {
 		return c.Api.Unauthorized("user not authenticated")
 	}
 
-	var userRepo auth.UserRepository
-	userRepo = lokstra_registry.GetServiceCached("user_repo", userRepo)
-
-	users, _ := userRepo.ListUsers(c.R.Context(), userInfo.TenantID)
+	users, _ := userRepo.MustGet().ListUsers(c.R.Context(), userInfo.TenantID)
 
 	// Count active users
 	activeCount := 0

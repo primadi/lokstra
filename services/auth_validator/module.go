@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
@@ -19,14 +20,14 @@ type Config struct {
 
 type authValidator struct {
 	cfg         *Config
-	tokenIssuer auth.TokenIssuer
-	userRepo    auth.UserRepository
+	tokenIssuer *service.Cached[auth.TokenIssuer]
+	userRepo    *service.Cached[auth.UserRepository]
 }
 
 var _ auth.Validator = (*authValidator)(nil)
 
 func (v *authValidator) ValidateAccessToken(ctx context.Context, token string) (*auth.TokenClaims, error) {
-	claims, err := v.tokenIssuer.VerifyToken(ctx, token)
+	claims, err := v.tokenIssuer.MustGet().VerifyToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +40,7 @@ func (v *authValidator) ValidateAccessToken(ctx context.Context, token string) (
 }
 
 func (v *authValidator) ValidateRefreshToken(ctx context.Context, token string) (*auth.TokenClaims, error) {
-	claims, err := v.tokenIssuer.VerifyToken(ctx, token)
+	claims, err := v.tokenIssuer.MustGet().VerifyToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +81,8 @@ func (v *authValidator) Shutdown() error {
 	return nil
 }
 
-func Service(cfg *Config, tokenIssuer auth.TokenIssuer, userRepo auth.UserRepository) *authValidator {
+func Service(cfg *Config, tokenIssuer *service.Cached[auth.TokenIssuer],
+	userRepo *service.Cached[auth.UserRepository]) *authValidator {
 	return &authValidator{
 		cfg:         cfg,
 		tokenIssuer: tokenIssuer,
@@ -95,13 +97,12 @@ func ServiceFactory(params map[string]any) any {
 	}
 
 	// Get TokenIssuer service from registry
-	var tokenIssuer auth.TokenIssuer
-	tokenIssuer = lokstra_registry.GetServiceCached(cfg.TokenIssuerServiceName, tokenIssuer)
+	tokenIssuer := service.LazyLoad[auth.TokenIssuer](cfg.TokenIssuerServiceName)
 
 	// Get UserRepository service from registry (optional)
-	var userRepo auth.UserRepository
+	var userRepo *service.Cached[auth.UserRepository]
 	if cfg.UserRepoServiceName != "" {
-		userRepo = lokstra_registry.GetServiceCached(cfg.UserRepoServiceName, userRepo)
+		userRepo = service.LazyLoad[auth.UserRepository](cfg.UserRepoServiceName)
 	}
 
 	return Service(cfg, tokenIssuer, userRepo)

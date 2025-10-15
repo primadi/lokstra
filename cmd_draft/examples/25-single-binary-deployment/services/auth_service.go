@@ -59,8 +59,8 @@ type ValidateTokenResponse struct {
 type authServiceLocal struct {
 	jwtSecret   string
 	tokenExpiry int
-	userService *service.Lazy[UserService] // Lazy dependency injection
-	tokens      map[string]string          // token -> userID
+	userService *service.Cached[UserService] // Lazy dependency injection
+	tokens      map[string]string            // token -> userID
 }
 
 func (s *authServiceLocal) Login(ctx *request.Context, req *LoginRequest) (*LoginResponse, error) {

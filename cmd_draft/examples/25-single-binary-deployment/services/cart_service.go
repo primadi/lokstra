@@ -59,7 +59,7 @@ type GetCartResponse struct {
 type cartServiceLocal struct {
 	storage        string
 	sessionTimeout int
-	userService    *service.Lazy[UserService] // Cross-server dependency
+	userService    *service.Cached[UserService] // Cross-server dependency
 	carts          map[string]*GetCartResponse
 }
 

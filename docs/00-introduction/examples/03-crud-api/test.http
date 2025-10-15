@@ -1,0 +1,181 @@
+### CRUD API Example - Complete Test Suite
+### Use REST Client extension in VS Code
+
+###
+### Info Endpoint
+###
+
+### Get API info
+GET http://localhost:3002/
+###
+
+###
+### READ Operations
+###
+
+### 1. List all users
+GET http://localhost:3002/api/v1/users
+###
+
+### 2. Get user by ID (Alice)
+GET http://localhost:3002/api/v1/users/1
+###
+
+### 3. Get user by ID (Bob)
+GET http://localhost:3002/api/v1/users/2
+###
+
+### 4. Get user by ID - Not found (404)
+GET http://localhost:3002/api/v1/users/999
+###
+
+###
+### CREATE Operations
+###
+
+### 5. Create new user - Success
+POST http://localhost:3002/api/v1/users
+Content-Type: application/json
+
+{
+  "name": "Charlie",
+  "email": "charlie@example.com"
+}
+###
+
+### 6. Create user - Duplicate email (409 Conflict)
+POST http://localhost:3002/api/v1/users
+Content-Type: application/json
+
+{
+  "name": "Duplicate User",
+  "email": "alice@example.com"
+}
+###
+
+### 7. Create user - Missing name (400 Validation Error)
+POST http://localhost:3002/api/v1/users
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+###
+
+### 8. Create user - Invalid email format (400 Validation Error)
+POST http://localhost:3002/api/v1/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email"
+}
+###
+
+### 9. Create user - Missing both fields (400 Validation Error)
+POST http://localhost:3002/api/v1/users
+Content-Type: application/json
+
+{}
+###
+
+###
+### UPDATE Operations
+###
+
+### 10. Update user - Success
+PUT http://localhost:3002/api/v1/users/1
+Content-Type: application/json
+
+{
+  "name": "Alice Updated",
+  "email": "alice.updated@example.com"
+}
+###
+
+### 11. Update user - Not found (404)
+PUT http://localhost:3002/api/v1/users/999
+Content-Type: application/json
+
+{
+  "name": "Non-existent",
+  "email": "nonexistent@example.com"
+}
+###
+
+### 12. Update user - Duplicate email (409 Conflict)
+### (Try to change user 1's email to user 2's email)
+PUT http://localhost:3002/api/v1/users/1
+Content-Type: application/json
+
+{
+  "name": "Alice",
+  "email": "bob@example.com"
+}
+###
+
+### 13. Update user - Invalid email (400 Validation Error)
+PUT http://localhost:3002/api/v1/users/1
+Content-Type: application/json
+
+{
+  "name": "Alice",
+  "email": "invalid-email"
+}
+###
+
+###
+### DELETE Operations
+###
+
+### 14. Delete user - Success
+DELETE http://localhost:3002/api/v1/users/2
+###
+
+### 15. Delete user - Not found (404)
+DELETE http://localhost:3002/api/v1/users/999
+###
+
+### 16. List users after delete (verify user 2 is gone)
+GET http://localhost:3002/api/v1/users
+###
+
+###
+### Complete Flow Test
+###
+
+### 17. Create user
+POST http://localhost:3002/api/v1/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com"
+}
+###
+
+### 18. Verify user exists (use ID from previous response, typically 3)
+GET http://localhost:3002/api/v1/users/3
+###
+
+### 19. Update user
+PUT http://localhost:3002/api/v1/users/3
+Content-Type: application/json
+
+{
+  "name": "Test User Updated",
+  "email": "test.updated@example.com"
+}
+###
+
+### 20. Verify update
+GET http://localhost:3002/api/v1/users/3
+###
+
+### 21. Delete user
+DELETE http://localhost:3002/api/v1/users/3
+###
+
+### 22. Verify deletion (should return 404)
+GET http://localhost:3002/api/v1/users/3
+###

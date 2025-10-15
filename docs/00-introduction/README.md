@@ -377,4 +377,30 @@ Before moving on, remember:
 
 ---
 
+## 🚀 Roadmap
+
+### Next Release
+We're actively working on:
+
+- **🎨 HTMX Support** - Build modern web apps easier
+  - Template rendering integration
+  - Partial page updates
+  - Form handling patterns
+  - Example applications
+
+- **🛠️ CLI Tools** - Developer productivity
+  - Project scaffolding (`lokstra new`)
+  - Code generation (`lokstra generate`)
+  - Migration helpers
+  - Development server
+
+- **📦 Complete Standard Library** - Production essentials
+  - **Middleware**: Metrics, Auth (JWT, OAuth), Rate limiting
+  - **Services**: Monitoring, Tracing, Health checks
+  - **Utilities**: Common patterns and helpers
+
+Want to contribute or suggest features? Visit our [GitHub repository](https://github.com/primadi/lokstra)
+
+---
+
 **Ready?** → Continue to [Why Lokstra?](why-lokstra.md) or jump straight to [Quick Start](quick-start.md)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
@@ -33,8 +34,7 @@ type Config struct {
 // Middleware creates a JWT authentication middleware
 // It validates the JWT token and adds user info to the request context
 func Middleware(cfg *Config) request.HandlerFunc {
-	var validator auth.Validator
-	validator = lokstra_registry.GetServiceCached(cfg.ValidatorServiceName, validator)
+	validator := service.LazyLoad[auth.Validator](cfg.ValidatorServiceName)
 
 	return request.HandlerFunc(func(c *request.Context) error {
 		// Check if path should skip auth
@@ -62,7 +62,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 
 		// Validate token
 		ctx := c.R.Context()
-		claims, err := validator.ValidateAccessToken(ctx, token)
+		claims, err := validator.MustGet().ValidateAccessToken(ctx, token)
 		if err != nil {
 			c.W.WriteHeader(http.StatusUnauthorized)
 			c.W.Header().Set("Content-Type", "application/json")
@@ -75,7 +75,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 		}
 
 		// Get user info
-		userInfo, err := validator.GetUserInfo(ctx, claims)
+		userInfo, err := validator.MustGet().GetUserInfo(ctx, claims)
 		if err != nil {
 			c.W.WriteHeader(http.StatusUnauthorized)
 			c.W.Header().Set("Content-Type", "application/json")

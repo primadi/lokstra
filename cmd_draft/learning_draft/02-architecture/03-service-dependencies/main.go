@@ -7,6 +7,7 @@ import (
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/config"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -137,20 +138,18 @@ type UserService struct {
 	cacheServiceName string
 
 	// Cache variables (nil until first GetService call)
-	dbCache    *DBService
-	cacheCache *CacheService
+	dbCache    *service.Cached[*DBService]
+	cacheCache *service.Cached[*CacheService]
 }
 
 // Lazy getter for DB - only calls GetService when needed
 func (s *UserService) getDB() *DBService {
-	s.dbCache = lokstra_registry.GetServiceCached(s.dbServiceName, s.dbCache)
-	return s.dbCache
+	return s.dbCache.MustGet()
 }
 
 // Lazy getter for Cache - only calls GetService when needed
 func (s *UserService) getCache() *CacheService {
-	s.cacheCache = lokstra_registry.GetServiceCached(s.cacheServiceName, s.cacheCache)
-	return s.cacheCache
+	return s.cacheCache.MustGet()
 }
 
 func (s *UserService) GetUser(id string) map[string]any {
@@ -210,19 +209,17 @@ type OrderService struct {
 	userServiceName string
 
 	// Cache variables (nil until first use)
-	dbCache   *DBService
-	userCache *UserService
+	dbCache   *service.Cached[*DBService]
+	userCache *service.Cached[*UserService]
 }
 
 // Lazy getters
 func (s *OrderService) getDB() *DBService {
-	s.dbCache = lokstra_registry.GetServiceCached(s.dbServiceName, s.dbCache)
-	return s.dbCache
+	return s.dbCache.MustGet()
 }
 
 func (s *OrderService) getUser() *UserService {
-	s.userCache = lokstra_registry.GetServiceCached(s.userServiceName, s.userCache)
-	return s.userCache
+	return s.userCache.MustGet()
 }
 
 func (s *OrderService) CreateOrder(userID string, product string, amount float64) map[string]any {
@@ -274,30 +271,26 @@ func OrderServiceFactory(cfg map[string]any) any {
 // =============================================================================
 
 type ServiceContainer struct {
-	dbCache    *DBService
-	cacheCache *CacheService
-	userCache  *UserService
-	orderCache *OrderService
+	dbCache    *service.Cached[*DBService]
+	cacheCache *service.Cached[*CacheService]
+	userCache  *service.Cached[*UserService]
+	orderCache *service.Cached[*OrderService]
 }
 
 func (sc *ServiceContainer) GetDB() *DBService {
-	sc.dbCache = lokstra_registry.GetServiceCached("db-service", sc.dbCache)
-	return sc.dbCache
+	return sc.dbCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetCache() *CacheService {
-	sc.cacheCache = lokstra_registry.GetServiceCached("cache-service", sc.cacheCache)
-	return sc.cacheCache
+	return sc.cacheCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetServiceCached("user-service", sc.userCache)
-	return sc.userCache
+	return sc.userCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetOrder() *OrderService {
-	sc.orderCache = lokstra_registry.GetServiceCached("order-service", sc.orderCache)
-	return sc.orderCache
+	return sc.orderCache.MustGet()
 }
 
 var services = &ServiceContainer{}

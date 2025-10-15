@@ -423,7 +423,145 @@ A: API is stabilizing. We follow semantic versioning. Breaking changes only in m
 
 ---
 
-## 📚 Learn More
+## � What's Coming Next?
+
+Lokstra is actively evolving. Here's what's on the horizon:
+
+### Next Release Priorities
+
+#### 🎨 **HTMX Support** - Modern Web Apps Made Easy
+Build interactive web applications without complex JavaScript:
+
+```go
+// Coming soon!
+r.GET("/users", func() templ.Component {
+    users := userService.GetAll()
+    return views.UserList(users)  // Returns HTMX-ready component
+})
+
+r.POST("/users", func(req *CreateUserReq) templ.Component {
+    user := userService.Create(req)
+    return views.UserRow(user)  // Partial update
+})
+```
+
+**Features**:
+- Template rendering integration (templ, html/template)
+- HTMX helper functions and middleware
+- Form handling patterns
+- Server-sent events (SSE) support
+- Example applications (Todo, Dashboard, etc.)
+
+---
+
+#### 🛠️ **CLI Tools** - Developer Productivity
+
+Speed up development with command-line tools:
+
+```bash
+# Create new project
+lokstra new my-api --template=rest-api
+
+# Generate boilerplate
+lokstra generate service user
+lokstra generate router api
+lokstra generate middleware auth
+
+# Development server with hot reload
+lokstra dev --port 3000
+
+# Database migrations
+lokstra migrate create add_users_table
+lokstra migrate up
+```
+
+**Features**:
+- Project scaffolding with templates
+- Code generation (services, routers, middleware)
+- Hot reload development server
+- Migration management
+- Testing utilities
+
+---
+
+#### 📦 **Complete Standard Library** - Production Ready
+
+Essential middleware and services out of the box:
+
+**Middleware**:
+```go
+// Metrics and monitoring
+r.Use(middleware.Prometheus())
+r.Use(middleware.OpenTelemetry())
+
+// Authentication
+r.Use(middleware.JWT(jwtConfig))
+r.Use(middleware.OAuth2(oauthConfig))
+r.Use(middleware.BasicAuth(users))
+
+// Rate limiting
+r.Use(middleware.RateLimit(100, time.Minute))
+
+// Security
+r.Use(middleware.CSRF())
+r.Use(middleware.SecureHeaders())
+```
+
+**Services**:
+```go
+// Health checks
+health := lokstra_registry.GetService[*HealthService]("health")
+health.AddCheck("database", dbHealthCheck)
+health.AddCheck("cache", cacheHealthCheck)
+
+// Metrics
+metrics := lokstra_registry.GetService[*MetricsService]("metrics")
+metrics.RecordRequest(duration, statusCode)
+
+// Distributed tracing
+tracer := lokstra_registry.GetService[*TracingService]("tracing")
+span := tracer.StartSpan(ctx, "user.create")
+defer span.End()
+```
+
+**Features**:
+- Prometheus metrics integration
+- OpenTelemetry tracing
+- JWT/OAuth2 authentication
+- Rate limiting with Redis
+- Health check endpoints
+- CSRF protection
+- Security headers
+
+---
+
+### Future Vision
+
+**Beyond Next Release**:
+- 🔌 **Plugin System** - Extend framework with community plugins
+- 📊 **Admin Dashboard** - Built-in API explorer and monitoring
+- 🌐 **GraphQL Support** - Alternative to REST APIs
+- 🔄 **WebSocket Support** - Real-time communication
+- 📝 **API Documentation** - Auto-generate OpenAPI/Swagger docs
+- 🧪 **Testing Utilities** - Built-in test helpers and mocks
+
+---
+
+### Community & Contributions
+
+Want to help shape Lokstra's future?
+
+- 💡 **Suggest features**: Open GitHub issues
+- 🐛 **Report bugs**: Help us improve
+- 🤝 **Contribute code**: PRs welcome
+- 📖 **Improve docs**: Documentation contributions appreciated
+- ⭐ **Star the repo**: Show your support
+
+Visit: [github.com/primadi/lokstra](https://github.com/primadi/lokstra)
+
+---
+
+## �📚 Learn More
 
 - **Next**: [Architecture Overview](architecture.md) - Understand how it works
 - **Or**: [Quick Start](quick-start.md) - Start coding now

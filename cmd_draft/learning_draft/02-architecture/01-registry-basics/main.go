@@ -6,6 +6,7 @@ import (
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -78,19 +79,16 @@ func CounterServiceFactory(cfg map[string]any) any {
 // =============================================================================
 
 type ServiceContainer struct {
-	emailCache   *EmailService
-	counterCache *CounterService
+	emailCache   *service.Cached[*EmailService]
+	counterCache *service.Cached[*CounterService]
 }
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
-	// GetService will create the service on first call, then cache it
-	sc.emailCache = lokstra_registry.GetServiceCached("email-service", sc.emailCache)
-	return sc.emailCache
+	return sc.emailCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetCounter() *CounterService {
-	sc.counterCache = lokstra_registry.GetServiceCached("counter-service", sc.counterCache)
-	return sc.counterCache
+	return sc.counterCache.MustGet()
 }
 
 var services = &ServiceContainer{}

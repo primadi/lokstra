@@ -46,7 +46,7 @@ type User struct {
 type LocalUserService struct {
 	// Using service.Lazy[T] for type-safe lazy dependency injection
 	// Database pool will be loaded on first .Get() call and cached
-	db *service.Lazy[sql.DB]
+	db *service.Cached[sql.DB]
 }
 
 func (s *LocalUserService) GetUser(ctx *request.Context, req *GetUserRequest) (*User, error) {

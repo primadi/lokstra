@@ -7,35 +7,35 @@ import (
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-// Lazy provides a type-safe lazy-loading service container.
+// Cached provides a type-safe lazy-loading service container.
 // The service is only initialized on first Get() call and cached thereafter.
 //
 // Example usage:
 //
 //	type MyService struct {
-//	    db *service.Lazy[Database]
+//	    db *service.Cached[Database]
 //	}
 //
 //	func (s *MyService) DoSomething() {
-//	    db := s.db.Get()  // Lazy loaded, cached, type-safe
+//	    db := s.db.Get()  // Cached loaded, cached, type-safe
 //	    db.Query("...")
 //	}
-type Lazy[T any] struct {
+type Cached[T any] struct {
 	serviceName string
 	once        sync.Once
 	cache       T
 }
 
 // creates a new lazy service loader for the given service name.
-func LazyLoad[T any](serviceName string) *Lazy[T] {
-	return &Lazy[T]{
+func LazyLoad[T any](serviceName string) *Cached[T] {
+	return &Cached[T]{
 		serviceName: serviceName,
 	}
 }
 
 // Get retrieves the service instance. The service is initialized on first call
 // and cached for subsequent calls. This method is thread-safe.
-func (l *Lazy[T]) Get() T {
+func (l *Cached[T]) Get() T {
 	l.once.Do(func() {
 		service := lokstra_registry.GetService[T](l.serviceName)
 		l.cache = service
@@ -44,7 +44,7 @@ func (l *Lazy[T]) Get() T {
 }
 
 // MustGet retrieves the service instance or panics if the service is not found.
-func (l *Lazy[T]) MustGet() T {
+func (l *Cached[T]) MustGet() T {
 	svc := l.Get()
 	if utils.IsNil(svc) {
 		panic("service '" + l.serviceName + "' not found or not initialized")
@@ -53,17 +53,17 @@ func (l *Lazy[T]) MustGet() T {
 }
 
 // ServiceName returns the name of the service being lazily loaded.
-func (l *Lazy[T]) ServiceName() string {
+func (l *Cached[T]) ServiceName() string {
 	return l.serviceName
 }
 
 // IsLoaded returns true if the service has been loaded (Get was called at least once).
-func (l *Lazy[T]) IsLoaded() bool {
+func (l *Cached[T]) IsLoaded() bool {
 	return !utils.IsNil(l.cache)
 }
 
 // creates a lazy service loader from factory service configuration map.
-func LazyLoadFromConfig[T any](cfg map[string]any, key string) *Lazy[T] {
+func LazyLoadFromConfig[T any](cfg map[string]any, key string) *Cached[T] {
 	if cfg == nil {
 		return nil
 	}
@@ -83,7 +83,7 @@ func LazyLoadFromConfig[T any](cfg map[string]any, key string) *Lazy[T] {
 
 // creates a lazy service loader from factory service configuration map.
 // It panics if the key is missing or invalid.
-func MustLazyLoadFromConfig[T any](cfg map[string]any, key string) *Lazy[T] {
+func MustLazyLoadFromConfig[T any](cfg map[string]any, key string) *Cached[T] {
 	lazy := LazyLoadFromConfig[T](cfg, key)
 	if lazy == nil {
 		panic("missing required dependency '" + key + "'")

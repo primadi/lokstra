@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
@@ -23,9 +24,9 @@ type Config struct {
 
 type authService struct {
 	cfg         *Config
-	tokenIssuer auth.TokenIssuer
-	session     auth.Session
-	flows       map[string]auth.Flow
+	tokenIssuer *service.Cached[auth.TokenIssuer]
+	session     *service.Cached[auth.Session]
+	flows       map[string]*service.Cached[auth.Flow]
 }
 
 var _ auth.Service = (*authService)(nil)
@@ -38,18 +39,18 @@ func (s *authService) Login(ctx context.Context, input auth.LoginRequest) (*auth
 	}
 
 	// Authenticate using the flow
-	result, err := flow.Authenticate(ctx, input.Payload)
+	result, err := flow.MustGet().Authenticate(ctx, input.Payload)
 	if err != nil {
 		return nil, err
 	}
 
 	// Generate tokens
-	accessToken, err := s.tokenIssuer.IssueAccessToken(ctx, result, s.cfg.AccessTokenTTL)
+	accessToken, err := s.tokenIssuer.MustGet().IssueAccessToken(ctx, result, s.cfg.AccessTokenTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to issue access token: %w", err)
 	}
 
-	refreshToken, err := s.tokenIssuer.IssueRefreshToken(ctx, result, s.cfg.RefreshTokenTTL)
+	refreshToken, err := s.tokenIssuer.MustGet().IssueRefreshToken(ctx, result, s.cfg.RefreshTokenTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to issue refresh token: %w", err)
 	}
@@ -61,7 +62,7 @@ func (s *authService) Login(ctx context.Context, input auth.LoginRequest) (*auth
 		Metadata: result.Metadata,
 	}
 
-	if err := s.session.Set(ctx, refreshToken, sessionData, s.cfg.RefreshTokenTTL); err != nil {
+	if err := s.session.MustGet().Set(ctx, refreshToken, sessionData, s.cfg.RefreshTokenTTL); err != nil {
 		return nil, fmt.Errorf("failed to store session: %w", err)
 	}
 
@@ -74,13 +75,13 @@ func (s *authService) Login(ctx context.Context, input auth.LoginRequest) (*auth
 
 func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*auth.LoginResponse, error) {
 	// Get session data
-	sessionData, err := s.session.Get(ctx, refreshToken)
+	sessionData, err := s.session.MustGet().Get(ctx, refreshToken)
 	if err != nil {
 		return nil, auth.ErrTokenNotFound
 	}
 
 	// Verify refresh token with token issuer
-	claims, err := s.tokenIssuer.VerifyToken(ctx, refreshToken)
+	claims, err := s.tokenIssuer.MustGet().VerifyToken(ctx, refreshToken)
 	if err != nil {
 		return nil, auth.ErrTokenExpired
 	}
@@ -99,24 +100,24 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*a
 	}
 
 	// Generate new access token
-	accessToken, err := s.tokenIssuer.IssueAccessToken(ctx, result, s.cfg.AccessTokenTTL)
+	accessToken, err := s.tokenIssuer.MustGet().IssueAccessToken(ctx, result, s.cfg.AccessTokenTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to issue access token: %w", err)
 	}
 
 	// Optionally generate new refresh token (rotate refresh token)
-	newRefreshToken, err := s.tokenIssuer.IssueRefreshToken(ctx, result, s.cfg.RefreshTokenTTL)
+	newRefreshToken, err := s.tokenIssuer.MustGet().IssueRefreshToken(ctx, result, s.cfg.RefreshTokenTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to issue refresh token: %w", err)
 	}
 
 	// Delete old refresh token session
-	if err := s.session.Delete(ctx, refreshToken); err != nil {
+	if err := s.session.MustGet().Delete(ctx, refreshToken); err != nil {
 		// Log error but don't fail the request
 	}
 
 	// Store new session
-	if err := s.session.Set(ctx, newRefreshToken, sessionData, s.cfg.RefreshTokenTTL); err != nil {
+	if err := s.session.MustGet().Set(ctx, newRefreshToken, sessionData, s.cfg.RefreshTokenTTL); err != nil {
 		return nil, fmt.Errorf("failed to store session: %w", err)
 	}
 
@@ -128,14 +129,16 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*a
 }
 
 func (s *authService) Logout(ctx context.Context, refreshToken string) error {
-	return s.session.Delete(ctx, refreshToken)
+	return s.session.MustGet().Delete(ctx, refreshToken)
 }
 
 func (s *authService) Shutdown() error {
 	return nil
 }
 
-func Service(cfg *Config, tokenIssuer auth.TokenIssuer, session auth.Session, flows map[string]auth.Flow) *authService {
+func Service(cfg *Config, tokenIssuer *service.Cached[auth.TokenIssuer],
+	session *service.Cached[auth.Session],
+	flows map[string]*service.Cached[auth.Flow]) *authService {
 	return &authService{
 		cfg:         cfg,
 		tokenIssuer: tokenIssuer,
@@ -157,18 +160,15 @@ func ServiceFactory(params map[string]any) any {
 	}
 
 	// Get TokenIssuer service from registry
-	var tokenIssuer auth.TokenIssuer
-	tokenIssuer = lokstra_registry.GetServiceCached(cfg.TokenIssuerServiceName, tokenIssuer)
+	tokenIssuer := service.LazyLoad[auth.TokenIssuer](cfg.TokenIssuerServiceName)
 
 	// Get Session service from registry
-	var session auth.Session
-	session = lokstra_registry.GetServiceCached(cfg.SessionServiceName, session)
+	session := service.LazyLoad[auth.Session](cfg.SessionServiceName)
 
 	// Get Flow services from registry
-	flows := make(map[string]auth.Flow)
+	flows := make(map[string]*service.Cached[auth.Flow])
 	for flowName, serviceName := range cfg.FlowServiceNames {
-		var flow auth.Flow
-		flow = lokstra_registry.GetServiceCached(serviceName, flow)
+		flow := service.LazyLoad[auth.Flow](serviceName)
 		flows[flowName] = flow
 	}
 

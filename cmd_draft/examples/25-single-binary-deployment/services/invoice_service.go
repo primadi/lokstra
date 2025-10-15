@@ -49,7 +49,7 @@ type GetInvoiceResponse struct {
 
 type invoiceServiceLocal struct {
 	storage        string
-	paymentService *service.Lazy[PaymentService] // Cross-server dependency
+	paymentService *service.Cached[PaymentService] // Cross-server dependency
 	invoices       map[string]*GetInvoiceResponse
 }
 

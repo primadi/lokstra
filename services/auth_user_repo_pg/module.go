@@ -6,6 +6,7 @@ import (
 
 	"github.com/primadi/lokstra/common/customtype"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/serviceapi/auth"
@@ -22,13 +23,13 @@ type Config struct {
 
 type userRepoPg struct {
 	cfg    *Config
-	dbPool serviceapi.DbPool
+	dbPool *service.Cached[serviceapi.DbPool]
 }
 
 var _ auth.UserRepository = (*userRepoPg)(nil)
 
 func (r *userRepoPg) GetUserByName(ctx context.Context, tenantID, userName string) (*auth.User, error) {
-	conn, err := r.dbPool.Acquire(ctx, r.cfg.Schema)
+	conn, err := r.dbPool.MustGet().Acquire(ctx, r.cfg.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func (r *userRepoPg) GetUserByName(ctx context.Context, tenantID, userName strin
 }
 
 func (r *userRepoPg) CreateUser(ctx context.Context, user *auth.User) error {
-	conn, err := r.dbPool.Acquire(ctx, r.cfg.Schema)
+	conn, err := r.dbPool.MustGet().Acquire(ctx, r.cfg.Schema)
 	if err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func (r *userRepoPg) CreateUser(ctx context.Context, user *auth.User) error {
 }
 
 func (r *userRepoPg) UpdateUser(ctx context.Context, user *auth.User) error {
-	conn, err := r.dbPool.Acquire(ctx, r.cfg.Schema)
+	conn, err := r.dbPool.MustGet().Acquire(ctx, r.cfg.Schema)
 	if err != nil {
 		return err
 	}
@@ -114,7 +115,7 @@ func (r *userRepoPg) UpdateUser(ctx context.Context, user *auth.User) error {
 }
 
 func (r *userRepoPg) DeleteUser(ctx context.Context, tenantID, userName string) error {
-	conn, err := r.dbPool.Acquire(ctx, r.cfg.Schema)
+	conn, err := r.dbPool.MustGet().Acquire(ctx, r.cfg.Schema)
 	if err != nil {
 		return err
 	}
@@ -138,7 +139,7 @@ func (r *userRepoPg) DeleteUser(ctx context.Context, tenantID, userName string) 
 }
 
 func (r *userRepoPg) ListUsers(ctx context.Context, tenantID string) ([]*auth.User, error) {
-	conn, err := r.dbPool.Acquire(ctx, r.cfg.Schema)
+	conn, err := r.dbPool.MustGet().Acquire(ctx, r.cfg.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +185,7 @@ func (r *userRepoPg) Shutdown() error {
 	return nil
 }
 
-func Service(cfg *Config, dbPool serviceapi.DbPool) *userRepoPg {
+func Service(cfg *Config, dbPool *service.Cached[serviceapi.DbPool]) *userRepoPg {
 	return &userRepoPg{
 		cfg:    cfg,
 		dbPool: dbPool,
@@ -199,8 +200,7 @@ func ServiceFactory(params map[string]any) any {
 	}
 
 	// Get DbPool service from registry
-	var dbPool serviceapi.DbPool
-	dbPool = lokstra_registry.GetServiceCached(cfg.DbPoolServiceName, dbPool)
+	dbPool := service.LazyLoad[serviceapi.DbPool](cfg.DbPoolServiceName)
 
 	return Service(cfg, dbPool)
 }

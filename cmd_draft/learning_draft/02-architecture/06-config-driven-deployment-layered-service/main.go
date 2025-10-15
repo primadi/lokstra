@@ -220,7 +220,7 @@ func NewEmailService(cfg map[string]any) any {
 // =============================================================================
 
 type UserRepository struct {
-	db *service.Lazy[DBService] // ✨ Generic lazy - type safe, auto-caching
+	db *service.Cached[DBService] // ✨ Generic lazy - type safe, auto-caching
 }
 
 func (r *UserRepository) FindByID(id string) map[string]any {
@@ -243,8 +243,8 @@ func NewUserRepository(cfg map[string]any) any {
 }
 
 type ProductRepository struct {
-	db    *service.Lazy[DBService]
-	cache *service.Lazy[CacheService]
+	db    *service.Cached[DBService]
+	cache *service.Cached[CacheService]
 }
 
 var productList = []map[string]any{
@@ -286,7 +286,7 @@ func NewProductRepository(cfg map[string]any) any {
 }
 
 type OrderRepository struct {
-	db *service.Lazy[DBService]
+	db *service.Cached[DBService]
 }
 
 func (r *OrderRepository) Create(userID, productID string, quantity int, amount float64) map[string]any {
@@ -314,7 +314,7 @@ func NewOrderRepository(cfg map[string]any) any {
 // =============================================================================
 
 type UserService struct {
-	repo              *service.Lazy[UserRepository] // ✨ Generic lazy container
+	repo              *service.Cached[UserRepository] // ✨ Generic lazy container
 	passwordMinLength int
 }
 
@@ -340,7 +340,7 @@ func NewUserService(cfg map[string]any) any {
 }
 
 type ProductService struct {
-	repo            *service.Lazy[ProductRepository]
+	repo            *service.Cached[ProductRepository]
 	defaultCurrency string
 }
 
@@ -369,10 +369,10 @@ func NewProductService(cfg map[string]any) any {
 }
 
 type OrderService struct {
-	repo           *service.Lazy[*OrderRepository] // ✨ 4 dependencies
-	product        *service.Lazy[*ProductService]  // ✨ Only 4 lines of code!
-	user           *service.Lazy[*UserService]     // ✨ vs ~60 lines in old pattern
-	email          *service.Lazy[*EmailService]    // ✨ 93% reduction in boilerplate
+	repo           *service.Cached[*OrderRepository] // ✨ 4 dependencies
+	product        *service.Cached[*ProductService]  // ✨ Only 4 lines of code!
+	user           *service.Cached[*UserService]     // ✨ vs ~60 lines in old pattern
+	email          *service.Cached[*EmailService]    // ✨ 93% reduction in boilerplate
 	taxRate        float64
 	minOrderAmount float64
 }
@@ -426,24 +426,21 @@ func NewOrderService(cfg map[string]any) any {
 // =============================================================================
 
 type ServiceContainer struct {
-	userCache    *UserService
-	productCache *ProductService
-	orderCache   *OrderService
+	userCache    *service.Cached[*UserService]
+	productCache *service.Cached[*ProductService]
+	orderCache   *service.Cached[*OrderService]
 }
 
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetServiceCached("user-service", sc.userCache)
-	return sc.userCache
+	return sc.userCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetProduct() *ProductService {
-	sc.productCache = lokstra_registry.GetServiceCached("product-service", sc.productCache)
-	return sc.productCache
+	return sc.productCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetOrder() *OrderService {
-	sc.orderCache = lokstra_registry.GetServiceCached("order-service", sc.orderCache)
-	return sc.orderCache
+	return sc.orderCache.MustGet()
 }
 
 var services = &ServiceContainer{}

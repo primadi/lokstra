@@ -9,6 +9,7 @@ import (
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -83,11 +84,11 @@ func DBServiceFactory(params map[string]any) any {
 }
 
 type UserService struct {
-	db *DBService
+	db *service.Cached[*DBService]
 }
 
 func (s *UserService) GetUser(id string) map[string]any {
-	result := s.db.Query("SELECT * FROM users WHERE id = " + id)
+	result := s.db.MustGet().Query("SELECT * FROM users WHERE id = " + id)
 	return map[string]any{
 		"id":     id,
 		"name":   "User " + id,
@@ -96,21 +97,12 @@ func (s *UserService) GetUser(id string) map[string]any {
 }
 
 func (s *UserService) CreateUser(name string) map[string]any {
-	s.db.Query("INSERT INTO users (name) VALUES ('" + name + "')")
+	s.db.MustGet().Query("INSERT INTO users (name) VALUES ('" + name + "')")
 	return map[string]any{"id": "new-id", "name": name}
 }
 
-func NewUserService(db *DBService) *UserService {
-	fmt.Println("   🏗️  Creating UserService")
-	return &UserService{db: db}
-}
-
-// Factory resolves dependencies
-func UserServiceFactory(params map[string]any) any {
-	// Get dependency - lazy loaded
-	var db *DBService
-	db = lokstra_registry.GetServiceCached("db", db)
-	return NewUserService(db)
+func NewUserService() *UserService {
+	return &UserService{db: service.LazyLoad[*DBService]("db")}
 }
 
 // === 3. INTERFACE-BASED SERVICE (Easy testing) ===
@@ -145,31 +137,27 @@ func ConsoleLoggerFactory(params map[string]any) any {
 // === 4. SERVICE CONTAINER (Proper Caching Pattern) ===
 
 type ServiceContainer struct {
-	emailCache  *EmailService
-	dbCache     *DBService
-	userCache   *UserService
-	loggerCache *ConsoleLogger
+	emailCache  *service.Cached[*EmailService]
+	dbCache     *service.Cached[*DBService]
+	userCache   *service.Cached[*UserService]
+	loggerCache *service.Cached[*ConsoleLogger]
 }
 
 // Getters with caching (CRITICAL PATTERN!)
 func (sc *ServiceContainer) GetEmail() *EmailService {
-	sc.emailCache = lokstra_registry.GetServiceCached("email", sc.emailCache)
-	return sc.emailCache
+	return sc.emailCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetDB() *DBService {
-	sc.dbCache = lokstra_registry.GetServiceCached("db", sc.dbCache)
-	return sc.dbCache
+	return sc.dbCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetServiceCached("user", sc.userCache)
-	return sc.userCache
+	return sc.userCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetLogger() *ConsoleLogger {
-	sc.loggerCache = lokstra_registry.GetServiceCached("logger", sc.loggerCache)
-	return sc.loggerCache
+	return sc.loggerCache.MustGet()
 }
 
 // Global container
@@ -184,7 +172,7 @@ func main() {
 
 	lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
 	lokstra_registry.RegisterServiceFactory("db", DBServiceFactory)
-	lokstra_registry.RegisterServiceFactory("user", UserServiceFactory)
+	lokstra_registry.RegisterServiceFactory("user", NewUserService)
 	lokstra_registry.RegisterServiceFactory("logger", ConsoleLoggerFactory)
 
 	fmt.Println("   ✅ Registered: email, db, user, logger")

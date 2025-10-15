@@ -59,8 +59,8 @@ type GetOrderResponse struct {
 type orderServiceLocal struct {
 	storage        string
 	maxItems       int
-	userService    *service.Lazy[UserService]    // Cross-server dependency
-	paymentService *service.Lazy[PaymentService] // Cross-server dependency
+	userService    *service.Cached[UserService]    // Cross-server dependency
+	paymentService *service.Cached[PaymentService] // Cross-server dependency
 	orders         map[string]*GetOrderResponse
 }
 

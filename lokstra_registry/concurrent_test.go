@@ -35,11 +35,10 @@ func TestConcurrentServiceAccess(t *testing.T) {
 	wg.Add(numGoroutines)
 
 	results := make([]*TestCounterService, numGoroutines)
-
 	for i := 0; i < numGoroutines; i++ {
 		go func(idx int) {
 			defer wg.Done()
-			svc := GetServiceCached("counter-svc", (*TestCounterService)(nil))
+			svc := GetService[*TestCounterService]("counter-svc")
 			results[idx] = svc
 		}(i)
 	}

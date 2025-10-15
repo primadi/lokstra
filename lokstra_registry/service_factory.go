@@ -190,12 +190,19 @@ func adaptServiceFactory(factory any) ServiceFactory {
 			panic("service factory must be a function, got: " + t.String())
 		}
 
-		if t.NumIn() != 1 {
-			panic(fmt.Sprintf("service factory must have exactly 1 input parameter, got: %d", t.NumIn()))
-		}
-
 		if t.NumOut() != 1 {
 			panic("service factory must return exactly one value, got: " + t.String())
+		}
+
+		if t.NumIn() == 0 {
+			fVal := reflect.ValueOf(factory)
+			return func(_ map[string]any) any {
+				return fVal.Call([]reflect.Value{})[0].Interface()
+			}
+		}
+
+		if t.NumIn() != 1 {
+			panic(fmt.Sprintf("service factory must have exactly 1 input parameter, got: %d", t.NumIn()))
 		}
 
 		paramType := t.In(0)
@@ -220,9 +227,8 @@ func adaptServiceFactory(factory any) ServiceFactory {
 			}
 		}
 
+		fVal := reflect.ValueOf(factory)
 		return func(config map[string]any) any {
-			fVal := reflect.ValueOf(factory)
-
 			// Convert config map to struct using JSON marshal/unmarshal
 			b, err := json.Marshal(config)
 			if err != nil {

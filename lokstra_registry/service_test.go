@@ -30,8 +30,7 @@ func TestRegisterAndGetService(t *testing.T) {
 	t.Run("register and get by concrete type", func(t *testing.T) {
 		lokstra_registry.RegisterService("serviceA", newServiceA("Service A"),
 			lokstra_registry.AllowOverride(true))
-		var svcA *serviceA
-		svcA = lokstra_registry.GetServiceCached("serviceA", svcA)
+		svcA := lokstra_registry.GetService[*serviceA]("serviceA")
 		if svcA == nil {
 			t.Fatalf("svcA should not be nil after LazyGetService")
 		}
@@ -41,8 +40,7 @@ func TestRegisterAndGetService(t *testing.T) {
 	})
 
 	t.Run("get by interface type", func(t *testing.T) {
-		var namedSvc namedService
-		namedSvc = lokstra_registry.GetServiceCached("serviceA", namedSvc)
+		namedSvc := lokstra_registry.GetService[namedService]("serviceA")
 		if namedSvc == nil {
 			t.Fatalf("namedSvc should not be nil after LazyGetService")
 		}
@@ -51,26 +49,15 @@ func TestRegisterAndGetService(t *testing.T) {
 		}
 	})
 
-	t.Run("skip if already set", func(t *testing.T) {
-		var svcA *serviceA
-		svcA = lokstra_registry.GetServiceCached("serviceA", svcA)
-		lokstra_registry.GetServiceCached("serviceA", &svcA) // should skip as already set
-		var namedSvc namedService
-		namedSvc = lokstra_registry.GetServiceCached("serviceA", namedSvc)
-		lokstra_registry.GetServiceCached("serviceA", &namedSvc) // should skip as already set
-	})
-
 	t.Run("try get with wrong interface", func(t *testing.T) {
-		var serviceC descService
-		serviceC, ok := lokstra_registry.TryGetServiceCached("serviceA", serviceC)
+		_, ok := lokstra_registry.TryGetService[descService]("serviceA")
 		if ok {
 			t.Errorf("serviceA should not be found with DescService interface")
 		}
-		serviceC, ok = lokstra_registry.TryGetServiceCached("serviceC", serviceC)
+		_, ok = lokstra_registry.TryGetService[descService]("serviceC")
 		if ok {
 			t.Errorf("serviceC should not be found with DescService interface")
 		}
-		_ = serviceC
 	})
 }
 
@@ -85,7 +72,7 @@ func TestNewService(t *testing.T) {
 		}
 		var newServiceA *serviceA
 		var ok bool
-		if newServiceA, ok = lokstra_registry.TryGetServiceCached("newServiceA", newServiceA); !ok {
+		if newServiceA, ok = lokstra_registry.TryGetService[*serviceA]("newServiceA"); !ok {
 			t.Errorf("newServiceA should be registered")
 		}
 		if newServiceA.Name() != "Service A" {
@@ -107,8 +94,7 @@ func TestGetService_PanicNotFound(t *testing.T) {
 			t.Errorf("Expected panic when service not found")
 		}
 	}()
-	var svcA *serviceA
-	_ = lokstra_registry.GetServiceCached("notExistService", svcA)
+	_ = lokstra_registry.MustGetService[*serviceA]("notExistService")
 }
 
 func TestGetService_PanicTypeMismatch(t *testing.T) {
@@ -120,8 +106,7 @@ func TestGetService_PanicTypeMismatch(t *testing.T) {
 	// Register serviceA as *serviceA
 	lokstra_registry.RegisterService("serviceA", newServiceA("Service A"))
 	// Try to get as descService (should panic)
-	var svcC descService
-	_ = lokstra_registry.GetServiceCached("serviceA", svcC)
+	_ = lokstra_registry.GetService[descService]("serviceA")
 }
 
 func TestRegisterLazyServiceAndGetService(t *testing.T) {
@@ -135,8 +120,7 @@ func TestRegisterLazyServiceAndGetService(t *testing.T) {
 		map[string]any{"name": "Lazy Service A"})
 
 	t.Run("GetService from lazy service", func(t *testing.T) {
-		var svcA *serviceA
-		svcA = lokstra_registry.GetServiceCached("lazyServiceA", svcA)
+		svcA := lokstra_registry.GetService[*serviceA]("lazyServiceA")
 		if svcA == nil {
 			t.Fatalf("svcA should not be nil after GetService from lazy service")
 		}
@@ -151,7 +135,6 @@ func TestRegisterLazyServiceAndGetService(t *testing.T) {
 				t.Errorf("Expected panic when type mismatch from lazy service")
 			}
 		}()
-		var svcB descService
-		_ = lokstra_registry.GetServiceCached("lazyServiceA", svcB)
+		_ = lokstra_registry.MustGetService[descService]("lazyServiceA")
 	})
 }

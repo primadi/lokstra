@@ -64,39 +64,34 @@ func RegisterLazyService(svcName string, svcType string,
 	})
 }
 
-// Tries to resolve a service from the current and registry,
-// if fail to find, it will retun zero value of T.
-func GetServiceCached[T any](name string, current T) T {
-	// if current is already set (non-zero), return as is
-	if !utils.IsNil(current) {
-		return current
-	}
-
-	return GetService[T](name)
-}
-
-// Tries to resolve a service from the current and registry,
-// if fail to find, it will panic.
-func MustGetServiceCached[T any](name string, current T) T {
-	s := GetServiceCached(name, current)
-	if utils.IsNil(s) {
-		panic("service " + name + " not found or type mismatch")
-	}
-	return s
-}
-
 // Tries to resolve a service from the registry.
 func GetService[T any](svcName string) T {
+	if v, ok := TryGetService[T](svcName); ok {
+		return v
+	}
+	var zero T
+	return zero
+}
+
+func MustGetService[T any](svcName string) T {
+	if v, ok := TryGetService[T](svcName); ok {
+		return v
+	}
+	panic("service " + svcName + " not found or type mismatch")
+}
+
+// Tries to resolve a service from the registry
+func TryGetService[T any](svcName string) (T, bool) {
 	// lookup in registry (read lock)
 	svc, ok := serviceRegistry.Load(svcName)
 	var zero T
 
 	if ok {
 		if typed, ok := svc.(T); ok {
-			return typed
+			return typed, true
 		}
 		// type mismatch
-		panic("type mismatch for service " + svcName)
+		return zero, false
 	}
 
 	// not found, check if lazy config exists
@@ -110,44 +105,22 @@ func GetService[T any](svcName string) T {
 				if existing, loaded := serviceRegistry.LoadOrStore(svcName, svc); loaded {
 					// Another goroutine created it first, use that
 					if typed, ok := existing.(T); ok {
-						return typed
+						return typed, true
 					}
-					return zero
+					return zero, false
 				}
 
 				// We successfully stored it
 				if typed, ok := svc.(T); ok {
-					return typed
+					return typed, true
 				}
-				return zero
+				return zero, false
 			}
 		}
 	}
 
 	// not found
-	return zero
-}
-
-// Tries to resolve a service from the registry
-func TryGetService[T any](svcName string) (T, bool) {
-	s := GetService[T](svcName)
-	return s, !utils.IsNil(s)
-}
-
-// Tries to resolve a service from the current and registry.
-//
-// If current != nil, it will be returned immediately with ok=true.
-// If current is nil and found in registry with correct type, it will be returned with ok=true.
-// If not found or type mismatch, it tries to create from lazy config if exists.
-// If still not found, it returns zero value of T with ok=false.
-func TryGetServiceCached[T any](svcName string, current T) (T, bool) {
-	// if current is already set (non-zero), return as is
-	if !utils.IsNil(current) {
-		return current, true
-	}
-
-	s := GetService[T](svcName)
-	return s, !utils.IsNil(s)
+	return zero, false
 }
 
 // Create a new service using registered factory, register it, and return it.

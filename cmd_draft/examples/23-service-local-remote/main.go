@@ -10,8 +10,11 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/route"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
+
+var local_service = service.LazyLoad[user_service.UserService]("user-service")
 
 func main() {
 	fmt.Println(strings.Repeat("=", 70))
@@ -57,11 +60,8 @@ func main() {
 	// ========================================================================
 	fmt.Println("📋 Step 3: Creating router from service...")
 
-	// Get the LOCAL service instance for server
-	localService := lokstra_registry.GetServiceCached[user_service.UserService]("user-service", nil)
-
 	// Create router from service methods
-	userRouter := router.NewFromService(localService, router.DefaultServiceRouterOptions())
+	userRouter := router.NewFromService(local_service.MustGet(), router.DefaultServiceRouterOptions())
 
 	fmt.Println("   ✅ Router created with auto-generated routes:")
 	userRouter.Walk(func(rt *route.Route) {
@@ -161,15 +161,14 @@ func main() {
 	fmt.Println()
 }
 
+var userService = service.LazyLoad[user_service.UserService]("user-service")
+
 func testLocalService() {
 	// Create mock context
 	ctx := &request.Context{}
 
-	// Get service - framework will use LOCAL factory
-	userService := lokstra_registry.GetServiceCached[user_service.UserService]("user-service", nil)
-
 	// Call method - looks the same whether local or remote!
-	user, err := userService.GetUser(ctx, &user_service.GetUserRequest{
+	user, err := userService.MustGet().GetUser(ctx, &user_service.GetUserRequest{
 		UserID: "123",
 	})
 

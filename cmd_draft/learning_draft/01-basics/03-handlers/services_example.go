@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -51,23 +52,24 @@ func (s *CacheService) Set(key, value string) {
 // === Service Container Pattern ===
 
 type ServiceContainer struct {
-	userCache  *UserService
-	cacheCache *CacheService
+	userCache  *service.Cached[*UserService]
+	cacheCache *service.Cached[*CacheService]
 }
 
 // Lazy-loaded getters with caching
 func (sc *ServiceContainer) GetUser() *UserService {
-	sc.userCache = lokstra_registry.GetServiceCached("user", sc.userCache)
-	return sc.userCache
+	return sc.userCache.MustGet()
 }
 
 func (sc *ServiceContainer) GetCache() *CacheService {
-	sc.cacheCache = lokstra_registry.GetServiceCached("cache", sc.cacheCache)
-	return sc.cacheCache
+	return sc.cacheCache.MustGet()
 }
 
 // Global service container
-var services = &ServiceContainer{}
+var services = &ServiceContainer{
+	userCache:  service.LazyLoad[*UserService]("user"),
+	cacheCache: service.LazyLoad[*CacheService]("cache"),
+}
 
 // === Handler Examples Using Services ===
 

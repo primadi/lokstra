@@ -46,12 +46,13 @@ services:
       db_service: db-service       # Which DB to use
       user_service: user-service   # Which user service to use
 
+routers:
+  - name: health-api
+    path-prefix: /check
+
 servers:
   - name: dependency-demo-server
-    baseUrl: http://localhost
+    base-url: http://localhost
     apps:
       - addr: ":8080"
         routers: [user-api, order-api, health-api]
-        routers-with-prefix:
-          - name: health-api
-            prefix: /check
