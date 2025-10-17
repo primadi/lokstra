@@ -170,10 +170,10 @@ func main() {
 	// === STEP 1: Register Service Factories ===
 	fmt.Println("\n📝 Step 1: Registering Service Factories")
 
-	lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
-	lokstra_registry.RegisterServiceFactory("db", DBServiceFactory)
-	lokstra_registry.RegisterServiceFactory("user", NewUserService)
-	lokstra_registry.RegisterServiceFactory("logger", ConsoleLoggerFactory)
+	lokstra_registry.RegisterServiceType("email", EmailServiceFactory)
+	lokstra_registry.RegisterServiceType("db", DBServiceFactory)
+	lokstra_registry.RegisterServiceType("user", NewUserService)
+	lokstra_registry.RegisterServiceType("logger", ConsoleLoggerFactory)
 
 	fmt.Println("   ✅ Registered: email, db, user, logger")
 

@@ -156,6 +156,6 @@ func CreateAuthServiceRemote(cfg map[string]any) any {
 }
 
 func RegisterAuthService() {
-	lokstra_registry.RegisterServiceFactoryLocalAndRemote("auth_service",
+	lokstra_registry.RegisterServiceTypeLocalAndRemote("auth_service",
 		CreateAuthServiceLocal, CreateAuthServiceRemote)
 }

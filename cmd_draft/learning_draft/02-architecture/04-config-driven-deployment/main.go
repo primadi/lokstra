@@ -444,19 +444,19 @@ var services = &ServiceContainer{
 
 func setupFactories() {
 	// Infrastructure
-	lokstra_registry.RegisterServiceFactory("db", NewDBService)
-	lokstra_registry.RegisterServiceFactory("cache", NewCacheService)
-	lokstra_registry.RegisterServiceFactory("email", NewEmailService)
+	lokstra_registry.RegisterServiceType("db", NewDBService)
+	lokstra_registry.RegisterServiceType("cache", NewCacheService)
+	lokstra_registry.RegisterServiceType("email", NewEmailService)
 
 	// Repositories
-	lokstra_registry.RegisterServiceFactory("user-repo", NewUserRepository)
-	lokstra_registry.RegisterServiceFactory("product-repo", NewProductRepository)
-	lokstra_registry.RegisterServiceFactory("order-repo", NewOrderRepository)
+	lokstra_registry.RegisterServiceType("user-repo", NewUserRepository)
+	lokstra_registry.RegisterServiceType("product-repo", NewProductRepository)
+	lokstra_registry.RegisterServiceType("order-repo", NewOrderRepository)
 
 	// Domain Services
-	lokstra_registry.RegisterServiceFactory("user", NewUserService)
-	lokstra_registry.RegisterServiceFactory("product", NewProductService)
-	lokstra_registry.RegisterServiceFactory("order", NewOrderService)
+	lokstra_registry.RegisterServiceType("user", NewUserService)
+	lokstra_registry.RegisterServiceType("product", NewProductService)
+	lokstra_registry.RegisterServiceType("order", NewOrderService)
 
 	fmt.Println("   ✓ Registered 9 service factories")
 }

@@ -142,7 +142,7 @@ users, err := userService.MustGet().GetAll()
 
 **⚠️ Not Recommended: Get() - Confusing Errors**
 ```go
-users, err := userService.Get().GetAll()
+users, err := userService.MustGet().GetAll()
 
 // If service not found:
 // Panic: "runtime error: invalid memory address or nil pointer dereference"
@@ -252,7 +252,7 @@ func (s *OrderService) GetOrderWithUser(orderID int) (*OrderWithUser, error) {
 func handler(ctx *request.Context) error {
     // ❌ BAD! Cache created every request, then thrown away!
     userService := service.LazyLoad[*UserService]("users")
-    users, err := userService.Get().GetAll()
+    users, err := userService.MustGet().GetAll()
     // ...
 }
 ```

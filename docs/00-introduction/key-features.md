@@ -155,7 +155,7 @@ func getUser(req *GetUserReq) (*User, error) {
 ```go
 // 1. Define service with methods
 type UserService struct {
-    DB *service.Lazy[*Database]
+    DB *service.Cached[*Database]
 }
 
 type GetAllParams struct {}
@@ -168,15 +168,15 @@ type CreateParams struct {
 }
 
 func (s *UserService) GetAll(p *GetAllParams) ([]User, error) {
-    return s.DB.Get().Query("SELECT * FROM users")
+    return s.DB.MustGet().Query("SELECT * FROM users")
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-    return s.DB.Get().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
+    return s.DB.MustGet().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
 }
 
 func (s *UserService) Create(p *CreateParams) (*User, error) {
-    return s.DB.Get().Insert("INSERT INTO users ...", p.Name, p.Email)
+    return s.DB.MustGet().Insert("INSERT INTO users ...", p.Name, p.Email)
 }
 
 // 2. Register service
@@ -228,26 +228,26 @@ Lokstra understands REST conventions:
 ```go
 // All your logic in one place
 type UserService struct {
-    DB    *service.Lazy[*Database]
-    Email *service.Lazy[*EmailService]
-    Auth  *service.Lazy[*AuthService]
+    DB    *service.Cached[*Database]
+    Email *service.Cached[*EmailService]
+    Auth  *service.Cached[*AuthService]
 }
 
 // Pure business logic
 func (s *UserService) Create(p *CreateParams) (*User, error) {
     // Validate
-    if err := s.Auth.Get().CheckPermission(); err != nil {
+    if err := s.Auth.MustGet().CheckPermission(); err != nil {
         return nil, err
     }
     
     // Create
-    user, err := s.DB.Get().Insert(...)
+    user, err := s.DB.MustGet().Insert(...)
     if err != nil {
         return nil, err
     }
     
     // Notify
-    s.Email.Get().SendWelcome(user.Email)
+    s.Email.MustGet().SendWelcome(user.Email)
     
     return user, nil
 }
@@ -328,12 +328,12 @@ go build -o myapp
 ```go
 // In OrderService
 type OrderService struct {
-    Users *service.Lazy[*UserService]  // May be local or remote!
+    Users *service.Cached[*UserService]  // May be local or remote!
 }
 
 func (s *OrderService) CreateOrder(p *CreateOrderParams) (*Order, error) {
     // This works in BOTH deployments!
-    user, err := s.Users.Get().GetByID(p.UserID)
+    user, err := s.Users.MustGet().GetByID(p.UserID)
     // Monolith: Direct call
     // Microservices: HTTP call to user-service
     
@@ -386,9 +386,9 @@ import "github.com/primadi/lokstra/core/service"
 
 // 1. Define services with lazy dependencies
 type OrderService struct {
-    DB    *service.Lazy[*Database]
-    Users *service.Lazy[*UserService]     // Lazy reference
-    Cache *service.Lazy[*CacheService]
+    DB    *service.Cached[*Database]
+    Users *service.Cached[*UserService]     // Lazy reference
+    Cache *service.Cached[*CacheService]
 }
 
 // 2. Register factories (order doesn't matter!)
@@ -419,7 +419,7 @@ Services created only when first accessed:
 
 ```go
 type OrderService struct {
-    DB *service.Lazy[*Database]
+    DB *service.Cached[*Database]
 }
 
 func (s *OrderService) CreateOrder(p *CreateOrderParams) (*Order, error) {

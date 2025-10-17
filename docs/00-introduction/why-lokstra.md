@@ -120,19 +120,28 @@ r.GET("/complex", func(ctx *request.Context) (*response.Response, error) {
 ```go
 // Define service
 type UserService struct {
-    DB *service.Lazy[*Database]
+    DB *service.Cached[*Database]
 }
 
 // Business logic in service
 func (s *UserService) GetUsers() ([]User, error) {
-    return s.DB.Get().Query("SELECT * FROM users")
+    return s.DB.MustGet().Query("SELECT * FROM users")
 }
 
-// Use in handler
+// ❌ Not optimal - looks up service in map on EVERY request
 r.GET("/users", func() ([]User, error) {
     users := lokstra_registry.GetService[*UserService]("users")
     return users.GetUsers()
 })
+
+// ✅ Optimal - cached service resolution (recommended)
+var userService = service.LazyLoad[*UserService]("users")
+
+r.GET("/users", func() ([]User, error) {
+    return userService.MustGet().GetUsers()
+})
+// First call: Creates & caches service instance
+// Subsequent calls: Returns cached instance (fast!)
 
 // OR: Service becomes router automatically!
 userRouter := router.NewFromService(userService, "/users")
@@ -165,6 +174,31 @@ users := lokstra_registry.GetService[*UserService]("users")
 - Type-safe with generics
 - Lazy loading (efficient)
 - Testable (easy mocking)
+
+**Performance Tip**: Use `service.LazyLoad` for handler-level caching:
+
+```go
+// ❌ Slow: Registry lookup on every request
+r.GET("/users", func() ([]User, error) {
+    users := lokstra_registry.GetService[*UserService]("users")
+    return users.GetUsers()  // Map lookup happens on EVERY request
+})
+
+// ✅ Fast: Cached service resolution (recommended)
+var userService = service.LazyLoad[*UserService]("users")
+
+r.GET("/users", func() ([]User, error) {
+    return userService.MustGet().GetUsers()  // Cached after first access
+})
+```
+
+**Why faster?**
+1. **First call**: Looks up service in registry, creates instance, caches it
+2. **Subsequent calls**: Returns cached instance (no map lookup)
+3. **Thread-safe**: Safe for concurrent requests
+4. **Zero allocation**: No repeated map lookups or service creation
+
+This pattern is used throughout Lokstra's examples and is the **recommended approach** for production code.
 
 ---
 
@@ -220,6 +254,7 @@ servers:
 | **Auto JSON Response** | ❌ | ✅ | ⚠️ | ✅ |
 | **Service Layer** | ❌ | ❌ | ❌ | ✅ Built-in |
 | **Dependency Injection** | ❌ | ❌ | ❌ | ✅ Built-in |
+| **Service Caching** | ❌ | ❌ | ❌ | ✅ Lazy Load |
 | **Service as Router** | ❌ | ❌ | ❌ | ✅ Unique |
 | **Config-Driven Deploy** | ❌ | ⚠️ Limited | ❌ | ✅ Full |
 | **Multi-Deployment** | ❌ | ❌ | ❌ | ✅ 1 binary |
@@ -274,9 +309,9 @@ servers:
 ```go
 // Rich business logic in services
 type OrderService struct {
-    Users    *service.Lazy[*UserService]
-    Payments *service.Lazy[*PaymentService]
-    Inventory *service.Lazy[*InventoryService]
+    Users    *service.Cached[*UserService]
+    Payments *service.Cached[*PaymentService]
+    Inventory *service.Cached[*InventoryService]
 }
 ```
 

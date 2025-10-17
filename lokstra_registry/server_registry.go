@@ -10,7 +10,7 @@ import (
 type ServerInterface interface {
 	GetName() string
 	Start() error
-	Shutdown(timeout interface{}) error
+	Shutdown(timeout any) error
 }
 
 var serverRegistry sync.Map

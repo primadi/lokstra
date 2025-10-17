@@ -21,7 +21,7 @@ func TestConcurrentServiceAccess(t *testing.T) {
 	serviceFactoryRegistry = sync.Map{}
 
 	// Register factory
-	RegisterServiceFactory("counter", func(cfg map[string]any) any {
+	RegisterServiceType("counter", func(cfg map[string]any) any {
 		time.Sleep(10 * time.Millisecond) // Simulate slow creation
 		return &TestCounterService{count: 0}
 	}, AllowOverride(true))
@@ -64,7 +64,7 @@ func TestConcurrentServiceRegistration(t *testing.T) {
 	serviceFactoryRegistry = sync.Map{}
 
 	// Register factory
-	RegisterServiceFactory("counter", func(cfg map[string]any) any {
+	RegisterServiceType("counter", func(cfg map[string]any) any {
 		return &TestCounterService{count: 0}
 	}, AllowOverride(true))
 

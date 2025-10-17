@@ -3,25 +3,25 @@
 ###############################################
 #
 # This file demonstrates testing the same API
-# in different deployment modes:
+# in different deployment configurations:
 #
-# 1. MONOLITH MODE (port 3003)
-#    - All services in one process
-#    - Run: go run main.go -mode monolith
+# DEPLOYMENT 1: MONOLITH (1 server on port 3003)
+#    - All services in one server process
+#    - Run: go run main.go -server monolith
 #
-# 2. MICROSERVICES MODE (ports 3004, 3005)
-#    - User service: port 3004
-#    - Order service: port 3005
-#    - Run user-service: go run main.go -mode user-service
-#    - Run order-service: go run main.go -mode order-service
+# DEPLOYMENT 2: MICROSERVICES (2 servers on ports 3004, 3005)
+#    - User-service server: port 3004
+#    - Order-service server: port 3005
+#    - Run user-service: go run main.go -server user-service
+#    - Run order-service: go run main.go -server order-service
 #
 ###############################################
 
 ###############################################
-# PART 1: MONOLITH MODE (Port 3003)
+# DEPLOYMENT 1: MONOLITH (Port 3003)
 ###############################################
 
-### 1.1 Get monolith info
+### 1.1 Get monolith server info
 GET http://localhost:3003/
 Content-Type: application/json
 
@@ -35,12 +35,16 @@ Content-Type: application/json
 
 ### 1.4 Get order with user info (monolith - cross-service call)
 # This demonstrates OrderService calling UserService
-# In monolith: Direct method call
+# In monolith: Direct method call within same server
 GET http://localhost:3003/orders/1
 Content-Type: application/json
 
 ### 1.5 Get orders by user (monolith)
 GET http://localhost:3003/users/1/orders
+Content-Type: application/json
+
+### 1.5a Get orders by user (monolith)
+GET http://localhost:3003/users/999/orders
 Content-Type: application/json
 
 ### 1.6 Get non-existent user (monolith - error handling)
@@ -52,10 +56,10 @@ GET http://localhost:3003/orders/999
 Content-Type: application/json
 
 ###############################################
-# PART 2: USER SERVICE (Port 3004)
+# DEPLOYMENT 2: USER-SERVICE SERVER (Port 3004)
 ###############################################
 
-### 2.1 Get user-service info
+### 2.1 Get user-service server info
 GET http://localhost:3004/
 Content-Type: application/json
 
@@ -80,16 +84,16 @@ GET http://localhost:3004/users/999
 Content-Type: application/json
 
 ###############################################
-# PART 3: ORDER SERVICE (Port 3005)
+# DEPLOYMENT 2: ORDER-SERVICE SERVER (Port 3005)
 ###############################################
 
-### 3.1 Get order-service info
+### 3.1 Get order-service server info
 GET http://localhost:3005/
 Content-Type: application/json
 
 ### 3.2 Get order with user info (microservices - cross-service call)
 # OrderService calls UserService to get user data
-# In microservices: Could be HTTP call to port 3004
+# In microservices: Could be HTTP call to user-service server (port 3004)
 GET http://localhost:3005/orders/1
 Content-Type: application/json
 
@@ -120,14 +124,14 @@ Content-Type: application/json
 ###############################################
 # PART 4: COMPARISON TESTS
 ###############################################
-# Run the same request on both deployments
+# Run the same request on both deployment options
 # to verify identical behavior
 ###############################################
 
 ### 4.1a Get user/1 from MONOLITH
 GET http://localhost:3003/users/1
 
-### 4.1b Get user/1 from USER-SERVICE
+### 4.1b Get user/1 from USER-SERVICE SERVER
 GET http://localhost:3004/users/1
 
 # ➜ Both should return identical responses
@@ -135,7 +139,7 @@ GET http://localhost:3004/users/1
 ### 4.2a Get order/1 from MONOLITH
 GET http://localhost:3003/orders/1
 
-### 4.2b Get order/1 from ORDER-SERVICE
+### 4.2b Get order/1 from ORDER-SERVICE SERVER
 GET http://localhost:3005/orders/1
 
 # ➜ Both should return identical responses with user data
@@ -143,8 +147,16 @@ GET http://localhost:3005/orders/1
 ### 4.3a Get Alice's orders from MONOLITH
 GET http://localhost:3003/users/1/orders
 
-### 4.3b Get Alice's orders from ORDER-SERVICE
+### 4.3b Get Alice's orders from ORDER-SERVICE SERVER
 GET http://localhost:3005/users/1/orders
+
+# ➜ Both should return identical order lists
+
+### 4.4a Get Alice's orders from MONOLITH
+GET http://localhost:3003/users/99/orders
+
+### 4.4b Get Alice's orders from ORDER-SERVICE SERVER
+GET http://localhost:3005/users/99/orders
 
 # ➜ Both should return identical order lists
 
@@ -152,7 +164,7 @@ GET http://localhost:3005/users/1/orders
 # PART 5: COMPLETE FLOW TEST
 ###############################################
 
-### 5.1 MONOLITH - Complete flow
+### 5.1 MONOLITH DEPLOYMENT - Complete flow
 # 1. Get all users
 GET http://localhost:3003/users
 
@@ -165,43 +177,43 @@ GET http://localhost:3003/users/1/orders
 # 4. Get order details with user info
 GET http://localhost:3003/orders/1
 
-### 5.2 MICROSERVICES - Complete flow
-# 1. Get all users (from user-service)
+### 5.2 MICROSERVICES DEPLOYMENT - Complete flow
+# 1. Get all users (from user-service server)
 GET http://localhost:3004/users
 
-# 2. Get Alice's details (from user-service)
+# 2. Get Alice's details (from user-service server)
 GET http://localhost:3004/users/1
 
-# 3. Get Alice's orders (from order-service)
+# 3. Get Alice's orders (from order-service server)
 GET http://localhost:3005/users/1/orders
 
-# 4. Get order details with user info (from order-service)
+# 4. Get order details with user info (from order-service server)
 GET http://localhost:3005/orders/1
 
 ###############################################
 # TESTING NOTES
 ###############################################
 #
-# MONOLITH MODE:
-# ✅ Single process on port 3003
+# DEPLOYMENT 1: MONOLITH
+# ✅ Single server process on port 3003
 # ✅ All endpoints available
-# ✅ Fast (no network calls)
+# ✅ Fast (no network calls between services)
 # ✅ Shared database
 # ✅ Direct method calls between services
 #
-# MICROSERVICES MODE:
-# ✅ User service on port 3004
-# ✅ Order service on port 3005
-# ✅ Services run independently
+# DEPLOYMENT 2: MICROSERVICES
+# ✅ User-service server on port 3004
+# ✅ Order-service server on port 3005
+# ✅ Servers run independently
 # ✅ Cross-service calls (currently direct, could be HTTP)
-# ✅ Each service can scale independently
+# ✅ Each server can scale independently
 #
 # KEY OBSERVATIONS:
 # 1. Same API, different ports
-# 2. Identical responses in both modes
+# 2. Identical responses in both deployments
 # 3. OrderService depends on UserService (see orders/1)
 # 4. Error handling works the same way
-# 5. Service isolation in microservices mode
+# 5. Server isolation in microservices deployment
 #
 ###############################################
 

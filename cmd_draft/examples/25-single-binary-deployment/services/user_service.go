@@ -122,6 +122,6 @@ func (s *userServiceRemote) GetUser(ctx *request.Context, req *GetUserRequest) (
 }
 
 func RegisterUserService() {
-	lokstra_registry.RegisterServiceFactoryLocalAndRemote("user_service",
+	lokstra_registry.RegisterServiceTypeLocalAndRemote("user_service",
 		CreateUserServiceLocal, CreateUserServiceRemote)
 }

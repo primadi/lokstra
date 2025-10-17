@@ -253,9 +253,9 @@ Step 5: Execute middleware chain
 
 ```go
 type UserService struct {
-    DB    *service.Lazy[*Database]
-    Cache *service.Lazy[*CacheService]
-    Email *service.Lazy[*EmailService]
+    DB    *service.Cached[*Database]
+    Cache *service.Cached[*CacheService]
+    Email *service.Cached[*EmailService]
 }
 
 // Registered in registry
@@ -280,7 +280,7 @@ func (s *UserService) CreateUser(p *CreateParams) (*User, error) {
     }
     
     // Email created here (first call)
-    s.Email.Get().SendWelcome(user.Email)
+    s.Email.MustGet().SendWelcome(user.Email)
     
     return user, nil
 }
@@ -321,7 +321,7 @@ type GetByIDParams struct {
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-    return s.DB.Get().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
+    return s.DB.MustGet().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
 }
 
 // ❌ WRONG: Primitive parameter
@@ -519,7 +519,7 @@ servers:
 ```go
 // In OrderService
 type OrderService struct {
-    Users *service.Lazy[*UserService]
+    Users *service.Cached[*UserService]
 }
 
 func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
@@ -528,7 +528,7 @@ func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
     //
     // Different deployment-id (prod):
     //   → HTTP call to base-url
-    user, err := s.Users.Get().GetByID(p.UserID)
+    user, err := s.Users.MustGet().GetByID(p.UserID)
 }
 ```
 
@@ -647,7 +647,7 @@ func GetUserHandler(ctx *request.Context) (*User, error) {
 
 // Business: Service
 func (s *UserService) GetByID(id string) (*User, error) {
-    return s.DB.Get().QueryOne(...)  // Call data layer
+    return s.DB.MustGet().QueryOne(...)  // Call data layer
 }
 
 // Data: Database
@@ -673,8 +673,8 @@ lokstra_registry.RegisterServiceFactory("users", createUserService)
 
 // Service with dependencies
 type UserService struct {
-    DB    *service.Lazy[*Database]
-    Email *service.Lazy[*EmailService]
+    DB    *service.Cached[*Database]
+    Email *service.Cached[*EmailService]
 }
 
 // Handler uses service

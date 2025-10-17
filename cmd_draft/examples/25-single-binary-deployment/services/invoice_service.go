@@ -135,6 +135,6 @@ func CreateInvoiceServiceRemote(cfg map[string]any) any {
 }
 
 func RegisterInvoiceService() {
-	lokstra_registry.RegisterServiceFactoryLocalAndRemote("invoice_service",
+	lokstra_registry.RegisterServiceTypeLocalAndRemote("invoice_service",
 		CreateInvoiceServiceLocal, CreateInvoiceServiceRemote)
 }

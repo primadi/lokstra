@@ -99,7 +99,7 @@ func TryGetService[T any](svcName string) (T, bool) {
 
 	if lazyExists {
 		lazyCfg := lazyCfgAny.(lazyServiceConfig)
-		if factory := GetServiceFactory(lazyCfg.serviceType, lazyCfg.serviceName); factory != nil {
+		if factory := GetServiceType(lazyCfg.serviceType, lazyCfg.serviceName); factory != nil {
 			if svc := factory(lazyCfg.config); svc != nil {
 				// Double-check if another goroutine already created it
 				if existing, loaded := serviceRegistry.LoadOrStore(svcName, svc); loaded {
@@ -130,7 +130,7 @@ func TryGetService[T any](svcName string) (T, bool) {
 // the RegisterOption allowOverride is set to true.
 func NewService[T any](svcName, svcType string, config map[string]any,
 	opts ...RegisterOption) T {
-	if factory := GetServiceFactory(svcType, svcName); factory != nil {
+	if factory := GetServiceType(svcType, svcName); factory != nil {
 		if svc := factory(config); svc != nil {
 			RegisterService(svcName, svc, opts...)
 			return svc.(T)

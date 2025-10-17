@@ -44,7 +44,7 @@ type User struct {
 // ============================================================================
 
 type LocalUserService struct {
-	// Using service.Lazy[T] for type-safe lazy dependency injection
+	// Using service.Cached[T] for type-safe lazy dependency injection
 	// Database pool will be loaded on first .Get() call and cached
 	db *service.Cached[sql.DB]
 }

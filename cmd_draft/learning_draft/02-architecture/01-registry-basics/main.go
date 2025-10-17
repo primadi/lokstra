@@ -173,8 +173,8 @@ func setupRegistry() {
 
 	// Step 1: Register Service Factories
 	// These are templates that know how to create services from config
-	lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
-	lokstra_registry.RegisterServiceFactory("counter", CounterServiceFactory)
+	lokstra_registry.RegisterServiceType("email", EmailServiceFactory)
+	lokstra_registry.RegisterServiceType("counter", CounterServiceFactory)
 	fmt.Println("   ✓ Registered service factories: email, counter")
 
 	// Step 2: Register Lazy Services

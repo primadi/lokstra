@@ -190,7 +190,7 @@ curl -X DELETE http://localhost:3002/api/v1/users/2
 #### Service Definition
 ```go
 type UserService struct {
-    DB *service.Lazy[*Database]  // Lazy-loaded dependency
+    DB *service.Cached[*Database]  // Lazy-loaded dependency
 }
 ```
 
@@ -211,12 +211,12 @@ type CreateParams struct {
 }
 
 func (s *UserService) Create(p *CreateParams) (*User, error) {
-    return s.DB.Get().Create(p.Name, p.Email)
+    return s.DB.MustGet().Create(p.Name, p.Email)
 }
 
 // ✅ CORRECT - Method without input data uses no parameters
 func (s *UserService) GetAll() ([]*User, error) {
-    return s.DB.Get().GetAll()
+    return s.DB.MustGet().GetAll()
 }
 
 // ❌ WRONG - Don't use empty struct as parameter
@@ -224,7 +224,7 @@ type GetAllParams struct{} // Empty struct
 
 func (s *UserService) GetAll(p *GetAllParams) ([]*User, error) {
     // This may cause issues with Lokstra's binding mechanism
-    return s.DB.Get().GetAll()
+    return s.DB.MustGet().GetAll()
 }
 ```
 
@@ -324,7 +324,7 @@ users, err := userService.MustGet().GetAll()
 // Panics: "service 'users' not found or not initialized"
 
 // ⚠️ Not recommended: Get() - Returns nil (confusing errors)
-users, err := userService.Get().GetAll()
+users, err := userService.MustGet().GetAll()
 // Panics: "nil pointer dereference" (unclear what's wrong!)
 ```
 

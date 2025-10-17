@@ -275,7 +275,7 @@ func generateRouterFromService(svc *config.Service) error {
 		svc.Name, convention, servicePrefix, resourceName, pluralResourceName)
 
 	// Get the service factory to create service instance
-	serviceFactory := GetServiceFactory(svc.Type, svc.Name)
+	serviceFactory := GetServiceType(svc.Type, svc.Name)
 	if serviceFactory == nil {
 		return fmt.Errorf("service factory %s not found", svc.Type)
 	}

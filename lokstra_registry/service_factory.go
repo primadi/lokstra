@@ -23,7 +23,7 @@ type serviceFactoryEntry struct {
 
 var serviceFactoryRegistry sync.Map
 
-func RegisterServiceFactoryLocalAndRemote(serviceType string,
+func RegisterServiceTypeLocalAndRemote(serviceType string,
 	localFactory, remoteFactory AnyServiceFactory,
 	opts ...RegisterOption) {
 	var options registerOptions
@@ -49,16 +49,9 @@ func RegisterServiceFactoryLocalAndRemote(serviceType string,
 	serviceFactoryRegistry.Store(serviceType, entry)
 }
 
-// RegisterServiceFactory registers BOTH local and remote factory (backward compatibility)
-// Deprecated: Use RegisterServiceFactoryLocal and RegisterServiceFactoryRemote instead
-func RegisterServiceFactory(serviceType string, factory AnyServiceFactory,
-	opts ...RegisterOption) {
-	RegisterServiceFactoryLocal(serviceType, factory, opts...)
-}
-
-// RegisterServiceFactoryLocal registers a factory for creating LOCAL service instances
+// registers a factory for creating LOCAL service instances
 // This factory will be used when the service needs to run in the same process
-func RegisterServiceFactoryLocal(serviceType string, factory AnyServiceFactory,
+func RegisterServiceType(serviceType string, factory AnyServiceFactory,
 	opts ...RegisterOption) {
 	var options registerOptions
 	for _, opt := range opts {
@@ -81,9 +74,9 @@ func RegisterServiceFactoryLocal(serviceType string, factory AnyServiceFactory,
 	serviceFactoryRegistry.Store(serviceType, entry)
 }
 
-// RegisterServiceFactoryRemote registers a factory for creating REMOTE service client instances
+// registers a factory for creating REMOTE service client instances
 // This factory will be used when the service needs to call a remote instance via HTTP
-func RegisterServiceFactoryRemote(serviceType string, factory AnyServiceFactory,
+func RegisterServiceTypeRemote(serviceType string, factory AnyServiceFactory,
 	opts ...RegisterOption) {
 	var options registerOptions
 	for _, opt := range opts {
@@ -106,13 +99,13 @@ func RegisterServiceFactoryRemote(serviceType string, factory AnyServiceFactory,
 	serviceFactoryRegistry.Store(serviceType, entry)
 }
 
-// GetServiceFactory retrieves the appropriate factory (local or remote) based on service location
+// retrieves the appropriate factory (local or remote) based on service location
 // Returns local factory if service should run locally, remote factory otherwise
 // Framework automatically decides based on:
 // - Router registration (same server = local, different server = remote)
 // - ClientRouter metadata (IsLocal flag)
 // serviceName is the instance name (e.g., "user-service"), serviceType is the factory type (e.g., "user_service")
-func GetServiceFactory(serviceType string, serviceName string) ServiceFactory {
+func GetServiceType(serviceType string, serviceName string) ServiceFactory {
 	entryAny, ok := serviceFactoryRegistry.Load(serviceType)
 	if !ok {
 		return nil
@@ -158,8 +151,8 @@ func GetServiceFactory(serviceType string, serviceName string) ServiceFactory {
 	return entry.remoteFactory
 }
 
-// GetServiceFactoryLocal explicitly gets the local factory (for testing/debugging)
-func GetServiceFactoryLocal(serviceType string) ServiceFactory {
+// explicitly gets the local factory (for testing/debugging)
+func GetServiceTypeLocal(serviceType string) ServiceFactory {
 	if entryAny, ok := serviceFactoryRegistry.Load(serviceType); ok {
 		entry := entryAny.(*serviceFactoryEntry)
 		return entry.localFactory
@@ -167,8 +160,8 @@ func GetServiceFactoryLocal(serviceType string) ServiceFactory {
 	return nil
 }
 
-// GetServiceFactoryRemote explicitly gets the remote factory (for testing/debugging)
-func GetServiceFactoryRemote(serviceType string) ServiceFactory {
+// explicitly gets the remote factory (for testing/debugging)
+func GetServiceTypeRemote(serviceType string) ServiceFactory {
 	if entryAny, ok := serviceFactoryRegistry.Load(serviceType); ok {
 		entry := entryAny.(*serviceFactoryEntry)
 		return entry.remoteFactory
@@ -177,6 +170,9 @@ func GetServiceFactoryRemote(serviceType string) ServiceFactory {
 }
 
 func adaptServiceFactory(factory any) ServiceFactory {
+	if factory == nil {
+		return nil
+	}
 	switch f := factory.(type) {
 	case func(map[string]any) any:
 		return f
@@ -248,8 +244,7 @@ func adaptServiceFactory(factory any) ServiceFactory {
 				in = []reflect.Value{reflect.ValueOf(argPtr).Elem()}
 			}
 
-			out := fVal.Call(in)
-			return out[0].Interface()
+			return fVal.Call(in)[0].Interface()
 		}
 	}
 }

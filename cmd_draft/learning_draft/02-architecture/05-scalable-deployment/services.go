@@ -232,16 +232,16 @@ func setupFactories() {
 	fmt.Println("🔧 Registering Service Factories...")
 
 	// Layer 1: Infrastructure
-	lokstra_registry.RegisterServiceFactory("db", DBServiceFactory)
-	lokstra_registry.RegisterServiceFactory("cache", CacheServiceFactory)
+	lokstra_registry.RegisterServiceType("db", DBServiceFactory)
+	lokstra_registry.RegisterServiceType("cache", CacheServiceFactory)
 
 	// Layer 2: Repositories
-	lokstra_registry.RegisterServiceFactory("product-repository", ProductRepositoryFactory)
-	lokstra_registry.RegisterServiceFactory("order-repository", OrderRepositoryFactory)
+	lokstra_registry.RegisterServiceType("product-repository", ProductRepositoryFactory)
+	lokstra_registry.RegisterServiceType("order-repository", OrderRepositoryFactory)
 
 	// Layer 3: Business Services
-	lokstra_registry.RegisterServiceFactory("product", ProductServiceFactory)
-	lokstra_registry.RegisterServiceFactory("order", OrderServiceFactory)
+	lokstra_registry.RegisterServiceType("product", ProductServiceFactory)
+	lokstra_registry.RegisterServiceType("order", OrderServiceFactory)
 
 	fmt.Println("✅ Service factories registered")
 }

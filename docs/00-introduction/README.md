@@ -231,7 +231,7 @@ No external DI framework needed:
 import "github.com/primadi/lokstra/core/service"
 
 type UserService struct {
-    DB *service.Lazy[*Database]
+    DB *service.Cached[*Database]
 }
 
 // Register factories

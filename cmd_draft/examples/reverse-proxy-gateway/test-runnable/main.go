@@ -38,8 +38,8 @@ func main() {
 
 func registerServiceFactories() {
 	// Register User Service (for App1)
-	lokstra_registry.RegisterServiceFactory("user_service", UserServiceFactory)
+	lokstra_registry.RegisterServiceType("user_service", UserServiceFactory)
 
 	// Register Product Service (for App2)
-	lokstra_registry.RegisterServiceFactory("product_service", ProductServiceFactory)
+	lokstra_registry.RegisterServiceType("product_service", ProductServiceFactory)
 }

@@ -228,9 +228,9 @@ func setupRegistry() {
 	fmt.Println("🔧 Setting up registry...")
 
 	// Register service factories
-	lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
-	lokstra_registry.RegisterServiceFactory("counter", CounterServiceFactory)
-	lokstra_registry.RegisterServiceFactory("logger", LoggerServiceFactory)
+	lokstra_registry.RegisterServiceType("email", EmailServiceFactory)
+	lokstra_registry.RegisterServiceType("counter", CounterServiceFactory)
+	lokstra_registry.RegisterServiceType("logger", LoggerServiceFactory)
 	fmt.Println("   ✓ Registered service factories: email, counter, logger")
 
 	// Register routers

@@ -379,7 +379,7 @@ type OrderService struct {
 
 func (s *OrderService) CreateOrder(userID, productID string, quantity int) (map[string]any, error) {
 	// ✨ Direct access - type-safe, lazy loaded, auto-cached
-	product := s.product.Get().GetProduct(productID)
+	product := s.product.MustGet().GetProduct(productID)
 	price := product["price"].(float64)
 
 	// Calculate total
@@ -392,14 +392,14 @@ func (s *OrderService) CreateOrder(userID, productID string, quantity int) (map[
 	total := subtotal + tax
 
 	// Create order
-	order := s.repo.Get().Create(userID, productID, quantity, total)
+	order := s.repo.MustGet().Create(userID, productID, quantity, total)
 	order["subtotal"] = subtotal
 	order["tax"] = tax
 	order["total"] = total
 
 	// Send confirmation email
-	user := s.user.Get().GetUser(userID)
-	s.email.Get().Send(
+	user := s.user.MustGet().GetUser(userID)
+	s.email.MustGet().Send(
 		user["email"].(string),
 		"Order Confirmation",
 		fmt.Sprintf("Your order #%s has been placed. Total: $%.2f", order["id"], total),
@@ -451,19 +451,19 @@ var services = &ServiceContainer{}
 
 func setupFactories() {
 	// Infrastructure
-	lokstra_registry.RegisterServiceFactory("db", NewDBService)
-	lokstra_registry.RegisterServiceFactory("cache", NewCacheService)
-	lokstra_registry.RegisterServiceFactory("email", NewEmailService)
+	lokstra_registry.RegisterServiceType("db", NewDBService)
+	lokstra_registry.RegisterServiceType("cache", NewCacheService)
+	lokstra_registry.RegisterServiceType("email", NewEmailService)
 
 	// Repositories
-	lokstra_registry.RegisterServiceFactory("user-repo", NewUserRepository)
-	lokstra_registry.RegisterServiceFactory("product-repo", NewProductRepository)
-	lokstra_registry.RegisterServiceFactory("order-repo", NewOrderRepository)
+	lokstra_registry.RegisterServiceType("user-repo", NewUserRepository)
+	lokstra_registry.RegisterServiceType("product-repo", NewProductRepository)
+	lokstra_registry.RegisterServiceType("order-repo", NewOrderRepository)
 
 	// Domain Services
-	lokstra_registry.RegisterServiceFactory("user", NewUserService)
-	lokstra_registry.RegisterServiceFactory("product", NewProductService)
-	lokstra_registry.RegisterServiceFactory("order", NewOrderService)
+	lokstra_registry.RegisterServiceType("user", NewUserService)
+	lokstra_registry.RegisterServiceType("product", NewProductService)
+	lokstra_registry.RegisterServiceType("order", NewOrderService)
 
 	fmt.Println("   ✓ Registered 9 service factories")
 }

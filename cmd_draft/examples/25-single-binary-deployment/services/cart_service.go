@@ -164,6 +164,6 @@ func CreateCartServiceRemote(cfg map[string]any) any {
 }
 
 func RegisterCartService() {
-	lokstra_registry.RegisterServiceFactoryLocalAndRemote("cart_service",
+	lokstra_registry.RegisterServiceTypeLocalAndRemote("cart_service",
 		CreateCartServiceLocal, CreateCartServiceRemote)
 }

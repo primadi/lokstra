@@ -193,7 +193,7 @@ func CreateOrderService(cfg map[string]any) any {
 
 func (s *OrderService) CreateOrder(userID, productID string) (*Order, error) {
     // Lazy-load and use dependencies
-    user := s.userService.Get().GetUser(userID)
+    user := s.userService.MustGet().GetUser(userID)
     
     order := &Order{
         UserID:    userID,

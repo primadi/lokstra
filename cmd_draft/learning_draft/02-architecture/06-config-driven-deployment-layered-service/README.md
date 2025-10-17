@@ -105,7 +105,7 @@ services:
 ### Factory Pattern (Generic Lazy)
 ```go
 type UserRepository struct {
-    db *service.Lazy[DBService]  // Generic lazy container
+    db *service.Cached[DBService]  // Generic lazy container
 }
 
 func (r *UserRepository) FindByID(id string) map[string]any {
@@ -264,10 +264,10 @@ func NewOrderService(cfg map[string]any) any {
 **Factory Code:**
 ```go
 type OrderService struct {
-    repo    *service.Lazy[OrderRepository]
-    product *service.Lazy[ProductService]
-    user    *service.Lazy[UserService]
-    email   *service.Lazy[EmailService]
+    repo    *service.Cached[OrderRepository]
+    product *service.Cached[ProductService]
+    user    *service.Cached[UserService]
+    email   *service.Cached[EmailService]
 }
 
 func NewOrderService(cfg map[string]any) any {
@@ -281,10 +281,10 @@ func NewOrderService(cfg map[string]any) any {
 
 func (s *OrderService) CreateOrder(userID, productID string, quantity int) (map[string]any, error) {
     // Direct access - lazy loaded, cached, type-safe
-    product := s.product.Get().GetProduct(productID)
-    order := s.repo.Get().Create(userID, productID, quantity, total)
-    user := s.user.Get().GetUser(userID)
-    s.email.Get().Send(user["email"].(string), "Order Confirmation", body)
+    product := s.product.MustGet().GetProduct(productID)
+    order := s.repo.MustGet().Create(userID, productID, quantity, total)
+    user := s.user.MustGet().GetUser(userID)
+    s.email.MustGet().Send(user["email"].(string), "Order Confirmation", body)
     return order, nil
 }
 ```
@@ -354,7 +354,7 @@ type UserRepository struct {
 
 // After
 type UserRepository struct {
-    db *service.Lazy[DBService]
+    db *service.Cached[DBService]
 }
 ```
 

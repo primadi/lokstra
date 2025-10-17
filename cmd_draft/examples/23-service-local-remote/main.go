@@ -28,13 +28,13 @@ func main() {
 	fmt.Println("📋 Step 1: Registering service factories...")
 
 	// Register LOCAL factory - creates real implementation
-	lokstra_registry.RegisterServiceFactoryLocal(
+	lokstra_registry.RegisterServiceType(
 		"user",
 		user_service.CreateLocalUserService,
 	)
 
 	// Register REMOTE factory - creates HTTP client
-	lokstra_registry.RegisterServiceFactoryRemote(
+	lokstra_registry.RegisterServiceTypeRemote(
 		"user",
 		user_service.CreateRemoteUserService,
 	)

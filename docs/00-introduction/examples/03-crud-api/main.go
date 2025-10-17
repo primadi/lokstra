@@ -171,11 +171,11 @@ type DeleteParams struct {
 
 // Service methods
 func (s *UserService) GetAll() ([]*User, error) {
-	return s.DB.Get().GetAll()
+	return s.DB.MustGet().GetAll()
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-	user, err := s.DB.Get().GetByID(p.ID)
+	user, err := s.DB.MustGet().GetByID(p.ID)
 	if err != nil {
 		return nil, fmt.Errorf("user with ID %d not found", p.ID)
 	}
@@ -183,7 +183,7 @@ func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
 }
 
 func (s *UserService) Create(p *CreateParams) (*User, error) {
-	user, err := s.DB.Get().Create(p.Name, p.Email)
+	user, err := s.DB.MustGet().Create(p.Name, p.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
 }
 
 func (s *UserService) Update(p *UpdateParams) (*User, error) {
-	user, err := s.DB.Get().Update(p.ID, p.Name, p.Email)
+	user, err := s.DB.MustGet().Update(p.ID, p.Name, p.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (s *UserService) Update(p *UpdateParams) (*User, error) {
 }
 
 func (s *UserService) Delete(p *DeleteParams) error {
-	err := s.DB.Get().Delete(p.ID)
+	err := s.DB.MustGet().Delete(p.ID)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %v", err)
 	}
@@ -307,7 +307,7 @@ func main() {
 	// 	return NewDatabase()
 	// })
 	// register service factory: dbFactory
-	lokstra_registry.RegisterServiceFactory("dbFactory", NewDatabase)
+	lokstra_registry.RegisterServiceType("dbFactory", NewDatabase)
 	// regiuster lazy service: db using dbFactory
 	lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
 
@@ -317,7 +317,7 @@ func main() {
 	// 	}
 	// })
 	// register service factory: usersFactory
-	lokstra_registry.RegisterServiceFactory("usersFactory", func() any {
+	lokstra_registry.RegisterServiceType("usersFactory", func() any {
 		return &UserService{
 			DB: service.LazyLoad[*Database]("db"),
 		}

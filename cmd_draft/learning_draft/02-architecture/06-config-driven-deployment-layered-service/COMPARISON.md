@@ -79,10 +79,10 @@ func (s *OrderService) CreateOrder(userID, productID string, quantity int) (map[
 ```go
 type OrderService struct {
     // Generic lazy containers - type safe!
-    repo           *service.Lazy[OrderRepository]
-    product        *service.Lazy[ProductService]
-    user           *service.Lazy[UserService]
-    email          *service.Lazy[EmailService]
+    repo           *service.Cached[OrderRepository]
+    product        *service.Cached[ProductService]
+    user           *service.Cached[UserService]
+    email          *service.Cached[EmailService]
     
     // Config
     taxRate        float64
@@ -102,10 +102,10 @@ func NewOrderService(cfg map[string]any) any {
 
 func (s *OrderService) CreateOrder(userID, productID string, quantity int) (map[string]any, error) {
     // Direct access - clean and type-safe!
-    product := s.product.Get().GetProduct(productID)
-    order := s.repo.Get().Create(userID, productID, quantity, total)
-    user := s.user.Get().GetUser(userID)
-    s.email.Get().Send(...)
+    product := s.product.MustGet().GetProduct(productID)
+    order := s.repo.MustGet().Create(userID, productID, quantity, total)
+    user := s.user.MustGet().GetUser(userID)
+    s.email.MustGet().Send(...)
     return order, nil
 }
 ```

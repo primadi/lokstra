@@ -132,6 +132,6 @@ func CreatePaymentServiceRemote(cfg map[string]any) any {
 }
 
 func RegisterPaymentService() {
-	lokstra_registry.RegisterServiceFactoryLocalAndRemote("payment_service",
+	lokstra_registry.RegisterServiceTypeLocalAndRemote("payment_service",
 		CreatePaymentServiceLocal, CreatePaymentServiceRemote)
 }

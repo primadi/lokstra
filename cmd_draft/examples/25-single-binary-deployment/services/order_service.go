@@ -154,6 +154,6 @@ func CreateOrderServiceRemote(cfg map[string]any) any {
 }
 
 func RegisterOrderService() {
-	lokstra_registry.RegisterServiceFactoryLocalAndRemote("order_service",
+	lokstra_registry.RegisterServiceTypeLocalAndRemote("order_service",
 		CreateOrderServiceLocal, CreateOrderServiceRemote)
 }

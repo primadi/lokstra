@@ -204,6 +204,6 @@ func ServiceFactory(params map[string]any) any {
 }
 
 func Register() {
-	lokstra_registry.RegisterServiceFactory(SERVICE_TYPE, ServiceFactory,
+	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
 		lokstra_registry.AllowOverride(true))
 }

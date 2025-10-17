@@ -45,11 +45,11 @@ services:
 
 ### 2. **Generic Lazy Service Container**
 
-Type-safe lazy loading with `service.Lazy[T]`:
+Type-safe lazy loading with `service.Cached[T]`:
 
 ```go
 type UserRepository struct {
-    db *service.Lazy[Database]  // Type-safe, no assertions needed
+    db *service.Cached[Database]  // Type-safe, no assertions needed
 }
 
 func (r *UserRepository) FindUser(id string) (*User, error) {

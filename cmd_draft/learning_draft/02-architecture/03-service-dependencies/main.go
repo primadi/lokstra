@@ -388,10 +388,10 @@ func setupRegistry() {
 	fmt.Println("🔧 Setting up registry...")
 
 	// Register factories
-	lokstra_registry.RegisterServiceFactory("db", DBServiceFactory)
-	lokstra_registry.RegisterServiceFactory("cache", CacheServiceFactory)
-	lokstra_registry.RegisterServiceFactory("user", UserServiceFactory)
-	lokstra_registry.RegisterServiceFactory("order", OrderServiceFactory)
+	lokstra_registry.RegisterServiceType("db", DBServiceFactory)
+	lokstra_registry.RegisterServiceType("cache", CacheServiceFactory)
+	lokstra_registry.RegisterServiceType("user", UserServiceFactory)
+	lokstra_registry.RegisterServiceType("order", OrderServiceFactory)
 	fmt.Println("   ✓ Registered factories: db, cache, user, order")
 
 	// Register routers

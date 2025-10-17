@@ -36,14 +36,14 @@ func createAdminRouter() lokstra.Router {
 	myCounter := service.LazyLoad[*CounterService]("my-counter")
 
 	r.GET("/count", func(c *lokstra.RequestContext) error {
-		return c.Api.Ok(myCounter.Get().Increment())
+		return c.Api.Ok(myCounter.MustGet().Increment())
 	})
 	return r
 }
 
 func main() {
 	// Register the service factory and lazy service
-	lokstra_registry.RegisterServiceFactory("counter", CounterFactory)
+	lokstra_registry.RegisterServiceType("counter", CounterFactory)
 	lokstra_registry.RegisterLazyService("my-counter", "counter", map[string]any{"seed": 100})
 
 	// Create app with main router

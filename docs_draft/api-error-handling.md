@@ -56,7 +56,7 @@ Simply return the error as-is. Let the framework's error handler deal with it:
 ```go
 func (s *orderServiceLocal) CreateOrder(ctx *request.Context, req *CreateOrderRequest) (*CreateOrderResponse, error) {
     // Call user service (may be local or remote)
-    user, err := s.userService.Get().GetUser(ctx, &GetUserRequest{UserID: req.UserID})
+    user, err := s.userService.MustGet().GetUser(ctx, &GetUserRequest{UserID: req.UserID})
     if err != nil {
         // ApiError will be automatically handled by the framework
         return nil, fmt.Errorf("user verification failed: %w", err)
@@ -72,7 +72,7 @@ Handle specific error types differently:
 
 ```go
 func (s *orderServiceLocal) CreateOrder(ctx *request.Context, req *CreateOrderRequest) (*CreateOrderResponse, error) {
-    user, err := s.userService.Get().GetUser(ctx, &GetUserRequest{UserID: req.UserID})
+    user, err := s.userService.MustGet().GetUser(ctx, &GetUserRequest{UserID: req.UserID})
     if err != nil {
         // Check if it's an ApiError
         if apiErr, ok := err.(*api_client.ApiError); ok {

@@ -63,7 +63,7 @@ func TestRegisterAndGetService(t *testing.T) {
 
 func TestNewService(t *testing.T) {
 	t.Run("register factory and create service", func(t *testing.T) {
-		lokstra_registry.RegisterServiceFactory("typeA", func(config map[string]any) any {
+		lokstra_registry.RegisterServiceType("typeA", func(config map[string]any) any {
 			return &serviceA{name: config["name"].(string)}
 		}, lokstra_registry.AllowOverride(true))
 		svcA := lokstra_registry.NewService[namedService]("newServiceA", "typeA", map[string]any{"name": "Service A"})
@@ -111,7 +111,7 @@ func TestGetService_PanicTypeMismatch(t *testing.T) {
 
 func TestRegisterLazyServiceAndGetService(t *testing.T) {
 	// Register factory for lazy type
-	lokstra_registry.RegisterServiceFactory("lazyTypeA", func(config map[string]any) any {
+	lokstra_registry.RegisterServiceType("lazyTypeA", func(config map[string]any) any {
 		return &serviceA{name: config["name"].(string)}
 	})
 
