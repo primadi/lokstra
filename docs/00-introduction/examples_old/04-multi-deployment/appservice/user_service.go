@@ -26,3 +26,9 @@ func (s *UserServiceImpl) GetByID(p *GetUserParams) (*User, error) {
 func (s *UserServiceImpl) List(p *ListUsersParams) ([]*User, error) {
 	return s.DB.MustGet().GetAllUsers()
 }
+
+func NewUserService() UserService {
+	return &UserServiceImpl{
+		DB: service.LazyLoad[*Database]("db"),
+	}
+}

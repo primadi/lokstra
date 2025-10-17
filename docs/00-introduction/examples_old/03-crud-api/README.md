@@ -1,79 +1,54 @@
-# CRUD API Example - Two Approaches!
+# CRUD API Example
 
-> **Complete REST API demonstrating BOTH manual and config-based service management**
-
-🎯 **This example runs in TWO MODES:**
-- **Mode 1: By Code** - Manual instantiation (simple, explicit)
-- **Mode 2: By Config** - YAML + Lazy DI (scalable, production-ready)
+> **Complete REST API with Service pattern and Lazy Dependency Injection**
 
 Related to: [Architecture - Service Component](../../architecture.md#component-4-service)
 
 ---
 
-## 🎭 Choose Your Approach!
-
-### Mode 1: Run by Code (Manual)
-```bash
-go run main.go --mode=code
-# or just: go run main.go
-```
-
-**What you'll see:**
-```
-🚀 Starting CRUD API in 'code' mode...
-📝 APPROACH 1: Manual instantiation (run by code)
-```
-
-**How it works:**
-- Services created manually in code
-- Direct instantiation: `db := NewDatabase()`
-- Simple and explicit
-- Good for learning and small apps
-
----
-
-### Mode 2: Run by Config (YAML + Lazy DI)
-```bash
-go run main.go --mode=config
-```
-
-**What you'll see:**
-```
-🚀 Starting CRUD API in 'config' mode...
-⚙️ APPROACH 2: YAML Configuration + Lazy DI (run by config)
-✅ Services loaded from YAML config
-```
-
-**How it works:**
-- Services defined in `config.yaml`
-- Factory pattern with lazy loading
-- Declarative configuration
-- Production-ready with validation
-
----
-
 ## 📖 What This Example Shows
 
-### Core Features:
-- ✅ Complete CRUD operations (Create, Read, Update, Delete)
+### Service Patterns:
 - ✅ Service layer with business logic
-- ✅ Thread-safe in-memory database
+- ✅ **Cached service access** (`service.LazyLoad[T]`) - **Optimal pattern**
+- ✅ Lazy dependency injection within services
+- ✅ Service registry (Factory → Lazy Service)
+- ✅ Service methods with struct parameters
+
+### Service Access Patterns (Quick Reference):
+
+| Pattern | Performance | Error Handling | Use Case |
+|---------|-------------|----------------|----------|
+| `GetService[T]()` | ⚠️ Slow (map lookup every call) | Returns nil (confusing) | Quick prototypes only |
+| `MustGetService[T]()` | ⚠️ Slow (map lookup every call) | Panics (clear error) | Fail-fast prototypes |
+| **`LazyLoad + MustGet()`** | ✅ **Fast (cached)** | ✅ **Panics (clear error)** | **Production (recommended)** |
+
+```go
+// ✅ Optimal: Package-level cached service with fail-fast
+var userService = service.LazyLoad[*UserService]("users")
+
+func handler() {
+    userService.MustGet().DoSomething() // Fast + clear errors!
+}
+```
+
+### Complete CRUD:
+- ✅ Create (POST)
+- ✅ Read (GET single & list)
+- ✅ Update (PUT)
+- ✅ Delete (DELETE)
+- ✅ Validation & error handling
+- ✅ In-memory database
+
+### Concepts:
+- ✅ Service-oriented architecture
+- ✅ Thread-safe operations (mutex)
 - ✅ Request binding (path, body)
 - ✅ Custom error responses (404, 409, 500)
 
-### TWO Service Management Approaches:
-1. **Manual** - Direct instantiation (code mode)
-2. **Factory + YAML** - Lazy DI with config (config mode)
-
-### Lazy Dependency Injection:
-- ✅ `service.Cached[T]` for type-safe lazy loading
-- ✅ Database only created when UserService needs it
-- ✅ No initialization order issues
-- ✅ MustGet() for fail-fast error handling
-
 ---
 
-## 🚀 Quick Start
+## 🚀 Run the Example
 
 ```bash
 # From this directory
@@ -487,72 +462,19 @@ Response
 
 ---
 
-## � Comparing Both Approaches
-
-### Side-by-Side:
-
-| Aspect | Mode: Code | Mode: Config |
-|--------|------------|--------------|
-| **Setup** | Very simple | More setup (factories) |
-| **Services** | Manual instantiation | YAML definition |
-| **Dependencies** | Manual wiring | Auto lazy-load |
-| **Config** | Hardcoded | YAML + env vars |
-| **Multi-env** | Manual flags | Built-in deployments |
-| **Validation** | None | JSON Schema |
-| **Best for** | Learning, small apps | Production, teams |
-
-### Try Both!
-
-```bash
-# Run in CODE mode - see manual approach
-go run main.go --mode=code
-
-# Run in CONFIG mode - see YAML approach
-go run main.go --mode=config
-
-# Both produce identical API behavior!
-# Test with: curl http://localhost:3002/api/v1/users
-```
-
-**Read detailed comparison:** [MIGRATION.md](./MIGRATION.md)
-
----
-
-## 📚 Learn More
-
-### Understanding the Patterns:
-- **[CODE-VS-CONFIG.md](../../CODE-VS-CONFIG.md)** - Parallel structure explanation (NEW!)
-- **[MIGRATION.md](./MIGRATION.md)** - Detailed comparison of both approaches
-- **[config.yaml](./config.yaml)** - Example YAML configuration
-- **Service Factories** - See `DatabaseFactory` and `UserServiceFactory` in main.go
-
-### When to Use Which:
-- **Use "code" mode** when:
-  - Learning Lokstra
-  - Prototyping quickly
-  - Simple apps (1-3 services)
-  - Want full explicit control
-
-- **Use "config" mode** when:
-  - Building production apps
-  - Multiple environments (dev/staging/prod)
-  - Complex dependencies (5+ services)
-  - Team development
-
----
-
-## �🔍 What's Next?
+## 🔍 What's Next?
 
 Try modifying:
 - Add pagination to list endpoint
 - Add search/filter functionality
 - Implement authentication
 - Add more validation rules
-- Switch between both modes
+- Use real database (PostgreSQL, MySQL)
 
 See more examples:
-- [Multi-Deployment](../04-multi-deployment/) - Monolith vs microservices with YAML
+- [Multi-Deployment](../04-multi-deployment/) - Run as monolith or microservices
+- [Service as Router](../../01-essentials/02-service/) - Auto-generate routes from service
 
 ---
 
-**Questions?** Check [MIGRATION.md](./MIGRATION.md) for detailed explanations!
+**Questions?** Check the [Architecture Guide](../../architecture.md)

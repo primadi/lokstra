@@ -1,0 +1,31 @@
+# ========================================
+# CRUD API - YAML Configuration
+# ========================================
+# This config is used when running with: go run main.go --mode=config
+
+# Global configs
+configs:
+  APP_NAME: "User CRUD API"
+  APP_VERSION: "1.0.0"
+  PORT: 3002
+
+# Service definitions
+services:
+  database:
+    type: database-factory
+    config:
+      seed_data: true
+  
+  user-service:
+    type: user-service-factory
+    depends-on: [database]  # Auto lazy-loaded!
+
+# Deployment configuration
+deployments:
+  development:
+    servers:
+      api:
+        base-url: http://localhost
+        apps:
+          - port: 3002
+            services: [database, user-service]

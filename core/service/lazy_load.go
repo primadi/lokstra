@@ -22,6 +22,7 @@ import (
 //	}
 type Cached[T any] struct {
 	serviceName string
+	loader      func() T
 	once        sync.Once
 	cache       T
 }
@@ -37,8 +38,14 @@ func LazyLoad[T any](serviceName string) *Cached[T] {
 // and cached for subsequent calls. This method is thread-safe.
 func (l *Cached[T]) Get() T {
 	l.once.Do(func() {
-		service := lokstra_registry.GetService[T](l.serviceName)
-		l.cache = service
+		if l.loader != nil {
+			// Custom loader
+			l.cache = l.loader()
+		} else {
+			// Default: load from lokstra_registry
+			service := lokstra_registry.GetService[T](l.serviceName)
+			l.cache = service
+		}
 	})
 	return l.cache
 }
@@ -89,4 +96,82 @@ func MustLazyLoadFromConfig[T any](cfg map[string]any, key string) *Cached[T] {
 		panic("missing required dependency '" + key + "'")
 	}
 	return lazy
+}
+
+// LazyLoadWith creates a lazy service loader with a custom loader function.
+// The loader function is called on first Get() and the result is cached.
+// This is useful for dependency injection frameworks that manage their own service resolution.
+//
+// Example usage:
+//
+//	deps["db"] = service.LazyLoadWith(func() any {
+//	    return app.GetService("db-pool")
+//	})
+func LazyLoadWith[T any](loader func() T) *Cached[T] {
+	return &Cached[T]{
+		loader: loader,
+	}
+}
+
+// Value creates a Cached instance with a pre-loaded value (no lazy loading).
+// Useful for testing or when the value is already available.
+func Value[T any](value T) *Cached[T] {
+	c := &Cached[T]{
+		cache: value,
+	}
+	// Mark as loaded by setting a no-op loader
+	c.loader = func() T {
+		return value
+	}
+	// Execute once.Do to mark as loaded
+	c.once.Do(func() {})
+	return c
+}
+
+// Cast converts a dependency value from map[string]any to a typed Cached[T].
+// This is a helper for factory functions that receive deps as map[string]any.
+//
+// Example usage in factory:
+//
+//	func userServiceFactory(deps map[string]any, config map[string]any) any {
+//	    return &UserService{
+//	        DB:     service.Cast[*DBPool](deps["db"]),
+//	        Logger: service.Cast[*Logger](deps["logger"]),
+//	    }
+//	}
+func Cast[T any](value any) *Cached[T] {
+	if cached, ok := value.(*Cached[any]); ok {
+		// Wrap the any Cached with a typed loader
+		return LazyLoadWith(func() T {
+			return cached.Get().(T)
+		})
+	}
+	// If it's already the right type, return as-is
+	if cached, ok := value.(*Cached[T]); ok {
+		return cached
+	}
+	panic("Cast: value is not a *Cached type")
+}
+
+// LazyLoadFrom creates a Cached that lazy-loads a service from a ServiceGetter.
+// This is useful for loading services from deployment apps.
+//
+// Example usage:
+//
+//app := dep.GetServerApp("api", "crud-api")
+//userService := service.LazyLoadFrom[*UserService](app, "user-service")
+//// Service is loaded on first Get() call
+//users := userService.MustGet().GetAll()
+type ServiceGetter interface {
+GetService(serviceName string) (any, error)
+}
+
+func LazyLoadFrom[T any](getter ServiceGetter, serviceName string) *Cached[T] {
+return LazyLoadWith(func() T {
+svc, err := getter.GetService(serviceName)
+if err != nil {
+panic("failed to load service '" + serviceName + "': " + err.Error())
+}
+return svc.(T)
+})
 }

@@ -7,20 +7,92 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/deploy"
+	"github.com/primadi/lokstra/core/deploy/loader"
+	"github.com/primadi/lokstra/core/service"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment/appservice"
 )
 
+func main() {
+	// Parse command line flag
+	deployment := flag.String("deployment", "order-service", "Deployment to run: monolith, user-service, or order-service")
+	flag.Parse()
+
+	fmt.Printf("\n")
+	fmt.Printf("╔═══════════════════════════════════════════════╗\n")
+	fmt.Printf("║   LOKSTRA MULTI-DEPLOYMENT DEMO               ║\n")
+	fmt.Printf("╚═══════════════════════════════════════════════╝\n")
+	fmt.Printf("\n")
+
+	// 1. Get global registry
+	reg := deploy.Global()
+
+	// 2. Register service factories
+	reg.RegisterServiceType("database-factory", DatabaseFactory, nil)
+	reg.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
+	reg.RegisterServiceType("order-service-factory", OrderServiceFactory, nil)
+
+	// 3. Load and build deployment from YAML (services defined in config.yaml)
+	dep, err := loader.LoadAndBuild(
+		[]string{"config.yaml"},
+		*deployment,
+		reg,
+	)
+	if err != nil {
+		log.Fatal("❌ Failed to load config:", err)
+	}
+
+	// 5. Run the deployment
+	switch *deployment {
+	case "monolith":
+		fmt.Println("📦 Deployment: MONOLITH")
+		fmt.Println("   • All services in one process")
+		fmt.Println("   • Port: 3003")
+		fmt.Println()
+		runMonolith(dep)
+
+	case "user-service":
+		fmt.Println("🔷 Deployment: USER-SERVICE")
+		fmt.Println("   • Only user endpoints")
+		fmt.Println("   • Port: 3004")
+		fmt.Println()
+		runUserService(dep)
+
+	case "order-service":
+		fmt.Println("🔶 Deployment: ORDER-SERVICE")
+		fmt.Println("   • Only order endpoints + remote user service")
+		fmt.Println("   • Port: 3005")
+		fmt.Println()
+		runOrderService(dep)
+
+	default:
+		log.Fatalf("Unknown deployment: %s\nUse: monolith, user-service, or order-service", *deployment)
+	}
+}
+
 // ========================================
-// Server Configurations
+// MONOLITH: All services in one process
 // ========================================
 
-func runMonolithServer() {
+func runMonolith(dep *deploy.Deployment) {
 	log.Println("🚀 Starting MONOLITH server")
-	log.Println("   All services in one process")
 
-	// Register services
-	registerMonolithServices()
+	// Get app
+	server, ok := dep.GetServer("api")
+	if !ok {
+		log.Fatal("❌ Failed to get server 'api'")
+	}
+	app := server.Apps()[0]
 
-	// Create combined router
+	// Lazy load services
+	userService := service.LazyLoadFrom[appservice.UserService](app, "user-service")
+	orderService := service.LazyLoadFrom[appservice.OrderService](app, "order-service")
+
+	// Create handlers
+	userHandler := NewUserHandler(userService)
+	orderHandler := NewOrderHandler(orderService)
+
+	// Create router
 	r := lokstra.NewRouter("monolith")
 
 	r.GET("/", func() map[string]any {
@@ -40,28 +112,41 @@ func runMonolithServer() {
 		}
 	})
 
-	// Register user routes
-	r.GET("/users", listUsersHandler)
-	r.GET("/users/{id}", getUserHandler)
-
-	// Register order routes
-	r.GET("/orders/{id}", getOrderHandler)
-	r.GET("/users/{user_id}/orders", getUserOrdersHandler)
+	// Register routes
+	r.GET("/users", userHandler.list)
+	r.GET("/users/{id}", userHandler.get)
+	r.GET("/orders/{id}", orderHandler.get)
+	r.GET("/users/{user_id}/orders", orderHandler.getUserOrders)
 
 	// Run
-	app := lokstra.NewApp("monolith", ":3003", r)
-	app.PrintStartInfo()
-	app.Run(30 * time.Second)
+	lokstraApp := lokstra.NewApp("monolith", ":3003", r)
+	lokstraApp.PrintStartInfo()
+	if err := lokstraApp.Run(30 * time.Second); err != nil {
+		log.Fatal("❌ Failed to start server:", err)
+	}
 }
 
-func runUserServiceServer() {
+// ========================================
+// USER SERVICE: Only user endpoints
+// ========================================
+
+func runUserService(dep *deploy.Deployment) {
 	log.Println("🚀 Starting USER-SERVICE server")
-	log.Println("   Only user-related endpoints")
 
-	// Register user service dependencies
-	registerUserServices()
+	// Get app
+	server, ok := dep.GetServer("user-api")
+	if !ok {
+		log.Fatal("❌ Failed to get server 'user-api'")
+	}
+	app := server.Apps()[0]
 
-	// Create user router
+	// Lazy load services
+	userService := service.LazyLoadFrom[appservice.UserService](app, "user-service")
+
+	// Create handlers
+	userHandler := NewUserHandler(userService)
+
+	// Create router
 	r := lokstra.NewRouter("user-service")
 
 	r.GET("/", func() map[string]any {
@@ -74,24 +159,39 @@ func runUserServiceServer() {
 		}
 	})
 
-	// Register user routes
-	r.GET("/users", listUsersHandler)
-	r.GET("/users/{id}", getUserHandler)
+	// Register routes
+	r.GET("/users", userHandler.list)
+	r.GET("/users/{id}", userHandler.get)
 
 	// Run
-	app := lokstra.NewApp("user-service", ":3004", r)
-	app.PrintStartInfo()
-	app.Run(30 * time.Second)
+	lokstraApp := lokstra.NewApp("user-service", ":3004", r)
+	lokstraApp.PrintStartInfo()
+	if err := lokstraApp.Run(30 * time.Second); err != nil {
+		log.Fatal("❌ Failed to start server:", err)
+	}
 }
 
-func runOrderServiceServer() {
+// ========================================
+// ORDER SERVICE: Order endpoints + remote user service
+// ========================================
+
+func runOrderService(dep *deploy.Deployment) {
 	log.Println("🚀 Starting ORDER-SERVICE server")
-	log.Println("   Only order-related endpoints")
 
-	// Register order service dependencies
-	registerOrderServices()
+	// Get app
+	server, ok := dep.GetServer("order-api")
+	if !ok {
+		log.Fatal("❌ Failed to get server 'order-api'")
+	}
+	app := server.Apps()[0]
 
-	// Create order router
+	// Lazy load services
+	orderService := service.LazyLoadFrom[appservice.OrderService](app, "order-service")
+
+	// Create handlers
+	orderHandler := NewOrderHandler(orderService)
+
+	// Create router
 	r := lokstra.NewRouter("order-service")
 
 	r.GET("/", func() map[string]any {
@@ -102,58 +202,19 @@ func runOrderServiceServer() {
 				"GET /users/{user_id}/orders",
 			},
 			"dependencies": []string{
-				"user-service (for user data)",
+				"user-service (remote at http://localhost:3004)",
 			},
 		}
 	})
 
-	// Register order routes
-	r.GET("/orders/{id}", getOrderHandler)
-	r.GET("/users/{user_id}/orders", getUserOrdersHandler)
+	// Register routes
+	r.GET("/orders/{id}", orderHandler.get)
+	r.GET("/users/{user_id}/orders", orderHandler.getUserOrders)
 
 	// Run
-	app := lokstra.NewApp("order-service", ":3005", r)
-	app.PrintStartInfo()
-	app.Run(30 * time.Second)
-}
-
-// ========================================
-// Main
-// ========================================
-
-func main() {
-	server := flag.String("server", "order-service", "Server to run: monolith, user-service, or order-service")
-	flag.Parse()
-
-	fmt.Printf("\n")
-	fmt.Printf("╔═══════════════════════════════════════════════╗\n")
-	fmt.Printf("║   LOKSTRA MULTI-DEPLOYMENT DEMO               ║\n")
-	fmt.Printf("╚═══════════════════════════════════════════════╝\n")
-	fmt.Printf("\n")
-
-	switch *server {
-	case "monolith":
-		fmt.Println("📦 Server: MONOLITH")
-		fmt.Println("   • All services in one process")
-		fmt.Println("   • Port: 3003")
-		fmt.Println()
-		runMonolithServer()
-
-	case "user-service":
-		fmt.Println("🔷 Server: USER-SERVICE")
-		fmt.Println("   • Only user endpoints")
-		fmt.Println("   • Port: 3004")
-		fmt.Println()
-		runUserServiceServer()
-
-	case "order-service":
-		fmt.Println("🔶 Server: ORDER-SERVICE")
-		fmt.Println("   • Only order endpoints")
-		fmt.Println("   • Port: 3005")
-		fmt.Println()
-		runOrderServiceServer()
-
-	default:
-		log.Fatalf("Unknown server: %s\nUse: monolith, user-service, or order-service", *server)
+	lokstraApp := lokstra.NewApp("order-service", ":3005", r)
+	lokstraApp.PrintStartInfo()
+	if err := lokstraApp.Run(30 * time.Second); err != nil {
+		log.Fatal("❌ Failed to start server:", err)
 	}
 }

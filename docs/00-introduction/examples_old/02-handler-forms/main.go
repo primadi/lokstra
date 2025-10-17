@@ -259,7 +259,5 @@ func main() {
 	app := lokstra.NewApp("handler-forms", ":3001", r)
 
 	app.PrintStartInfo()
-	if err := app.Run(30 * time.Second); err != nil {
-		panic(err) // Or use log.Fatal(err)
-	}
+	app.Run(30 * time.Second)
 }

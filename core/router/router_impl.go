@@ -314,7 +314,12 @@ func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []re
 		currentRouterName = routerName
 	}
 	for _, rt := range r.routes {
-		fn(rt, baseName+rt.Name, basePrefix+rt.Path, baseMw, currentRouterName)
+		// Fix: Don't add trailing slash when path is "/"
+		fullPath := basePrefix + rt.Path
+		if rt.Path == "/" && basePrefix != "" {
+			fullPath = basePrefix
+		}
+		fn(rt, baseName+rt.Name, fullPath, baseMw, currentRouterName)
 	}
 	for _, child := range r.children {
 		child.walkBuildRecursive(baseName, basePrefix, baseMw, currentRouterName, fn)

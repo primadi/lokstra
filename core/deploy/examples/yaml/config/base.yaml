@@ -1,0 +1,33 @@
+# base.yaml - Base configuration
+#
+# This file contains global configurations and base services.
+# It can be merged with other YAML files to create complete deployments.
+
+configs:
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_NAME: myapp_db
+  LOG_LEVEL: info
+  CACHE_HOST: localhost
+  CACHE_PORT: 6379
+
+services:
+  db-pool:
+    type: postgres-pool
+    config:
+      host: ${@cfg:DB_HOST}
+      port: ${@cfg:DB_PORT}
+      database: ${@cfg:DB_NAME}
+      max-conns: 20
+
+  logger:
+    type: logger-service
+    config:
+      level: ${@cfg:LOG_LEVEL}
+      format: json
+
+  cache:
+    type: redis-cache
+    config:
+      host: ${@cfg:CACHE_HOST}
+      port: ${@cfg:CACHE_PORT}

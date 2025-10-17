@@ -1,0 +1,36 @@
+# Deployment Configuration (will be merged with base.yaml and services.yaml)
+deployments:
+  production:
+    config-overrides:
+      LOG_LEVEL: warn
+      DB_HOST: prod-db.example.com
+      API_TIMEOUT: 60
+
+    servers:
+      api-server:
+        base-url: https://api.example.com
+        apps:
+          - port: 8080
+            services:
+              - db-pool
+              - logger
+              - cache
+              - user-service
+              - order-service
+            remote-services:
+              - payment-api
+              - notification-api
+
+  development:
+    config-overrides:
+      LOG_LEVEL: debug
+      
+    servers:
+      dev-server:
+        base-url: http://localhost
+        apps:
+          - port: 3000
+            services:
+              - db-pool
+              - logger
+              - user-service

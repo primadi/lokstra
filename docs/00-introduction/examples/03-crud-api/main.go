@@ -1,340 +1,135 @@
 package main
 
 import (
-	"fmt"
-	"sync"
+	"flag"
+	"log"
 	"time"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/deploy"
+	"github.com/primadi/lokstra/core/deploy/loader"
+	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-// ========================================
-// Models
-// ========================================
-
-type User struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// ========================================
-// Database (In-Memory)
-// ========================================
-
-type Database struct {
-	users  map[int]*User
-	nextID int
-	mu     sync.RWMutex
-}
-
-func NewDatabase() *Database {
-	db := &Database{
-		users:  make(map[int]*User),
-		nextID: 1,
-	}
-
-	// Seed data
-	db.users[1] = &User{
-		ID:        1,
-		Name:      "Alice",
-		Email:     "alice@example.com",
-		CreatedAt: time.Now().Add(-24 * time.Hour),
-		UpdatedAt: time.Now().Add(-24 * time.Hour),
-	}
-	db.users[2] = &User{
-		ID:        2,
-		Name:      "Bob",
-		Email:     "bob@example.com",
-		CreatedAt: time.Now().Add(-12 * time.Hour),
-		UpdatedAt: time.Now().Add(-12 * time.Hour),
-	}
-	db.nextID = 3
-
-	return db
-}
-
-func (db *Database) GetAll() ([]*User, error) {
-	db.mu.RLock()
-	defer db.mu.RUnlock()
-
-	users := make([]*User, 0, len(db.users))
-	for _, user := range db.users {
-		users = append(users, user)
-	}
-	return users, nil
-}
-
-func (db *Database) GetByID(id int) (*User, error) {
-	db.mu.RLock()
-	defer db.mu.RUnlock()
-
-	user, exists := db.users[id]
-	if !exists {
-		return nil, fmt.Errorf("user not found")
-	}
-	return user, nil
-}
-
-func (db *Database) Create(name, email string) (*User, error) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
-	// Check duplicate email
-	for _, u := range db.users {
-		if u.Email == email {
-			return nil, fmt.Errorf("email already exists")
-		}
-	}
-
-	user := &User{
-		ID:        db.nextID,
-		Name:      name,
-		Email:     email,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	db.users[db.nextID] = user
-	db.nextID++
-
-	return user, nil
-}
-
-func (db *Database) Update(id int, name, email string) (*User, error) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
-	user, exists := db.users[id]
-	if !exists {
-		return nil, fmt.Errorf("user not found")
-	}
-
-	// Check duplicate email (excluding current user)
-	for _, u := range db.users {
-		if u.ID != id && u.Email == email {
-			return nil, fmt.Errorf("email already exists")
-		}
-	}
-
-	user.Name = name
-	user.Email = email
-	user.UpdatedAt = time.Now()
-
-	return user, nil
-}
-
-func (db *Database) Delete(id int) error {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
-	if _, exists := db.users[id]; !exists {
-		return fmt.Errorf("user not found")
-	}
-
-	delete(db.users, id)
-	return nil
-}
-
-// ========================================
-// Service with Lazy DI
-// ========================================
-
-type UserService struct {
-	DB *service.Cached[*Database]
-}
-
-// Request types for service methods
-type GetByIDParams struct {
-	ID int `path:"id"`
-}
-
-type CreateParams struct {
-	Name  string `json:"name" validate:"required"`
-	Email string `json:"email" validate:"required,email"`
-}
-
-type UpdateParams struct {
-	ID    int    `path:"id"`
-	Name  string `json:"name" validate:"required"`
-	Email string `json:"email" validate:"required,email"`
-}
-
-type DeleteParams struct {
-	ID int `path:"id"`
-}
-
-// Service methods
-func (s *UserService) GetAll() ([]*User, error) {
-	return s.DB.MustGet().GetAll()
-}
-
-func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-	user, err := s.DB.MustGet().GetByID(p.ID)
-	if err != nil {
-		return nil, fmt.Errorf("user with ID %d not found", p.ID)
-	}
-	return user, nil
-}
-
-func (s *UserService) Create(p *CreateParams) (*User, error) {
-	user, err := s.DB.MustGet().Create(p.Name, p.Email)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
-}
-
-func (s *UserService) Update(p *UpdateParams) (*User, error) {
-	user, err := s.DB.MustGet().Update(p.ID, p.Name, p.Email)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
-}
-
-func (s *UserService) Delete(p *DeleteParams) error {
-	err := s.DB.MustGet().Delete(p.ID)
-	if err != nil {
-		return fmt.Errorf("failed to delete user: %v", err)
-	}
-	return nil
-}
-
-// ========================================
-// Custom Handlers (Alternative to Service-as-Router)
-// ========================================
-
-// Package-level cached service for optimal performance
-// - Loaded once on first access (lazy initialization)
-// - Cached for all subsequent calls (zero registry lookup cost)
-// - Thread-safe via sync.Once
-// - MustGet() panics with clear error if service not found (fail-fast)
-var userService = service.LazyLoad[*UserService]("users")
-
-func listUsersHandler(ctx *request.Context) error {
-	users, err := userService.MustGet().GetAll()
-	if err != nil {
-		return ctx.Api.Error(500, "INTERNAL_ERROR", err.Error())
-	}
-
-	return ctx.Api.Ok(users)
-}
-
-func getUserHandler(ctx *request.Context) error {
-	var params GetByIDParams
-	if err := ctx.Req.BindPath(&params); err != nil {
-		return ctx.Api.BadRequest("INVALID_ID", "Invalid user ID")
-	}
-
-	user, err := userService.MustGet().GetByID(&params)
-	if err != nil {
-		return ctx.Api.Error(404, "NOT_FOUND", err.Error())
-	}
-
-	return ctx.Api.Ok(user)
-}
-
-func createUserHandler(ctx *request.Context) error {
-	var params CreateParams
-	if err := ctx.Req.BindBody(&params); err != nil {
-		return ctx.Api.BadRequest("INVALID_INPUT", "Invalid request body")
-	}
-
-	user, err := userService.MustGet().Create(&params)
-	if err != nil {
-		if err.Error() == "email already exists" {
-			return ctx.Api.Error(409, "DUPLICATE", err.Error())
-		}
-		return ctx.Api.Error(500, "INTERNAL_ERROR", err.Error())
-	}
-
-	return ctx.Api.Created(user, "User created successfully")
-}
-
-func updateUserHandler(ctx *request.Context) error {
-	var params UpdateParams
-	if err := ctx.Req.BindPath(&params); err != nil {
-		return ctx.Api.BadRequest("INVALID_ID", "Invalid user ID")
-	}
-	if err := ctx.Req.BindBody(&params); err != nil {
-		return ctx.Api.BadRequest("INVALID_INPUT", "Invalid request body")
-	}
-
-	user, err := userService.MustGet().Update(&params)
-	if err != nil {
-		if err.Error() == "user not found" {
-			return ctx.Api.Error(404, "NOT_FOUND", err.Error())
-		}
-		if err.Error() == "email already exists" {
-			return ctx.Api.Error(409, "DUPLICATE", err.Error())
-		}
-		return ctx.Api.Error(500, "INTERNAL_ERROR", err.Error())
-	}
-
-	return ctx.Api.Ok(user)
-}
-
-func deleteUserHandler(ctx *request.Context) error {
-	var params DeleteParams
-	if err := ctx.Req.BindPath(&params); err != nil {
-		return ctx.Api.BadRequest("INVALID_ID", "Invalid user ID")
-	}
-
-	err := userService.MustGet().Delete(&params)
-	if err != nil {
-		if err.Error() == "failed to delete user: user not found" {
-			return ctx.Api.Error(404, "NOT_FOUND", "User not found")
-		}
-		return ctx.Api.Error(500, "INTERNAL_ERROR", err.Error())
-	}
-
-	return ctx.Api.OkWithMessage(nil, "User deleted successfully")
-}
-
-// ========================================
-// Main
-// ========================================
-
 func main() {
-	// Register services
-	// lokstra_registry.RegisterServiceFactory("db", func() any {
-	// 	return NewDatabase()
-	// })
-	// register service factory: dbFactory
-	lokstra_registry.RegisterServiceType("dbFactory", NewDatabase)
-	// regiuster lazy service: db using dbFactory
-	lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
+	// Parse command line flag
+	mode := flag.String("mode", "config", "Run mode: 'code' (manual) or 'config' (YAML)")
+	flag.Parse()
 
-	// lokstra_registry.RegisterServiceFactory("users", func() any {
-	// 	return &UserService{
-	// 		DB: service.LazyLoad[*Database]("db"),
-	// 	}
-	// })
-	// register service factory: usersFactory
-	lokstra_registry.RegisterServiceType("usersFactory", func() any {
-		return &UserService{
-			DB: service.LazyLoad[*Database]("db"),
-		}
+	log.Printf("🚀 Starting CRUD API in '%s' mode...\n", *mode)
+
+	if *mode == "config" {
+		runWithConfig()
+	} else {
+		runWithCode()
+	}
+}
+
+// ========================================
+// APPROACH 1: Run by Code (Manual)
+// ========================================
+
+func runWithCode() {
+	log.Println("📝 APPROACH 1: Manual registration + Lazy loading (run by code)")
+
+	// 1. Get global registry
+	reg := deploy.Global()
+
+	// 2. Register service factories (same as config mode)
+	reg.RegisterServiceType("database-factory", DatabaseFactory, nil)
+	reg.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
+
+	// 3. Define services in registry using ServiceDef (like YAML structure)
+	reg.DefineService(&schema.ServiceDef{
+		Name: "database",
+		Type: "database-factory",
 	})
-	// register lazy service: users using usersFactory
-	lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
+	reg.DefineService(&schema.ServiceDef{
+		Name:      "user-service",
+		Type:      "user-service-factory",
+		DependsOn: []string{"database"},
+	})
 
+	// 4. Build deployment manually (same structure as config mode)
+	dep := deploy.New("development")
+	server := dep.NewServer("api", ":3002")
+	app := server.NewApp(3002)
+
+	// 5. Add services to app (lazy-loaded automatically)
+	app.AddService("database")
+	app.AddService("user-service")
+
+	// 6. Lazy load service (SAME pattern as config mode)
+	userService := service.LazyLoadFrom[*UserService](app, "user-service")
+
+	log.Println("✅ Services configured from code (lazy - will be created on first HTTP request)")
+
+	// 7. Create handler with injected service
+	handler := NewUserHandler(userService)
+
+	// 8. Setup router and run
+	setupRouterAndRun(handler)
+}
+
+// ========================================
+// APPROACH 2: Run by Config (YAML + Lazy DI)
+// ========================================
+
+func runWithConfig() {
+	log.Println("⚙️  APPROACH 2: YAML Configuration + Lazy DI (run by config)")
+
+	// 1. Get global registry
+	reg := deploy.Global()
+
+	// 2. Register service factories
+	reg.RegisterServiceType("database-factory", DatabaseFactory, nil)
+	reg.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
+
+	// 3. Load and build deployment from YAML
+	dep, err := loader.LoadAndBuild(
+		[]string{"config.yaml"},
+		"development",
+		reg,
+	)
+	if err != nil {
+		log.Fatal("❌ Failed to load config:", err)
+	}
+
+	// 4. Get app (service container)
+	server, ok := dep.GetServer("api")
+	if !ok {
+		log.Fatal("❌ Failed to get server 'api'")
+	}
+	app := server.Apps()[0]
+
+	// 5. Lazy load service from app - Service created on FIRST HTTP request!
+	userService := service.LazyLoadFrom[*UserService](app, "user-service")
+
+	log.Println("✅ Services configured from YAML (lazy - will be created on first HTTP request)")
+
+	// 6. Create handler with injected service
+	handler := NewUserHandler(userService)
+
+	// 7. Setup router and run
+	setupRouterAndRun(handler)
+}
+
+// ========================================
+// Router Setup (Shared by Both Approaches)
+// ========================================
+
+func setupRouterAndRun(handler *UserHandler) {
 	// Create router
 	r := lokstra.NewRouter("api")
 
-	// Route 1: Manual routes with custom handlers
+	// CRUD routes - Using Group for clean organization
 	r.Group("/api/v1/users", func(api lokstra.Router) {
-		api.GET("/", listUsersHandler)
-		api.GET("/{id}", getUserHandler)
-		api.POST("/", createUserHandler)
-		api.PUT("/{id}", updateUserHandler)
-		api.DELETE("/{id}", deleteUserHandler)
+		api.GET("/", handler.listUsers)
+		api.GET("/{id}", handler.getUser)
+		api.POST("/", handler.createUser)
+		api.PUT("/{id}", handler.updateUser)
+		api.DELETE("/{id}", handler.deleteUser)
 	})
 
 	// Info endpoint
@@ -352,9 +147,12 @@ func main() {
 		}
 	})
 
-	// Create app
+	// Create and start app
 	app := lokstra.NewApp("crud-api", ":3002", r)
-
 	app.PrintStartInfo()
-	app.Run(30 * time.Second)
+
+	// Handle error from Run (e.g., port already in use)
+	if err := app.Run(30 * time.Second); err != nil {
+		log.Fatal("❌ Failed to start server:", err)
+	}
 }

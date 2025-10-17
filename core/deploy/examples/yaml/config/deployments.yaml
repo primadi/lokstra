@@ -1,0 +1,58 @@
+# deployments.yaml - Deployment configurations
+#
+# This file defines different deployment targets (production, development, etc.)
+# Each deployment can override configs and select which services to deploy.
+
+deployments:
+  production:
+    config-overrides:
+      LOG_LEVEL: warn
+      DB_HOST: prod-db.company.com
+      DB_NAME: production_db
+      CACHE_HOST: prod-redis.company.com
+
+    servers:
+      api-server:
+        base-url: https://api.company.com
+        apps:
+          - port: 8080
+            services:
+              - db-pool
+              - logger
+              - cache
+              - user-service
+              - order-service
+
+  development:
+    config-overrides:
+      LOG_LEVEL: debug
+      DB_NAME: dev_db
+      
+    servers:
+      dev-server:
+        base-url: http://localhost
+        apps:
+          - port: 3000
+            services:
+              - db-pool
+              - logger
+              - cache
+              - user-service
+              - order-service
+
+  staging:
+    config-overrides:
+      LOG_LEVEL: info
+      DB_HOST: staging-db.company.com
+      DB_NAME: staging_db
+      
+    servers:
+      staging-server:
+        base-url: https://staging.company.com
+        apps:
+          - port: 8080
+            services:
+              - db-pool
+              - logger
+              - cache
+              - user-service

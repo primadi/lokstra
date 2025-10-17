@@ -1,0 +1,29 @@
+# Global Configuration
+configs:
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_NAME: myapp
+  LOG_LEVEL: info
+  API_TIMEOUT: 30
+
+# Service Definitions
+services:
+  db-pool:
+    type: postgres-pool
+    config:
+      host: ${@cfg:DB_HOST}
+      port: ${@cfg:DB_PORT}
+      database: ${@cfg:DB_NAME}
+      max-conns: 20
+
+  logger:
+    type: logger-service
+    config:
+      level: ${@cfg:LOG_LEVEL}
+      format: json
+
+  cache:
+    type: redis-cache
+    config:
+      host: localhost
+      port: 6379

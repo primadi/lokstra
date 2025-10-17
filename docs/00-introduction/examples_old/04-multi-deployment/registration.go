@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment/appservice"
+	"github.com/primadi/lokstra/docs/00-introduction/examples_old/04-multi-deployment/appservice"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 

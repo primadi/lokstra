@@ -13,7 +13,7 @@ type OrderService interface {
 
 type OrderServiceImpl struct {
 	DB    *service.Cached[*Database]
-	Users *service.Cached[UserService] // Cross-service dependency (can be local OR remote)
+	Users *service.Cached[UserService] // Lazy cross-service dependency
 }
 
 var _ OrderService = (*OrderServiceImpl)(nil) // Ensure implementation
@@ -60,4 +60,11 @@ func (s *OrderServiceImpl) GetByUserID(p *GetUserOrdersParams) ([]*Order, error)
 	}
 
 	return s.DB.MustGet().GetOrdersByUser(p.UserID)
+}
+
+func NewOrderService() OrderService {
+	return &OrderServiceImpl{
+		DB:    service.LazyLoad[*Database]("db"),
+		Users: service.LazyLoad[UserService]("users"),
+	}
 }

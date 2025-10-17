@@ -30,7 +30,5 @@ func main() {
 	app := lokstra.NewApp("hello", ":3000", r)
 
 	app.PrintStartInfo()
-	if err := app.Run(30 * time.Second); err != nil {
-		panic(err) // Or use log.Fatal(err)
-	}
+	app.Run(30 * time.Second)
 }

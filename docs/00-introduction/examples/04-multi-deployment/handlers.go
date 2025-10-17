@@ -7,68 +7,74 @@ import (
 )
 
 // ========================================
-// Handlers - Manual Approach
+// User Handler (struct-based DI)
 // ========================================
-//
-// NOTE: This example demonstrates MANUAL handler creation from service methods.
-//
-// In production, you would use automated patterns:
-//   - router.NewFromService() to auto-generate handlers
-//   - Convention-based routing (RESTful, RPC, etc)
-//   - See EVOLUTION.md for automated patterns
-//
-// Manual approach shown here for educational purposes:
-//   - Understand how service-to-handler works
-//   - Learn request binding and error handling
-//   - See the foundation before automation
-//
 
-var (
-	userService  = service.LazyLoad[appservice.UserService]("users")
-	orderService = service.LazyLoad[appservice.OrderService]("orders")
-)
+type UserHandler struct {
+	userService *service.Cached[appservice.UserService]
+}
 
-func listUsersHandler(ctx *request.Context) error {
-	users, err := userService.MustGet().List(&appservice.ListUsersParams{})
+func NewUserHandler(userService *service.Cached[appservice.UserService]) *UserHandler {
+	return &UserHandler{
+		userService: userService,
+	}
+}
+
+func (h *UserHandler) list(ctx *request.Context) error {
+	users, err := h.userService.MustGet().List(&appservice.ListUsersParams{})
 	if err != nil {
 		return ctx.Api.Error(500, "INTERNAL_ERROR", err.Error())
 	}
 	return ctx.Api.Ok(users)
 }
 
-func getUserHandler(ctx *request.Context) error {
+func (h *UserHandler) get(ctx *request.Context) error {
 	var params appservice.GetUserParams
-	if err := ctx.Req.BindPath(&params); err != nil {
+	if err := ctx.Req.BindAll(&params); err != nil {
 		return ctx.Api.BadRequest("INVALID_ID", "Invalid user ID")
 	}
 
-	user, err := userService.MustGet().GetByID(&params)
+	user, err := h.userService.MustGet().GetByID(&params)
 	if err != nil {
 		return ctx.Api.Error(404, "NOT_FOUND", err.Error())
 	}
 	return ctx.Api.Ok(user)
 }
 
-func getOrderHandler(ctx *request.Context) error {
+// ========================================
+// Order Handler (struct-based DI)
+// ========================================
+
+type OrderHandler struct {
+	orderService *service.Cached[appservice.OrderService]
+}
+
+func NewOrderHandler(orderService *service.Cached[appservice.OrderService]) *OrderHandler {
+	return &OrderHandler{
+		orderService: orderService,
+	}
+}
+
+func (h *OrderHandler) get(ctx *request.Context) error {
 	var params appservice.GetOrderParams
-	if err := ctx.Req.BindPath(&params); err != nil {
+	if err := ctx.Req.BindAll(&params); err != nil {
 		return ctx.Api.BadRequest("INVALID_ID", "Invalid order ID")
 	}
 
-	orderWithUser, err := orderService.MustGet().GetByID(&params)
+	orderWithUser, err := h.orderService.MustGet().GetByID(&params)
 	if err != nil {
 		return ctx.Api.Error(404, "NOT_FOUND", err.Error())
 	}
 	return ctx.Api.Ok(orderWithUser)
 }
 
-func getUserOrdersHandler(ctx *request.Context) error {
+func (h *OrderHandler) getUserOrders(ctx *request.Context) error {
 	var params appservice.GetUserOrdersParams
-	if err := ctx.Req.BindPath(&params); err != nil {
+	if err := ctx.Req.BindAll(&params); err != nil {
 		return ctx.Api.BadRequest("INVALID_ID", "Invalid user ID")
 	}
 
-	orders, err := orderService.MustGet().GetByUserID(&params)
+	orders, err := h.orderService.MustGet().GetByUserID(&params)
 	if err != nil {
 		return ctx.Api.Error(404, "NOT_FOUND", err.Error())
 	}
