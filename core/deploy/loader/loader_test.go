@@ -21,11 +21,11 @@ func TestLoadSingleFile(t *testing.T) {
 	}
 
 	// Check services
-	if len(config.Services) == 0 {
+	if len(config.ServiceDefinitions) == 0 {
 		t.Fatal("expected services to be loaded")
 	}
 
-	dbPool := config.Services["db-pool"]
+	dbPool := config.ServiceDefinitions["db-pool"]
 	if dbPool == nil {
 		t.Fatal("db-pool service not found")
 	}
@@ -51,26 +51,26 @@ func TestLoadMultipleFiles(t *testing.T) {
 	}
 
 	// Check services from different files merged
-	if config.Services["db-pool"] == nil {
+	if config.ServiceDefinitions["db-pool"] == nil {
 		t.Error("service from base.yaml not found")
 	}
 
-	if config.Services["user-service"] == nil {
+	if config.ServiceDefinitions["user-service"] == nil {
 		t.Error("service from services.yaml not found")
 	}
 
 	// Check user-service dependencies
-	userSvc := config.Services["user-service"]
+	userSvc := config.ServiceDefinitions["user-service"]
 	if len(userSvc.DependsOn) != 3 {
 		t.Errorf("expected 3 dependencies, got %d", len(userSvc.DependsOn))
 	}
 
 	// Check remote services
-	if len(config.RemoteServices) != 2 {
-		t.Errorf("expected 2 remote services, got %d", len(config.RemoteServices))
+	if len(config.RemoteServiceDefinitions) != 2 {
+		t.Errorf("expected 2 remote services, got %d", len(config.RemoteServiceDefinitions))
 	}
 
-	paymentAPI := config.RemoteServices["payment-api"]
+	paymentAPI := config.RemoteServiceDefinitions["payment-api"]
 	if paymentAPI == nil {
 		t.Fatal("payment-api remote service not found")
 	}
@@ -114,8 +114,8 @@ func TestLoadMultipleFiles(t *testing.T) {
 	}
 
 	app := apiServer.Apps[0]
-	if app.Port != 8080 {
-		t.Errorf("expected port 8080, got %d", app.Port)
+	if app.Addr != ":8080" {
+		t.Errorf("expected addr :8080, got %s", app.Addr)
 	}
 
 	if len(app.Services) != 5 {
@@ -134,8 +134,8 @@ func TestLoadFromDirectory(t *testing.T) {
 	}
 
 	// Should have merged all files
-	if len(config.Services) < 3 {
-		t.Errorf("expected at least 3 services, got %d", len(config.Services))
+	if len(config.ServiceDefinitions) < 3 {
+		t.Errorf("expected at least 3 services, got %d", len(config.ServiceDefinitions))
 	}
 
 	if len(config.Deployments) < 2 {
@@ -155,11 +155,11 @@ func TestMergeStrategy(t *testing.T) {
 
 	// Later files should override earlier ones
 	// Both files define services, they should be merged
-	if config.Services["db-pool"] == nil {
+	if config.ServiceDefinitions["db-pool"] == nil {
 		t.Error("service from first file missing")
 	}
 
-	if config.Services["user-service"] == nil {
+	if config.ServiceDefinitions["user-service"] == nil {
 		t.Error("service from second file missing")
 	}
 
@@ -207,7 +207,7 @@ func TestConfigToMap(t *testing.T) {
 	}
 
 	// Check services section
-	services, ok := configMap["services"].(map[string]any)
+	services, ok := configMap["service-definitions"].(map[string]any)
 	if !ok {
 		t.Fatal("services section missing or wrong type")
 	}

@@ -1,5 +1,5 @@
 # Additional Services (will be merged with base.yaml)
-services:
+service-definitions:
   user-service:
     type: user-service-factory
     depends-on:
@@ -17,7 +17,7 @@ services:
       - logger
 
 # Remote Services
-remote-services:
+remote-service-definitions:
   payment-api:
     url: https://payment.example.com
     resource: payment

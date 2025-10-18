@@ -32,7 +32,7 @@ type Server struct {
 
 // App represents an application running on a server
 type App struct {
-	port   int
+	addr   string // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
 	server *Server
 
 	// Service instances (lazy-loaded)
@@ -151,9 +151,9 @@ func (d *Deployment) GetServer(serverName string) (*Server, bool) {
 // ===== APP MANAGEMENT =====
 
 // NewApp creates a new app on this server
-func (s *Server) NewApp(port int) *App {
+func (s *Server) NewApp(addr string) *App {
 	app := &App{
-		port:           port,
+		addr:           addr,
 		server:         s,
 		services:       make(map[string]*serviceInstance),
 		routers:        make(map[string]any),
@@ -401,9 +401,9 @@ func (s *Server) Apps() []*App {
 	return s.apps
 }
 
-// Port returns the app port
-func (a *App) Port() int {
-	return a.port
+// Addr returns the app address (e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock")
+func (a *App) Addr() string {
+	return a.addr
 }
 
 // Services returns all services in this app

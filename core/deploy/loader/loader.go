@@ -65,11 +65,11 @@ func loadSingleFile(path string) (*schema.DeployConfig, error) {
 // Source values override target values
 func mergeConfigs(target, source *schema.DeployConfig) *schema.DeployConfig {
 	result := &schema.DeployConfig{
-		Configs:        mergeMap(target.Configs, source.Configs),
-		Services:       mergeMaps(target.Services, source.Services),
-		Routers:        mergeMaps(target.Routers, source.Routers),
-		RemoteServices: mergeMaps(target.RemoteServices, source.RemoteServices),
-		Deployments:    mergeMaps(target.Deployments, source.Deployments),
+		Configs:                  mergeMap(target.Configs, source.Configs),
+		ServiceDefinitions:       mergeMaps(target.ServiceDefinitions, source.ServiceDefinitions),
+		Routers:                  mergeMaps(target.Routers, source.Routers),
+		RemoteServiceDefinitions: mergeMaps(target.RemoteServiceDefinitions, source.RemoteServiceDefinitions),
+		Deployments:              mergeMaps(target.Deployments, source.Deployments),
 	}
 	return result
 }
@@ -151,9 +151,9 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 		result["configs"] = config.Configs
 	}
 
-	if len(config.Services) > 0 {
+	if len(config.ServiceDefinitions) > 0 {
 		services := make(map[string]any)
-		for name, svc := range config.Services {
+		for name, svc := range config.ServiceDefinitions {
 			svcMap := map[string]any{
 				"type": svc.Type,
 			}
@@ -165,7 +165,7 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 			}
 			services[name] = svcMap
 		}
-		result["services"] = services
+		result["service-definitions"] = services
 	}
 
 	if len(config.Routers) > 0 {
@@ -182,9 +182,9 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 		result["routers"] = routers
 	}
 
-	if len(config.RemoteServices) > 0 {
+	if len(config.RemoteServiceDefinitions) > 0 {
 		remotes := make(map[string]any)
-		for name, rs := range config.RemoteServices {
+		for name, rs := range config.RemoteServiceDefinitions {
 			rsMap := map[string]any{
 				"url":      rs.URL,
 				"resource": rs.Resource,
@@ -194,7 +194,7 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 			}
 			remotes[name] = rsMap
 		}
-		result["remote-services"] = remotes
+		result["remote-service-definitions"] = remotes
 	}
 
 	if len(config.Deployments) > 0 {
@@ -217,16 +217,16 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 						apps := make([]any, len(srv.Apps))
 						for i, app := range srv.Apps {
 							appMap := map[string]any{
-								"port": app.Port,
+								"addr": app.Addr,
 							}
 							if len(app.Services) > 0 {
-								appMap["services"] = app.Services
+								appMap["required-services"] = app.Services
 							}
 							if len(app.Routers) > 0 {
 								appMap["routers"] = app.Routers
 							}
 							if len(app.RemoteServices) > 0 {
-								appMap["remote-services"] = app.RemoteServices
+								appMap["required-remote-services"] = app.RemoteServices
 							}
 							apps[i] = appMap
 						}

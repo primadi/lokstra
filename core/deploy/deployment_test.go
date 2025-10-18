@@ -188,10 +188,10 @@ func TestDeployment_AppCreation(t *testing.T) {
 	dep := New("test")
 	server := dep.NewServer("main-server", "http://localhost")
 
-	app := server.NewApp(3000)
+	app := server.NewApp(":3000")
 
-	if app.Port() != 3000 {
-		t.Errorf("expected port 3000, got %d", app.Port())
+	if app.Addr() != ":3000" {
+		t.Errorf("expected addr :3000, got %s", app.Addr())
 	}
 
 	// Verify app is in server
@@ -209,7 +209,7 @@ func TestApp_AddService(t *testing.T) {
 	reg := setupTestRegistry()
 	dep := NewWithRegistry("test", reg)
 	server := dep.NewServer("main-server", "http://localhost")
-	app := server.NewApp(3000)
+	app := server.NewApp(":3000")
 
 	// Add service
 	app.AddService("db")
@@ -238,7 +238,7 @@ func TestApp_GetService_Simple(t *testing.T) {
 	reg := setupTestRegistry()
 	dep := NewWithRegistry("test", reg)
 	server := dep.NewServer("main-server", "http://localhost")
-	app := server.NewApp(3000)
+	app := server.NewApp(":3000")
 
 	// Add services
 	app.AddServices("db", "logger")
@@ -293,7 +293,7 @@ func TestApp_GetService_WithDependencies(t *testing.T) {
 	reg := setupTestRegistry()
 	dep := NewWithRegistry("test", reg)
 	server := dep.NewServer("main-server", "http://localhost")
-	app := server.NewApp(3000)
+	app := server.NewApp(":3000")
 
 	// Add all services
 	app.AddServices("db", "logger", "user-service")
@@ -334,7 +334,7 @@ func TestApp_GetService_WithAliases(t *testing.T) {
 	reg := setupTestRegistry()
 	dep := NewWithRegistry("test", reg)
 	server := dep.NewServer("main-server", "http://localhost")
-	app := server.NewApp(3000)
+	app := server.NewApp(":3000")
 
 	// Add all services
 	app.AddServices("db", "logger", "user-service", "order-service")
@@ -388,7 +388,7 @@ func TestApp_FluentAPI(t *testing.T) {
 
 	server := dep.NewServer("main-server", "http://localhost")
 
-	app := server.NewApp(3000).
+	app := server.NewApp(":3000").
 		AddServices("db", "logger", "user-service").
 		AddRouter("health-router", nil)
 
@@ -443,7 +443,7 @@ func TestApp_ServiceNotFound(t *testing.T) {
 	reg := setupTestRegistry()
 	dep := NewWithRegistry("test", reg)
 	server := dep.NewServer("main-server", "http://localhost")
-	app := server.NewApp(3000)
+	app := server.NewApp(":3000")
 
 	// Try to get non-existent service
 	_, err := app.GetService("nonexistent")
@@ -465,7 +465,7 @@ func TestApp_MissingDependency(t *testing.T) {
 	reg := setupTestRegistry()
 	dep := NewWithRegistry("test", reg)
 	server := dep.NewServer("main-server", "http://localhost")
-	app := server.NewApp(3000)
+	app := server.NewApp(":3000")
 
 	// Add user-service but not its dependencies
 	app.AddService("user-service")

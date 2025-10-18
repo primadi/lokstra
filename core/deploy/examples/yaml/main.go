@@ -206,7 +206,7 @@ func main() {
 	fmt.Println("=" + string(make([]byte, 60)))
 	fmt.Printf("Deployment: %s\n", dep.Name())
 	fmt.Printf("  Server: %s (%s)\n", server.Name(), server.BaseURL())
-	fmt.Printf("    App (port %d):\n", app.Port())
+	fmt.Printf("    App (addr %s):\n", app.Addr())
 	fmt.Printf("      Services: %d (loaded from YAML)\n", len(app.Services()))
 	for name := range app.Services() {
 		fmt.Printf("        - %s\n", name)

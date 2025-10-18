@@ -10,14 +10,14 @@ deployments:
       api-server:
         base-url: https://api.example.com
         apps:
-          - port: 8080
-            services:
+          - addr: ":8080"
+            required-services:
               - db-pool
               - logger
               - cache
               - user-service
               - order-service
-            remote-services:
+            required-remote-services:
               - payment-api
               - notification-api
 
@@ -29,8 +29,8 @@ deployments:
       dev-server:
         base-url: http://localhost
         apps:
-          - port: 3000
-            services:
+          - addr: ":3000"
+            required-services:
               - db-pool
               - logger
               - user-service

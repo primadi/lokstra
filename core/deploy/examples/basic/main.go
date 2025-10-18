@@ -213,8 +213,8 @@ func main() {
 	server := dep.NewServer("main-server", "http://localhost")
 
 	// Create app
-	fmt.Println("📱 Creating app on port 3000...")
-	app := server.NewApp(3000)
+	fmt.Println("📱 Creating app on addr :3000...")
+	app := server.NewApp(":3000")
 
 	// Add services
 	fmt.Println("➕ Adding services to app...")
@@ -260,7 +260,7 @@ func main() {
 	fmt.Println("=" + string(make([]byte, 50)))
 	fmt.Printf("Deployment: %s\n", dep.Name())
 	fmt.Printf("  Server: %s (%s)\n", server.Name(), server.BaseURL())
-	fmt.Printf("    App (port %d):\n", app.Port())
+	fmt.Printf("    App (addr %s):\n", app.Addr())
 	fmt.Printf("      Services: %d\n", len(app.Services()))
 	for name := range app.Services() {
 		fmt.Printf("        - %s\n", name)

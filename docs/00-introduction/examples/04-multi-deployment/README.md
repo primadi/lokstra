@@ -678,8 +678,8 @@ func NewUserServiceRemote() *UserServiceRemote {
 
 Or use Lokstra's unified config:
 ```yaml
-services:
-  user-service:
+remote-service-definitions:
+  user-service-remote:
     url: http://user-service:3004
     timeout: 5s
     retry: 3

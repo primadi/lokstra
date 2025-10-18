@@ -21,7 +21,7 @@
         }
       }
     },
-    "services": {
+    "service-definitions": {
       "type": "object",
       "description": "Service definitions",
       "patternProperties": {
@@ -93,7 +93,7 @@
         }
       }
     },
-    "remote-services": {
+    "remote-service-definitions": {
       "type": "object",
       "description": "Remote service definitions",
       "patternProperties": {
@@ -151,15 +151,14 @@
                       "description": "Applications on this server",
                       "items": {
                         "type": "object",
-                        "required": ["port"],
+                        "required": ["addr"],
                         "properties": {
-                          "port": {
-                            "type": "integer",
-                            "description": "Application port",
-                            "minimum": 1,
-                            "maximum": 65535
+                          "addr": {
+                            "type": "string",
+                            "description": "Application address (e.g., ':8080', '127.0.0.1:8080', 'unix:/tmp/app.sock')",
+                            "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
                           },
-                          "services": {
+                          "required-services": {
                             "type": "array",
                             "description": "Services to include in this app",
                             "items": {
@@ -175,7 +174,7 @@
                               "pattern": "^[a-z][a-z0-9-]*$"
                             }
                           },
-                          "remote-services": {
+                          "required-remote-services": {
                             "type": "array",
                             "description": "Remote services to include in this app",
                             "items": {

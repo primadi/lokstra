@@ -3,11 +3,11 @@ package schema
 // DeployConfig is the root configuration structure for YAML files
 // This matches the JSON schema and supports multi-file merging
 type DeployConfig struct {
-	Configs        map[string]any                  `yaml:"configs" json:"configs"`
-	Services       map[string]*ServiceDef          `yaml:"services" json:"services"`
-	Routers        map[string]*RouterDefSimple     `yaml:"routers" json:"routers"`
-	RemoteServices map[string]*RemoteServiceSimple `yaml:"remote-services" json:"remote-services"`
-	Deployments    map[string]*DeploymentDefMap    `yaml:"deployments" json:"deployments"`
+	Configs                  map[string]any                  `yaml:"configs" json:"configs"`
+	ServiceDefinitions       map[string]*ServiceDef          `yaml:"service-definitions" json:"service-definitions"`
+	Routers                  map[string]*RouterDefSimple     `yaml:"routers" json:"routers"`
+	RemoteServiceDefinitions map[string]*RemoteServiceSimple `yaml:"remote-service-definitions" json:"remote-service-definitions"`
+	Deployments              map[string]*DeploymentDefMap    `yaml:"deployments" json:"deployments"`
 }
 
 // RouterDefSimple is a simplified router definition for YAML
@@ -36,10 +36,10 @@ type ServerDefMap struct {
 
 // AppDefMap is an app using map structure
 type AppDefMap struct {
-	Port           int      `yaml:"port" json:"port"`
-	Services       []string `yaml:"services,omitempty" json:"services,omitempty"`
+	Addr           string   `yaml:"addr" json:"addr"` // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
+	Services       []string `yaml:"required-services,omitempty" json:"required-services,omitempty"`
 	Routers        []string `yaml:"routers,omitempty" json:"routers,omitempty"`
-	RemoteServices []string `yaml:"remote-services,omitempty" json:"remote-services,omitempty"`
+	RemoteServices []string `yaml:"required-remote-services,omitempty" json:"required-remote-services,omitempty"`
 }
 
 // RemoteServiceSimple defines a remote service (simple YAML structure)
@@ -133,11 +133,11 @@ type ServerDef struct {
 
 // AppDef defines an application running on a server
 type AppDef struct {
-	Port           int                `yaml:"port"`
-	Services       []string           `yaml:"services"`        // Service names to instantiate
-	Routers        []string           `yaml:"routers"`         // Manual router names
-	ServiceRouters []ServiceRouterRef `yaml:"service-routers"` // Service routers (can be name or config)
-	RemoteServices []RemoteServiceDef `yaml:"remote-services"` // Remote service proxies
+	Addr           string             `yaml:"addr"`                     // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
+	Services       []string           `yaml:"required-services"`        // Service names to instantiate
+	Routers        []string           `yaml:"routers"`                  // Manual router names
+	ServiceRouters []ServiceRouterRef `yaml:"service-routers"`          // Service routers (can be name or config)
+	RemoteServices []RemoteServiceDef `yaml:"required-remote-services"` // Remote service proxies
 }
 
 // ServiceRouterRef can be either:

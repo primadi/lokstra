@@ -5,18 +5,18 @@
 
 configs:
   DB_HOST: localhost
-  DB_PORT: 5432
+  DB_addr: 5432
   DB_NAME: myapp_db
   LOG_LEVEL: info
   CACHE_HOST: localhost
-  CACHE_PORT: 6379
+  CACHE_addr: 6379
 
-services:
+service-definitions:
   db-pool:
     type: postgres-pool
     config:
       host: ${@cfg:DB_HOST}
-      port: ${@cfg:DB_PORT}
+      addr: ${@cfg:DB_PORT}
       database: ${@cfg:DB_NAME}
       max-conns: 20
 
@@ -30,4 +30,4 @@ services:
     type: redis-cache
     config:
       host: ${@cfg:CACHE_HOST}
-      port: ${@cfg:CACHE_PORT}
+      addr: ${@cfg:CACHE_PORT}

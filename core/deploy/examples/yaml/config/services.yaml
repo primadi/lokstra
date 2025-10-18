@@ -3,7 +3,7 @@
 # This file defines application-level services with their dependencies.
 # It will be merged with base.yaml to create the complete service graph.
 
-services:
+service-definitions:
   user-service:
     type: user-service-factory
     depends-on:

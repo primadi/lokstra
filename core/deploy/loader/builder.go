@@ -29,7 +29,7 @@ func BuildDeployment(config *schema.DeployConfig, deploymentName string, registr
 	}
 
 	// Register services from YAML
-	for name, svc := range config.Services {
+	for name, svc := range config.ServiceDefinitions {
 		svc.Name = name // Set name from map key
 		registry.DefineService(svc)
 	}
@@ -47,7 +47,7 @@ func BuildDeployment(config *schema.DeployConfig, deploymentName string, registr
 		server := dep.NewServer(serverName, serverDef.BaseURL)
 
 		for _, appDef := range serverDef.Apps {
-			app := server.NewApp(appDef.Port)
+			app := server.NewApp(appDef.Addr)
 
 			// Add services
 			if len(appDef.Services) > 0 {

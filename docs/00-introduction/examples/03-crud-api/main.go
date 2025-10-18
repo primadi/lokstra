@@ -53,8 +53,8 @@ func runWithCode() {
 
 	// 4. Build deployment manually (same structure as config mode)
 	dep := deploy.New("development")
-	server := dep.NewServer("api", ":3002")
-	app := server.NewApp(3002)
+	server := dep.NewServer("api", "http://localhost")
+	app := server.NewApp(":3002")
 
 	// 5. Add services to app (lazy-loaded automatically)
 	app.AddService("database")

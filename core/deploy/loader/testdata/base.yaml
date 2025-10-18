@@ -7,7 +7,7 @@ configs:
   API_TIMEOUT: 30
 
 # Service Definitions
-services:
+service-definitions:
   db-pool:
     type: postgres-pool
     config:

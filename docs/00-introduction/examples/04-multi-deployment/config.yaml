@@ -12,7 +12,7 @@
 # Service Definitions (Global) - MAP format
 # ========================================
 
-services:
+service-definitions:
   database:
     type: database-factory
 
@@ -28,10 +28,10 @@ services:
       - user-service  # Can be local OR remote
 
 # ========================================
-# Remote Services (for microservices) - MAP format
+# Remote Service Definitions (for microservices) - MAP format
 # ========================================
 
-remote-services:
+remote-service-definitions:
   user-service-remote:
     url: "http://localhost:3004"
     resource: "user"
@@ -48,10 +48,10 @@ deployments:
   monolith:
     servers:
       api:
-        base-url: "http://localhost:3003"
+        base-url: "http://localhost"
         apps:
-          - port: 3003
-            services:
+          - addr: ":3003"
+            required-services:
               - database
               - user-service
               - order-service
@@ -62,10 +62,10 @@ deployments:
   user-service:
     servers:
       user-api:
-        base-url: "http://localhost:3004"
+        base-url: "http://localhost"
         apps:
-          - port: 3004
-            services:
+          - addr: ":3004"
+            required-services:
               - database
               - user-service
 
@@ -75,11 +75,11 @@ deployments:
   order-service:
     servers:
       order-api:
-        base-url: "http://localhost:3005"
+        base-url: "http://localhost"
         apps:
-          - port: 3005
-            services:
+          - addr: ":3005"
+            required-services:
               - database
               - order-service
-            remote-services:
+            required-remote-services:
               - user-service-remote  # Uses HTTP client to call user-service
