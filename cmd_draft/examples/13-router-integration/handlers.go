@@ -6,7 +6,7 @@ import (
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // Product represents a product in our e-commerce system
@@ -70,7 +70,7 @@ var productClient *api_client.ClientRouter
 func getProduct(c *request.Context, productID string) (*Product, error) {
 	// Automatically resolves product-api location based on deployment configuration
 	// No need for manual RegisterRouterURL - auto-discovery handles this
-	productClient = lokstra_registry.GetClientRouterCached("product-api", productClient)
+	productClient = old_registry.GetClientRouterCached("product-api", productClient)
 	if productClient == nil {
 		return nil, c.Api.InternalError("Product service unavailable")
 	}

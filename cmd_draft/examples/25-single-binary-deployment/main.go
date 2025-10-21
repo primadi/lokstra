@@ -8,7 +8,7 @@ import (
 
 	"github.com/primadi/lokstra/cmd_draft/examples/25-single-binary-deployment/services"
 	"github.com/primadi/lokstra/core/config"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 func main() {
@@ -51,13 +51,13 @@ func main() {
 	// STEP 3: Register server and run
 	// ==============================================================================
 	// Register config after setting server name
-	lokstra_registry.RegisterConfig(cfg, *serverName)
+	old_registry.RegisterConfig(cfg, *serverName)
 
 	// Print server info
-	lokstra_registry.PrintServerStartInfo()
+	old_registry.PrintServerStartInfo()
 
 	// Run server with graceful shutdown
-	if err := lokstra_registry.RunServer(5 * time.Second); err != nil {
+	if err := old_registry.RunServer(5 * time.Second); err != nil {
 		log.Fatalf("❌ Server error: %v", err)
 	}
 

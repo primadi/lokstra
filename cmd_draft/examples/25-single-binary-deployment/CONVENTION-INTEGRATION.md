@@ -23,11 +23,11 @@ type UserService interface {
 
 ### 2. Convention Application (Automatic)
 
-When you register a service with `lokstra_registry.RegisterService()`, the REST convention automatically applies:
+When you register a service with `old_registry.RegisterService()`, the REST convention automatically applies:
 
 ```go
 // In main.go or service factory
-lokstra_registry.RegisterService("user-service", NewUserService)
+old_registry.RegisterService("user-service", NewUserService)
 ```
 
 The REST convention generates these routes:
@@ -229,7 +229,7 @@ func (c *CompanyAPIConvention) GenerateRoutes(serviceType reflect.Type, options 
 }
 
 func init() {
-    lokstra_registry.MustRegisterConvention(&CompanyAPIConvention{})
+    old_registry.MustRegisterConvention(&CompanyAPIConvention{})
 }
 ```
 
@@ -251,7 +251,7 @@ Convention system makes testing easier:
 ```go
 // Test that convention generates expected routes
 func TestUserServiceConvention(t *testing.T) {
-    convention, _ := lokstra_registry.GetConvention("rest")
+    convention, _ := old_registry.GetConvention("rest")
     
     options := router.DefaultServiceRouterOptions().
         WithPrefix("/api/v1")

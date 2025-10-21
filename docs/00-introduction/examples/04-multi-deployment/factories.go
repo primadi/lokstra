@@ -30,8 +30,15 @@ func OrderServiceFactory(deps map[string]any, config map[string]any) any {
 }
 
 // UserServiceRemoteFactory creates a remote user service client
-// func UserServiceRemoteFactory(deps map[string]any, config map[string]any) any {
-// 	// TODO: Get base URL from remote service config
-// 	baseURL := "http://localhost:3004"
-// 	return appservice.NewUserServiceRemote(baseURL)
-// }
+func UserServiceRemoteFactory(deps map[string]any, config map[string]any) any {
+	// Get base URL from config (injected by framework from remote service definition)
+	baseURL := config["base-url"].(string)
+	return appservice.NewUserServiceRemote(baseURL)
+}
+
+// OrderServiceRemoteFactory creates a remote order service client
+func OrderServiceRemoteFactory(deps map[string]any, config map[string]any) any {
+	// Get base URL from config (injected by framework from remote service definition)
+	baseURL := config["base-url"].(string)
+	return appservice.NewOrderServiceRemote(baseURL)
+}

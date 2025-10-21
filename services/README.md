@@ -53,7 +53,7 @@ package myservice
 
 import (
     "github.com/primadi/lokstra/common/utils"
-    "github.com/primadi/lokstra/lokstra_registry"
+    "github.com/primadi/lokstra/old_registry"
 )
 
 const SERVICE_TYPE = "myservice"
@@ -79,8 +79,8 @@ func ServiceFactory(params map[string]any) any {
 }
 
 func Register() {
-    lokstra_registry.RegisterServiceFactory(SERVICE_TYPE, ServiceFactory,
-        lokstra_registry.AllowOverride(true))
+    old_registry.RegisterServiceFactory(SERVICE_TYPE, ServiceFactory,
+        old_registry.AllowOverride(true))
 }
 ```
 
@@ -90,13 +90,13 @@ func Register() {
 
 ```go
 import (
-    "github.com/primadi/lokstra/lokstra_registry"
+    "github.com/primadi/lokstra/old_registry"
     "github.com/primadi/lokstra/services/dbpool_pg"
 )
 
 dbpool_pg.Register()
 
-dbPool := lokstra_registry.NewService[any](
+dbPool := old_registry.NewService[any](
     "main_db", "dbpool_pg",
     map[string]any{
         "host":     "localhost",
@@ -112,13 +112,13 @@ dbPool := lokstra_registry.NewService[any](
 
 ```go
 import (
-    "github.com/primadi/lokstra/lokstra_registry"
+    "github.com/primadi/lokstra/old_registry"
     "github.com/primadi/lokstra/services/kvstore_redis"
 )
 
 kvstore_redis.Register()
 
-kvStore := lokstra_registry.NewService[any](
+kvStore := old_registry.NewService[any](
     "my_cache", "kvstore_redis",
     map[string]any{
         "addr":   "localhost:6379",
@@ -132,7 +132,7 @@ kvStore := lokstra_registry.NewService[any](
 ```go
 import (
     "context"
-    "github.com/primadi/lokstra/lokstra_registry"
+    "github.com/primadi/lokstra/old_registry"
     "github.com/primadi/lokstra/serviceapi/auth"
     "github.com/primadi/lokstra/services"
 )
@@ -141,14 +141,14 @@ import (
 services.RegisterAuthServices()
 
 // Configure services
-lokstra_registry.NewService[any]("my_db", "dbpool_pg", map[string]any{...})
-lokstra_registry.NewService[any]("my_token_issuer", "auth_token_jwt", map[string]any{...})
-lokstra_registry.NewService[any]("my_session", "auth_session_redis", map[string]any{...})
-lokstra_registry.NewService[any]("my_user_repo", "auth_user_repo_pg", map[string]any{...})
-lokstra_registry.NewService[any]("my_password_flow", "auth_flow_password", map[string]any{...})
+old_registry.NewService[any]("my_db", "dbpool_pg", map[string]any{...})
+old_registry.NewService[any]("my_token_issuer", "auth_token_jwt", map[string]any{...})
+old_registry.NewService[any]("my_session", "auth_session_redis", map[string]any{...})
+old_registry.NewService[any]("my_user_repo", "auth_user_repo_pg", map[string]any{...})
+old_registry.NewService[any]("my_password_flow", "auth_flow_password", map[string]any{...})
 
 // Create main auth service
-authSvc := lokstra_registry.NewService[auth.Service](
+authSvc := old_registry.NewService[auth.Service](
     "my_auth", "auth_service",
     map[string]any{
         "token_issuer_service_name": "my_token_issuer",
@@ -174,14 +174,14 @@ resp, err := authSvc.Login(context.Background(), auth.LoginRequest{
 
 ```go
 import (
-    "github.com/primadi/lokstra/lokstra_registry"
+    "github.com/primadi/lokstra/old_registry"
     "github.com/primadi/lokstra/serviceapi"
     "github.com/primadi/lokstra/services/metrics_prometheus"
 )
 
 metrics_prometheus.Register()
 
-metrics := lokstra_registry.NewService[serviceapi.Metrics](
+metrics := old_registry.NewService[serviceapi.Metrics](
     "my_metrics", "metrics_prometheus",
     map[string]any{
         "namespace": "myapp",

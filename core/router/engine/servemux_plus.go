@@ -44,6 +44,8 @@ func convertToServeMuxPattern(path string) string {
 	// Convert * wildcard to {path...}
 	if before, found := strings.CutSuffix(path, "/*"); found {
 		path = before + "/{path...}"
+	} else if path == "" {
+		path = "/{$}"
 	}
 
 	// Convert :param to {param}

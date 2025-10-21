@@ -6,6 +6,9 @@ import (
 
 	"github.com/primadi/lokstra/core/deploy/resolver"
 	"github.com/primadi/lokstra/core/deploy/schema"
+	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/internal/registry"
 )
 
 // GlobalRegistry stores all global definitions (configs, middlewares, services, etc.)
@@ -20,16 +23,23 @@ type GlobalRegistry struct {
 	serviceFactories    map[string]*ServiceFactoryEntry
 	middlewareFactories map[string]MiddlewareFactory
 
+	// Runtime instances (registered routers, services, middlewares)
+	routerInstances     sync.Map // map[string]router.Router
+	serviceInstances    sync.Map // map[string]any
+	middlewareInstances sync.Map // map[string]request.HandlerFunc
+
 	// Definitions (YAML or code-defined)
 	configs         map[string]*schema.ConfigDef
 	middlewares     map[string]*schema.MiddlewareDef
 	services        map[string]*schema.ServiceDef
 	routers         map[string]*schema.RouterDef
 	routerOverrides map[string]*schema.RouterOverrideDef
-	serviceRouters  map[string]*schema.ServiceRouterDef
 
 	// Resolved config values (after resolver processing)
 	resolvedConfigs map[string]any
+
+	// Deployments (loaded from config)
+	deployments map[string]*Deployment
 }
 
 // ServiceFactoryEntry holds local and remote factory functions
@@ -47,16 +57,15 @@ type ServiceFactory func(deps map[string]any, config map[string]any) any
 // MiddlewareFactory creates a middleware instance
 type MiddlewareFactory func(config map[string]any) any
 
-var (
-	globalRegistry     *GlobalRegistry
-	globalRegistryOnce sync.Once
-)
+var globalRegistry = NewGlobalRegistry()
+
+func init() {
+	// Register to internal registry for access by core packages
+	registry.SetGlobal(globalRegistry)
+}
 
 // Global returns the singleton global registry
 func Global() *GlobalRegistry {
-	globalRegistryOnce.Do(func() {
-		globalRegistry = NewGlobalRegistry()
-	})
 	return globalRegistry
 }
 
@@ -71,8 +80,8 @@ func NewGlobalRegistry() *GlobalRegistry {
 		services:            make(map[string]*schema.ServiceDef),
 		routers:             make(map[string]*schema.RouterDef),
 		routerOverrides:     make(map[string]*schema.RouterOverrideDef),
-		serviceRouters:      make(map[string]*schema.ServiceRouterDef),
 		resolvedConfigs:     make(map[string]any),
+		deployments:         make(map[string]*Deployment),
 	}
 }
 
@@ -148,40 +157,28 @@ func (g *GlobalRegistry) DefineService(def *schema.ServiceDef) {
 	g.services[def.Name] = def
 }
 
-// DefineRouter defines a manual router
-func (g *GlobalRegistry) DefineRouter(def *schema.RouterDef) {
+// DefineRouter defines a router
+func (g *GlobalRegistry) DefineRouter(name string, def *schema.RouterDef) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if _, exists := g.routers[def.Name]; exists {
-		panic(fmt.Sprintf("router %s already defined", def.Name))
+	if _, exists := g.routers[name]; exists {
+		panic(fmt.Sprintf("router %s already defined", name))
 	}
 
-	g.routers[def.Name] = def
+	g.routers[name] = def
 }
 
 // DefineRouterOverride defines router overrides
-func (g *GlobalRegistry) DefineRouterOverride(def *schema.RouterOverrideDef) {
+func (g *GlobalRegistry) DefineRouterOverride(name string, def *schema.RouterOverrideDef) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if _, exists := g.routerOverrides[def.Name]; exists {
-		panic(fmt.Sprintf("router override %s already defined", def.Name))
+	if _, exists := g.routerOverrides[name]; exists {
+		panic(fmt.Sprintf("router override %s already defined", name))
 	}
 
-	g.routerOverrides[def.Name] = def
-}
-
-// DefineServiceRouter defines a service router
-func (g *GlobalRegistry) DefineServiceRouter(def *schema.ServiceRouterDef) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if _, exists := g.serviceRouters[def.Name]; exists {
-		panic(fmt.Sprintf("service router %s already defined", def.Name))
-	}
-
-	g.serviceRouters[def.Name] = def
+	g.routerOverrides[name] = def
 }
 
 // ===== GETTERS =====
@@ -219,44 +216,36 @@ func (g *GlobalRegistry) GetConfig(name string) *schema.ConfigDef {
 	return g.configs[name]
 }
 
-// GetMiddleware returns a middleware definition
-func (g *GlobalRegistry) GetMiddleware(name string) *schema.MiddlewareDef {
+// GetMiddlewareDef returns a middleware definition
+func (g *GlobalRegistry) GetMiddlewareDef(name string) *schema.MiddlewareDef {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
 	return g.middlewares[name]
 }
 
-// GetService returns a service definition
-func (g *GlobalRegistry) GetService(name string) *schema.ServiceDef {
+// GetServiceDef returns a service definition
+func (g *GlobalRegistry) GetServiceDef(name string) *schema.ServiceDef {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
 	return g.services[name]
 }
 
-// GetRouter returns a router definition
-func (g *GlobalRegistry) GetRouter(name string) *schema.RouterDef {
+// GetRouterDef returns a router definition
+func (g *GlobalRegistry) GetRouterDef(name string) *schema.RouterDef {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
 	return g.routers[name]
 }
 
-// GetRouterOverride returns router overrides
+// GetRouterOverride returns a router override definition
 func (g *GlobalRegistry) GetRouterOverride(name string) *schema.RouterOverrideDef {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
 	return g.routerOverrides[name]
-}
-
-// GetServiceRouter returns a service router definition
-func (g *GlobalRegistry) GetServiceRouter(name string) *schema.ServiceRouterDef {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.serviceRouters[name]
 }
 
 // ===== CONFIG RESOLUTION =====
@@ -325,4 +314,129 @@ func (g *GlobalRegistry) ResolveConfigValue(value any) (any, error) {
 	defer g.mu.RUnlock()
 
 	return g.resolver.ResolveValue(valueStr, g.resolvedConfigs)
+}
+
+// ===== RUNTIME INSTANCE REGISTRATION =====
+
+// RegisterRouter registers a router instance
+func (g *GlobalRegistry) RegisterRouter(name string, r router.Router) {
+	if _, exists := g.routerInstances.Load(name); exists {
+		panic(fmt.Sprintf("router %s already registered", name))
+	}
+	g.routerInstances.Store(name, r)
+}
+
+// GetRouter retrieves a router instance by name
+func (g *GlobalRegistry) GetRouter(name string) router.Router {
+	if v, ok := g.routerInstances.Load(name); ok {
+		return v.(router.Router)
+	}
+	return nil
+}
+
+// GetAllRouters returns all registered routers
+func (g *GlobalRegistry) GetAllRouters() map[string]router.Router {
+	result := make(map[string]router.Router)
+	g.routerInstances.Range(func(key, value any) bool {
+		result[key.(string)] = value.(router.Router)
+		return true
+	})
+	return result
+}
+
+// RegisterService registers a service instance
+func (g *GlobalRegistry) RegisterService(name string, service any) {
+	if _, exists := g.serviceInstances.Load(name); exists {
+		panic(fmt.Sprintf("service %s already registered", name))
+	}
+	g.serviceInstances.Store(name, service)
+}
+
+// GetServiceAny retrieves a service instance by name as any
+func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
+	return g.serviceInstances.Load(name)
+}
+
+// RegisterMiddleware registers a middleware instance by name
+func (g *GlobalRegistry) RegisterMiddleware(name string, mw request.HandlerFunc) {
+	if _, exists := g.middlewareInstances.Load(name); exists {
+		panic(fmt.Sprintf("middleware %s already registered", name))
+	}
+	g.middlewareInstances.Store(name, mw)
+}
+
+// GetMiddleware retrieves a middleware instance by name
+func (g *GlobalRegistry) GetMiddleware(name string) (request.HandlerFunc, bool) {
+	if v, ok := g.middlewareInstances.Load(name); ok {
+		return v.(request.HandlerFunc), true
+	}
+	return nil, false
+}
+
+// CreateMiddleware creates a middleware instance from definition
+func (g *GlobalRegistry) CreateMiddleware(name string) request.HandlerFunc {
+	// First check if already instantiated
+	if mw, ok := g.middlewareInstances.Load(name); ok {
+		return mw.(request.HandlerFunc)
+	}
+
+	// Try to create from middleware definition
+	g.mu.RLock()
+	mwDef, defExists := g.middlewares[name]
+	g.mu.RUnlock()
+
+	if !defExists {
+		return nil
+	}
+
+	// Get factory
+	factory := g.GetMiddlewareFactory(mwDef.Type)
+	if factory == nil {
+		return nil
+	}
+
+	// Create instance
+	mw := factory(mwDef.Config)
+	if handlerFunc, ok := mw.(request.HandlerFunc); ok {
+		// Cache it
+		g.RegisterMiddleware(name, handlerFunc)
+		return handlerFunc
+	}
+
+	return nil
+}
+
+// ===== DEPLOYMENT MANAGEMENT =====
+
+// RegisterDeployment registers a deployment in the global registry
+func (g *GlobalRegistry) RegisterDeployment(name string, deployment *Deployment) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if _, exists := g.deployments[name]; exists {
+		panic(fmt.Sprintf("deployment %s already registered", name))
+	}
+
+	g.deployments[name] = deployment
+}
+
+// GetDeployment retrieves a deployment by name
+func (g *GlobalRegistry) GetDeployment(name string) (*Deployment, bool) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	dep, ok := g.deployments[name]
+	return dep, ok
+}
+
+// GetAllDeployments returns all registered deployments
+func (g *GlobalRegistry) GetAllDeployments() map[string]*Deployment {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	result := make(map[string]*Deployment, len(g.deployments))
+	for name, dep := range g.deployments {
+		result[name] = dep
+	}
+	return result
 }

@@ -200,12 +200,12 @@ func main() {
     // Set server
     if *serverName == "all" {
         // Run all servers (multiport mode)
-        lokstra_registry.RunAllServers()
+        old_registry.RunAllServers()
     } else {
         // Run specific server
-        lokstra_registry.SetCurrentServerName(*serverName)
-        lokstra_registry.RegisterConfig(cfg)
-        lokstra_registry.StartServer()
+        old_registry.SetCurrentServerName(*serverName)
+        old_registry.RegisterConfig(cfg)
+        old_registry.StartServer()
     }
 }
 ```

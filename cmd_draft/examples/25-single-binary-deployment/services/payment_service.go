@@ -7,7 +7,7 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // ==============================================================================
@@ -127,11 +127,11 @@ func CreatePaymentServiceRemote(cfg map[string]any) any {
 	fmt.Printf("[payment-service] Creating REMOTE client for router: %s, prefix: %s\n", routerName, pathPrefix)
 
 	return &paymentServiceRemote{
-		client: lokstra_registry.GetRemoteService(cfg),
+		client: old_registry.GetRemoteService(cfg),
 	}
 }
 
 func RegisterPaymentService() {
-	lokstra_registry.RegisterServiceTypeLocalAndRemote("payment_service",
+	old_registry.RegisterServiceTypeLocalAndRemote("payment_service",
 		CreatePaymentServiceLocal, CreatePaymentServiceRemote)
 }

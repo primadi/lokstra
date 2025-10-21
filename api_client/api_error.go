@@ -1,7 +1,6 @@
 package api_client
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -45,10 +44,11 @@ type ApiError struct {
 
 // Error implements the error interface
 func (e *ApiError) Error() string {
-	if e.Code != "" {
-		return fmt.Sprintf("[%d %s] %s", e.StatusCode, e.Code, e.Message)
-	}
-	return fmt.Sprintf("[%d] %s", e.StatusCode, e.Message)
+	return e.Message
+	// if e.Code != "" {
+	// 	return fmt.Sprintf("[%d %s] %s", e.StatusCode, e.Code, e.Message)
+	// }
+	// return fmt.Sprintf("[%d] %s", e.StatusCode, e.Message)
 }
 
 // IsClientError returns true if the error is a 4xx client error

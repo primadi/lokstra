@@ -10,8 +10,8 @@ Example 25 telah diupdate untuk menggunakan Service Convention System yang baru.
 
 ```go
 // Manual registration for each service
-lokstra_registry.RegisterRouterFunc("user-service", func(app *lokstra.App) error {
-    svc := lokstra_registry.GetService[services.UserService]("user-service", nil)
+old_registry.RegisterRouterFunc("user-service", func(app *lokstra.App) error {
+    svc := old_registry.GetService[services.UserService]("user-service", nil)
     rt := router.NewFromService(svc, router.DefaultServiceRouterOptions())
     app.AddRouter(rt)
     return nil
@@ -31,7 +31,7 @@ restOptions := router.DefaultServiceRouterOptions().
 // Register routers with auto-generated routes
 userSvc := services.CreateUserServiceLocal(nil)
 userRouter := router.NewFromService(userSvc, restOptions.WithResourceName("user"))
-lokstra_registry.RegisterRouter("user-service", userRouter)
+old_registry.RegisterRouter("user-service", userRouter)
 
 // Convention automatically generates:
 // GET    /api/v1/users/{id}     -> GetUser

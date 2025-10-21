@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/core/config"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 func main() {
@@ -24,13 +24,13 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	lokstra_registry.RegisterConfig(cfg, "demo-api-gateway")
+	old_registry.RegisterConfig(cfg, "demo-api-gateway")
 
 	// Print server info
-	lokstra_registry.PrintServerStartInfo()
+	old_registry.PrintServerStartInfo()
 
 	// Run server with graceful shutdown
-	if err := lokstra_registry.RunServer(5 * time.Second); err != nil {
+	if err := old_registry.RunServer(5 * time.Second); err != nil {
 		log.Fatalf("❌ Server error: %v", err)
 	}
 	fmt.Println("Server ended")
@@ -38,8 +38,8 @@ func main() {
 
 func registerServiceFactories() {
 	// Register User Service (for App1)
-	lokstra_registry.RegisterServiceType("user_service", UserServiceFactory)
+	old_registry.RegisterServiceType("user_service", UserServiceFactory)
 
 	// Register Product Service (for App2)
-	lokstra_registry.RegisterServiceType("product_service", ProductServiceFactory)
+	old_registry.RegisterServiceType("product_service", ProductServiceFactory)
 }

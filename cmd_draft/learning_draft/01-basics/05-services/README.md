@@ -37,7 +37,7 @@ func EmailServiceFactory(params map[string]any) any {
 
 **Register factory:**
 ```go
-lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
+old_registry.RegisterServiceFactory("email", EmailServiceFactory)
 ```
 
 ### 2. Service Container (CRITICAL PATTERN!)
@@ -48,7 +48,7 @@ lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
 // ❌ WRONG: Local variable resets every call
 func handler(c *lokstra.RequestContext) error {
     var email *EmailService  // Reset to nil on each request!
-    email = lokstra_registry.GetService("email", email)
+    email = old_registry.GetService("email", email)
     // Always fetches from registry - no caching benefit
 }
 ```
@@ -63,7 +63,7 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
-    sc.emailCache = lokstra_registry.GetService("email", sc.emailCache)
+    sc.emailCache = old_registry.GetService("email", sc.emailCache)
     return sc.emailCache  // Cached!
 }
 
@@ -88,7 +88,7 @@ Services created only when first accessed:
 
 ```go
 // Registration: Just config, no instance created
-lokstra_registry.RegisterLazyService("db", "db", config)
+old_registry.RegisterLazyService("db", "db", config)
 
 // First access: Creates instance
 db := services.GetDB()  // Creates + caches
@@ -114,7 +114,7 @@ type UserService struct {
 func UserServiceFactory(params map[string]any) any {
     // Resolve dependency
     var db *DBService
-    db = lokstra_registry.GetService("db", db)
+    db = old_registry.GetService("db", db)
     
     return NewUserService(db)
 }
@@ -149,7 +149,7 @@ func (m *MockLogger) Info(msg string) {
 Creates service immediately:
 
 ```go
-email := lokstra_registry.NewService[*EmailService](
+email := old_registry.NewService[*EmailService](
     "email",           // service name
     "email",           // factory type
     map[string]any{    // configuration
@@ -166,7 +166,7 @@ Registers config only, creates on first access:
 
 ```go
 // Registration (startup)
-lokstra_registry.RegisterLazyService("db", "db", config)
+old_registry.RegisterLazyService("db", "db", config)
 
 // Usage (runtime, lazy)
 db := services.GetDB()  // Created on first call
@@ -178,7 +178,7 @@ db := services.GetDB()  // Created on first call
 
 ```go
 var cache *CacheService
-cache = lokstra_registry.GetService("cache", cache)
+cache = old_registry.GetService("cache", cache)
 ```
 
 **Behavior:**
@@ -189,7 +189,7 @@ cache = lokstra_registry.GetService("cache", cache)
 ### Method 4: TryGetService (Safe Version)
 
 ```go
-cache, ok := lokstra_registry.TryGetService[*CacheService]("cache", nil)
+cache, ok := old_registry.TryGetService[*CacheService]("cache", nil)
 if !ok {
     // Service not found - handle gracefully
 }
@@ -254,7 +254,7 @@ services:
 ```go
 // Load config and create services
 config.LoadConfigFile("config.yaml", cfg)
-lokstra_registry.CreateServicesFromConfig(cfg)
+old_registry.CreateServicesFromConfig(cfg)
 ```
 
 ## Best Practices
@@ -315,7 +315,7 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
-    sc.emailCache = lokstra_registry.GetService("email", sc.emailCache)
+    sc.emailCache = old_registry.GetService("email", sc.emailCache)
     return sc.emailCache
 }
 ```
@@ -333,7 +333,7 @@ func (sc *ServiceContainer) GetEmail() *EmailService {
 
 ```go
 // Registration: just config, no instance created
-lokstra_registry.RegisterLazyService("db", DB_TYPE, config)
+old_registry.RegisterLazyService("db", DB_TYPE, config)
 
 // First access: creates instance
 db := services.GetDB() // Creates + caches
@@ -409,7 +409,7 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetDB() *DBService {
-    sc.dbCache = lokstra_registry.GetService("db", sc.dbCache)
+    sc.dbCache = old_registry.GetService("db", sc.dbCache)
     return sc.dbCache
 }
 
@@ -487,10 +487,10 @@ func EmailServiceFactory(params map[string]any) any {
 }
 
 // Register
-lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
+old_registry.RegisterServiceFactory("email", EmailServiceFactory)
 
 // Create
-email := lokstra_registry.NewService[*EmailService]("email", "email", config)
+email := old_registry.NewService[*EmailService]("email", "email", config)
 ```
 
 ### Pattern 2: Service with Dependencies
@@ -503,7 +503,7 @@ type ServiceB struct {
 // Factory resolves dependency
 func ServiceBFactory(params map[string]any) any {
     var serviceA *ServiceA
-    serviceA = lokstra_registry.GetService("serviceA", serviceA)
+    serviceA = old_registry.GetService("serviceA", serviceA)
     return NewServiceB(serviceA)
 }
 ```
@@ -521,11 +521,11 @@ type MemoryStorage struct { ... }
 type RedisStorage struct { ... }
 
 // Register by name
-lokstra_registry.RegisterServiceFactory("memory_storage", MemoryStorageFactory)
-lokstra_registry.RegisterServiceFactory("redis_storage", RedisStorageFactory)
+old_registry.RegisterServiceFactory("memory_storage", MemoryStorageFactory)
+old_registry.RegisterServiceFactory("redis_storage", RedisStorageFactory)
 
 // Choose implementation via config
-storage := lokstra_registry.NewService[Storage]("storage", "memory_storage", nil)
+storage := old_registry.NewService[Storage]("storage", "memory_storage", nil)
 ```
 
 ---

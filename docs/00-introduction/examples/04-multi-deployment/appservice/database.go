@@ -3,6 +3,8 @@ package appservice
 import (
 	"fmt"
 	"sync"
+
+	"github.com/primadi/lokstra/api_client"
 )
 
 type User struct {
@@ -52,7 +54,8 @@ func (db *Database) GetUser(id int) (*User, error) {
 
 	user, exists := db.users[id]
 	if !exists {
-		return nil, fmt.Errorf("user not found")
+		return nil, api_client.NewApiError(404, "NOT_FOUND",
+			"user not found")
 	}
 	return user, nil
 }

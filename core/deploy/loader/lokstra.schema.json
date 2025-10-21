@@ -47,6 +47,46 @@
               "type": "object",
               "description": "Service-specific configuration",
               "additionalProperties": true
+            },
+            "auto-router": {
+              "type": "object",
+              "description": "Auto-router configuration for this service",
+              "properties": {
+                "convention": {
+                  "type": "string",
+                  "description": "Routing convention to use",
+                  "enum": ["rest", "rpc", "graphql"]
+                },
+                "resource": {
+                  "type": "string",
+                  "description": "Resource name (singular)",
+                  "pattern": "^[a-z][a-z0-9-]*$"
+                },
+                "resource-plural": {
+                  "type": "string",
+                  "description": "Resource name (plural)",
+                  "pattern": "^[a-z][a-z0-9-]*$"
+                },
+                "path-prefix": {
+                  "type": "string",
+                  "description": "Path prefix for all routes",
+                  "pattern": "^/.*"
+                },
+                "middlewares": {
+                  "type": "array",
+                  "description": "Router-level middlewares",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "hidden": {
+                  "type": "array",
+                  "description": "Methods to hide from auto-generated routes",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           },
           "additionalProperties": false
@@ -99,22 +139,22 @@
       "patternProperties": {
         "^[a-z][a-z0-9-]*$": {
           "type": "object",
-          "required": ["url", "resource"],
           "properties": {
+            "proxy-service": {
+              "type": "string",
+              "description": "Reference to service definition for proxying"
+            },
             "url": {
               "type": "string",
-              "description": "Base URL of remote service",
-              "pattern": "^https?://"
+              "description": "Base URL of remote service (not needed if using proxy-service)"
             },
             "resource": {
               "type": "string",
-              "description": "Resource name (singular)",
-              "pattern": "^[a-z][a-z-]*$"
+              "description": "Resource name (singular, not needed if using proxy-service)"
             },
             "resource-plural": {
               "type": "string",
-              "description": "Plural form of resource name",
-              "pattern": "^[a-z][a-z-]*$"
+              "description": "Plural form of resource name"
             }
           },
           "additionalProperties": false
@@ -177,6 +217,14 @@
                           "required-remote-services": {
                             "type": "array",
                             "description": "Remote services to include in this app",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9-]*$"
+                            }
+                          },
+                          "published-router-services": {
+                            "type": "array",
+                            "description": "Services published by this app for service discovery",
                             "items": {
                               "type": "string",
                               "pattern": "^[a-z][a-z0-9-]*$"

@@ -8,7 +8,7 @@ GET http://localhost:3000/
 
 ###
 ### 2. Ping endpoint - Returns plain text
-GET http://localhost:3000/ping
+GET http://localhost:3000/pingx
 ###
 
 ###

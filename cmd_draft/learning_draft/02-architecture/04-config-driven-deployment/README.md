@@ -133,7 +133,7 @@ export DB_PASSWORD=secure-password
 DB_HOST=test-db EMAIL_SERVICE=mock go run .
 
 # Mock services for unit tests
-lokstra_registry.RegisterServiceFactory("email", MockEmailFactory)
+old_registry.RegisterServiceFactory("email", MockEmailFactory)
 ```
 
 ### 4. Clear Separation

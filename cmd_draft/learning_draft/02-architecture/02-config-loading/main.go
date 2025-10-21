@@ -8,7 +8,7 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // =============================================================================
@@ -208,7 +208,7 @@ func createHealthRouter() lokstra.Router {
 
 	r.GET("/health", func(c *lokstra.RequestContext) error {
 		// Get app environment from config
-		appEnv := lokstra_registry.GetConfig("app-env", "unknown")
+		appEnv := old_registry.GetConfig("app-env", "unknown")
 
 		return c.Api.Ok(map[string]any{
 			"status":      "healthy",
@@ -228,16 +228,16 @@ func setupRegistry() {
 	fmt.Println("🔧 Setting up registry...")
 
 	// Register service factories
-	lokstra_registry.RegisterServiceType("email", EmailServiceFactory)
-	lokstra_registry.RegisterServiceType("counter", CounterServiceFactory)
-	lokstra_registry.RegisterServiceType("logger", LoggerServiceFactory)
+	old_registry.RegisterServiceType("email", EmailServiceFactory)
+	old_registry.RegisterServiceType("counter", CounterServiceFactory)
+	old_registry.RegisterServiceType("logger", LoggerServiceFactory)
 	fmt.Println("   ✓ Registered service factories: email, counter, logger")
 
 	// Register routers
-	lokstra_registry.RegisterRouter("email-api", createEmailRouter())
-	lokstra_registry.RegisterRouter("counter-api", createCounterRouter())
-	lokstra_registry.RegisterRouter("logger-api", createLoggerRouter())
-	lokstra_registry.RegisterRouter("health-api", createHealthRouter())
+	old_registry.RegisterRouter("email-api", createEmailRouter())
+	old_registry.RegisterRouter("counter-api", createCounterRouter())
+	old_registry.RegisterRouter("logger-api", createLoggerRouter())
+	old_registry.RegisterRouter("health-api", createHealthRouter())
 	fmt.Println("   ✓ Registered routers: email-api, counter-api, logger-api, health-api")
 
 	fmt.Println()
@@ -267,17 +267,17 @@ func main() {
 	fmt.Println()
 
 	// Step 3: Register config and set server name
-	lokstra_registry.RegisterConfig(cfg, "")
+	old_registry.RegisterConfig(cfg, "")
 
 	fmt.Println("🔍 Configuration loaded:")
-	fmt.Printf("   Server: %s\n", lokstra_registry.GetCurrentServerName())
-	fmt.Printf("   Environment: %s\n", lokstra_registry.GetConfig("app-env", "unknown"))
+	fmt.Printf("   Server: %s\n", old_registry.GetCurrentServerName())
+	fmt.Printf("   Environment: %s\n", old_registry.GetConfig("app-env", "unknown"))
 	fmt.Println()
 
 	// Step 4: Start server (config-driven)
 	fmt.Println("🚀 Starting config-driven server...")
-	lokstra_registry.PrintServerStartInfo()
-	if err := lokstra_registry.StartServer(); err != nil {
+	old_registry.PrintServerStartInfo()
+	if err := old_registry.StartServer(); err != nil {
 		fmt.Printf("❌ Server error: %v\n", err)
 	}
 }

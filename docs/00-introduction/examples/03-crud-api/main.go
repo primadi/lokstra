@@ -10,6 +10,7 @@ import (
 	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/service"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
@@ -33,42 +34,39 @@ func main() {
 func runWithCode() {
 	log.Println("📝 APPROACH 1: Manual registration + Lazy loading (run by code)")
 
-	// 1. Get global registry
-	reg := deploy.Global()
+	// 1. Register service factories
+	lokstra_registry.RegisterServiceType("database-factory", DatabaseFactory, nil)
+	lokstra_registry.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
 
-	// 2. Register service factories (same as config mode)
-	reg.RegisterServiceType("database-factory", DatabaseFactory, nil)
-	reg.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
-
-	// 3. Define services in registry using ServiceDef (like YAML structure)
-	reg.DefineService(&schema.ServiceDef{
+	// 2. Define services in registry using ServiceDef (like YAML structure)
+	lokstra_registry.DefineService(&schema.ServiceDef{
 		Name: "database",
 		Type: "database-factory",
 	})
-	reg.DefineService(&schema.ServiceDef{
+	lokstra_registry.DefineService(&schema.ServiceDef{
 		Name:      "user-service",
 		Type:      "user-service-factory",
 		DependsOn: []string{"database"},
 	})
 
-	// 4. Build deployment manually (same structure as config mode)
+	// 3. Build deployment manually (same structure as config mode)
 	dep := deploy.New("development")
 	server := dep.NewServer("api", "http://localhost")
 	app := server.NewApp(":3002")
 
-	// 5. Add services to app (lazy-loaded automatically)
+	// 4. Add services to app (lazy-loaded automatically)
 	app.AddService("database")
 	app.AddService("user-service")
 
-	// 6. Lazy load service (SAME pattern as config mode)
+	// 5. Lazy load service (SAME pattern as config mode)
 	userService := service.LazyLoadFrom[*UserService](app, "user-service")
 
 	log.Println("✅ Services configured from code (lazy - will be created on first HTTP request)")
 
-	// 7. Create handler with injected service
+	// 6. Create handler with injected service
 	handler := NewUserHandler(userService)
 
-	// 8. Setup router and run
+	// 7. Setup router and run
 	setupRouterAndRun(handler)
 }
 
@@ -79,39 +77,41 @@ func runWithCode() {
 func runWithConfig() {
 	log.Println("⚙️  APPROACH 2: YAML Configuration + Lazy DI (run by config)")
 
-	// 1. Get global registry
-	reg := deploy.Global()
+	// 1. Register service factories
+	lokstra_registry.RegisterServiceType("database-factory", DatabaseFactory, nil)
+	lokstra_registry.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
 
-	// 2. Register service factories
-	reg.RegisterServiceType("database-factory", DatabaseFactory, nil)
-	reg.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
-
-	// 3. Load and build deployment from YAML
-	dep, err := loader.LoadAndBuild(
-		[]string{"config.yaml"},
-		"development",
-		reg,
-	)
-	if err != nil {
+	// 2. Load and build deployment from YAML
+	if err := loader.LoadAndBuild([]string{"config.yaml"}); err != nil {
 		log.Fatal("❌ Failed to load config:", err)
 	}
 
-	// 4. Get app (service container)
+	// 3. Get app (service container) from global registry
+	dep, ok := deploy.Global().GetDeployment("development")
+	if !ok {
+		log.Fatal("❌ Failed to get deployment 'development'")
+	}
 	server, ok := dep.GetServer("api")
 	if !ok {
 		log.Fatal("❌ Failed to get server 'api'")
 	}
 	app := server.Apps()[0]
 
-	// 5. Lazy load service from app - Service created on FIRST HTTP request!
+	// Debug: Print available services
+	log.Printf("📋 App has %d services", len(app.Services()))
+	for _, svc := range app.Services() {
+		log.Printf("   - %s", svc.Name())
+	}
+
+	// 4. Lazy load service from app - Service created on FIRST HTTP request!
 	userService := service.LazyLoadFrom[*UserService](app, "user-service")
 
 	log.Println("✅ Services configured from YAML (lazy - will be created on first HTTP request)")
 
-	// 6. Create handler with injected service
+	// 5. Create handler with injected service
 	handler := NewUserHandler(userService)
 
-	// 7. Setup router and run
+	// 6. Setup router and run
 	setupRouterAndRun(handler)
 }
 

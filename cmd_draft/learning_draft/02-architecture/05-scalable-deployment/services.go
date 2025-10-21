@@ -5,7 +5,7 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // =============================================================================
@@ -232,16 +232,16 @@ func setupFactories() {
 	fmt.Println("🔧 Registering Service Factories...")
 
 	// Layer 1: Infrastructure
-	lokstra_registry.RegisterServiceType("db", DBServiceFactory)
-	lokstra_registry.RegisterServiceType("cache", CacheServiceFactory)
+	old_registry.RegisterServiceType("db", DBServiceFactory)
+	old_registry.RegisterServiceType("cache", CacheServiceFactory)
 
 	// Layer 2: Repositories
-	lokstra_registry.RegisterServiceType("product-repository", ProductRepositoryFactory)
-	lokstra_registry.RegisterServiceType("order-repository", OrderRepositoryFactory)
+	old_registry.RegisterServiceType("product-repository", ProductRepositoryFactory)
+	old_registry.RegisterServiceType("order-repository", OrderRepositoryFactory)
 
 	// Layer 3: Business Services
-	lokstra_registry.RegisterServiceType("product", ProductServiceFactory)
-	lokstra_registry.RegisterServiceType("order", OrderServiceFactory)
+	old_registry.RegisterServiceType("product", ProductServiceFactory)
+	old_registry.RegisterServiceType("order", OrderServiceFactory)
 
 	fmt.Println("✅ Service factories registered")
 }

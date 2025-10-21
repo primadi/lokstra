@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/internal/registry"
 )
 
 // Cached provides a type-safe lazy-loading service container.
@@ -27,11 +27,39 @@ type Cached[T any] struct {
 	cache       T
 }
 
-// creates a new lazy service loader for the given service name.
+// LazyLoad creates a new lazy service loader for the given service name.
+// The service will be automatically loaded from the global registry on first Get() call.
+//
+// Example usage:
+//
+//	type MyService struct {
+//	    db *service.Cached[*DBPool]
+//	}
+//
+//	func NewMyService() *MyService {
+//	    return &MyService{
+//	        db: service.LazyLoad[*DBPool]("db-pool"),
+//	    }
+//	}
+//
+//	func (s *MyService) Query() {
+//	    db := s.db.Get() // Loaded from registry on first call
+//	    db.Query("...")
+//	}
 func LazyLoad[T any](serviceName string) *Cached[T] {
-	return &Cached[T]{
-		serviceName: serviceName,
-	}
+	return LazyLoadWith(func() T {
+		// Load from global registry
+		if reg := registry.Global(); reg != nil {
+			if svc, ok := reg.GetServiceAny(serviceName); ok {
+				if typed, ok := svc.(T); ok {
+					return typed
+				}
+			}
+		}
+		// Return zero value if not found
+		var zero T
+		return zero
+	})
 }
 
 // Get retrieves the service instance. The service is initialized on first call
@@ -42,9 +70,9 @@ func (l *Cached[T]) Get() T {
 			// Custom loader
 			l.cache = l.loader()
 		} else {
-			// Default: load from lokstra_registry
-			service := lokstra_registry.GetService[T](l.serviceName)
-			l.cache = service
+			// No loader provided - return zero value
+			var zero T
+			l.cache = zero
 		}
 	})
 	return l.cache
@@ -158,20 +186,20 @@ func Cast[T any](value any) *Cached[T] {
 //
 // Example usage:
 //
-//app := dep.GetServerApp("api", "crud-api")
-//userService := service.LazyLoadFrom[*UserService](app, "user-service")
-//// Service is loaded on first Get() call
-//users := userService.MustGet().GetAll()
+// app := dep.GetServerApp("api", "crud-api")
+// userService := service.LazyLoadFrom[*UserService](app, "user-service")
+// // Service is loaded on first Get() call
+// users := userService.MustGet().GetAll()
 type ServiceGetter interface {
-GetService(serviceName string) (any, error)
+	GetService(serviceName string) (any, error)
 }
 
 func LazyLoadFrom[T any](getter ServiceGetter, serviceName string) *Cached[T] {
-return LazyLoadWith(func() T {
-svc, err := getter.GetService(serviceName)
-if err != nil {
-panic("failed to load service '" + serviceName + "': " + err.Error())
-}
-return svc.(T)
-})
+	return LazyLoadWith(func() T {
+		svc, err := getter.GetService(serviceName)
+		if err != nil {
+			panic("failed to load service '" + serviceName + "': " + err.Error())
+		}
+		return svc.(T)
+	})
 }

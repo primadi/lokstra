@@ -97,13 +97,13 @@ go run . hybrid
 productRouter := lokstra.NewRouter("product-api")
 productRouter.GET("/products", handlers.GetProducts)
 productRouter.GET("/products/{id}", handlers.GetProduct)
-lokstra_registry.RegisterRouter("product-api", productRouter)
+old_registry.RegisterRouter("product-api", productRouter)
 
 // Order Router
 orderRouter := lokstra.NewRouter("order-api")
 orderRouter.POST("/orders", handlers.CreateOrder)
 orderRouter.GET("/orders/{id}", handlers.GetOrder)
-lokstra_registry.RegisterRouter("order-api", orderRouter)
+old_registry.RegisterRouter("order-api", orderRouter)
 ```
 
 ### 2. Cross-Router Communication

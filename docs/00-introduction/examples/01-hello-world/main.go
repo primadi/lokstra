@@ -8,11 +8,15 @@ import (
 
 func main() {
 	// Create router
-	r := lokstra.NewRouter("api")
+	r := lokstra.NewRouterWithEngine("api", "chi")
 
 	// Simple routes
 	r.GET("/", func() string {
 		return "Hello, Lokstra!"
+	})
+
+	r.GETPrefix("/", func() string {
+		return "Hello, any!"
 	})
 
 	r.GET("/ping", func() string {

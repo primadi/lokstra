@@ -43,7 +43,7 @@ Content-Type: application/json
 GET http://localhost:3003/users/1/orders
 Content-Type: application/json
 
-### 1.5a Get orders by user (monolith)
+### 1.5a Get non-existent orders by user (monolith)
 GET http://localhost:3003/users/999/orders
 Content-Type: application/json
 
@@ -51,12 +51,9 @@ Content-Type: application/json
 GET http://localhost:3003/users/999
 Content-Type: application/json
 
-### 1.7 Get non-existent order (monolith - error handling)
-GET http://localhost:3003/orders/999
-Content-Type: application/json
 
 ###############################################
-# DEPLOYMENT 2: USER-SERVICE SERVER (Port 3004)
+# DEPLOYMENT 2: USER-SERVER (Port 3004)
 ###############################################
 
 ### 2.1 Get user-service server info
@@ -67,27 +64,23 @@ Content-Type: application/json
 GET http://localhost:3004/users
 Content-Type: application/json
 
-### 2.3 Get specific user (user-service)
+### 2.3 Get user Alice
 GET http://localhost:3004/users/1
 Content-Type: application/json
 
-### 2.4 Get user Alice
-GET http://localhost:3004/users/1
-Content-Type: application/json
-
-### 2.5 Get user Bob
+### 2.4 Get user Bob
 GET http://localhost:3004/users/2
 Content-Type: application/json
 
-### 2.6 Get non-existent user (user-service - error)
+### 2.5 Get non-existent user (user-service - error)
 GET http://localhost:3004/users/999
 Content-Type: application/json
 
 ###############################################
-# DEPLOYMENT 2: ORDER-SERVICE SERVER (Port 3005)
+# DEPLOYMENT 2: ORDER-SERVER (Port 3005)
 ###############################################
 
-### 3.1 Get order-service server info
+### 3.1 Get order-server info
 GET http://localhost:3005/
 Content-Type: application/json
 
@@ -159,6 +152,14 @@ GET http://localhost:3003/users/99/orders
 GET http://localhost:3005/users/99/orders
 
 # ➜ Both should return identical order lists
+
+### 4.5a Get non-existent order (order-service - error)
+GET http://localhost:3003/orders/999
+Content-Type: application/json
+
+### 4.5b Get non-existent order (order-service - error)
+GET http://localhost:3005/orders/999
+Content-Type: application/json
 
 ###############################################
 # PART 5: COMPLETE FLOW TEST
@@ -262,8 +263,9 @@ GET http://localhost:3005/orders/1
 
 # GET /users/999 (error)
 # {
-#   "code": 404,
 #   "status": "error",
-#   "error_code": "NOT_FOUND",
-#   "message": "user not found"
+#   "error": {
+#     "code": "NOT_FOUND",
+#     "message": "user not found"
+#   }
 # }

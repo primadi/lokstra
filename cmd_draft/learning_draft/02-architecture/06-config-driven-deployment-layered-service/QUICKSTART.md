@@ -165,7 +165,7 @@ Checks:
 **Simple Mode:**
 ```go
 func (s *OrderService) getRepo() *OrderRepository {
-    s.repoCache = lokstra_registry.GetService(s.repoServiceName, s.repoCache)
+    s.repoCache = old_registry.GetService(s.repoServiceName, s.repoCache)
     return s.repoCache  // Manual cast
 }
 ```

@@ -7,7 +7,7 @@ import (
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // =============================================================================
@@ -173,19 +173,19 @@ func setupRegistry() {
 
 	// Step 1: Register Service Factories
 	// These are templates that know how to create services from config
-	lokstra_registry.RegisterServiceType("email", EmailServiceFactory)
-	lokstra_registry.RegisterServiceType("counter", CounterServiceFactory)
+	old_registry.RegisterServiceType("email", EmailServiceFactory)
+	old_registry.RegisterServiceType("counter", CounterServiceFactory)
 	fmt.Println("   ✓ Registered service factories: email, counter")
 
 	// Step 2: Register Lazy Services
 	// These services will be created only when first accessed
-	lokstra_registry.RegisterLazyService("email-service", "email", map[string]any{
+	old_registry.RegisterLazyService("email-service", "email", map[string]any{
 		"smtp_host": "smtp.gmail.com",
 		"smtp_port": 587,
 		"from":      "demo@lokstra.dev",
 	})
 
-	lokstra_registry.RegisterLazyService("counter-service", "counter", map[string]any{
+	old_registry.RegisterLazyService("counter-service", "counter", map[string]any{
 		"name": "demo-counter",
 		"seed": 100,
 	})
@@ -193,9 +193,9 @@ func setupRegistry() {
 
 	// Step 3: Register Routers
 	// These routers can be referenced by name in config.yaml for auto-discovery
-	lokstra_registry.RegisterRouter("email-api", createEmailRouter())
-	lokstra_registry.RegisterRouter("counter-api", createCounterRouter())
-	lokstra_registry.RegisterRouter("health-api", createHealthRouter())
+	old_registry.RegisterRouter("email-api", createEmailRouter())
+	old_registry.RegisterRouter("counter-api", createCounterRouter())
+	old_registry.RegisterRouter("health-api", createHealthRouter())
 	fmt.Println("   ✓ Registered routers: email-api, counter-api, health-api")
 
 	fmt.Println()
@@ -216,9 +216,9 @@ func main() {
 	// Create app manually (without config.yaml)
 	fmt.Println("🚀 Starting server...")
 
-	emailRouter := lokstra_registry.GetRouter("email-api")
-	counterRouter := lokstra_registry.GetRouter("counter-api")
-	healthRouter := lokstra_registry.GetRouter("health-api")
+	emailRouter := old_registry.GetRouter("email-api")
+	counterRouter := old_registry.GetRouter("counter-api")
+	healthRouter := old_registry.GetRouter("health-api")
 
 	app := lokstra.NewApp("demo-app", ":8080", emailRouter, counterRouter, healthRouter)
 	server := lokstra.NewServer("demo-server", app)

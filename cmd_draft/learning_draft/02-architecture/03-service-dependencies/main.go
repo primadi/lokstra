@@ -8,7 +8,7 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // =============================================================================
@@ -19,7 +19,7 @@ import (
 // ❌ WRONG PATTERN (Don't do this!):
 //    func ServiceFactory(cfg map[string]any) any {
 //        var dep *DepService
-//        dep = lokstra_registry.GetService("dep", dep)  // BAD! Called at registration
+//        dep = old_registry.GetService("dep", dep)  // BAD! Called at registration
 //        return NewService(dep)
 //    }
 //
@@ -40,7 +40,7 @@ import (
 //
 // 2. Create lazy getter methods:
 //    func (s *MyService) getDep() *DepService {
-//        s.depCache = lokstra_registry.GetService(s.depServiceName, s.depCache)
+//        s.depCache = old_registry.GetService(s.depServiceName, s.depCache)
 //        return s.depCache
 //    }
 //
@@ -388,16 +388,16 @@ func setupRegistry() {
 	fmt.Println("🔧 Setting up registry...")
 
 	// Register factories
-	lokstra_registry.RegisterServiceType("db", DBServiceFactory)
-	lokstra_registry.RegisterServiceType("cache", CacheServiceFactory)
-	lokstra_registry.RegisterServiceType("user", UserServiceFactory)
-	lokstra_registry.RegisterServiceType("order", OrderServiceFactory)
+	old_registry.RegisterServiceType("db", DBServiceFactory)
+	old_registry.RegisterServiceType("cache", CacheServiceFactory)
+	old_registry.RegisterServiceType("user", UserServiceFactory)
+	old_registry.RegisterServiceType("order", OrderServiceFactory)
 	fmt.Println("   ✓ Registered factories: db, cache, user, order")
 
 	// Register routers
-	lokstra_registry.RegisterRouter("user-api", createUserRouter())
-	lokstra_registry.RegisterRouter("order-api", createOrderRouter())
-	lokstra_registry.RegisterRouter("health-api", createHealthRouter())
+	old_registry.RegisterRouter("user-api", createUserRouter())
+	old_registry.RegisterRouter("order-api", createOrderRouter())
+	old_registry.RegisterRouter("health-api", createHealthRouter())
 	fmt.Println("   ✓ Registered routers: user-api, order-api, health-api")
 
 	fmt.Println()
@@ -424,7 +424,7 @@ func main() {
 	fmt.Println("   ✓ Loaded config.yaml")
 	fmt.Println()
 
-	lokstra_registry.RegisterConfig(cfg, "")
+	old_registry.RegisterConfig(cfg, "")
 
 	fmt.Println("🔍 Service dependency tree:")
 	fmt.Println("   db-service (no dependencies)")
@@ -434,8 +434,8 @@ func main() {
 	fmt.Println()
 
 	fmt.Println("🚀 Starting server...")
-	lokstra_registry.PrintServerStartInfo()
-	if err := lokstra_registry.StartServer(); err != nil {
+	old_registry.PrintServerStartInfo()
+	if err := old_registry.StartServer(); err != nil {
 		fmt.Printf("❌ Server error: %v\n", err)
 	}
 }

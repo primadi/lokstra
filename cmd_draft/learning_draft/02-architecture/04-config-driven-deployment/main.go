@@ -8,7 +8,7 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // =============================================================================
@@ -59,20 +59,20 @@ func main() {
 	fmt.Println()
 
 	// Step 3: Register config with framework
-	lokstra_registry.RegisterConfig(cfg, "")
+	old_registry.RegisterConfig(cfg, "")
 
 	// Print application info
 	fmt.Println("📋 Application Info:")
 	fmt.Printf("   Name: E-Commerce API\n")
-	fmt.Printf("   Version: %s\n", lokstra_registry.GetConfig("app-version", "unknown"))
-	fmt.Printf("   Environment: %s\n", lokstra_registry.GetConfig("app-env", "unknown"))
-	fmt.Printf("   Server: %s\n", lokstra_registry.GetCurrentServerName())
+	fmt.Printf("   Version: %s\n", old_registry.GetConfig("app-version", "unknown"))
+	fmt.Printf("   Environment: %s\n", old_registry.GetConfig("app-env", "unknown"))
+	fmt.Printf("   Server: %s\n", old_registry.GetCurrentServerName())
 	fmt.Println()
 
 	// Step 4: Start server (framework does the rest)
 	fmt.Println("🚀 Starting server...")
-	lokstra_registry.PrintServerStartInfo()
-	if err := lokstra_registry.StartServer(); err != nil {
+	old_registry.PrintServerStartInfo()
+	if err := old_registry.StartServer(); err != nil {
 		fmt.Printf("❌ Server error: %v\n", err)
 	}
 }
@@ -444,19 +444,19 @@ var services = &ServiceContainer{
 
 func setupFactories() {
 	// Infrastructure
-	lokstra_registry.RegisterServiceType("db", NewDBService)
-	lokstra_registry.RegisterServiceType("cache", NewCacheService)
-	lokstra_registry.RegisterServiceType("email", NewEmailService)
+	old_registry.RegisterServiceType("db", NewDBService)
+	old_registry.RegisterServiceType("cache", NewCacheService)
+	old_registry.RegisterServiceType("email", NewEmailService)
 
 	// Repositories
-	lokstra_registry.RegisterServiceType("user-repo", NewUserRepository)
-	lokstra_registry.RegisterServiceType("product-repo", NewProductRepository)
-	lokstra_registry.RegisterServiceType("order-repo", NewOrderRepository)
+	old_registry.RegisterServiceType("user-repo", NewUserRepository)
+	old_registry.RegisterServiceType("product-repo", NewProductRepository)
+	old_registry.RegisterServiceType("order-repo", NewOrderRepository)
 
 	// Domain Services
-	lokstra_registry.RegisterServiceType("user", NewUserService)
-	lokstra_registry.RegisterServiceType("product", NewProductService)
-	lokstra_registry.RegisterServiceType("order", NewOrderService)
+	old_registry.RegisterServiceType("user", NewUserService)
+	old_registry.RegisterServiceType("product", NewProductService)
+	old_registry.RegisterServiceType("order", NewOrderService)
 
 	fmt.Println("   ✓ Registered 9 service factories")
 }
@@ -531,8 +531,8 @@ func setupRouters() {
 	healthRouter := lokstra.NewRouter("health-router")
 
 	healthRouter.GET("/health", func(c *lokstra.RequestContext) error {
-		appEnv := lokstra_registry.GetConfig("app-env", "unknown")
-		appVersion := lokstra_registry.GetConfig("app-version", "unknown")
+		appEnv := old_registry.GetConfig("app-env", "unknown")
+		appVersion := old_registry.GetConfig("app-version", "unknown")
 
 		return c.Api.Ok(map[string]any{
 			"status":      "healthy",
@@ -543,10 +543,10 @@ func setupRouters() {
 	})
 
 	// Register routers
-	lokstra_registry.RegisterRouter("product-api", productRouter)
-	lokstra_registry.RegisterRouter("order-api", orderRouter)
-	lokstra_registry.RegisterRouter("user-api", userRouter)
-	lokstra_registry.RegisterRouter("health-api", healthRouter)
+	old_registry.RegisterRouter("product-api", productRouter)
+	old_registry.RegisterRouter("order-api", orderRouter)
+	old_registry.RegisterRouter("user-api", userRouter)
+	old_registry.RegisterRouter("health-api", healthRouter)
 
 	fmt.Println("   ✓ Registered 4 routers")
 }

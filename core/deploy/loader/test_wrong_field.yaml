@@ -1,0 +1,13 @@
+# Test wrong field name
+services:
+  database:
+    type: database-factory
+
+deployments:
+  test:
+    servers:
+      api:
+        base-url: http://localhost
+        apps:
+          - addr: ":3000"
+            required-services: [database]

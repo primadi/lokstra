@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 	"github.com/primadi/lokstra/serviceapi/auth"
 	"github.com/primadi/lokstra/services"
 )
@@ -15,7 +15,7 @@ func main() {
 	services.RegisterAllServices()
 
 	// Example 1: Create database pool
-	dbPool := lokstra_registry.NewService[any](
+	dbPool := old_registry.NewService[any](
 		"my_db", "dbpool_pg",
 		map[string]any{
 			"host":     "localhost",
@@ -28,7 +28,7 @@ func main() {
 	fmt.Println("DbPool created:", dbPool != nil)
 
 	// Example 2: Create KvStore
-	kvStore := lokstra_registry.NewService[any](
+	kvStore := old_registry.NewService[any](
 		"my_kvstore", "kvstore_redis",
 		map[string]any{
 			"addr":   "localhost:6379",
@@ -38,7 +38,7 @@ func main() {
 	fmt.Println("KvStore created:", kvStore != nil)
 
 	// Example 3: Create metrics
-	metrics := lokstra_registry.NewService[any](
+	metrics := old_registry.NewService[any](
 		"my_metrics", "metrics_prometheus",
 		map[string]any{
 			"namespace": "myapp",
@@ -55,7 +55,7 @@ func setupAuthSystem() {
 	ctx := context.Background()
 
 	// 1. Create Token Issuer
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_token_issuer", "auth_token_jwt",
 		map[string]any{
 			"secret_key": "my-super-secret-key-change-in-production",
@@ -64,7 +64,7 @@ func setupAuthSystem() {
 	)
 
 	// 2. Create Session Store
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_session", "auth_session_redis",
 		map[string]any{
 			"addr":   "localhost:6379",
@@ -73,7 +73,7 @@ func setupAuthSystem() {
 	)
 
 	// 3. Create User Repository (requires DB Pool first)
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_db", "dbpool_pg",
 		map[string]any{
 			"host":     "localhost",
@@ -84,7 +84,7 @@ func setupAuthSystem() {
 		},
 	)
 
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_user_repo", "auth_user_repo_pg",
 		map[string]any{
 			"dbpool_service_name": "my_db",
@@ -94,14 +94,14 @@ func setupAuthSystem() {
 	)
 
 	// 4. Create Auth Flows
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_password_flow", "auth_flow_password",
 		map[string]any{
 			"user_repo_service_name": "my_user_repo",
 		},
 	)
 
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_kvstore", "kvstore_redis",
 		map[string]any{
 			"addr":   "localhost:6379",
@@ -109,7 +109,7 @@ func setupAuthSystem() {
 		},
 	)
 
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_otp_flow", "auth_flow_otp",
 		map[string]any{
 			"user_repo_service_name": "my_user_repo",
@@ -120,7 +120,7 @@ func setupAuthSystem() {
 	)
 
 	// 5. Create Main Auth Service
-	authSvc := lokstra_registry.NewService[auth.Service](
+	authSvc := old_registry.NewService[auth.Service](
 		"my_auth", "auth_service",
 		map[string]any{
 			"token_issuer_service_name": "my_token_issuer",
@@ -133,7 +133,7 @@ func setupAuthSystem() {
 	)
 
 	// 6. Create Auth Validator
-	lokstra_registry.NewService[any](
+	old_registry.NewService[any](
 		"my_validator", "auth_validator",
 		map[string]any{
 			"token_issuer_service_name": "my_token_issuer",

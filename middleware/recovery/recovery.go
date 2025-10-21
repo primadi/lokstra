@@ -7,7 +7,7 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 const RECOVERY_TYPE = "recovery"
@@ -88,6 +88,6 @@ func MiddlewareFactory(params map[string]any) request.HandlerFunc {
 }
 
 func Register() {
-	lokstra_registry.RegisterMiddlewareFactory(RECOVERY_TYPE, MiddlewareFactory,
-		lokstra_registry.AllowOverride(true))
+	old_registry.RegisterMiddlewareFactory(RECOVERY_TYPE, MiddlewareFactory,
+		old_registry.AllowOverride(true))
 }

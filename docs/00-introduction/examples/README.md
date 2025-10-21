@@ -1,264 +1,215 @@
-# Lokstra Examples - New Paradigm
+# Lokstra Examples
 
-> 🎯 **Same examples, modern approach with YAML + Lazy DI**
+> 🎯 **Progressive learning path: Manual basics → Auto-router patterns**
 
-These are the same examples as before, now updated to use Lokstra's new paradigm where beneficial.
+Learn Lokstra step by step, from manual router creation to automated service-to-router generation.
 
 ---
 
 ## 📂 Examples
 
-### [01-hello-world](./01-hello-world/) - **NO CHANGES**
-**Simplest API with 3 endpoints**
+### [01-hello-world](./01-hello-world/)
+**Your first Lokstra API**
 
 - Simple router with GET handlers
 - Auto JSON responses
 - Basic string and map returns
-
-**Status:** ❌ **No changes needed** - Simple examples don't need config!
 
 ```bash
 cd 01-hello-world && go run main.go
 curl http://localhost:3000/
 ```
 
+**Why manual?** Perfect for quick prototyping and learning basics!
+
 ---
 
-### [02-handler-forms](./02-handler-forms/) - **NO CHANGES**
-**All 29 handler variations**
+### [02-handler-forms](./02-handler-forms/)
+**Explore 29 handler variations**
 
 - Request binding (JSON, path, query, header)
 - Response forms (string, map, struct, error handling)
 - Context access patterns
 
-**Status:** ❌ **No changes needed** - Handler forms are framework features!
-
 ```bash
 cd 02-handler-forms && go run main.go
 ```
 
+**Why manual?** Understanding handler flexibility is fundamental!
+
 ---
 
-### [03-crud-api](./03-crud-api/) - **✅ UPDATED**
-**Full CRUD API with database service**
+### [03-crud-api](./03-crud-api/)
+**Full CRUD with service pattern**
 
-**OLD Approach:**
-- Manual service instantiation
-- Manual registry registration
-- Hardcoded dependencies
-
-**NEW Approach:**
-- Service factories with YAML config
-- Lazy dependency injection
-- Type-safe service loading
+- Service-based architecture
+- Dependency injection
+- Manual router registration
 
 ```bash
 cd 03-crud-api && go run main.go
 curl http://localhost:3000/users
 ```
 
-**What Changed:**
-- ✅ Added `config.yaml` for service configuration
-- ✅ Database and UserService now use factories
-- ✅ Lazy DI for Database → UserService
-- ❌ Router and handlers unchanged
+**Features:**
+- ✅ Service factories
+- ✅ Lazy dependency injection
+- ✅ Clean separation of concerns
+- ✅ Manual route registration (understand the foundation!)
 
 ---
 
-### [04-multi-deployment](./04-multi-deployment/) - **✅ UPDATED**
-**Monolith vs Microservices**
+### [04-multi-deployment](./04-multi-deployment/)
+**One binary, multiple deployments**
 
-**OLD Approach:**
-```go
-flag.StringVar(&mode, "mode", "monolith", "...")
-if mode == "monolith" {
-    runMonolithServer()
-} else if mode == "user-service" {
-    runUserServiceServer()
-}
-```
-
-**NEW Approach:**
-```yaml
-deployments:
-  monolith: {...}
-  microservices-user: {...}
-  microservices-order: {...}
-```
+- Monolith vs Microservices
+- Service interface pattern (local vs remote)
+- Cross-service communication
 
 ```bash
-# Choose deployment declaratively!
-go run main.go --deployment=monolith
-go run main.go --deployment=microservices-user
-go run main.go --deployment=microservices-order
+# Run as monolith
+go run . -server=monolith
+
+# Run as microservices
+go run . -server=user-service    # Terminal 1
+go run . -server=order-service   # Terminal 2
 ```
 
-**What Changed:**
-- ✅ One `config.yaml` instead of multiple flag checks
-- ✅ Declarative deployment configurations
-- ✅ Shared service definitions, different deployments
-- ✅ Better separation of concerns
+**Key Learning:**
+- Manual router for each deployment
+- Interface abstraction (UserService local vs remote)
+- Proxy pattern for remote calls
 
 ---
 
-## 🔄 When to Use New Paradigm?
+### [05-auto-router-proxy](./05-auto-router-proxy/) ⭐ **NEW!**
+**Automatic router generation + Convention-based proxy**
 
-### ❌ DON'T Update (Keep Simple):
-- **01-hello-world** - Too simple, no benefit
-- **02-handler-forms** - Framework features, not config
-- Simple scripts and prototypes
-- Learning examples
+This is where automation begins!
 
-### ✅ DO Update (Clear Benefits):
-- **03-crud-api** - Service dependencies benefit from lazy DI
-- **04-multi-deployment** - Multi-environment is perfect fit
-- Production applications
-- Complex service graphs
-- Multiple environments
+- ✅ `autogen.NewFromService()` - Auto-generate REST routes
+- ✅ `proxy.Service` - Convention-based remote calls
+- ✅ Zero boilerplate routing
+
+```bash
+# Terminal 1: User service with auto-router
+go run . -mode=server
+
+# Terminal 2: Order service with proxy
+go run . -mode=client
+```
+
+**What's automated:**
+- Router generation from service methods
+- URL construction from conventions
+- HTTP calls with `proxy.Call()`
+
+**Comparison with Example 04:**
+- Example 04: Manual `r.GET("/users", ...)` for each endpoint
+- Example 05: `autogen.NewFromService()` generates all routes automatically
 
 ---
 
-## 📊 Comparison Table
+## � Learning Progression
 
-| Example | Old Paradigm | New Paradigm | Status |
-|---------|-------------|--------------|--------|
-| **01-hello-world** | Manual router | Manual router | ❌ No change needed |
-| **02-handler-forms** | Manual router | Manual router | ❌ No change needed |
-| **03-crud-api** | Manual services | YAML + Factories | ✅ Updated |
-| **04-multi-deployment** | Flags + functions | YAML deployments | ✅ Updated |
+### Phase 1: Manual Foundation (Examples 01-04)
+**Learn the fundamentals** - How things work under the hood
 
----
+| Example | Focus | Why Manual? |
+|---------|-------|-------------|
+| **01** | Basic routing | Understand router creation |
+| **02** | Handler forms | Learn request/response patterns |
+| **03** | Services & DI | Grasp service architecture |
+| **04** | Deployments | Master interface abstraction |
 
-## 🎯 Key Improvements in Updated Examples
+**Benefits of learning manual first:**
+- ✅ Deep understanding of Lokstra internals
+- ✅ Better debugging when things go wrong
+- ✅ Flexibility for custom scenarios
+- ✅ Appreciation for what automation provides
 
-### Example 03 (CRUD API)
+### Phase 2: Automation (Example 05+)
+**Leverage the framework** - Let Lokstra do the heavy lifting
 
-**Before:**
-```go
-// main.go
-db := NewDatabase()
-lokstra_registry.Register("database", db)
+| Example | Automation | Benefit |
+|---------|------------|---------|
+| **05** | Auto-router + Proxy | Zero boilerplate routing |
 
-userSvc := NewUserService(db)
-lokstra_registry.Register("userService", userSvc)
-```
+**When automation makes sense:**
+- ✅ Service-based architectures (5+ endpoints per service)
+- ✅ RESTful conventions (standard CRUD patterns)
+- ✅ Microservices (multiple services to wire up)
+- ✅ Consistency requirements (same patterns everywhere)
 
-**After:**
-```yaml
-# config.yaml
-services:
-  database:
-    type: database-factory
-  
-  user-service:
-    type: user-service-factory
-    depends-on: [database]  # Auto lazy-loaded!
-```
-
-```go
-// main.go
-reg := deploy.Global()
-reg.RegisterServiceType("database-factory", dbFactory, nil)
-reg.RegisterServiceType("user-service-factory", userServiceFactory, nil)
-
-dep, _ := loader.LoadAndBuild([]string{"config.yaml"}, "development", reg)
-```
-
-**Benefits:**
-- ✅ No manual wiring
-- ✅ Lazy loading (DB created on first use)
-- ✅ Type-safe with `service.Cached[T]`
-- ✅ Easy to test (mock config)
-
-### Example 04 (Multi-Deployment)
-
-**Before:**
-```go
-// main.go - 160 lines with flag parsing
-flag.StringVar(&mode, "mode", "monolith", "...")
-if mode == "monolith" {
-    registerMonolithServices()
-    // ... setup routes
-    runMonolithServer()
-} else if mode == "user-service" {
-    registerUserServices()
-    // ... setup routes
-    runUserServiceServer()
-} // ... more conditions
-```
-
-**After:**
-```yaml
-# config.yaml - Declarative!
-deployments:
-  monolith:
-    servers:
-      main:
-        apps:
-          - port: 3003
-            services: [user-service, order-service]
-  
-  microservices-user:
-    servers:
-      user-api:
-        apps:
-          - port: 3004
-            services: [user-service]
-  
-  microservices-order:
-    servers:
-      order-api:
-        apps:
-          - port: 3005
-            services: [order-service]
-```
-
-```go
-// main.go - Clean and simple!
-deployment := flag.String("deployment", "monolith", "Deployment to run")
-flag.Parse()
-
-dep, _ := loader.LoadAndBuild([]string{"config.yaml"}, *deployment, reg)
-server, _ := dep.GetServer("main") // or "user-api", "order-api"
-// ... start server
-```
-
-**Benefits:**
-- ✅ One config file for all deployments
-- ✅ No conditional logic in code
-- ✅ Easy to add new deployments
-- ✅ Services defined once, reused everywhere
+**When to stay manual:**
+- ❌ Quick prototypes (< 10 endpoints total)
+- ❌ Non-standard routing (custom URL patterns)
+- ❌ Fine-grained control needed
+- ❌ Learning/debugging
 
 ---
 
-## 📚 Migration Notes
+## 🔄 Manual vs Auto-Router Comparison
 
-Each updated example includes:
-1. **MIGRATION.md** - Detailed before/after comparison
-2. **config.yaml** - New configuration file
-3. **Original code (commented)** - See what changed
-4. **New code** - Using YAML + lazy DI
+### Example 04 (Manual Router)
+```go
+// For each service method, manually register route
+r.GET("/users", userHandler.list)
+r.GET("/users/{id}", userHandler.get)
+r.POST("/users", userHandler.create)
+r.PUT("/users/{id}", userHandler.update)
 
-### Files Added:
-- `config.yaml` - Service and deployment configuration
-- `MIGRATION.md` - Explains the changes
-- Service factories in `main.go`
+// Repeat for order service...
+r.GET("/orders/{id}", orderHandler.get)
+r.GET("/users/{user_id}/orders", orderHandler.getUserOrders)
+```
 
-### Files Unchanged:
-- `README.md` - Updated to explain new approach
-- `test.http` - Testing commands same
-- Handler logic - Business logic unchanged
-- Router setup - Routing unchanged
+**Lines of code:** ~20 per service (routing only)
+
+### Example 05 (Auto-Router)
+```go
+// Define convention once
+conversionRule := autogen.ConversionRule{
+    Convention:     convention.REST,
+    Resource:       "user",
+    ResourcePlural: "users",
+}
+
+// Generate all routes automatically
+router := autogen.NewFromService(userService, conversionRule, routerOverride)
+```
+
+**Lines of code:** ~8 per service (routing only)  
+**Savings:** 60-70% less boilerplate!
+
+---
+
+## 🎯 Choosing the Right Approach
+
+### Use Manual Router When:
+- ✅ Learning Lokstra fundamentals
+- ✅ Building small APIs (< 10 endpoints)
+- ✅ Need custom route patterns
+- ✅ Prototyping quickly
+- ✅ Non-service based handlers (standalone functions)
+
+### Use Auto-Router When:
+- ✅ Service-based architecture
+- ✅ RESTful conventions
+- ✅ Large APIs (10+ endpoints per service)
+- ✅ Microservices
+- ✅ Consistency is critical
+- ✅ Rapid development
+
+**Pro tip:** Start manual (Examples 01-04), then adopt auto-router (Example 05) when complexity justifies it!
 
 ---
 
 ## 🚀 Running Examples
 
-All examples work the same way:
-
 ```bash
 # Navigate to any example
-cd 01-hello-world  # or 02, 03, 04
+cd 01-hello-world  # or 02, 03, 04, 05
 
 # Run it
 go run main.go
@@ -267,34 +218,56 @@ go run main.go
 curl http://localhost:3000/
 ```
 
-### For 04-multi-deployment:
+**For multi-server examples:**
+
+Example 04 (Manual):
 ```bash
 cd 04-multi-deployment
 
-# Run different deployments
-go run main.go --deployment=monolith
-go run main.go --deployment=microservices-user
-go run main.go --deployment=microservices-order
+# Option 1: Monolith
+go run . -server=monolith
+
+# Option 2: Microservices (2 terminals)
+go run . -server=user-service     # Terminal 1
+go run . -server=order-service    # Terminal 2
+```
+
+Example 05 (Auto-Router):
+```bash
+cd 05-auto-router-proxy
+
+# Terminal 1: Server
+go run . -mode=server
+
+# Terminal 2: Client
+go run . -mode=client
 ```
 
 ---
 
-## 🔗 Documentation
+## 🎓 Recommended Learning Path
 
-- **[Old Examples](../examples_old/)** - Original approach (still valid!)
-- **[YAML Quick Ref](../../core/deploy/YAML-QUICK-REF.md)** - Config syntax
-- **[Integration Guide](../../core/deploy/INTEGRASI-SISTEM-LAMA.md)** - Old vs new
-- **[Complete Journey](../../core/deploy/COMPLETE-JOURNEY.md)** - Full implementation
+### Week 1: Foundations
+1. **Day 1-2:** Example 01 - Hello World
+2. **Day 3-4:** Example 02 - Handler Forms
+3. **Day 5-7:** Example 03 - CRUD API
+
+**Goal:** Understand manual router, handlers, and services
+
+### Week 2: Advanced Patterns
+1. **Day 1-3:** Example 04 - Multi-deployment (deep dive!)
+2. **Day 4-5:** Example 05 - Auto-Router & Proxy
+3. **Day 6-7:** Build your own project using learned patterns
+
+**Goal:** Master deployment patterns and automation
 
 ---
 
-## ⚠️ Important Notes
+## 💡 Key Takeaways
 
-1. **Old paradigm still works 100%** - Not deprecated!
-2. **Simple examples don't need YAML** - Keep them simple!
-3. **New paradigm shines with complexity** - 5+ services, multi-env
-4. **Choose what fits your needs** - Both approaches are valid
+1. **Manual First**: Examples 01-04 teach fundamentals - don't skip them!
+2. **Auto-Router is Optional**: Use it when complexity justifies automation
+3. **Both Approaches Valid**: Manual for control, auto for consistency
+4. **Progressive Enhancement**: Start simple, add automation as needed
 
 ---
-
-*Updated examples show when and how to use the new paradigm effectively.*

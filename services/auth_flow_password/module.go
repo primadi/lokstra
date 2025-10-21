@@ -7,7 +7,7 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 	"github.com/primadi/lokstra/serviceapi/auth"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -101,6 +101,6 @@ func ServiceFactory(params map[string]any) any {
 }
 
 func Register() {
-	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
-		lokstra_registry.AllowOverride(true))
+	old_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
+		old_registry.AllowOverride(true))
 }

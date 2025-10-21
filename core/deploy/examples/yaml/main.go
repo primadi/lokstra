@@ -7,6 +7,7 @@ import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/core/service"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 // ===== DOMAIN MODELS =====
@@ -133,16 +134,13 @@ func main() {
 	fmt.Println("=" + string(make([]byte, 60)))
 	fmt.Println()
 
-	// Create global registry
-	reg := deploy.Global()
-
 	// Register service factories
 	fmt.Println("🔧 Registering service factories...")
-	reg.RegisterServiceType("postgres-pool", dbPoolFactory, nil)
-	reg.RegisterServiceType("logger-service", loggerFactory, nil)
-	reg.RegisterServiceType("redis-cache", cacheFactory, nil)
-	reg.RegisterServiceType("user-service-factory", userServiceFactory, nil)
-	reg.RegisterServiceType("order-service-factory", orderServiceFactory, nil)
+	lokstra_registry.RegisterServiceType("postgres-pool", dbPoolFactory, nil)
+	lokstra_registry.RegisterServiceType("logger-service", loggerFactory, nil)
+	lokstra_registry.RegisterServiceType("redis-cache", cacheFactory, nil)
+	lokstra_registry.RegisterServiceType("user-service-factory", userServiceFactory, nil)
+	lokstra_registry.RegisterServiceType("order-service-factory", orderServiceFactory, nil)
 	fmt.Println()
 
 	// Load configuration from YAML files
@@ -152,9 +150,14 @@ func main() {
 	fmt.Println("   - config/deployments.yaml")
 	fmt.Println()
 
-	dep, err := loader.LoadAndBuildFromDir("config", "production", reg)
-	if err != nil {
+	if err := loader.LoadAndBuildFromDir("config"); err != nil {
 		log.Fatal("❌ Failed to load deployment:", err)
+	}
+
+	// Get deployment from global registry
+	dep, ok := deploy.Global().GetDeployment("production")
+	if !ok {
+		log.Fatal("❌ Deployment 'production' not found")
 	}
 
 	fmt.Println("✅ Configuration loaded and validated!")
@@ -177,7 +180,7 @@ func main() {
 	fmt.Println("🔨 Instantiating services from YAML configuration...")
 	fmt.Println()
 
-	_, err = app.GetService("user-service")
+	_, err := app.GetService("user-service")
 	if err != nil {
 		log.Fatal(err)
 	}

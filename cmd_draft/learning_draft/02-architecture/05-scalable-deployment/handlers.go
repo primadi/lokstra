@@ -6,7 +6,7 @@ import (
 	lokstra "github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // =============================================================================
@@ -47,7 +47,7 @@ type ClientRouterContainer struct {
 }
 
 func (crc *ClientRouterContainer) GetProductAPI() *api_client.ClientRouter {
-	crc.productAPICache = lokstra_registry.GetClientRouterCached("product-api", crc.productAPICache)
+	crc.productAPICache = old_registry.GetClientRouterCached("product-api", crc.productAPICache)
 	return crc.productAPICache
 }
 
@@ -123,7 +123,7 @@ func getOrder(c *request.Context) error {
 // =============================================================================
 
 func healthCheck(c *request.Context) error {
-	serverName := lokstra_registry.GetCurrentServerName()
+	serverName := old_registry.GetCurrentServerName()
 
 	return c.Api.Ok(map[string]any{
 		"status": "healthy",

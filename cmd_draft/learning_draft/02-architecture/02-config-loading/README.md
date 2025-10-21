@@ -23,7 +23,7 @@ APP_ENV=production LOG_LEVEL=debug COUNTER_SEED=5000 go run .
 ### Before (Code-based):
 ```go
 // Hardcoded in main.go
-lokstra_registry.RegisterLazyService("email-service", "email", map[string]any{
+old_registry.RegisterLazyService("email-service", "email", map[string]any{
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 587,
     "from":      "demo@lokstra.dev",
@@ -119,13 +119,13 @@ services:
            │             - Parses YAML structure
            ▼
 ┌─────────────────────┐
-│  3. Register Config │  lokstra_registry.RegisterConfig(cfg)
+│  3. Register Config │  old_registry.RegisterConfig(cfg)
 │                     │  - Automatically calls RegisterLazyService() for each service
 └──────────┬──────────┘  - Stores server/app configurations
            │
            ▼
 ┌─────────────────────┐
-│  4. Start Server    │  lokstra_registry.StartServer()
+│  4. Start Server    │  old_registry.StartServer()
 │                     │  - Creates apps based on config
 │                     │  - Mounts routers
 └─────────────────────┘  - Services created lazily on first request
@@ -138,14 +138,14 @@ services:
 ```go
 func setupRegistry() {
     // Factories tell the framework how to create services
-    lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
-    lokstra_registry.RegisterServiceFactory("counter", CounterServiceFactory)
-    lokstra_registry.RegisterServiceFactory("logger", LoggerServiceFactory)
+    old_registry.RegisterServiceFactory("email", EmailServiceFactory)
+    old_registry.RegisterServiceFactory("counter", CounterServiceFactory)
+    old_registry.RegisterServiceFactory("logger", LoggerServiceFactory)
     
     // Routers for auto-discovery
-    lokstra_registry.RegisterRouter("email-api", createEmailRouter())
-    lokstra_registry.RegisterRouter("counter-api", createCounterRouter())
-    lokstra_registry.RegisterRouter("logger-api", createLoggerRouter())
+    old_registry.RegisterRouter("email-api", createEmailRouter())
+    old_registry.RegisterRouter("counter-api", createCounterRouter())
+    old_registry.RegisterRouter("logger-api", createLoggerRouter())
 }
 ```
 
@@ -186,9 +186,9 @@ func main() {
     config.LoadConfigFile("config.yaml", cfg)
     
     // Register and start
-    lokstra_registry.RegisterConfig(cfg)
-    lokstra_registry.SetCurrentServerName("config-demo-server")
-    lokstra_registry.StartServer()
+    old_registry.RegisterConfig(cfg)
+    old_registry.SetCurrentServerName("config-demo-server")
+    old_registry.StartServer()
 }
 ```
 
@@ -278,8 +278,8 @@ configs:
 
 **Access in code:**
 ```go
-serverName := lokstra_registry.GetConfig("server-name", "default")
-appEnv := lokstra_registry.GetConfig("app-env", "development")
+serverName := old_registry.GetConfig("server-name", "default")
+appEnv := old_registry.GetConfig("app-env", "development")
 ```
 
 ## Best Practices

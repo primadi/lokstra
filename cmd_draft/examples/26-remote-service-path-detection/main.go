@@ -10,7 +10,7 @@ import (
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // ============================================================================
@@ -299,7 +299,7 @@ func setupClient() *RemoteUserService {
 	fmt.Println("📡 Setting up client...")
 
 	// Register client router
-	lokstra_registry.RegisterClientRouter(
+	old_registry.RegisterClientRouter(
 		"user-service",          // routerName
 		"user-service-server",   // serverName
 		"http://localhost:8080", // baseURL
@@ -308,10 +308,10 @@ func setupClient() *RemoteUserService {
 	)
 
 	// Build running registry
-	lokstra_registry.SetCurrentServerName("user-service-server")
+	old_registry.SetCurrentServerName("user-service-server")
 
 	// Create remote service
-	client := lokstra_registry.GetClientRouter("user-service")
+	client := old_registry.GetClientRouter("user-service")
 	if client == nil {
 		log.Fatal("Failed to get client router")
 	}

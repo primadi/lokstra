@@ -25,22 +25,22 @@ type OrderService struct {
 
 // Manual lazy loading with caching (15 lines per dependency!)
 func (s *OrderService) getRepo() *OrderRepository {
-    s.repoCache = lokstra_registry.GetService(s.repoServiceName, s.repoCache)
+    s.repoCache = old_registry.GetService(s.repoServiceName, s.repoCache)
     return s.repoCache
 }
 
 func (s *OrderService) getProductService() *ProductService {
-    s.productServiceCache = lokstra_registry.GetService(s.productServiceName, s.productServiceCache)
+    s.productServiceCache = old_registry.GetService(s.productServiceName, s.productServiceCache)
     return s.productServiceCache
 }
 
 func (s *OrderService) getUserService() *UserService {
-    s.userServiceCache = lokstra_registry.GetService(s.userServiceName, s.userServiceCache)
+    s.userServiceCache = old_registry.GetService(s.userServiceName, s.userServiceCache)
     return s.userServiceCache
 }
 
 func (s *OrderService) getEmailService() *EmailService {
-    s.emailServiceCache = lokstra_registry.GetService(s.emailServiceName, s.emailServiceCache)
+    s.emailServiceCache = old_registry.GetService(s.emailServiceName, s.emailServiceCache)
     return s.emailServiceCache
 }
 

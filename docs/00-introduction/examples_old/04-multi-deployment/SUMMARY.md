@@ -71,13 +71,13 @@ func (s *OrderServiceImpl) GetByID(...) (*OrderWithUser, error) {
 
 **Monolith**:
 ```go
-lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+old_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
 // Returns UserServiceImpl (local)
 ```
 
 **Order-Service**:
 ```go
-lokstra_registry.RegisterServiceTypeRemote("usersFactory", appservice.NewUserServiceRemote)
+old_registry.RegisterServiceTypeRemote("usersFactory", appservice.NewUserServiceRemote)
 // Returns UserServiceRemote (HTTP proxy)
 ```
 
@@ -149,8 +149,8 @@ r.GET("/users/{id}", getUserHandler)
 err := u.proxy.DoJSON("GET", fmt.Sprintf("/users/%d", p.ID), nil, nil, &JsonWrapper)
 
 // Manual registration
-lokstra_registry.RegisterServiceType("usersFactory", NewUserService)
-lokstra_registry.RegisterServiceTypeRemote("usersFactory", NewUserServiceRemote)
+old_registry.RegisterServiceType("usersFactory", NewUserService)
+old_registry.RegisterServiceTypeRemote("usersFactory", NewUserServiceRemote)
 ```
 
 ### Future (Automated - covered in later chapters):

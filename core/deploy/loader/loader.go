@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"os"
@@ -54,7 +55,12 @@ func loadSingleFile(path string) (*schema.DeployConfig, error) {
 	}
 
 	var config schema.DeployConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
+
+	// Use strict YAML decoder to catch unknown fields
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true) // This will error on unknown fields like "services" instead of "service-definitions"
+
+	if err := decoder.Decode(&config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 

@@ -10,7 +10,7 @@ import (
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // Services in Lokstra
@@ -170,10 +170,10 @@ func main() {
 	// === STEP 1: Register Service Factories ===
 	fmt.Println("\n📝 Step 1: Registering Service Factories")
 
-	lokstra_registry.RegisterServiceType("email", EmailServiceFactory)
-	lokstra_registry.RegisterServiceType("db", DBServiceFactory)
-	lokstra_registry.RegisterServiceType("user", NewUserService)
-	lokstra_registry.RegisterServiceType("logger", ConsoleLoggerFactory)
+	old_registry.RegisterServiceType("email", EmailServiceFactory)
+	old_registry.RegisterServiceType("db", DBServiceFactory)
+	old_registry.RegisterServiceType("user", NewUserService)
+	old_registry.RegisterServiceType("logger", ConsoleLoggerFactory)
 
 	fmt.Println("   ✅ Registered: email, db, user, logger")
 
@@ -182,7 +182,7 @@ func main() {
 
 	// Way 1: NewService - Eager creation
 	fmt.Println("\n   Method 1: NewService (eager)")
-	emailSvc := lokstra_registry.NewService[*EmailService](
+	emailSvc := old_registry.NewService[*EmailService](
 		"email",
 		"email",
 		map[string]any{
@@ -194,11 +194,11 @@ func main() {
 
 	// Way 2: RegisterLazyService - Lazy creation (only when accessed)
 	fmt.Println("\n   Method 2: RegisterLazyService (lazy)")
-	lokstra_registry.RegisterLazyService("db", "db", map[string]any{
+	old_registry.RegisterLazyService("db", "db", map[string]any{
 		"name": "postgres-main",
 	})
-	lokstra_registry.RegisterLazyService("user", "user", map[string]any{})
-	lokstra_registry.RegisterLazyService("logger", "logger", map[string]any{
+	old_registry.RegisterLazyService("user", "user", map[string]any{})
+	old_registry.RegisterLazyService("logger", "logger", map[string]any{
 		"prefix": "DEMO",
 	})
 

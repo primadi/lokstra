@@ -203,33 +203,33 @@ userProxy := proxy.NewService("users", url, restConvention, routeOverrides)
 ```go
 // Monolith - register local implementation
 func registerMonolithServices() {
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
-    lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
+    old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+    old_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+    old_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
     
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
-    lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
+    old_registry.RegisterLazyService("db", "dbFactory", nil)
+    old_registry.RegisterLazyService("users", "usersFactory", nil)
+    old_registry.RegisterLazyService("orders", "ordersFactory", nil)
 }
 
 // User-service - register local implementation
 func registerUserServices() {
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+    old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+    old_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
     
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
+    old_registry.RegisterLazyService("db", "dbFactory", nil)
+    old_registry.RegisterLazyService("users", "usersFactory", nil)
 }
 
 // Order-service - register remote user service
 func registerOrderServices() {
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
-    lokstra_registry.RegisterServiceTypeRemote("usersFactory", appservice.NewUserServiceRemote)
+    old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+    old_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
+    old_registry.RegisterServiceTypeRemote("usersFactory", appservice.NewUserServiceRemote)
     
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
+    old_registry.RegisterLazyService("db", "dbFactory", nil)
+    old_registry.RegisterLazyService("orders", "ordersFactory", nil)
+    old_registry.RegisterLazyService("users", "usersFactory", nil)
 }
 ```
 

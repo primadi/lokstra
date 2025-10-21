@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra/core/config"
-	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/middleware/cors"
 	"github.com/primadi/lokstra/middleware/recovery"
 	"github.com/primadi/lokstra/middleware/request_logger"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // This example demonstrates YAML configuration with Lokstra.
@@ -16,11 +16,11 @@ import (
 // 1. Register routers in code (not in YAML)
 // 2. Register middleware factories in code
 // 3. Load config from YAML (configs, services, middlewares, servers)
-// 4. lokstra_registry wires everything automatically
+// 4. old_registry wires everything automatically
 //
 // YAML Config Structure:
-//   configs     → General key-value (lokstra_registry.GetConfig)
-//   services    → Lazy services (lokstra_registry.GetService)
+//   configs     → General key-value (old_registry.GetConfig)
+//   services    → Lazy services (old_registry.GetService)
 //   middlewares → Named middleware (router.Use("name") or in route options)
 //   servers     → Server definitions with apps and routers
 //
@@ -36,9 +36,9 @@ func main() {
 	// Middleware factories must be registered BEFORE loading config
 	// The YAML config references these by 'type' name
 
-	lokstra_registry.RegisterMiddlewareFactory("cors", cors.MiddlewareFactory)
-	lokstra_registry.RegisterMiddlewareFactory("request_logger", request_logger.MiddlewareFactory)
-	lokstra_registry.RegisterMiddlewareFactory("recovery", recovery.MiddlewareFactory)
+	old_registry.RegisterMiddlewareFactory("cors", cors.MiddlewareFactory)
+	old_registry.RegisterMiddlewareFactory("request_logger", request_logger.MiddlewareFactory)
+	old_registry.RegisterMiddlewareFactory("recovery", recovery.MiddlewareFactory)
 
 	fmt.Println("✅ Middleware factories registered: cors, request_logger, recovery")
 
@@ -77,18 +77,18 @@ func main() {
 	// - Middlewares (accessible via CreateMiddleware or router.Use)
 	// - Servers (with apps and routers)
 
-	lokstra_registry.RegisterConfig(cfg, "")
+	old_registry.RegisterConfig(cfg, "")
 
-	fmt.Println("✅ Configuration registered with lokstra_registry")
+	fmt.Println("✅ Configuration registered with old_registry")
 
 	// ========================================
 	// STEP 5: Access General Configs
 	// ========================================
 	// General configs from 'configs:' section can be accessed
 
-	appName := lokstra_registry.GetConfig("app-name", "unknown")
-	appVersion := lokstra_registry.GetConfig("app-version", "0.0.0")
-	environment := lokstra_registry.GetConfig("environment", "production")
+	appName := old_registry.GetConfig("app-name", "unknown")
+	appVersion := old_registry.GetConfig("app-version", "0.0.0")
+	environment := old_registry.GetConfig("environment", "production")
 
 	fmt.Println("\n� General Configs:")
 	fmt.Printf("   App Name: %s\n", appName)
@@ -102,16 +102,16 @@ func main() {
 	// For this example, we use "dev-server" from config.yaml
 
 	serverName := "dev-server"
-	lokstra_registry.SetCurrentServerName(serverName)
+	old_registry.SetCurrentServerName(serverName)
 
 	fmt.Println("\n🚀 Starting Server...")
 	fmt.Println("===================================")
 
 	// Print server start info (endpoints, middleware, etc.)
-	lokstra_registry.PrintServerStartInfo()
+	old_registry.PrintServerStartInfo()
 
 	// Start the server (blocks until shutdown)
-	if err := lokstra_registry.StartServer(); err != nil {
+	if err := old_registry.StartServer(); err != nil {
 		fmt.Printf("❌ Server error: %v\n", err)
 	}
 }

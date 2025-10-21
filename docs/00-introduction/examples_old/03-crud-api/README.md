@@ -245,8 +245,8 @@ func (s *UserService) GetAll(p *GetAllParams) ([]*User, error) {
 
 **Step 1: Register Factory** (blueprint)
 ```go
-lokstra_registry.RegisterServiceFactory("dbFactory", NewDatabase)
-lokstra_registry.RegisterServiceFactory("usersFactory", func() any {
+old_registry.RegisterServiceFactory("dbFactory", NewDatabase)
+old_registry.RegisterServiceFactory("usersFactory", func() any {
     return &UserService{
         DB: service.LazyLoad[*Database]("db"),
     }
@@ -255,8 +255,8 @@ lokstra_registry.RegisterServiceFactory("usersFactory", func() any {
 
 **Step 2: Register Lazy Service** (uses factory)
 ```go
-lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
+old_registry.RegisterLazyService("db", "dbFactory", nil)
+old_registry.RegisterLazyService("users", "usersFactory", nil)
 ```
 
 **Key Concepts**:
@@ -270,7 +270,7 @@ lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
 ```go
 func handler(ctx *request.Context) error {
     // ⚠️ Registry lookup EVERY request!
-    userService := lokstra_registry.GetService[*UserService]("users")
+    userService := old_registry.GetService[*UserService]("users")
     
     users, err := userService.GetAll()
     // ...
@@ -284,7 +284,7 @@ func handler(ctx *request.Context) error {
 ```go
 func handler(ctx *request.Context) error {
     // ⚠️ Registry lookup EVERY request, but panics if not found
-    userService := lokstra_registry.MustGetService[*UserService]("users")
+    userService := old_registry.MustGetService[*UserService]("users")
     
     users, err := userService.GetAll()
     // ...

@@ -5,21 +5,37 @@ package schema
 type DeployConfig struct {
 	Configs                  map[string]any                  `yaml:"configs" json:"configs"`
 	ServiceDefinitions       map[string]*ServiceDef          `yaml:"service-definitions" json:"service-definitions"`
-	Routers                  map[string]*RouterDefSimple     `yaml:"routers" json:"routers"`
+	Routers                  map[string]*RouterDef           `yaml:"routers" json:"routers"`
+	RouterOverrides          map[string]*RouterOverrideDef   `yaml:"router-overrides,omitempty" json:"router-overrides,omitempty"`
 	RemoteServiceDefinitions map[string]*RemoteServiceSimple `yaml:"remote-service-definitions" json:"remote-service-definitions"`
 	Deployments              map[string]*DeploymentDefMap    `yaml:"deployments" json:"deployments"`
 }
 
-// RouterDefSimple is a simplified router definition for YAML
-type RouterDefSimple struct {
-	Service   string                  `yaml:"service" json:"service"`
-	Overrides map[string]*RouteConfig `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+// RouterDef defines a router auto-generated from a service
+type RouterDef struct {
+	Service        string `yaml:"service" json:"service"`                                     // Service name to generate router from
+	Convention     string `yaml:"convention" json:"convention"`                               // Convention type (rest, rpc, graphql)
+	Resource       string `yaml:"resource,omitempty" json:"resource,omitempty"`               // Singular form, e.g., "user"
+	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Plural form, e.g., "users"
+	Overrides      string `yaml:"overrides,omitempty" json:"overrides,omitempty"`             // Reference to RouterOverrideDef name
 }
 
-// RouteConfig defines route-specific configuration
-type RouteConfig struct {
-	Hide       bool     `yaml:"hide,omitempty" json:"hide,omitempty"`
-	Middleware []string `yaml:"middleware,omitempty" json:"middleware,omitempty"`
+// RouterOverrideDef defines route overrides for a service router
+// This is the YAML representation of autogen.RouteOverride
+type RouterOverrideDef struct {
+	PathPrefix  string     `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"` // e.g., "/api/v1"
+	Middlewares []string   `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Router-level middleware names
+	Hidden      []string   `yaml:"hidden,omitempty" json:"hidden,omitempty"`           // Methods to hide
+	Custom      []RouteDef `yaml:"custom,omitempty" json:"custom,omitempty"`           // Custom route definitions (array in YAML, converted to map at runtime)
+}
+
+// RouteDef defines a single route override
+// This is the YAML representation of autogen.Route
+type RouteDef struct {
+	Name        string   `yaml:"name" json:"name"`                                   // Method name
+	Method      string   `yaml:"method,omitempty" json:"method,omitempty"`           // HTTP method override
+	Path        string   `yaml:"path,omitempty" json:"path,omitempty"`               // Path override
+	Middlewares []string `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Route-level middleware names
 }
 
 // DeploymentDefMap is a deployment using map structure
@@ -30,16 +46,18 @@ type DeploymentDefMap struct {
 
 // ServerDefMap is a server using map structure
 type ServerDefMap struct {
-	BaseURL string       `yaml:"base-url" json:"base-url"`
-	Apps    []*AppDefMap `yaml:"apps" json:"apps"`
+	BaseURL        string       `yaml:"base-url" json:"base-url"`
+	Services       []string     `yaml:"required-services,omitempty" json:"required-services,omitempty"`               // Server-level services (shared across apps)
+	RemoteServices []string     `yaml:"required-remote-services,omitempty" json:"required-remote-services,omitempty"` // Server-level remote services (shared)
+	Apps           []*AppDefMap `yaml:"apps" json:"apps"`
 }
 
 // AppDefMap is an app using map structure
 type AppDefMap struct {
-	Addr           string   `yaml:"addr" json:"addr"` // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
-	Services       []string `yaml:"required-services,omitempty" json:"required-services,omitempty"`
-	Routers        []string `yaml:"routers,omitempty" json:"routers,omitempty"`
-	RemoteServices []string `yaml:"required-remote-services,omitempty" json:"required-remote-services,omitempty"`
+	Addr           string   `yaml:"addr" json:"addr"`                                                             // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
+	Services       []string `yaml:"required-services,omitempty" json:"required-services,omitempty"`               // App-level services (app-specific)
+	Routers        []string `yaml:"routers,omitempty" json:"routers,omitempty"`                                   // Routers to include in this app (auto-published for discovery)
+	RemoteServices []string `yaml:"required-remote-services,omitempty" json:"required-remote-services,omitempty"` // App-level remote services (app-specific)
 }
 
 // RemoteServiceSimple defines a remote service (simple YAML structure)
@@ -47,20 +65,6 @@ type RemoteServiceSimple struct {
 	URL            string `yaml:"url" json:"url"`
 	Resource       string `yaml:"resource" json:"resource"`
 	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"`
-}
-
-// DeploymentConfig is the root YAML configuration
-type DeploymentConfig struct {
-	// Global definitions (available to all deployments)
-	Configs         []ConfigDef         `yaml:"configs"`
-	Middlewares     []MiddlewareDef     `yaml:"middlewares"`
-	Services        []ServiceDef        `yaml:"services"`
-	Routers         []RouterDef         `yaml:"routers"`
-	RouterOverrides []RouterOverrideDef `yaml:"router-overrides"`
-	ServiceRouters  []ServiceRouterDef  `yaml:"service-routers"`
-
-	// Deployments (select from global definitions)
-	Deployments []DeploymentDef `yaml:"deployments"`
 }
 
 // ConfigDef defines a configuration value
@@ -82,82 +86,4 @@ type ServiceDef struct {
 	Type      string         `yaml:"type"`       // Factory type
 	DependsOn []string       `yaml:"depends-on"` // Dependencies (can be "paramName:serviceName")
 	Config    map[string]any `yaml:"config"`     // Optional config
-}
-
-// RouterDef defines a manual router (created in code)
-type RouterDef struct {
-	Name string `yaml:"name"`
-	// Manual routers are just referenced by name
-	// Actual router is created in code via router.New()
-}
-
-// RouterOverrideDef defines route overrides for a service router
-type RouterOverrideDef struct {
-	Name        string     `yaml:"name"`
-	PathPrefix  string     `yaml:"path-prefix"` // Optional path prefix
-	Middlewares []string   `yaml:"middlewares"` // Router-level middlewares
-	Hidden      []string   `yaml:"hidden"`      // Methods to hide
-	Routes      []RouteDef `yaml:"routes"`      // Individual route overrides
-}
-
-// RouteDef defines a single route override
-type RouteDef struct {
-	Name        string   `yaml:"name"`        // Method name
-	Path        string   `yaml:"path"`        // Optional path override
-	Method      string   `yaml:"method"`      // Optional HTTP method override
-	Middlewares []string `yaml:"middlewares"` // Route-level middlewares
-	Enabled     *bool    `yaml:"enabled"`     // nil = use default, true/false = override
-}
-
-// ServiceRouterDef defines a router auto-generated from a service
-type ServiceRouterDef struct {
-	Name       string `yaml:"name"`       // Router name
-	Service    string `yaml:"service"`    // Service name to generate router from
-	Convention string `yaml:"convention"` // Convention type (rest, rpc, custom)
-	Overrides  string `yaml:"overrides"`  // Reference to RouterOverrideDef name
-}
-
-// DeploymentDef defines a deployment configuration
-type DeploymentDef struct {
-	Name            string         `yaml:"name"`
-	ConfigOverrides map[string]any `yaml:"config-overrides"` // Override global configs
-	Servers         []ServerDef    `yaml:"servers"`
-}
-
-// ServerDef defines a server in a deployment
-type ServerDef struct {
-	Name    string   `yaml:"name"`
-	BaseURL string   `yaml:"base-url"`
-	Apps    []AppDef `yaml:"apps"`
-}
-
-// AppDef defines an application running on a server
-type AppDef struct {
-	Addr           string             `yaml:"addr"`                     // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
-	Services       []string           `yaml:"required-services"`        // Service names to instantiate
-	Routers        []string           `yaml:"routers"`                  // Manual router names
-	ServiceRouters []ServiceRouterRef `yaml:"service-routers"`          // Service routers (can be name or config)
-	RemoteServices []RemoteServiceDef `yaml:"required-remote-services"` // Remote service proxies
-}
-
-// ServiceRouterRef can be either:
-// - Just a string name (reference to global service-router)
-// - Inline configuration
-type ServiceRouterRef struct {
-	// If Name is set, this is a reference to a global service-router
-	Name string `yaml:"name"`
-
-	// If Service is set, this is an inline service-router configuration
-	Service    string `yaml:"service"`
-	Convention string `yaml:"convention"`
-	Overrides  string `yaml:"overrides"`
-}
-
-// RemoteServiceDef defines a remote service proxy
-type RemoteServiceDef struct {
-	Name          string `yaml:"name"`           // Service name
-	URL           string `yaml:"url"`            // Remote service URL
-	ServiceRouter string `yaml:"service-router"` // Optional: reference to service-router for convention
-	Convention    string `yaml:"convention"`     // Optional: inline convention
-	Overrides     string `yaml:"overrides"`      // Optional: router overrides
 }

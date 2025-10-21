@@ -17,8 +17,8 @@ func UserServiceFactory(cfg map[string]any) any {
     var cache *CacheService
     
     // BAD! This runs when service is REGISTERED, not when it's USED
-    db = lokstra_registry.GetService("db-service", db)
-    cache = lokstra_registry.GetService("cache-service", cache)
+    db = old_registry.GetService("db-service", db)
+    cache = old_registry.GetService("cache-service", cache)
     
     return NewUserService(db, cache)
 }
@@ -60,12 +60,12 @@ type UserService struct {
 // Lazy getter - only calls GetService when needed
 func (s *UserService) getDB() *DBService {
     // GetService pattern: cache variable is updated
-    s.dbCache = lokstra_registry.GetService(s.dbServiceName, s.dbCache)
+    s.dbCache = old_registry.GetService(s.dbServiceName, s.dbCache)
     return s.dbCache
 }
 
 func (s *UserService) getCache() *CacheService {
-    s.cacheCache = lokstra_registry.GetService(s.cacheServiceName, s.cacheCache)
+    s.cacheCache = old_registry.GetService(s.cacheServiceName, s.cacheCache)
     return s.cacheCache
 }
 ```
@@ -297,7 +297,7 @@ Layer 2: Domain (depend on Layer 1)
 2. **Create lazy getter methods with cache variables**
    ```go
    func (s *Service) getDB() *DBService {
-       s.dbCache = lokstra_registry.GetService(s.dbServiceName, s.dbCache)
+       s.dbCache = old_registry.GetService(s.dbServiceName, s.dbCache)
        return s.dbCache
    }
    ```
@@ -394,7 +394,7 @@ func UserServiceFactory(cfg map[string]any) any {
 }
 
 // Just register different service names in test:
-lokstra_registry.RegisterServiceFactory("mock-db", func(cfg) any {
+old_registry.RegisterServiceFactory("mock-db", func(cfg) any {
     return &MockDB{}
 })
 ```

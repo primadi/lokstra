@@ -6,7 +6,7 @@ import (
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 type CounterService struct {
@@ -43,8 +43,8 @@ func createAdminRouter() lokstra.Router {
 
 func main() {
 	// Register the service factory and lazy service
-	lokstra_registry.RegisterServiceType("counter", CounterFactory)
-	lokstra_registry.RegisterLazyService("my-counter", "counter", map[string]any{"seed": 100})
+	old_registry.RegisterServiceType("counter", CounterFactory)
+	old_registry.RegisterLazyService("my-counter", "counter", map[string]any{"seed": 100})
 
 	// Create app with main router
 	mainRouter := createAdminRouter()

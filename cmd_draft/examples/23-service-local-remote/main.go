@@ -11,7 +11,7 @@ import (
 	"github.com/primadi/lokstra/core/route"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 var local_service = service.LazyLoad[user_service.UserService]("user-service")
@@ -28,13 +28,13 @@ func main() {
 	fmt.Println("📋 Step 1: Registering service factories...")
 
 	// Register LOCAL factory - creates real implementation
-	lokstra_registry.RegisterServiceType(
+	old_registry.RegisterServiceType(
 		"user",
 		user_service.CreateLocalUserService,
 	)
 
 	// Register REMOTE factory - creates HTTP client
-	lokstra_registry.RegisterServiceTypeRemote(
+	old_registry.RegisterServiceTypeRemote(
 		"user",
 		user_service.CreateRemoteUserService,
 	)
@@ -48,7 +48,7 @@ func main() {
 	// ========================================================================
 	fmt.Println("📋 Step 2: Registering lazy service...")
 
-	lokstra_registry.RegisterLazyService("user-service", "user", map[string]any{
+	old_registry.RegisterLazyService("user-service", "user", map[string]any{
 		"router": "UserService", // Router name for remote calls
 	})
 
@@ -74,7 +74,7 @@ func main() {
 	// ========================================================================
 	fmt.Println("📋 Step 4: Registering router...")
 
-	lokstra_registry.RegisterRouter("UserService", userRouter)
+	old_registry.RegisterRouter("UserService", userRouter)
 
 	fmt.Println("   ✅ Router registered")
 	fmt.Println()
@@ -86,10 +86,10 @@ func main() {
 	fmt.Println()
 
 	// Set current server name
-	lokstra_registry.SetCurrentServerName("server-a")
+	old_registry.SetCurrentServerName("server-a")
 
 	// Register ClientRouter for SAME server (will be LOCAL)
-	lokstra_registry.RegisterClientRouter(
+	old_registry.RegisterClientRouter(
 		"UserService",           // routerName
 		"server-a",              // serverName (SAME as current)
 		"http://localhost:3001", // baseURL
@@ -123,7 +123,7 @@ func main() {
 	// (In real app, this happens automatically per request)
 
 	// Register ClientRouter for DIFFERENT server (will be REMOTE)
-	lokstra_registry.RegisterClientRouter(
+	old_registry.RegisterClientRouter(
 		"UserService",              // routerName
 		"server-b",                 // serverName (DIFFERENT from current)
 		"http://user-service:3002", // baseURL

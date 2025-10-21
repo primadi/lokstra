@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/primadi/lokstra/core/config"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 		return
 	}
 
-	lokstra_registry.RegisterConfig(cfg, "")
+	old_registry.RegisterConfig(cfg, "")
 
 	// Print deployment info
 	printDeploymentInfo(deploymentMode)
@@ -41,8 +41,8 @@ func main() {
 	// Start server
 	fmt.Println("\n🌐 Starting Server...")
 	fmt.Println("=====================================")
-	lokstra_registry.PrintServerStartInfo()
-	if err := lokstra_registry.StartServer(); err != nil {
+	old_registry.PrintServerStartInfo()
+	if err := old_registry.StartServer(); err != nil {
 		fmt.Printf("❌ Server error: %v\n", err)
 	}
 }

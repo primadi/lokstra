@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/primadi/lokstra/docs/00-introduction/examples_old/04-multi-deployment/appservice"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // ========================================
@@ -26,35 +26,35 @@ import (
 
 func registerMonolithServices() {
 	// register all service type
-	lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-	lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
-	lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
+	old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+	old_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+	old_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
 
 	// register lazy service for all services
-	lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-	lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
-	lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
+	old_registry.RegisterLazyService("db", "dbFactory", nil)
+	old_registry.RegisterLazyService("users", "usersFactory", nil)
+	old_registry.RegisterLazyService("orders", "ordersFactory", nil)
 }
 
 func registerUserServices() {
 	// register only user-related service type
-	lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-	lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+	old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+	old_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
 
 	// register lazy service for user and its dependencies
-	lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-	lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
+	old_registry.RegisterLazyService("db", "dbFactory", nil)
+	old_registry.RegisterLazyService("users", "usersFactory", nil)
 }
 
 func registerOrderServices() {
 	// register only order-related service type
-	lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-	lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
+	old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+	old_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
 	// register remote user service type
-	lokstra_registry.RegisterServiceTypeRemote("usersFactory",
+	old_registry.RegisterServiceTypeRemote("usersFactory",
 		appservice.NewUserServiceRemote)
 
-	lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-	lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
-	lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
+	old_registry.RegisterLazyService("db", "dbFactory", nil)
+	old_registry.RegisterLazyService("orders", "ordersFactory", nil)
+	old_registry.RegisterLazyService("users", "usersFactory", nil)
 }

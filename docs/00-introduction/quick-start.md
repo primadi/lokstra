@@ -525,7 +525,7 @@ In just 5 minutes, you've learned:
 - [Configuration](../01-essentials/04-configuration/README.md) - YAML configs
 
 **Real Examples**:
-👉 [Complete Examples](../05-examples/README.md) - Production-ready apps
+👉 [Complete Examples](./examples/README.md) - Production-ready apps
 
 ---
 
@@ -606,7 +606,7 @@ Check supported forms in [Router Guide](../01-essentials/01-router/README.md)
 ## 📚 Resources
 
 - **Documentation**: [Full Docs](../README.md)
-- **Examples**: [Code Examples](../05-examples/README.md)
+- **Examples**: [Code Examples](./examples/README.md)
 - **API Reference**: [API Docs](../03-api-reference/README.md)
 - **GitHub**: [Report Issues](https://github.com/primadi/lokstra/issues)
 

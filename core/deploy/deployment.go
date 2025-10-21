@@ -38,13 +38,16 @@ type App struct {
 	// Service instances (lazy-loaded)
 	services map[string]*serviceInstance
 
+	// Remote service names (services that should use remote factory)
+	remoteServiceNames map[string]bool
+
 	// Manual routers
 	routers map[string]any // TODO: Use actual router type
 
 	// Service routers (auto-generated)
 	serviceRouters map[string]*serviceRouter
 
-	// Remote services (proxies)
+	// Remote services (proxies) - deprecated, use remoteServiceNames instead
 	remoteServices map[string]*remoteService
 }
 
@@ -54,6 +57,10 @@ type serviceInstance struct {
 	serviceDef *schema.ServiceDef
 	instance   any // Cached instance
 	resolved   bool
+}
+
+func (s *serviceInstance) Name() string {
+	return s.name
 }
 
 // serviceRouter represents an auto-generated router from a service
@@ -71,7 +78,6 @@ type remoteService struct {
 	url        string
 	convention string
 	overrides  string
-	proxy      any // TODO: Use actual proxy type
 }
 
 // ===== DEPLOYMENT CREATION =====
@@ -153,12 +159,13 @@ func (d *Deployment) GetServer(serverName string) (*Server, bool) {
 // NewApp creates a new app on this server
 func (s *Server) NewApp(addr string) *App {
 	app := &App{
-		addr:           addr,
-		server:         s,
-		services:       make(map[string]*serviceInstance),
-		routers:        make(map[string]any),
-		serviceRouters: make(map[string]*serviceRouter),
-		remoteServices: make(map[string]*remoteService),
+		addr:               addr,
+		server:             s,
+		services:           make(map[string]*serviceInstance),
+		remoteServiceNames: make(map[string]bool),
+		routers:            make(map[string]any),
+		serviceRouters:     make(map[string]*serviceRouter),
+		remoteServices:     make(map[string]*remoteService),
 	}
 
 	s.apps = append(s.apps, app)
@@ -171,7 +178,7 @@ func (s *Server) NewApp(addr string) *App {
 // Uses service definition from global registry
 func (a *App) AddService(serviceName string) *App {
 	// Get service definition from registry
-	serviceDef := a.server.deployment.registry.GetService(serviceName)
+	serviceDef := a.server.deployment.registry.GetServiceDef(serviceName)
 	if serviceDef == nil {
 		panic(fmt.Sprintf("service %s not defined in global registry", serviceName))
 	}
@@ -195,6 +202,40 @@ func (a *App) AddServices(serviceNames ...string) *App {
 	for _, name := range serviceNames {
 		a.AddService(name)
 	}
+	return a
+}
+
+// AddRemoteServiceByName marks a service as remote (will use remote factory)
+// This allows the same service definition to be used locally or remotely
+func (a *App) AddRemoteServiceByName(serviceName, baseURL string) *App {
+	// Mark service as remote
+	a.remoteServiceNames[serviceName] = true
+
+	// Add service with remote config
+	serviceDef := a.server.deployment.registry.GetServiceDef(serviceName)
+	if serviceDef == nil {
+		panic(fmt.Sprintf("service %s not defined in global registry", serviceName))
+	}
+
+	if _, exists := a.services[serviceName]; exists {
+		panic(fmt.Sprintf("service %s already added to app", serviceName))
+	}
+
+	// Create service instance with base-url config for remote factory
+	a.services[serviceName] = &serviceInstance{
+		name: serviceName,
+		serviceDef: &schema.ServiceDef{
+			Name: serviceName,
+			Type: serviceDef.Type,
+			Config: map[string]any{
+				"base-url": baseURL,
+			},
+			DependsOn: serviceDef.DependsOn, // Keep dependencies
+		},
+		instance: nil,
+		resolved: false,
+	}
+
 	return a
 }
 
@@ -227,10 +268,17 @@ func (a *App) instantiateService(svcInst *serviceInstance) (any, error) {
 	serviceDef := svcInst.serviceDef
 	registry := a.server.deployment.registry
 
+	// Determine if this service should use remote factory
+	isLocal := !a.remoteServiceNames[svcInst.name]
+
 	// Get factory
-	factory := registry.GetServiceFactory(serviceDef.Type, true) // TODO: Determine local vs remote
+	factory := registry.GetServiceFactory(serviceDef.Type, isLocal)
 	if factory == nil {
-		return nil, fmt.Errorf("service factory %s not registered", serviceDef.Type)
+		factoryType := "local"
+		if !isLocal {
+			factoryType = "remote"
+		}
+		return nil, fmt.Errorf("service factory %s (%s) not registered", serviceDef.Type, factoryType)
 	}
 
 	// Build lazy dependencies
@@ -292,23 +340,28 @@ func (a *App) AddRouter(routerName string, router any) *App {
 }
 
 // AddServiceRouter adds a service router (auto-generated from service)
-// Uses service router definition from global registry
-func (a *App) AddServiceRouter(serviceRouterName string) *App {
-	// Get service router definition from registry
-	srDef := a.server.deployment.registry.GetServiceRouter(serviceRouterName)
-	if srDef == nil {
-		panic(fmt.Sprintf("service router %s not defined in global registry", serviceRouterName))
+// Uses router definition from global registry
+func (a *App) AddServiceRouter(routerName string) *App {
+	// Get router definition from registry
+	routerDef := a.server.deployment.registry.GetRouterDef(routerName)
+	if routerDef == nil {
+		panic(fmt.Sprintf("router %s not defined in global registry", routerName))
 	}
 
-	if _, exists := a.serviceRouters[serviceRouterName]; exists {
-		panic(fmt.Sprintf("service router %s already added to app", serviceRouterName))
+	// Verify it's a service router (has Service field)
+	if routerDef.Service == "" {
+		panic(fmt.Sprintf("router %s is not a service router (missing service field)", routerName))
 	}
 
-	a.serviceRouters[serviceRouterName] = &serviceRouter{
-		name:       serviceRouterName,
-		service:    srDef.Service,
-		convention: srDef.Convention,
-		overrides:  srDef.Overrides,
+	if _, exists := a.serviceRouters[routerName]; exists {
+		panic(fmt.Sprintf("service router %s already added to app", routerName))
+	}
+
+	a.serviceRouters[routerName] = &serviceRouter{
+		name:       routerName,
+		service:    routerDef.Service,
+		convention: routerDef.Convention,
+		overrides:  routerDef.Overrides,
 		router:     nil, // TODO: Create router
 	}
 

@@ -116,7 +116,7 @@ func TestGlobalRegistry_ServiceDefinition(t *testing.T) {
 	})
 
 	// Retrieve service definition
-	svc := reg.GetService("user-service")
+	svc := reg.GetServiceDef("user-service")
 	if svc == nil {
 		t.Fatal("user-service not found")
 	}
@@ -138,21 +138,19 @@ func TestGlobalRegistry_RouterOverride(t *testing.T) {
 	reg := NewGlobalRegistry()
 
 	// Define router override
-	enabledFalse := false
-	reg.DefineRouterOverride(&schema.RouterOverrideDef{
-		Name:        "user-public-api",
+	reg.DefineRouterOverride("user-public-api", &schema.RouterOverrideDef{
 		PathPrefix:  "/api/v1",
 		Middlewares: []string{"cors", "rate-limit"},
 		Hidden:      []string{"Delete", "BulkDelete"},
-		Routes: []schema.RouteDef{
+		Custom: []schema.RouteDef{
 			{
 				Name:        "Create",
 				Path:        "/register",
 				Middlewares: []string{"recaptcha"},
 			},
 			{
-				Name:    "AdminReset",
-				Enabled: &enabledFalse,
+				Name: "AdminReset",
+				Path: "/admin/reset",
 			},
 		},
 	})
@@ -171,8 +169,8 @@ func TestGlobalRegistry_RouterOverride(t *testing.T) {
 		t.Errorf("expected 2 hidden methods, got %d", len(override.Hidden))
 	}
 
-	if len(override.Routes) != 2 {
-		t.Errorf("expected 2 route overrides, got %d", len(override.Routes))
+	if len(override.Custom) != 2 {
+		t.Errorf("expected 2 custom route overrides, got %d", len(override.Custom))
 	}
 }
 

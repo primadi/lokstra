@@ -5,32 +5,32 @@ import (
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 func main() {
 	// Register services
-	// lokstra_registry.RegisterServiceFactory("db", func() any {
+	// old_registry.RegisterServiceFactory("db", func() any {
 	// 	return NewDatabase()
 	// })
 	// register service factory: dbFactory
-	lokstra_registry.RegisterServiceType("dbFactory", NewDatabase)
+	old_registry.RegisterServiceType("dbFactory", NewDatabase)
 	// regiuster lazy service: db using dbFactory
-	lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
+	old_registry.RegisterLazyService("db", "dbFactory", nil)
 
-	// lokstra_registry.RegisterServiceFactory("users", func() any {
+	// old_registry.RegisterServiceFactory("users", func() any {
 	// 	return &UserService{
 	// 		DB: service.LazyLoad[*Database]("db"),
 	// 	}
 	// })
 	// register service factory: usersFactory
-	lokstra_registry.RegisterServiceType("usersFactory", func() any {
+	old_registry.RegisterServiceType("usersFactory", func() any {
 		return &UserService{
 			DB: service.LazyLoad[*Database]("db"),
 		}
 	})
 	// register lazy service: users using usersFactory
-	lokstra_registry.RegisterLazyService("users", "usersFactory", nil)
+	old_registry.RegisterLazyService("users", "usersFactory", nil)
 
 	// Create router
 	r := lokstra.NewRouter("api")

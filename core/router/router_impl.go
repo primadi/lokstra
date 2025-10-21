@@ -91,7 +91,7 @@ func (r *routerImpl) Build() {
 			rt.FullPath = fullPath
 			if rt.Name == "" {
 				pref := ""
-				if rt.FullPath != "/" && strings.HasSuffix(rt.FullPath, "/") {
+				if strings.HasSuffix(rt.FullPath, "/") {
 					pref = "PREF:"
 				}
 				nm := strings.ReplaceAll(strings.Trim(fullPath, "/"), "/", "_")
@@ -125,9 +125,6 @@ func (r *routerImpl) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (r *routerImpl) handle(method string, path string, h any, middleware []any) Router {
 	r.assertNotBuilt()
 
-	if path == "" {
-		path = "/"
-	}
 	rt := &route.Route{
 		Method: method,
 		Path:   path,

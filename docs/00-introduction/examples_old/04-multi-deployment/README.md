@@ -277,14 +277,14 @@ Handlers don't care about deployment mode - they just call services!
 ```go
 func registerMonolithServices() {
     // Register service factories
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
-    lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
+    old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+    old_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+    old_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
 
     // Register lazy services
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceImpl
-    lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
+    old_registry.RegisterLazyService("db", "dbFactory", nil)
+    old_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceImpl
+    old_registry.RegisterLazyService("orders", "ordersFactory", nil)
 }
 ```
 
@@ -292,11 +292,11 @@ func registerMonolithServices() {
 ```go
 func registerUserServices() {
     // Only user-related services
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+    old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+    old_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
 
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceImpl
+    old_registry.RegisterLazyService("db", "dbFactory", nil)
+    old_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceImpl
     // No orders service!
 }
 ```
@@ -304,16 +304,16 @@ func registerUserServices() {
 **Order-Service Server**:
 ```go
 func registerOrderServices() {
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
+    old_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
+    old_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
     
     // Remote user service - makes HTTP calls!
-    lokstra_registry.RegisterServiceTypeRemote("usersFactory",
+    old_registry.RegisterServiceTypeRemote("usersFactory",
         appservice.NewUserServiceRemote)  // ← UserServiceRemote!
 
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceRemote!
+    old_registry.RegisterLazyService("db", "dbFactory", nil)
+    old_registry.RegisterLazyService("orders", "ordersFactory", nil)
+    old_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceRemote!
 }
 ```
 
@@ -607,7 +607,7 @@ func getUserHandler(ctx *request.Context) error {
 Special registration for remote services:
 
 ```go
-lokstra_registry.RegisterServiceTypeRemote("usersFactory",
+old_registry.RegisterServiceTypeRemote("usersFactory",
     appservice.NewUserServiceRemote)
 ```
 

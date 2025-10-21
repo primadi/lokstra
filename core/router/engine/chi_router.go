@@ -147,7 +147,14 @@ func removeDuplicates(slice []string) []string {
 func parseMethodPath(pattern string) (method, path string) {
 	parts := strings.SplitN(pattern, " ", 2)
 	if len(parts) == 2 {
-		return parts[0], parts[1]
+		switch parts[1] {
+		case "":
+			return parts[0], "/"
+		case "/":
+			return parts[0], "/*"
+		default:
+			return parts[0], parts[1]
+		}
 	}
 	return "ANY", pattern
 }

@@ -42,7 +42,7 @@ func EmailServiceFactory(cfg map[string]any) any {
 
 **Register it:**
 ```go
-lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
+old_registry.RegisterServiceFactory("email", EmailServiceFactory)
 ```
 
 ### 2. Lazy Service
@@ -50,7 +50,7 @@ lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
 **Configuration** stored in registry, service created **only when accessed**:
 
 ```go
-lokstra_registry.RegisterLazyService("email-service", "email", map[string]any{
+old_registry.RegisterLazyService("email-service", "email", map[string]any{
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 587,
     "from":      "demo@lokstra.dev",
@@ -73,7 +73,7 @@ type ServiceContainer struct {
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
     // GetService creates on first call, returns cache on subsequent calls
-    sc.emailCache = lokstra_registry.GetService("email-service", sc.emailCache)
+    sc.emailCache = old_registry.GetService("email-service", sc.emailCache)
     return sc.emailCache
 }
 
@@ -94,8 +94,8 @@ r.POST("/api/email/send", func(c *lokstra.RequestContext) error {
 Register routers with **unique names** for config-driven deployment:
 
 ```go
-lokstra_registry.RegisterRouter("email-api", createEmailRouter())
-lokstra_registry.RegisterRouter("counter-api", createCounterRouter())
+old_registry.RegisterRouter("email-api", createEmailRouter())
+old_registry.RegisterRouter("counter-api", createCounterRouter())
 ```
 
 Later in `config.yaml`, reference by name:
@@ -160,24 +160,24 @@ apps:
 ```go
 func setupRegistry() {
     // 1. Register factories (templates)
-    lokstra_registry.RegisterServiceFactory("email", EmailServiceFactory)
-    lokstra_registry.RegisterServiceFactory("counter", CounterServiceFactory)
+    old_registry.RegisterServiceFactory("email", EmailServiceFactory)
+    old_registry.RegisterServiceFactory("counter", CounterServiceFactory)
     
     // 2. Register lazy services (configs)
-    lokstra_registry.RegisterLazyService("email-service", "email", map[string]any{
+    old_registry.RegisterLazyService("email-service", "email", map[string]any{
         "smtp_host": "smtp.gmail.com",
         "smtp_port": 587,
         "from":      "demo@lokstra.dev",
     })
     
-    lokstra_registry.RegisterLazyService("counter-service", "counter", map[string]any{
+    old_registry.RegisterLazyService("counter-service", "counter", map[string]any{
         "name": "demo-counter",
         "seed": 100,
     })
     
     // 3. Register routers
-    lokstra_registry.RegisterRouter("email-api", createEmailRouter())
-    lokstra_registry.RegisterRouter("counter-api", createCounterRouter())
+    old_registry.RegisterRouter("email-api", createEmailRouter())
+    old_registry.RegisterRouter("counter-api", createCounterRouter())
 }
 ```
 
@@ -190,12 +190,12 @@ type ServiceContainer struct {
 }
 
 func (sc *ServiceContainer) GetEmail() *EmailService {
-    sc.emailCache = lokstra_registry.GetService("email-service", sc.emailCache)
+    sc.emailCache = old_registry.GetService("email-service", sc.emailCache)
     return sc.emailCache
 }
 
 func (sc *ServiceContainer) GetCounter() *CounterService {
-    sc.counterCache = lokstra_registry.GetService("counter-service", sc.counterCache)
+    sc.counterCache = old_registry.GetService("counter-service", sc.counterCache)
     return sc.counterCache
 }
 
@@ -268,10 +268,10 @@ A: On **first call** to `GetService()`. The factory function runs once, then the
 A: YES! Register the factory once, then create multiple services:
 
 ```go
-lokstra_registry.RegisterServiceFactory("counter", CounterServiceFactory)
+old_registry.RegisterServiceFactory("counter", CounterServiceFactory)
 
-lokstra_registry.RegisterLazyService("counter-1", "counter", map[string]any{"seed": 0})
-lokstra_registry.RegisterLazyService("counter-2", "counter", map[string]any{"seed": 100})
+old_registry.RegisterLazyService("counter-1", "counter", map[string]any{"seed": 0})
+old_registry.RegisterLazyService("counter-2", "counter", map[string]any{"seed": 100})
 ```
 
 **Q: What if I call GetService before registering the service?**

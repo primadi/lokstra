@@ -7,7 +7,7 @@ import (
 	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 // ============================================================================
@@ -180,7 +180,7 @@ func CreateRemoteUserService(config map[string]any) any {
 	}
 
 	// Get ClientRouter from registry (framework handles this)
-	client := lokstra_registry.GetClientRouter(routerName)
+	client := old_registry.GetClientRouter(routerName)
 	if client == nil {
 		panic(fmt.Sprintf("ClientRouter '%s' not found in registry", routerName))
 	} else {

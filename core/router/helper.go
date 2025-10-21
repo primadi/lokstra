@@ -644,7 +644,7 @@ func adaptMiddlewares(mw []any) []request.HandlerFunc {
 
 func cleanPath(p string) string {
 	p = strings.Trim(p, "/")
-	if p == "" {
+	if p == "" || p == "/" {
 		return ""
 	}
 	return "/" + p

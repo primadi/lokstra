@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra/core/config"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/old_registry"
 )
 
 func main() {
@@ -29,13 +29,13 @@ func main() {
 
 	fmt.Printf("📄 Loaded config: %s\n", configFile)
 
-	lokstra_registry.RegisterConfig(cfg, "")
+	old_registry.RegisterConfig(cfg, "")
 
-	serverName := lokstra_registry.GetConfig("server-name", "auth-server")
-	lokstra_registry.SetCurrentServerName(serverName)
+	serverName := old_registry.GetConfig("server-name", "auth-server")
+	old_registry.SetCurrentServerName(serverName)
 
-	lokstra_registry.PrintServerStartInfo()
-	if err := lokstra_registry.StartServer(); err != nil {
+	old_registry.PrintServerStartInfo()
+	if err := old_registry.StartServer(); err != nil {
 		fmt.Printf("❌ Server error: %v\n", err)
 	}
 }

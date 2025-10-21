@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../../core/deploy/schema/lokstra.schema.json
 # ========================================
 # Multi-Deployment Configuration
 # ========================================
@@ -47,39 +48,41 @@ deployments:
   # ========================================
   monolith:
     servers:
-      api:
+      api-server:
         base-url: "http://localhost"
+        # Server-level services (shared across all apps)
+        required-services:
+          - database
+          - user-service
+          - order-service
         apps:
           - addr: ":3003"
-            required-services:
-              - database
-              - user-service
-              - order-service
+            routers: [monolith-api]
 
   # ========================================
-  # USER SERVICE: Only user-related endpoints
+  # MICROSERVICE: each service in its own process 
   # ========================================
-  user-service:
+  microservice:
     servers:
-      user-api:
+      user-server:
         base-url: "http://localhost"
+        # Server-level services (shared infrastructure)
+        required-services:
+          - database
+          - user-service
         apps:
           - addr: ":3004"
-            required-services:
-              - database
-              - user-service
+            routers: [user-api]
 
-  # ========================================
-  # ORDER SERVICE: Order endpoints + remote user service
-  # ========================================
-  order-service:
-    servers:
-      order-api:
+      order-server:
         base-url: "http://localhost"
+        # Server-level services (shared infrastructure)
+        required-services:
+          - database
+          - order-service
+        # Server-level remote services (shared HTTP clients)
+        required-remote-services:
+          - user-service-remote
         apps:
           - addr: ":3005"
-            required-services:
-              - database
-              - order-service
-            required-remote-services:
-              - user-service-remote  # Uses HTTP client to call user-service
+            routers: [order-api]

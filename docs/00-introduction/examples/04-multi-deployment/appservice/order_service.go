@@ -1,8 +1,6 @@
 package appservice
 
 import (
-	"fmt"
-
 	"github.com/primadi/lokstra/core/service"
 )
 
@@ -43,7 +41,12 @@ func (s *OrderServiceImpl) GetByID(p *GetOrderParams) (*OrderWithUser, error) {
 	// In microservices: HTTP call to user-service
 	user, err := s.Users.MustGet().GetByID(&GetUserParams{ID: order.UserID})
 	if err != nil {
-		return nil, fmt.Errorf("order found but user not found: %v", err)
+		return nil, err
+		// Extract clean error message from ApiError if it's a remote call
+		// if apiErr, ok := err.(*api_client.ApiError); ok {
+		// 	return nil, fmt.Errorf("order found but user not found: %s", apiErr.Message)
+		// }
+		// return nil, fmt.Errorf("order found but user not found: %v", err)
 	}
 
 	return &OrderWithUser{
@@ -56,7 +59,12 @@ func (s *OrderServiceImpl) GetByUserID(p *GetUserOrdersParams) ([]*Order, error)
 	// Verify user exists (cross-service call)
 	_, err := s.Users.MustGet().GetByID(&GetUserParams{ID: p.UserID})
 	if err != nil {
-		return nil, fmt.Errorf("user not found: %v", err)
+		return nil, err
+		// Extract clean error message from ApiError if it's a remote call
+		// if apiErr, ok := err.(*api_client.ApiError); ok {
+		// 	return nil, errors.New(apiErr.Message)
+		// }
+		// return nil, fmt.Errorf("user not found: %v", err)
 	}
 
 	return s.DB.MustGet().GetOrdersByUser(p.UserID)

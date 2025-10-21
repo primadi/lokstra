@@ -151,8 +151,19 @@ func FetchAndCast[T any](client *ClientRouter, path string, opts ...FetchOption)
 
 	var result T
 
-	// Check if T is a pointer type using reflection
+	// Check if T is interface{} or any - if so, return data directly
 	resultType := reflect.TypeOf((*T)(nil)).Elem()
+
+	// Special case: if T is interface{} or any, return clientResp.Data directly
+	if resultType.Kind() == reflect.Interface && resultType.NumMethod() == 0 {
+		// T is any/interface{}, return data as-is
+		if data, ok := any(clientResp.Data).(T); ok {
+			return data, nil
+		}
+		return zero, fmt.Errorf("failed to cast data to interface type")
+	}
+
+	// Check if T is a pointer type using reflection
 	if resultType.Kind() == reflect.Pointer {
 		elemType := resultType.Elem()
 		newValue := reflect.New(elemType)
