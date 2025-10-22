@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/route"
 	"github.com/primadi/lokstra/core/router/convention"
 )
 
@@ -112,6 +113,7 @@ func registerRoute(r lokstra.Router, httpMethod, path string, service any, metho
 	// - func(*Struct) (any, error)
 	// - etc.
 	handler := method.Interface()
+	middlewares = append(middlewares, route.WithNameOption(methodName))
 
 	// Register based on HTTP method with middlewares
 	switch httpMethod {

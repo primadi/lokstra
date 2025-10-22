@@ -12,35 +12,74 @@
 # ========================================
 # Service Definitions (Global) - MAP format
 # ========================================
+# Clean Architecture Layers:
+#   - Repository: Data access (infrastructure)
+#   - Service: Business logic (application)
+#   - Contract: Interfaces & DTOs (application)
+#   - Model: Domain entities (domain)
 
 service-definitions:
-  database:
-    type: database-factory
+  # Infrastructure layer - Repositories
+  user-repository:
+    type: user-repository-factory
 
+  order-repository:
+    type: order-repository-factory
+
+  # Application layer - Services
   user-service:
     type: user-service-factory
     depends-on:
-      - database
+      - user-repository
 
   order-service:
     type: order-service-factory
     depends-on:
-      - database
+      - order-repository
       - user-service  # Can be local OR remote
 
 # ========================================
-# Remote Service Definitions (for microservices) - MAP format
+# Router Definitions (Optional Overrides)
 # ========================================
-
-remote-service-definitions:
-  user-service-remote:
-    url: "http://localhost:3004"
-    resource: "user"
-    resource-plural: "users"
+# Auto-routers are generated from published-services using metadata
+# from XXXRemote service structs (primary source).
+# 
+# You can override here ONLY if you need deployment-specific customization:
+#   - Different resource names per deployment
+#   - Different conventions per environment
+#   - Additional route overrides not in code
+#
+# routers:
+#   user-service-router:
+#     service: user-service
+#     # Metadata already in UserServiceRemote, no override needed
+#
+#   order-service-router:
+#     service: order-service  
+#     # Metadata + custom routes already in OrderServiceRemote, no override needed
+#
+# router-overrides:
+#   order-api-overrides:
+#     # Custom routes already in OrderServiceRemote.Override, no override needed
 
 # ========================================
 # Deployments - MAP format
 # ========================================
+# Remote services are AUTO-RESOLVED from published-services!
+# No need for remote-service-definitions - URLs are discovered automatically.
+#
+# Example: If user-service is published at user-server:3004,
+# then required-remote-services: [user-service] will automatically
+# resolve to http://localhost:3004
+#
+# SHORTHAND SYNTAX (1 server = 1 app):
+# You can use addr/services/remote-services/routers/published-services
+# directly at server level. These create a new app and prepend it to apps array.
+# This allows mixing shorthand with additional explicit apps.
+#
+# Optional: You can still define external-service-definitions for:
+#   - External services (outside this config)
+#   - Override resource metadata per deployment
 
 deployments:
   # ========================================
@@ -50,14 +89,15 @@ deployments:
     servers:
       api-server:
         base-url: "http://localhost"
-        # Server-level services (shared across all apps)
+        # Infrastructure services (repositories)
         required-services:
-          - database
+          - user-repository
+          - order-repository
+        # Shorthand syntax (1 server = 1 app)
+        addr: ":3003"
+        published-services:
           - user-service
           - order-service
-        apps:
-          - addr: ":3003"
-            routers: [monolith-api]
 
   # ========================================
   # MICROSERVICE: each service in its own process 
@@ -66,23 +106,20 @@ deployments:
     servers:
       user-server:
         base-url: "http://localhost"
-        # Server-level services (shared infrastructure)
         required-services:
-          - database
+          - user-repository
+        # Shorthand syntax
+        addr: ":3004"
+        published-services:
           - user-service
-        apps:
-          - addr: ":3004"
-            routers: [user-api]
 
       order-server:
         base-url: "http://localhost"
-        # Server-level services (shared infrastructure)
         required-services:
-          - database
-          - order-service
-        # Server-level remote services (shared HTTP clients)
+          - order-repository
         required-remote-services:
           - user-service-remote
-        apps:
-          - addr: ":3005"
-            routers: [order-api]
+        # Shorthand syntax
+        addr: ":3005"
+        published-services:
+          - order-service

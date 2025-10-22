@@ -21,7 +21,7 @@ func main() {
 
 	fmt.Printf("✅ Config loaded successfully!\n")
 	fmt.Printf("   Service definitions: %d\n", len(config.ServiceDefinitions))
-	fmt.Printf("   Remote service definitions: %d\n", len(config.RemoteServiceDefinitions))
+	fmt.Printf("   External service definitions: %d\n", len(config.ExternalServiceDefinitions))
 	fmt.Printf("   Deployments: %d\n", len(config.Deployments))
 
 	// Show deployment details
@@ -37,14 +37,11 @@ func main() {
 			}
 			for i, app := range server.Apps {
 				fmt.Printf("         App #%d: %s\n", i+1, app.Addr)
-				if len(app.Services) > 0 {
-					fmt.Printf("            App services: %v\n", app.Services)
-				}
 				if len(app.Routers) > 0 {
 					fmt.Printf("            Routers: %v\n", app.Routers)
 				}
-				if len(app.RemoteServices) > 0 {
-					fmt.Printf("            App remote services: %v\n", app.RemoteServices)
+				if len(app.PublishedServices) > 0 {
+					fmt.Printf("            App published services: %v\n", app.PublishedServices)
 				}
 			}
 		}

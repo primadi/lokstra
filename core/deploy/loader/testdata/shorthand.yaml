@@ -1,0 +1,22 @@
+# Test shorthand syntax (1 server = 1 app)
+configs:
+  DB_HOST: localhost
+
+service-definitions:
+  user-service:
+    type: user-factory
+  order-service:
+    type: order-factory
+
+deployments:
+  test:
+    servers:
+      api-server:
+        base-url: http://localhost
+        required-services:
+          - database
+        # Shorthand syntax
+        addr: ":3000"
+        published-services:
+          - user-service
+          - order-service

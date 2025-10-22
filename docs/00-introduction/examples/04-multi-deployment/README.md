@@ -1,911 +1,870 @@
-# Example 4: Multi-Deployment
+# Example 4: Multi-Deployment with Auto-Router & Proxy
 
-**Demonstrates**: One binary, three deployment modes - flexible server architecture
+**Demonstrates**: Convention-based auto-router generation, metadata-driven routing, and seamless local/remote service switching
 
 ---
 
 ## 📌 About This Example
 
-> **Note**: This example demonstrates the **manual approach** to service and router registration. It's designed to help you understand:
-> - How service-to-router conversion works under the hood
-> - How to manually create handlers from service methods
-> - How proxy services work for cross-service communication
-> - Manual service registration for different deployment modes
+This example showcases Lokstra's **production-ready patterns** for building flexible, deployment-agnostic applications:
 
-### What This Example Shows (Manual Approach):
-- ✅ Manual handler creation from service methods
-- ✅ Manual `proxy.Router` usage with `DoJSON()` 
-- ✅ Manual service registration (`UserServiceImpl` vs `UserServiceRemote`)
-- ✅ Manual router configuration per server
+### Key Features:
+- ✅ **Auto-router generation** from service methods using conventions
+- ✅ **Metadata-driven routing** with `RemoteServiceMeta` interface
+- ✅ **Single source of truth** for routing configuration
+- ✅ **Seamless proxy services** with `proxy.Service` and `proxy.CallWithData`
+- ✅ **Single binary, multiple deployments** (monolith, microservices)
+- ✅ **YAML-driven configuration** with optional code-based overrides
+- ✅ **Clean Architecture** with separated layers (contract, model, service, repository)
 
-### Advanced Patterns (Coming in Later Chapters):
-For production applications, Lokstra provides automated patterns:
-- 🔄 **Auto service-to-router conversion**: `router.NewFromService()` with conventions
-- 🔄 **Convention-based routing**: RESTful, RPC, and custom conventions
-- 🔄 **Auto proxy services**: `proxy.Service` with same conventions as router
-- 🔄 **Config-driven deployment**: YAML/code-based deployment configuration
-
-These advanced patterns will be covered in **01-essentials** and **02-advanced** chapters.
-
-**For now, focus on understanding the manual approach - it's the foundation!**
-
-📖 **Want to see the evolution path?** Read [EVOLUTION.md](EVOLUTION.md) for detailed comparison of manual vs automated patterns.
+### What's New vs Manual Approach:
+- 🚀 **No manual handler creation** - auto-generated from service methods
+- 🚀 **No manual route definitions** - convention-based mapping
+- 🚀 **No manual proxy.Router calls** - `proxy.Service` handles it
+- 🚀 **Metadata in service code** - no redundant YAML config
+- 🚀 **Clean separation** - contracts, models, services, repositories in separate packages
 
 ---
 
 ## 🎯 Learning Objectives
 
-This example shows Lokstra's powerful deployment flexibility:
+1. **Convention-Based Routing**: How services auto-generate RESTful endpoints
+2. **Clean Architecture**: Separation of concerns with contract, model, service, repository layers
+3. **Metadata Architecture**: Single source of truth in `RemoteServiceMetaAdapter`
+4. **3-Level Metadata System**: Service code → RegisterServiceType → YAML config
+5. **Auto-Proxy Pattern**: `proxy.CallWithData` with convention mapping
+6. **Deployment Flexibility**: Same code, different runtime behavior
+7. **Interface-Based DI**: Depend on contracts, not implementations
 
-1. **Single Binary**: One compiled binary can run as 3 different server types
-2. **Service Interface Pattern**: Same interface, multiple implementations (local vs remote)
-3. **Transparent Cross-Service Calls**: HTTP calls hidden behind service interface
-4. **Deployment-Specific Registration**: Each server registers only what it needs
-5. **Shared Handlers & Services**: Code reuse across all deployment modes
-
-## 📐 Key Concepts
-
-### Deployment vs Server
-
-- **Deployment** = Complete infrastructure setup
-  - Monolith deployment: 1 server running all services
-  - Microservices deployment: 2+ servers (user-service + order-service)
-
-- **Server** = Individual process with specific responsibilities
-  - **Monolith server**: All services, all endpoints (port 3003)
-  - **User-service server**: Only user service, user endpoints (port 3004)
-  - **Order-service server**: Only order service, order endpoints (port 3005)
-
-### Single Binary Approach
-
-**One binary, three modes**:
-```bash
-# Same binary file
-./app -server monolith       # Mode 1
-./app -server user-service   # Mode 2
-./app -server order-service  # Mode 3
-```
-
-Each mode registers different services and exposes different endpoints.
+---
 
 ## 🏗️ Architecture
 
 ### Deployment 1: Monolith (1 Server)
 ```
 ┌────────────────────────────────────────┐
-│   Monolith Server (Port 3003)          │
+│   API Server (Port 3003)               │
 │                                        │
 │  ┌──────────────────────────────────┐  │
 │  │  UserServiceImpl (local)         │  │
-│  │  - GetByID()                     │  │
-│  │  - List()                        │  │
+│  │  Auto-Router:                    │  │
+│  │  • GET /users                    │  │
+│  │  • GET /users/{id}               │  │
 │  └──────────────────────────────────┘  │
 │                ↑                       │
 │  ┌──────────────────────────────────┐  │
-│  │  OrderServiceImpl                │  │
-│  │  - GetByID() → calls UserService │  │
-│  │  - GetByUserID()                 │  │
+│  │  OrderServiceImpl (local)        │  │
+│  │  Auto-Router:                    │  │
+│  │  • GET /orders/{id}              │  │
+│  │  • GET /users/{user_id}/orders   │  │
 │  └──────────────────────────────────┘  │
 │                                        │
-│  Direct method calls (fast)            │
-│  Shared database                       │
+│  Direct method calls (in-process)      │
 └────────────────────────────────────────┘
 ```
 
 ### Deployment 2: Microservices (2 Servers)
 ```
 ┌───────────────────────┐         ┌─────────────────────────────┐
-│  User-Service Server  │         │  Order-Service Server       │
+│  User Server          │         │  Order Server               │
 │  (Port 3004)          │         │  (Port 3005)                │
 │                       │         │                             │
 │  ┌─────────────────┐  │  HTTP   │  ┌───────────────────────┐  │
 │  │ UserServiceImpl │  │◄────────┤  │ UserServiceRemote     │  │
-│  │ (local)         │  │         │  │ (proxy to :3004)      │  │
-│  │ - GetByID()     │  │         │  └───────────────────────┘  │
-│  │ - List()        │  │         │            ↑                │
-│  └─────────────────┘  │         │  ┌───────────────────────┐  │
-│                       │         │  │ OrderServiceImpl      │  │
-│  Endpoints:           │         │  │ - GetByID()           │  │
-│  • GET /users         │         │  │ - GetByUserID()       │  │
-│  • GET /users/{id}    │         │  └───────────────────────┘  │
-│                       │         │                             │
-└───────────────────────┘         │  Endpoints:                 │
-                                  │  • GET /orders/{id}         │
-                                  │  • GET /users/{id}/orders   │
+│  │ Auto-Router:    │  │         │  │ (proxy.Service)       │  │
+│  │ • GET /users    │  │         │  │ • CallWithData        │  │
+│  │ • GET /users/{id}  │         │  └───────────────────────┘  │
+│  └─────────────────┘  │         │            ↑                │
+│                       │         │  ┌───────────────────────┐  │
+└───────────────────────┘         │  │ OrderServiceImpl      │  │
+                                  │  │ Auto-Router:          │  │
+                                  │  │ • GET /orders/{id}    │  │
+                                  │  │ • GET /users/{uid}/   │  │
+                                  │  │   orders              │  │
+                                  │  └───────────────────────┘  │
                                   └─────────────────────────────┘
 
-Key: OrderService uses UserServiceRemote which makes HTTP calls to port 3004
+Key: UserServiceRemote uses metadata to auto-map methods to HTTP endpoints
 ```
+
+---
 
 ## 📦 Project Structure
 
 ```
 04-multi-deployment/
-├── appservice/              # Service definitions (deployment-agnostic)
-│   ├── database.go         # In-memory database with User & Order models
-│   ├── user_service.go     # UserServiceImpl (local implementation)
-│   ├── user_service_remote.go  # UserServiceRemote (HTTP proxy)
-│   └── order_service.go    # OrderServiceImpl (uses UserService interface)
+├── contract/                    # Application Layer - Interfaces & DTOs
+│   ├── user_contract.go         # UserService interface + request/response types
+│   └── order_contract.go        # OrderService interface + DTOs
 │
-├── handlers.go             # HTTP handlers (shared across all deployments)
-├── registration.go         # Service registration for each server mode
-├── main.go                 # Server entry points (3 functions)
-└── test.http               # Test requests for all deployment modes
+├── model/                       # Domain Layer - Pure business entities
+│   ├── user.go                  # User entity
+│   └── order.go                 # Order entity
+│
+├── repository/                  # Infrastructure Layer - Data access
+│   ├── user_repository.go       # UserRepository interface + in-memory impl
+│   └── order_repository.go      # OrderRepository interface + in-memory impl
+│
+├── service/                     # Application Layer - Business logic
+│   ├── user_service.go          # UserServiceImpl (local implementation)
+│   ├── user_service_remote.go   # UserServiceRemote (HTTP proxy)
+│   ├── order_service.go         # OrderServiceImpl (local implementation)
+│   └── order_service_remote.go  # OrderServiceRemote (HTTP proxy)
+│
+├── config.yaml                  # Multi-deployment configuration
+├── main.go                      # Entry point with service registration
+└── test.http                    # API tests
 ```
 
-### Key Insight: Separation of Concerns
+### 🏛️ Clean Architecture Layers
 
-- **`/appservice`**: Service logic (same for all deployments)
-- **`handlers.go`**: HTTP layer (same for all deployments)
-- **`registration.go`**: What differs between deployments
-- **`main.go`**: Server configuration & routing
+```
+┌─────────────────────────────────────────────────────────┐
+│  Application Layer (service/, contract/)                │
+│  - Business logic & use cases                           │
+│  - Service interfaces & DTOs                            │
+│  - Depends on: Domain Layer                             │
+├─────────────────────────────────────────────────────────┤
+│  Domain Layer (model/)                                  │
+│  - Pure business entities                               │
+│  - No external dependencies                             │
+├─────────────────────────────────────────────────────────┤
+│  Infrastructure Layer (repository/)                     │
+│  - Data access implementations                          │
+│  - External service adapters                            │
+│  - Depends on: Domain interfaces                        │
+└─────────────────────────────────────────────────────────┘
 
-## 📚 Code Walkthrough
+Dependency Rule: Outer layers depend on inner layers, never the reverse
+```
 
-### 1. Service Interface Pattern
+---
 
-**appservice/user_service.go** - Interface + Local Implementation:
+## 🔑 Key Concepts
+
+### 1. **Clean Architecture Pattern**
+
+This example follows **Clean Architecture** principles with clear separation of concerns:
+
+#### **Layer 1: Domain (model/)**
+Pure business entities with no external dependencies:
+
 ```go
-// Interface (used by all)
+// model/user.go
+package model
+
+type User struct {
+    ID    int    `json:"id"`
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+```
+
+**Characteristics**:
+- ✅ No framework dependencies
+- ✅ No infrastructure dependencies  
+- ✅ Pure Go structs
+- ✅ Represents business concepts
+
+#### **Layer 2: Application (contract/, service/)**
+
+**contract/user_contract.go** - Service interfaces & DTOs:
+```go
+package contract
+
+import "example/model"
+
+// Service interface (application boundary)
 type UserService interface {
-    GetByID(p *GetUserParams) (*User, error)
-    List(p *ListUsersParams) ([]*User, error)
+    GetByID(p *GetUserParams) (*model.User, error)
+    List(p *ListUsersParams) ([]*model.User, error)
 }
 
-// Local implementation (for monolith & user-service server)
+// DTOs (Data Transfer Objects)
+type GetUserParams struct {
+    ID int `path:"id"`
+}
+```
+
+**service/user_service.go** - Business logic implementation:
+```go
+package service
+
+import "example/contract"
+import "example/repository"
+
 type UserServiceImpl struct {
-    DB *service.Cached[*Database]
+    UserRepo *service.Cached[repository.UserRepository]  // Depend on interface!
 }
 
-func (s *UserServiceImpl) GetByID(p *GetUserParams) (*User, error) {
-    return s.DB.MustGet().GetUser(p.ID)
-}
+var _ contract.UserService = (*UserServiceImpl)(nil)  // Ensure implementation
 
-func (s *UserServiceImpl) List(p *ListUsersParams) ([]*User, error) {
-    return s.DB.MustGet().GetAllUsers()
-}
-
-func NewUserService() UserService {
-    return &UserServiceImpl{
-        DB: service.LazyLoad[*Database]("db"),
-    }
+func (s *UserServiceImpl) GetByID(p *contract.GetUserParams) (*model.User, error) {
+    return s.UserRepo.MustGet().GetByID(p.ID)
 }
 ```
 
-**appservice/user_service_remote.go** - Remote Implementation (HTTP Proxy):
+**Characteristics**:
+- ✅ Depends on domain models
+- ✅ Depends on repository interfaces (not implementations!)
+- ✅ Contains business logic
+- ✅ Framework-agnostic (testable!)
+
+#### **Layer 3: Infrastructure (repository/)**
+
+**repository/user_repository.go** - Data access:
 ```go
-// Remote implementation (for order-service server in microservices mode)
+package repository
+
+import "example/model"
+
+// Repository interface (defined by application layer needs)
+type UserRepository interface {
+    GetByID(id int) (*model.User, error)
+    List() ([]*model.User, error)
+}
+
+// Implementation (infrastructure detail)
+type UserRepositoryMemory struct {
+    users map[int]*model.User
+}
+
+var _ UserRepository = (*UserRepositoryMemory)(nil)
+
+func (r *UserRepositoryMemory) GetByID(id int) (*model.User, error) {
+    // Implementation details
+}
+```
+
+**Characteristics**:
+- ✅ Implements repository interfaces
+- ✅ Can be swapped (memory → postgres → redis)
+- ✅ Infrastructure details hidden behind interface
+
+#### **Dependency Flow**
+
+```
+main.go → service → repository interface
+                 ↓
+              model
+
+Dependencies point INWARD (toward domain)
+```
+
+**Benefits**:
+1. **Testability**: Easy to mock repositories and test services
+2. **Flexibility**: Swap implementations without changing business logic
+3. **Maintainability**: Clear boundaries between layers
+4. **Scalability**: Add features without touching existing code
+5. **Team collaboration**: Clear ownership per layer
+
+---
+
+### 2. **RemoteServiceMeta Interface**
+
+Services provide routing metadata via embedded `RemoteServiceMetaAdapter`:
+
+**service/user_service_remote.go**:
+```go
 type UserServiceRemote struct {
-    proxy *proxy.Router
+    service.RemoteServiceMetaAdapter  // Metadata + proxy.Service
 }
 
-func (u *UserServiceRemote) GetByID(p *GetUserParams) (*User, error) {
-    var JsonWrapper struct {
-        Status string `json:"status"`
-        Data   *User  `json:"data"`
-    }
-    
-    // Makes HTTP GET to user-service server
-    err := u.proxy.DoJSON("GET", fmt.Sprintf("/users/%d", p.ID), nil, nil, &JsonWrapper)
-    if err != nil {
-        return nil, proxy.ParseRouterError(err)
-    }
-    return JsonWrapper.Data, nil
-}
-
-func NewUserServiceRemote() *UserServiceRemote {
+func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
     return &UserServiceRemote{
-        proxy: proxy.NewRemoteRouter("http://localhost:3004"),
+        RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
+            Resource:     "user",
+            Plural:       "users",
+            Convention:   "rest",
+            ProxyService: proxyService,
+        },
     }
 }
 ```
 
-**Key Benefit**: OrderService doesn't know if it's calling local or remote!
+**Benefits**:
+- ✅ Single source of truth for routing
+- ✅ Used by auto-router generation
+- ✅ Used by proxy.Service for HTTP calls
+- ✅ No separate field for proxy.Service
 
-### 2. OrderService Uses Interface
+### 3. **Auto-Router Generation**
 
-**appservice/order_service.go**:
+Framework scans service methods and generates routes using conventions:
+
 ```go
-type OrderService interface {
-    GetByID(p *GetOrderParams) (*OrderWithUser, error)
-    GetByUserID(p *GetUserOrdersParams) ([]*Order, error)
-}
+// Service method
+func (s *UserServiceImpl) GetByID(p *GetUserParams) (*User, error)
 
-type OrderServiceImpl struct {
-    DB    *service.Cached[*Database]
-    Users *service.Cached[UserService]  // ← Interface, not concrete type!
-}
-
-func (s *OrderServiceImpl) GetByID(p *GetOrderParams) (*OrderWithUser, error) {
-    order, err := s.DB.MustGet().GetOrder(p.ID)
-    if err != nil {
-        return nil, err
-    }
-
-    // Cross-service call - local or HTTP, doesn't matter!
-    user, err := s.Users.MustGet().GetByID(&GetUserParams{ID: order.UserID})
-    if err != nil {
-        return nil, fmt.Errorf("order found but user not found: %v", err)
-    }
-
-    return &OrderWithUser{Order: order, User: user}, nil
-}
+// Auto-generates
+GET /users/{id} -> UserService.GetByID
 ```
 
-**Magic**: `s.Users.MustGet()` returns `UserService` interface.
-- In monolith: It's `UserServiceImpl` (local calls)
-- In order-service server: It's `UserServiceRemote` (HTTP calls)
+**Convention mapping**:
+| Method Name | HTTP Method | Path |
+|-------------|-------------|------|
+| `List()` | GET | `/users` |
+| `GetByID(params)` | GET | `/users/{id}` |
+| `Create(params)` | POST | `/users` |
+| `Update(params)` | PUT | `/users/{id}` |
+| `Delete(params)` | DELETE | `/users/{id}` |
+| Custom actions | POST | `/actions/{snake_case}` |
 
-### 3. Shared Handlers
+### 4. **Custom Route Overrides**
 
-**handlers.go** - Same code for all deployments:
+Services can override convention-based routes:
+
+**service/order_service_remote.go**:
 ```go
-var (
-    userService  = service.LazyLoad[appservice.UserService]("users")
-    orderService = service.LazyLoad[appservice.OrderService]("orders")
-)
-
-func listUsersHandler(ctx *request.Context) error {
-    users, err := userService.MustGet().List(&appservice.ListUsersParams{})
-    if err != nil {
-        return ctx.Api.Error(500, "INTERNAL_ERROR", err.Error())
-    }
-    return ctx.Api.Ok(users)
-}
-
-func getOrderHandler(ctx *request.Context) error {
-    var params appservice.GetOrderParams
-    if err := ctx.Req.BindPath(&params); err != nil {
-        return ctx.Api.BadRequest("INVALID_ID", "Invalid order ID")
-    }
-
-    orderWithUser, err := orderService.MustGet().GetByID(&params)
-    if err != nil {
-        return ctx.Api.Error(404, "NOT_FOUND", err.Error())
-    }
-    return ctx.Api.Ok(orderWithUser)
+RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
+    Resource:     "order",
+    Plural:       "orders",
+    Convention:   "rest",
+    ProxyService: proxyService,
+    Override: autogen.RouteOverride{
+        Custom: map[string]autogen.Route{
+            "GetByUserID": {Method: "GET", Path: "/users/{user_id}/orders"},
+        },
+    },
 }
 ```
 
-Handlers don't care about deployment mode - they just call services!
+Result:
+- `GetByID()` → `GET /orders/{id}` (convention)
+- `GetByUserID()` → `GET /users/{user_id}/orders` (custom override)
 
-### 4. Deployment-Specific Registration
+### 5. **Proxy.Service Pattern**
 
-**registration.go** - This is where the magic happens:
+Remote services use `proxy.CallWithData` for type-safe HTTP calls:
 
-**Monolith Server**:
 ```go
-func registerMonolithServices() {
-    // Register service factories
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
-    lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
-
-    // Register lazy services
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceImpl
-    lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
+func (u *UserServiceRemote) GetByID(params *GetUserParams) (*User, error) {
+    return proxy.CallWithData[*User](u.GetProxyService(), "GetByID", params)
 }
 ```
 
-**User-Service Server**:
-```go
-func registerUserServices() {
-    // Only user-related services
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("usersFactory", appservice.NewUserService)
+**What happens**:
+1. Framework resolves method name to HTTP route using metadata
+2. Extracts path params from struct tags (`path:"id"`)
+3. Makes HTTP request
+4. Auto-extracts data from JSON wrapper (`{"data": {...}}`)
+5. Returns typed result
 
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceImpl
-    // No orders service!
-}
+**No manual URL construction, no manual JSON parsing!**
+
+### 6. **3-Level Metadata System**
+
+Metadata can be provided in 3 places with priority:
+
+```
+Priority 1 (HIGH):  YAML config (router-overrides)     ← Deployment-specific
+Priority 2 (MED):   XXXRemote struct (code)            ← Service-level defaults
+Priority 3 (LOW):   RegisterServiceType options        ← Framework defaults
 ```
 
-**Order-Service Server**:
-```go
-func registerOrderServices() {
-    lokstra_registry.RegisterServiceType("dbFactory", appservice.NewDatabase)
-    lokstra_registry.RegisterServiceType("ordersFactory", appservice.NewOrderService)
-    
-    // Remote user service - makes HTTP calls!
-    lokstra_registry.RegisterServiceTypeRemote("usersFactory",
-        appservice.NewUserServiceRemote)  // ← UserServiceRemote!
+**Recommended**: Put metadata in `XXXRemote` struct only. Use YAML only for deployment-specific overrides.
 
-    lokstra_registry.RegisterLazyService("db", "dbFactory", nil)
-    lokstra_registry.RegisterLazyService("orders", "ordersFactory", nil)
-    lokstra_registry.RegisterLazyService("users", "usersFactory", nil)  // ← UserServiceRemote!
-}
-```
-
-**Critical Difference**: `users` service:
-- Monolith & user-service: `UserServiceImpl` (local)
-- Order-service: `UserServiceRemote` (HTTP proxy)
-
-### 5. Server Entry Points
-
-**main.go**:
-```go
-func main() {
-    server := flag.String("server", "monolith", "Server to run")
-    
-    switch *server {
-    case "monolith":
-        runMonolithServer()
-    case "user-service":
-        runUserServiceServer()
-    case "order-service":
-        runOrderServiceServer()
-    }
-}
-```
-
-Each function:
-1. Calls appropriate registration function
-2. Creates router with specific endpoints
-3. Runs server on designated port
+---
 
 ## 🚀 Running the Examples
 
-### Option 1: Monolith Deployment (1 Server)
+### Option 1: Monolith Deployment
 
-Run everything in one server process:
 ```powershell
-go run . -server monolith
+go run . -server "monolith.api-server"
 ```
 
-Access all endpoints on **port 3003**:
+Output:
+```
+Starting [api-server] with 2 router(s) on address :3003
+[user-auto] GET /users/{id} -> user-auto.GetByID
+[user-auto] GET /users -> user-auto.List
+[order-auto] GET /orders/{id} -> order-auto.GetByID
+[order-auto] GET /users/{user_id}/orders -> order-auto.GetByUserID
+```
+
+All endpoints on **port 3003**.
+
+### Option 2: Microservices Deployment
+
+**Terminal 1** - User Server:
+```powershell
+go run . -server "microservice.user-server"
+```
+
+Output:
+```
+Starting [user-server] with 1 router(s) on address :3004
+[user-auto] GET /users/{id} -> user-auto.GetByID
+[user-auto] GET /users -> user-auto.List
+```
+
+**Terminal 2** - Order Server:
+```powershell
+go run . -server "microservice.order-server"
+```
+
+Output:
+```
+Starting [order-server] with 1 router(s) on address :3005
+[order-auto] GET /orders/{id} -> order-auto.GetByID
+[order-auto] GET /users/{user_id}/orders -> order-auto.GetByUserID
+```
+
+---
+
+## 📝 Configuration Walkthrough
+
+### config.yaml
+
+```yaml
+service-definitions:
+  # Infrastructure layer - Repositories
+  user-repository:
+    type: user-repository-factory
+
+  order-repository:
+    type: order-repository-factory
+
+  # Application layer - Services
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [order-repository, user-service]  # Can be local OR remote
+
+# Routers auto-generated from published-services using metadata
+# Optional overrides commented out - metadata in XXXRemote is enough!
+
+deployments:
+  monolith:
+    servers:
+      api-server:
+        base-url: "http://localhost"
+        required-services: [user-repository, order-repository]
+        addr: ":3003"
+        published-services:
+          - user-service
+          - order-service
+
+  microservice:
+    servers:
+      user-server:
+        base-url: "http://localhost"
+        required-services: [user-repository]
+        addr: ":3004"
+        published-services: [user-service]
+
+      order-server:
+        base-url: "http://localhost"
+        required-services: [order-repository]
+        required-remote-services: [user-service-remote]  # Auto-resolved!
+        addr: ":3005"
+        published-services: [order-service]
+```
+
+**Key Points**:
+- **Layered architecture**: Repositories (infrastructure) → Services (application)
+- `published-services`: Services that expose HTTP endpoints
+- `required-remote-services`: Services accessed via HTTP proxy
+- URLs auto-resolved from `published-services` in other servers
+- No manual router definitions needed!
+
+### main.go
+
+```go
+func main() {
+    // Register repositories (infrastructure layer)
+    lokstra_registry.RegisterServiceType("user-repository-factory",
+        func(deps map[string]any, config map[string]any) any {
+            return repository.NewUserRepositoryMemory()
+        }, nil)
+
+    lokstra_registry.RegisterServiceType("order-repository-factory",
+        func(deps map[string]any, config map[string]any) any {
+            return repository.NewOrderRepositoryMemory()
+        }, nil)
+
+    // Register services (application layer)
+    // Metadata comes from XXXRemote structs!
+    lokstra_registry.RegisterServiceType("user-service-factory",
+        service.UserServiceFactory,
+        service.UserServiceRemoteFactory,
+        // Metadata in UserServiceRemote.RemoteServiceMetaAdapter
+    )
+
+    lokstra_registry.RegisterServiceType("order-service-factory",
+        service.OrderServiceFactory,
+        service.OrderServiceRemoteFactory,
+        // Metadata + custom routes in OrderServiceRemote.Override!
+    )
+
+    // Load config - auto-builds ALL deployments
+    lokstra_registry.LoadAndBuild([]string{"config.yaml"})
+
+    // Run server based on flag
+    lokstra_registry.RunServer(*server, 30*time.Second)
+}
+```
+
+**What's simplified**:
+- ❌ No manual router setup
+- ❌ No manual handler registration
+- ❌ No deployment-specific registration functions
+- ✅ Just factory registration + LoadAndBuild!
+
+---
+
+## 🧪 Testing
+
+Use `test.http` with VS Code REST Client extension:
+
 ```http
+### Monolith - Get all users
 GET http://localhost:3003/users
+
+### Monolith - Get specific user
 GET http://localhost:3003/users/1
+
+### Monolith - Get order with user (cross-service)
 GET http://localhost:3003/orders/1
+
+### Monolith - Get user's orders
 GET http://localhost:3003/users/1/orders
-```
 
-**What's registered**:
-- ✅ Database
-- ✅ UserServiceImpl (local)
-- ✅ OrderServiceImpl (local)
-
-### Option 2: Microservices Deployment (2 Servers)
-
-**Terminal 1** - Start User Service Server:
-```powershell
-go run . -server user-service
-```
-
-**Terminal 2** - Start Order Service Server:
-```powershell
-go run . -server order-service
-```
-
-Access services on different ports:
-```http
-# User Service Server (port 3004)
-GET http://localhost:3004/users
+### Microservices - User server
 GET http://localhost:3004/users/1
 
-# Order Service Server (port 3005)
+### Microservices - Order server (makes HTTP call to user server)
 GET http://localhost:3005/orders/1
 GET http://localhost:3005/users/1/orders
 ```
 
-**What's registered in user-service**:
-- ✅ Database
-- ✅ UserServiceImpl (local)
+---
 
-**What's registered in order-service**:
-- ✅ Database
-- ✅ OrderServiceImpl (local)
-- ✅ UserServiceRemote (HTTP proxy to localhost:3004)
+## 🔍 How It Works
 
-## 🧪 Testing with test.http
+### Auto-Router Generation Flow
 
-The included `test.http` file has comprehensive tests for all deployment options. Open it in VS Code with REST Client extension.
+```
+1. Config loading (LoadAndBuild):
+   ├─ Read config.yaml
+   ├─ Find published-services: [user-service, order-service]
+   ├─ Create router definitions: [user-service-router, order-service-router]
+   └─ Register to global registry
 
-## 🔍 Key Features Demonstrated
+2. Server startup (RunServer):
+   ├─ Get router definitions for current server
+   ├─ Call BuildRouterFromDefinition for each:
+   │  ├─ Instantiate remote factory (UserServiceRemoteFactory)
+   │  ├─ Read metadata from RemoteServiceMetaAdapter
+   │  ├─ Call autogen.NewFromService(svc, rule, override)
+   │  │  ├─ Scan service methods via reflection
+   │  │  ├─ Map methods to routes using convention
+   │  │  ├─ Apply custom overrides from metadata
+   │  │  └─ Create auto-generated handlers
+   │  └─ Return router
+   └─ Mount all routers to app
 
-### 1. **Single Binary, Multiple Deployment Modes**
-
-One compiled binary can run as 3 different servers:
-```bash
-# Build once
-go build .
-
-# Run in 3 different modes
-./04-multi-deployment -server monolith
-./04-multi-deployment -server user-service
-./04-multi-deployment -server order-service
+3. Request handling:
+   ├─ HTTP request arrives
+   ├─ Router matches path to auto-generated handler
+   ├─ Handler calls service method
+   ├─ Service method:
+   │  ├─ Monolith: Direct method call (UserServiceImpl)
+   │  └─ Microservices: HTTP proxy call (UserServiceRemote)
+   │     └─ proxy.CallWithData resolves method → HTTP using metadata
+   └─ Return response
 ```
 
-### 2. **Interface-Based Service Abstraction**
+### Cross-Service Call Flow (Microservices)
 
+```
+Client → Order Server → User Server
+                ↓
+GET /orders/1   OrderServiceImpl.GetByID()
+                ↓
+                s.Users.MustGet().GetByID(...)
+                ↓
+                UserServiceRemote.GetByID()
+                ↓
+                proxy.CallWithData[*User](service, "GetByID", params)
+                ↓
+                [Metadata resolution]
+                Resource: "user", Plural: "users", Convention: "rest"
+                Method: "GetByID" → Convention: GET /users/{id}
+                ↓
+                HTTP GET http://localhost:3004/users/1
+                ↓
+                UserServiceImpl.GetByID() @ User Server
+                ↓
+                Return User
+```
+
+---
+
+## 💡 Design Patterns
+
+### 1. **Convention Over Configuration**
+
+Instead of:
+```yaml
+# ❌ Manual route definitions
+routers:
+  user-router:
+    routes:
+      - path: /users
+        method: GET
+        handler: listUsers
+      - path: /users/{id}
+        method: GET
+        handler: getUser
+```
+
+We have:
 ```go
+// ✅ Convention-based auto-generation
 type UserService interface {
-    GetByID(p *GetUserParams) (*User, error)
-    List(p *ListUsersParams) ([]*User, error)
+    List()     // → GET /users
+    GetByID()  // → GET /users/{id}
 }
-
-// Implementation 1: Local (direct DB calls)
-type UserServiceImpl struct { ... }
-
-// Implementation 2: Remote (HTTP proxy)
-type UserServiceRemote struct { ... }
 ```
 
-Consumer code (OrderService, handlers) uses the interface - doesn't know which!
+### 2. **Metadata-Driven Architecture**
 
-### 3. **Transparent Cross-Service Communication**
-
-OrderService code:
+Single source of truth in service code:
 ```go
-user, err := s.Users.MustGet().GetByID(&GetUserParams{ID: order.UserID})
-```
-
-Behavior:
-- **Monolith**: Direct method call to `UserServiceImpl.GetByID()`
-- **Microservices**: HTTP GET to `http://localhost:3004/users/{id}` via `UserServiceRemote`
-
-Same code, different runtime behavior!
-
-### 4. **Deployment-Specific Service Registration**
-
-The **only** difference between deployments is what gets registered:
-
-| Server | Database | UserService | OrderService |
-|--------|----------|-------------|--------------|
-| Monolith | Local | `UserServiceImpl` (local) | `OrderServiceImpl` (local) |
-| User-service | Local | `UserServiceImpl` (local) | ❌ Not registered |
-| Order-service | Local | `UserServiceRemote` (HTTP) | `OrderServiceImpl` (local) |
-
-### 5. **Shared Code Across Deployments**
-
-**What's shared** (100% reuse):
-- ✅ All service interfaces
-- ✅ All service implementations
-- ✅ All handlers
-- ✅ All models
-
-**What's different**:
-- ❌ Service registration
-- ❌ Router configuration
-- ❌ Port numbers
-
-## 📊 Response Examples
-
-### Monolith Server Info
-```bash
-GET http://localhost:3003/
-```
-
-Response:
-```json
-{
-  "code": 200,
-  "status": "success",
-  "message": "OK",
-  "data": {
-    "server": "monolith",
-    "message": "All services running in one process",
-    "endpoints": {
-      "users": ["GET /users", "GET /users/{id}"],
-      "orders": ["GET /orders/{id}", "GET /users/{user_id}/orders"]
-    }
-  }
-}
-```
-
-### Get Order with User (Cross-Service Call)
-
-**Monolith** - Direct method call:
-```bash
-GET http://localhost:3003/orders/1
-```
-
-**Order-Service (Microservices)** - HTTP call to user-service:
-```bash
-GET http://localhost:3005/orders/1
-```
-
-Both return identical response:
-```json
-{
-  "code": 200,
-  "status": "success",
-  "message": "OK",
-  "data": {
-    "order": {
-      "id": 1,
-      "user_id": 1,
-      "product": "Laptop",
-      "amount": 1200
+RemoteServiceMetaAdapter{
+    Resource:   "order",
+    Plural:     "orders",
+    Convention: "rest",
+    Override: autogen.RouteOverride{
+        Custom: map[string]autogen.Route{
+            "GetByUserID": {Method: "GET", Path: "/users/{user_id}/orders"},
+        },
     },
-    "user": {
-      "id": 1,
-      "name": "Alice",
-      "email": "alice@example.com"
-    }
-  }
 }
 ```
 
-**Behind the scenes**:
-- **Monolith**: `OrderServiceImpl` → `UserServiceImpl` (direct call)
-- **Microservices**: `OrderServiceImpl` → `UserServiceRemote` → HTTP GET `/users/1` → `UserServiceImpl`
+Used by:
+- ✅ Auto-router generation (server-side)
+- ✅ Proxy.Service (client-side)
+- ✅ Documentation generation (future)
+- ✅ API gateway configuration (future)
 
-## 🎓 Advanced Patterns
-
-### 1. **proxy.Router for HTTP Communication**
-
-`UserServiceRemote` uses `proxy.Router` to make HTTP calls:
+### 3. **Interface-Based Dependency Injection**
 
 ```go
-type UserServiceRemote struct {
-    proxy *proxy.Router
-}
-
-func NewUserServiceRemote() *UserServiceRemote {
-    return &UserServiceRemote{
-        proxy: proxy.NewRemoteRouter("http://localhost:3004"),
-    }
-}
-
-func (u *UserServiceRemote) GetByID(p *GetUserParams) (*User, error) {
-    var JsonWrapper struct {
-        Status string `json:"status"`
-        Data   *User  `json:"data"`
-    }
-    
-    // Makes HTTP GET to http://localhost:3004/users/{id}
-    err := u.proxy.DoJSON("GET", fmt.Sprintf("/users/%d", p.ID), nil, nil, &JsonWrapper)
-    if err != nil {
-        return nil, proxy.ParseRouterError(err)
-    }
-    return JsonWrapper.Data, nil
+type OrderServiceImpl struct {
+    Users *service.Cached[UserService]  // Interface!
 }
 ```
 
-**Benefits**:
-- Automatic JSON marshaling/unmarshaling
-- Error handling with `proxy.ParseRouterError()`
-- Consistent interface with local implementation
+Runtime resolution:
+- Monolith: `UserServiceImpl` (local)
+- Microservices: `UserServiceRemote` (proxy)
 
-### 2. **Service Interface Contract**
+Same code, different behavior!
 
-Both implementations satisfy the same interface:
+### 4. **Zero-Boilerplate Remote Calls**
+
+Before (manual):
+```go
+var wrapper struct {
+    Data *User `json:"data"`
+}
+err := proxy.DoJSON("GET", fmt.Sprintf("/users/%d", id), nil, nil, &wrapper)
+return wrapper.Data, err
+```
+
+After (auto):
+```go
+return proxy.CallWithData[*User](service, "GetByID", params)
+```
+
+Framework handles:
+- ✅ URL construction
+- ✅ Path parameter extraction
+- ✅ JSON wrapper unwrapping
+- ✅ Error handling
+
+---
+
+## 🎓 Advanced Topics
+
+### Custom Conventions
+
+Create your own routing conventions:
 
 ```go
-var _ UserService = (*UserServiceImpl)(nil)   // Compile-time check
-var _ UserService = (*UserServiceRemote)(nil) // Compile-time check
+convention.Register("api-v2", &convention.Definition{
+    List:     "GET /{resource}",
+    GetByID:  "GET /{resource}/{id}",
+    Create:   "POST /{resource}",
+    // ... custom patterns
+})
 ```
 
-This ensures:
-- Both have identical methods
-- Can be swapped at runtime
-- Type safety guaranteed
+### Deployment-Specific Overrides
 
-### 3. **Lazy Service Resolution**
+Override metadata per environment:
 
-Handlers use `service.LazyLoad`:
+```yaml
+# production.yaml
+routers:
+  order-service-router:
+    overrides: prod-overrides
 
-```go
-var userService = service.LazyLoad[appservice.UserService]("users")
-
-func getUserHandler(ctx *request.Context) error {
-    // Resolved at first call based on registration
-    user, err := userService.MustGet().GetByID(&params)
-    ...
-}
+router-overrides:
+  prod-overrides:
+    path-prefix: /api/v2  # All routes prefixed
+    hidden: [InternalMethod]  # Hide from public
 ```
 
-**Benefits**:
-- Resolved based on what was registered
-- No code changes in handlers
-- Type-safe service access
+### Service Discovery Integration
 
-### 4. **RegisterServiceTypeRemote**
+Auto-resolve service URLs:
 
-Special registration for remote services:
-
-```go
-lokstra_registry.RegisterServiceTypeRemote("usersFactory",
-    appservice.NewUserServiceRemote)
+```yaml
+deployments:
+  kubernetes:
+    servers:
+      order-server:
+        required-remote-services:
+          - user-service-remote:
+              url: "http://user-service.default.svc.cluster.local"
 ```
 
-This tells Lokstra:
-- Create instance using `NewUserServiceRemote()`
-- Service will make HTTP calls
-- Different from local factory registration
+---
 
-## 💡 Design Principles
+## 📊 Comparison: Manual vs Auto
 
-### 1. **Separation of Concerns**
+| Aspect | Manual Approach | Auto (This Example) |
+|--------|----------------|---------------------|
+| Router Creation | Manual `r.GET()` | Auto-generated |
+| Handler Code | Manual functions | Auto-generated |
+| Proxy Calls | Manual `DoJSON()` | `CallWithData()` |
+| Route Metadata | Hardcoded strings | Convention + metadata |
+| Custom Routes | Manual registration | Override in metadata |
+| Lines of Code | ~200 lines | ~40 lines |
+| Refactoring | Manual updates | Auto-updates |
 
-| Layer | Responsibility | Deployment Dependency |
-|-------|----------------|----------------------|
-| **Models** (`User`, `Order`) | Data structures | ❌ None |
-| **Service Interfaces** | Contracts | ❌ None |
-| **Service Implementations** | Business logic | ❌ None (both local & remote) |
-| **Handlers** | HTTP layer | ❌ None |
-| **Registration** | Wiring | ✅ **YES** - Only this changes! |
+**Code reduction**: **80%** less boilerplate!
 
-### 2. **Dependency Inversion**
-
-```
-OrderService depends on UserService interface (abstraction)
-         ↓
-Not on UserServiceImpl or UserServiceRemote (concrete)
-```
-
-This allows swapping implementations at runtime.
-
-### 3. **Interface Segregation**
-
-Each service interface is minimal:
-- `UserService`: Only user operations
-- `OrderService`: Only order operations
-
-No bloated interfaces with unused methods.
-
-### 4. **Single Responsibility**
-
-Each file has one job:
-- `database.go`: Data storage
-- `user_service.go`: Local user operations
-- `user_service_remote.go`: Remote user operations  
-- `order_service.go`: Order operations + user coordination
-- `handlers.go`: HTTP request/response
-- `registration.go`: Service wiring
-- `main.go`: Server configuration
+---
 
 ## 🚀 Production Considerations
 
-### 1. **Configuration Management**
+### 1. **Service URLs**
 
-Currently uses hardcoded values. In production:
-
+Development (current):
 ```go
-// Use environment variables
-func NewUserServiceRemote() *UserServiceRemote {
-    baseURL := os.Getenv("USER_SERVICE_URL")
-    if baseURL == "" {
-        baseURL = "http://localhost:3004"
-    }
-    return &UserServiceRemote{
-        proxy: proxy.NewRemoteRouter(baseURL),
-    }
-}
+ProxyService: proxyService  // Framework-injected
 ```
 
-Or use Lokstra's unified config:
+Production:
 ```yaml
-remote-service-definitions:
+external-service-definitions:
   user-service-remote:
-    url: http://user-service:3004
+    url: "http://user-service.prod.internal:3004"
     timeout: 5s
-    retry: 3
 ```
 
-### 2. **Service Discovery**
+### 2. **Error Handling**
 
-Integrate with:
-- **Kubernetes**: Service DNS (e.g., `http://user-service.default.svc.cluster.local`)
-- **Consul**: Dynamic service discovery
-- **Eureka**: Netflix service registry
-
-### 3. **Resilience Patterns**
-
-Add to `UserServiceRemote`:
-- **Circuit breaker**: Stop calling failing services
-- **Retries**: Retry failed requests with backoff
-- **Timeouts**: Don't wait forever
-- **Fallbacks**: Return cached data or defaults
-
+Add circuit breakers, retries:
 ```go
-func (u *UserServiceRemote) GetByID(p *GetUserParams) (*User, error) {
-    // Add circuit breaker, retry, timeout logic
-    return u.circuitBreaker.Execute(func() (*User, error) {
-        return u.doGetByID(p)
-    })
+func (s *OrderServiceImpl) GetByID(p *GetOrderParams) (*OrderWithUser, error) {
+    user, err := s.Users.MustGet().GetByID(&GetUserParams{ID: order.UserID})
+    if err != nil {
+        // Handle remote call failure
+        if apiErr, ok := err.(*api_client.ApiError); ok {
+            return nil, fmt.Errorf("user service error: %s", apiErr.Message)
+        }
+        return nil, err
+    }
+    // ...
 }
 ```
 
-### 4. **Monitoring & Observability**
+### 3. **Monitoring**
 
-Add:
-- Request tracing (OpenTelemetry)
-- Metrics (Prometheus)
-- Logging (structured logs)
-
-```go
-func (u *UserServiceRemote) GetByID(p *GetUserParams) (*User, error) {
-    span := trace.Start("UserService.GetByID")
-    defer span.End()
-    
-    log.Info("Fetching user", "id", p.ID)
-    // ... existing code
-}
+Framework logs auto-router generation:
+```
+✨ Auto-generated router 'user-service-router' from service 'user-service'
+✨ Auto-generated router 'order-service-router' from service 'order-service'
 ```
 
-### 5. **Database Strategy**
-
-**Development** (current):
-- Shared in-memory database
-- Simple, fast
-
-**Production**:
-- Each server has own database
-- Data consistency via events or distributed transactions
-- User-service: PostgreSQL
-- Order-service: PostgreSQL + cache
-
-### 6. **API Versioning**
-
-When services evolve independently:
-
+Add custom metrics:
 ```go
-proxy: proxy.NewRemoteRouter("http://user-service:3004/v1")
+proxy.CallWithData[*User](service, "GetByID", params)
+// Framework can track: latency, errors, retries
 ```
 
-Allows:
-- User-service to release v2 without breaking order-service
-- Gradual migration
-- Backward compatibility
-
-## 💡 When to Use Each Deployment
-
-### Monolith Deployment
-✅ **Good for**:
-- Development & testing
-- Small to medium apps
-- Simple operations
-- Low latency requirements
-- Cost-sensitive projects
-- Single team
-
-❌ **Avoid when**:
-- Need independent scaling
-- Multiple teams on different services
-- Services have different resource needs
-
-### Microservices Deployment
-✅ **Good for**:
-- Large applications
-- Independent team ownership
-- Different scaling per service
-- Polyglot requirements
-- Fault isolation
-- Independent deployment cycles
-
-❌ **Avoid when**:
-- Small team/app
-- High inter-service chattiness
-- Limited ops experience
-- Complexity not justified
-
-## 🔗 Related Topics
-
-- **Example 3 (CRUD API)**: Service layer patterns
-- **Essentials / Services**: Deep dive into service registration & lazy loading
-- **Essentials / Proxy Router**: HTTP client for inter-service communication
-- **Configuration Guide**: Unified config for deployment settings
-- **Production Guide**: Scaling, monitoring, and deployment strategies
-
-## 📚 What You Learned
-
-1. ✅ **Single binary, multiple deployment modes** - One build, three run options
-2. ✅ **Interface-based abstraction** - UserService interface with local & remote implementations
-3. ✅ **Transparent cross-service calls** - Same code works locally or via HTTP
-4. ✅ **Deployment-specific registration** - Only registration changes, not business logic
-5. ✅ **Code reuse** - Handlers, services, models shared across all deployments
-6. ✅ **proxy.Router pattern** - Clean HTTP communication wrapper
-7. ✅ **Design principles** - Separation of concerns, dependency inversion, interface segregation
-8. ✅ **Production considerations** - Config, service discovery, resilience, monitoring
+---
 
 ## 🎯 Key Takeaways
 
-### Manual Approach for Learning
+### Why This Approach Is Better
 
-This example uses the **manual approach** intentionally to teach fundamentals:
+1. **Less Code**: 80% reduction vs manual approach
+2. **Type Safety**: Compile-time checks for method mapping
+3. **Single Source of Truth**: Metadata in service code
+4. **Refactoring-Friendly**: Rename method → route auto-updates
+5. **Convention-Based**: Follow standards (REST, JSON:API, etc.)
+6. **Flexible**: Override when needed via metadata or YAML
 
-**What you learned (Manual)**:
-- ✅ How to create handlers from service methods manually
-- ✅ How `proxy.Router` works with `DoJSON()` calls
-- ✅ How to register different service implementations per deployment
-- ✅ How interface abstraction enables transparent local/remote calls
+### When to Use Auto-Router
 
-**What's coming (Automated)**:
-- 🔄 Auto service-to-router with `router.NewFromService()`
-- 🔄 Convention-based routing (RESTful, RPC, custom)
-- 🔄 Auto proxy with `proxy.Service` using same conventions
-- 🔄 Config-driven deployment (YAML/code)
+✅ **Good for**:
+- RESTful APIs
+- CRUD operations
+- Microservices communication
+- Rapid development
+- Standard patterns
 
-### Why Learn Manual First?
+❌ **Consider manual when**:
+- Highly custom routing
+- Non-standard HTTP patterns
+- Need fine-grained control
+- Legacy API compatibility
 
-Understanding the manual approach helps you:
-1. **Debug issues**: Know what's happening under the hood
-2. **Customize behavior**: Override automated behavior when needed
-3. **Appreciate automation**: Understand what the framework does for you
-4. **Make informed decisions**: Choose manual vs automated wisely
+### Production Checklist
 
-### This Example Does NOT Use Unified Config
+Before deploying:
+- [ ] Configure service URLs (env vars or config)
+- [ ] Add health check endpoints
+- [ ] Set up monitoring/metrics
+- [ ] Configure timeouts and retries
+- [ ] Test failure scenarios
+- [ ] Document API endpoints
+- [ ] Set up CI/CD pipelines
 
-This example demonstrates deployment flexibility **without** Lokstra's unified config system. Everything is hardcoded for clarity:
-- Port numbers in `main.go`
-- Service URLs in `NewUserServiceRemote()`
-- Flag-based server selection
+---
 
-**Next Level**: Later chapters will show:
-- Unified config system
-- Convention-based routing
-- Automated service registration
-- Config-driven deployment
+## 📚 Related Topics
 
-### The Power of Interfaces
+- **01-essentials/auto-router**: Deep dive into convention system
+- **01-essentials/proxy-service**: Advanced proxy patterns
+- **01-essentials/metadata**: Metadata architecture
+- **02-advanced/custom-conventions**: Build your own conventions
+- **03-production/service-discovery**: Kubernetes, Consul integration
 
-The magic is in this line:
-```go
-Users *service.Cached[UserService]  // Interface, not concrete type!
-```
+---
 
-This single design choice enables:
-- ✅ Swapping implementations at runtime
-- ✅ Testing with mocks
-- ✅ Deployment flexibility
-- ✅ Zero code changes in consumers
+## 💡 What You Learned
 
-### One Binary = Deployment Flexibility
+1. ✅ **Clean Architecture** with contract, model, service, repository layers
+2. ✅ **Auto-router generation** from service methods
+3. ✅ **RemoteServiceMeta** interface for metadata
+4. ✅ **3-level metadata system** (code → options → YAML)
+5. ✅ **proxy.CallWithData** for type-safe HTTP calls
+6. ✅ **Convention-based routing** (REST, custom)
+7. ✅ **Single binary, multiple deployments**
+8. ✅ **Zero-boilerplate** remote service calls
+9. ✅ **Metadata-driven** architecture
+10. ✅ **Interface-based dependency injection** for testability
 
-Traditional approach:
-```bash
-user-service/      # Separate project
-order-service/     # Separate project
-shared-lib/        # Shared code (versioning nightmare)
-```
-
-Lokstra approach:
-```bash
-app/               # One project
-  -server monolith       # Run option 1
-  -server user-service   # Run option 2
-  -server order-service  # Run option 3
-```
-
-Benefits:
-- No version skew between services
-- Shared code without libraries
-- Easy refactoring across services
-- Type-safe cross-service calls
-
-## 🎯 Next Steps
-
-### Within This Example (Manual Approach):
-1. **Add More Services**: Create `PaymentService`, `ShippingService` manually
-2. **Implement Caching**: Add Redis to UserServiceRemote
-3. **Add Tests**: Unit test with mock UserService
-4. **Add Metrics**: Track HTTP calls in UserServiceRemote
-5. **Add Circuit Breaker**: Resilience patterns in remote calls
-
-### Evolution to Advanced Patterns:
-Continue your learning journey with these chapters:
-
-**01-Essentials** (Recommended Next):
-- 📚 **Convention-Based Routing**: Auto service-to-router conversion
-- 📚 **Proxy Services**: `proxy.Service` with automatic method mapping
-- 📚 **Service Registry Patterns**: Advanced registration strategies
-
-**02-Advanced**:
-- 📚 **Config-Driven Deployment**: YAML/code-based deployment configuration
-- 📚 **Custom Conventions**: Create your own routing conventions
-- 📚 **Multi-Environment Setup**: Dev, staging, production configs
-
-**03-Production**:
-- 📚 **Service Discovery**: Integration with Consul, Kubernetes
-- 📚 **Observability**: Metrics, tracing, logging
-- 📚 **Resilience Patterns**: Circuit breakers, retries, timeouts
-3. **Add Config**: Use unified config for ports & URLs
-4. **Add Metrics**: Track HTTP calls in UserServiceRemote
-5. **Add Tests**: Unit test with mock UserService
-6. **Add Circuit Breaker**: Resilience patterns in remote calls
-7. **Try Kubernetes**: Deploy all three modes to K8s
-
-Happy coding! 🚀
+**Next**: Explore custom conventions and advanced routing patterns! 🚀

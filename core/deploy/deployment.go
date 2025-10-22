@@ -5,6 +5,9 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/core/deploy/schema"
+	"github.com/primadi/lokstra/core/proxy"
+	"github.com/primadi/lokstra/core/router/autogen"
+	"github.com/primadi/lokstra/core/router/convention"
 	"github.com/primadi/lokstra/core/service"
 )
 
@@ -207,7 +210,8 @@ func (a *App) AddServices(serviceNames ...string) *App {
 
 // AddRemoteServiceByName marks a service as remote (will use remote factory)
 // This allows the same service definition to be used locally or remotely
-func (a *App) AddRemoteServiceByName(serviceName, baseURL string) *App {
+// remoteDef can contain YAML overrides for resource, resource-plural, convention, and overrides
+func (a *App) AddRemoteServiceByName(serviceName, baseURL string, remoteDef *schema.RemoteServiceSimple) *App {
 	// Mark service as remote
 	a.remoteServiceNames[serviceName] = true
 
@@ -221,16 +225,55 @@ func (a *App) AddRemoteServiceByName(serviceName, baseURL string) *App {
 		panic(fmt.Sprintf("service %s already added to app", serviceName))
 	}
 
-	// Create service instance with base-url config for remote factory
+	// Get service metadata from factory registration
+	metadata := a.server.deployment.registry.GetServiceMetadata(serviceDef.Type)
+
+	// Apply YAML overrides if provided
+	var overridesName string
+	if remoteDef != nil {
+		if metadata == nil {
+			metadata = &ServiceMetadata{}
+		}
+		// YAML overrides take precedence
+		if remoteDef.Resource != "" {
+			metadata.Resource = remoteDef.Resource
+		}
+		if remoteDef.ResourcePlural != "" {
+			metadata.ResourcePlural = remoteDef.ResourcePlural
+		}
+		if remoteDef.Convention != "" {
+			metadata.Convention = remoteDef.Convention
+		}
+		if remoteDef.Overrides != "" {
+			overridesName = remoteDef.Overrides
+		}
+	}
+
+	// Create proxy.Service with metadata
+	var proxyService any
+	if metadata != nil && metadata.Resource != "" {
+		// Use metadata (from registration or YAML override)
+		proxyService = createProxyService(baseURL, metadata)
+	} else {
+		// Fallback: auto-generate from service name
+		proxyService = createProxyServiceFromName(baseURL, serviceName)
+	}
+
+	// Prepare config map
+	config := make(map[string]any)
+	config["remote"] = proxyService
+	if overridesName != "" {
+		config["overrides"] = overridesName
+	}
+
+	// Create service instance with proxy.Service as dependency
 	a.services[serviceName] = &serviceInstance{
 		name: serviceName,
 		serviceDef: &schema.ServiceDef{
-			Name: serviceName,
-			Type: serviceDef.Type,
-			Config: map[string]any{
-				"base-url": baseURL,
-			},
+			Name:      serviceName,
+			Type:      serviceDef.Type,
 			DependsOn: serviceDef.DependsOn, // Keep dependencies
+			Config:    config,               // Pre-instantiated proxy.Service + optional overrides
 		},
 		instance: nil,
 		resolved: false,
@@ -378,51 +421,8 @@ func (a *App) AddServiceRouters(serviceRouterNames ...string) *App {
 
 // ===== REMOTE SERVICE MANAGEMENT =====
 
-// AddRemoteService adds a remote service proxy
-func (a *App) AddRemoteService(serviceName, url string, opts ...RemoteServiceOption) *App {
-	remote := &remoteService{
-		name: serviceName,
-		url:  url,
-	}
-
-	for _, opt := range opts {
-		opt.apply(remote)
-	}
-
-	if _, exists := a.remoteServices[serviceName]; exists {
-		panic(fmt.Sprintf("remote service %s already added to app", serviceName))
-	}
-
-	a.remoteServices[serviceName] = remote
-	return a
-}
-
-// RemoteServiceOption configures a remote service
-type RemoteServiceOption interface {
-	apply(*remoteService)
-}
-
-type remoteServiceOptionFunc func(*remoteService)
-
-func (f remoteServiceOptionFunc) apply(rs *remoteService) {
-	f(rs)
-}
-
-// WithConvention sets the convention for remote service
-func WithConvention(convention string) RemoteServiceOption {
-	return remoteServiceOptionFunc(func(rs *remoteService) {
-		rs.convention = convention
-	})
-}
-
-// WithOverrides sets the overrides for remote service
-func WithOverrides(overrides string) RemoteServiceOption {
-	return remoteServiceOptionFunc(func(rs *remoteService) {
-		rs.overrides = overrides
-	})
-}
-
-// ===== GETTERS =====
+// AddRemoteServiceByName marks a service as remote (will use remote factory)
+// This allows the same service definition to be used locally or remotely
 
 // Name returns the deployment name
 func (d *Deployment) Name() string {
@@ -477,4 +477,41 @@ func (a *App) ServiceRouters() map[string]*serviceRouter {
 // RemoteServices returns all remote services
 func (a *App) RemoteServices() map[string]*remoteService {
 	return a.remoteServices
+}
+
+// ===== HELPER FUNCTIONS =====
+
+// createProxyService creates a proxy.Service from metadata
+func createProxyService(baseURL string, metadata *ServiceMetadata) *proxy.Service {
+	return proxy.NewService(
+		baseURL,
+		autogen.ConversionRule{
+			Convention:     convention.ConventionType(metadata.Convention),
+			Resource:       metadata.Resource,
+			ResourcePlural: metadata.ResourcePlural,
+		},
+		autogen.RouteOverride{
+			PathPrefix: metadata.PathPrefix,
+			Hidden:     metadata.HiddenMethods,
+			// TODO: Convert RouteOverrides map to Custom routes
+		},
+	)
+}
+
+// createProxyServiceFromName creates a proxy.Service by auto-generating metadata from service name
+// e.g., "user-service" → resource: "user", plural: "users"
+func createProxyServiceFromName(baseURL string, serviceName string) *proxy.Service {
+	// Auto-generate resource name from service name
+	resourceName := strings.TrimSuffix(serviceName, "-service")
+	resourcePlural := resourceName + "s" // Simple pluralization
+
+	return proxy.NewService(
+		baseURL,
+		autogen.ConversionRule{
+			Convention:     "", // Default to REST
+			Resource:       resourceName,
+			ResourcePlural: resourcePlural,
+		},
+		autogen.RouteOverride{},
+	)
 }

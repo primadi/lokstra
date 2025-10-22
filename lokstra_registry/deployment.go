@@ -10,6 +10,7 @@ import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/server"
 )
 
 var (
@@ -135,13 +136,13 @@ func RunCurrentServer(timeout time.Duration) error {
 	}
 
 	// Get server from deployment
-	server, ok := currentDeployment.GetServer(currentServerName)
+	deployServer, ok := currentDeployment.GetServer(currentServerName)
 	if !ok {
 		return fmt.Errorf("server '%s' not found in deployment '%s'", currentServerName, currentDeployment.Name())
 	}
 
 	// Get apps
-	apps := server.Apps()
+	apps := deployServer.Apps()
 	if len(apps) == 0 {
 		return fmt.Errorf("server '%s' has no apps configured", currentServerName)
 	}
@@ -161,32 +162,31 @@ func RunCurrentServer(timeout time.Duration) error {
 
 	var routers []router.Router
 	for routerName := range routersMap {
-		router := GetRouter(routerName)
-		if router == nil {
-			return fmt.Errorf("router '%s' not found in registry - did you call RegisterRouter?", routerName)
+		// Try to get manually registered router first
+		r := GetRouter(routerName)
+
+		// If not found, try to build from router definition (auto-generated)
+		if r == nil {
+			autoRouter, err := BuildRouterFromDefinition(routerName, ap)
+			if err != nil {
+				return fmt.Errorf("router '%s' not found in registry and failed to auto-build: %w", routerName, err)
+			}
+			r = autoRouter
+			log.Printf("✨ Auto-generated router '%s' from service '%s'\n", routerName, deploy.Global().GetRouterDef(routerName).Service)
 		}
-		routers = append(routers, router)
+
+		routers = append(routers, r)
 	}
 
-	// Merge routers if multiple
-	var finalRouter router.Router
-	if len(routers) == 1 {
-		finalRouter = routers[0]
-	} else {
-		// TODO: Implement router merging for multi-router apps
-		return fmt.Errorf("multi-router apps not yet supported (app has %d routers)", len(routers))
-	}
+	// Create Lokstra App with all routers (app.New supports multiple routers)
+	lokstraApp := app.New(currentServerName, ap.Addr(), routers...)
 
-	// Create and run Lokstra app
-	lokstraApp := app.New(currentServerName, ap.Addr(), finalRouter)
-	lokstraApp.PrintStartInfo()
+	// Create core Server and run (delegates to core/server/server.go)
+	coreServer := server.New(currentServerName, lokstraApp)
+	coreServer.PrintStartInfo()
 
-	log.Printf("🟢 Starting server '%s' on %s\n", currentServerName, ap.Addr())
-	if err := lokstraApp.Run(timeout); err != nil {
-		return fmt.Errorf("failed to run server: %w", err)
-	}
-
-	return nil
+	// Delegate to core Server.Run() - no code duplication!
+	return coreServer.Run(timeout)
 }
 
 // RunServer is a convenience helper that combines SetCurrentServer, PrintCurrentServerInfo, and RunCurrentServer.

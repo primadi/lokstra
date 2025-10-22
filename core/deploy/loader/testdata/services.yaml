@@ -16,8 +16,8 @@ service-definitions:
       - userSvc:user-service
       - logger
 
-# Remote Services
-remote-service-definitions:
+# External Services (renamed from remote-service-definitions)
+external-service-definitions:
   payment-api:
     url: https://payment.example.com
     resource: payment

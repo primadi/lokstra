@@ -42,10 +42,22 @@ type GlobalRegistry struct {
 	deployments map[string]*Deployment
 }
 
-// ServiceFactoryEntry holds local and remote factory functions
+// ServiceFactoryEntry holds local and remote factory functions plus metadata
 type ServiceFactoryEntry struct {
-	Local  ServiceFactory
-	Remote ServiceFactory
+	Local    ServiceFactory
+	Remote   ServiceFactory
+	Metadata *ServiceMetadata // Optional metadata for auto-router generation
+}
+
+// ServiceMetadata holds metadata for service auto-generation
+type ServiceMetadata struct {
+	Resource        string            // Singular resource name (e.g., "user")
+	ResourcePlural  string            // Plural resource name (e.g., "users")
+	Convention      string            // Convention type (e.g., "rest", "rpc")
+	RouteOverrides  map[string]string // Method name -> custom path
+	HiddenMethods   []string          // Methods to hide from router
+	PathPrefix      string            // Path prefix for all routes
+	MiddlewareNames []string          // Middleware names to apply
 }
 
 // ServiceFactory creates a service instance
@@ -87,8 +99,8 @@ func NewGlobalRegistry() *GlobalRegistry {
 
 // ===== FACTORY REGISTRATION (CODE) =====
 
-// RegisterServiceType registers a service factory
-func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote ServiceFactory) {
+// RegisterServiceType registers a service factory with optional metadata
+func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote ServiceFactory, options ...RegisterServiceTypeOption) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -96,9 +108,24 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote S
 		panic(fmt.Sprintf("service type %s already registered", serviceType))
 	}
 
+	// Build metadata from options
+	metadata := &ServiceMetadata{
+		Convention: "rest", // Default convention
+	}
+	for _, opt := range options {
+		opt(metadata)
+	}
+
+	// Only store metadata if resource name is provided
+	var metadataPtr *ServiceMetadata
+	if metadata.Resource != "" {
+		metadataPtr = metadata
+	}
+
 	g.serviceFactories[serviceType] = &ServiceFactoryEntry{
-		Local:  local,
-		Remote: remote,
+		Local:    local,
+		Remote:   remote,
+		Metadata: metadataPtr,
 	}
 }
 
@@ -198,6 +225,19 @@ func (g *GlobalRegistry) GetServiceFactory(serviceType string, isLocal bool) Ser
 		return entry.Local
 	}
 	return entry.Remote
+}
+
+// GetServiceMetadata returns the service metadata for a service type
+func (g *GlobalRegistry) GetServiceMetadata(serviceType string) *ServiceMetadata {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	entry, ok := g.serviceFactories[serviceType]
+	if !ok {
+		return nil
+	}
+
+	return entry.Metadata
 }
 
 // GetMiddlewareFactory returns the middleware factory

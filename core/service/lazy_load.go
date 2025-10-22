@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/internal/registry"
 )
 
@@ -202,4 +203,25 @@ func LazyLoadFrom[T any](getter ServiceGetter, serviceName string) *Cached[T] {
 		}
 		return svc.(T)
 	})
+}
+
+// CastProxyService casts a dependency value to *proxy.Service
+// This is used in remote service factories where the framework pre-instantiates proxy.Service
+//
+// Example usage:
+//
+//	func UserServiceRemoteFactory(deps map[string]any, config map[string]any) any {
+//	    return &UserServiceRemote{
+//	        service: service.CastProxyService(deps["remote"]),
+//	    }
+//	}
+func CastProxyService(value any) *proxy.Service {
+	// Allow nil for metadata reading scenarios
+	if value == nil {
+		return nil
+	}
+	if svc, ok := value.(*proxy.Service); ok {
+		return svc
+	}
+	panic("CastProxyService: value is not a *proxy.Service")
 }

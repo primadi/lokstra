@@ -156,28 +156,38 @@
         }
       }
     },
-    "remote-service-definitions": {
+    "external-service-definitions": {
       "type": "object",
-      "description": "Remote service definitions",
+      "description": "External service definitions (services outside this deployment). For external services, you typically need to override everything since their API structure may differ from internal conventions.",
       "patternProperties": {
         "^[a-z][a-z0-9-]*$": {
           "type": "object",
-          "required": ["url", "resource"],
+          "required": ["url"],
           "properties": {
             "url": {
               "type": "string",
-              "description": "Base URL of remote service",
+              "description": "Base URL of external service",
               "pattern": "^https?://"
             },
             "resource": {
               "type": "string",
-              "description": "Resource name (singular)",
+              "description": "Resource name (singular) - Override of RegisterServiceType metadata",
               "pattern": "^[a-z][a-z-]*$"
             },
             "resource-plural": {
               "type": "string",
-              "description": "Plural form of resource name",
+              "description": "Plural form of resource name - Override",
               "pattern": "^[a-z][a-z-]*$"
+            },
+            "convention": {
+              "type": "string",
+              "description": "Convention type (rest, rpc, graphql) - Override of RegisterServiceType metadata",
+              "pattern": "^[a-z][a-z-]*$"
+            },
+            "overrides": {
+              "type": "string",
+              "description": "Reference to router-overrides definition for full path customization",
+              "pattern": "^[a-z][a-z0-9-]*$"
             }
           },
           "additionalProperties": false
@@ -202,7 +212,7 @@
               "patternProperties": {
                 "^[a-z][a-z0-9-]*$": {
                   "type": "object",
-                  "required": ["base-url", "apps"],
+                  "required": ["base-url"],
                   "properties": {
                     "base-url": {
                       "type": "string",
@@ -227,7 +237,7 @@
                     },
                     "apps": {
                       "type": "array",
-                      "description": "Applications on this server",
+                      "description": "Applications on this server (optional if using shorthand fields)",
                       "items": {
                         "type": "object",
                         "required": ["addr"],
@@ -237,25 +247,17 @@
                             "description": "Application address (e.g., ':8080', '127.0.0.1:8080', 'unix:/tmp/app.sock')",
                             "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
                           },
-                          "required-services": {
-                            "type": "array",
-                            "description": "App-level services (app-specific)",
-                            "items": {
-                              "type": "string",
-                              "pattern": "^[a-z][a-z0-9-]*$"
-                            }
-                          },
                           "routers": {
                             "type": "array",
-                            "description": "Routers to include in this app (automatically published for service discovery)",
+                            "description": "Routers to include in this app",
                             "items": {
                               "type": "string",
                               "pattern": "^[a-z][a-z0-9-]*$"
                             }
                           },
-                          "required-remote-services": {
+                          "published-services": {
                             "type": "array",
-                            "description": "App-level remote services (app-specific)",
+                            "description": "Services to auto-generate routers for",
                             "items": {
                               "type": "string",
                               "pattern": "^[a-z][a-z0-9-]*$"
@@ -263,6 +265,27 @@
                           }
                         },
                         "additionalProperties": false
+                      }
+                    },
+                    "addr": {
+                      "type": "string",
+                      "description": "Shorthand: Application address (creates new app prepended to apps array)",
+                      "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
+                    },
+                    "routers": {
+                      "type": "array",
+                      "description": "Shorthand: Routers for the shorthand app",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9-]*$"
+                      }
+                    },
+                    "published-services": {
+                      "type": "array",
+                      "description": "Shorthand: Services to auto-generate routers for in the shorthand app",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9-]*$"
                       }
                     }
                   },

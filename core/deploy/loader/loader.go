@@ -2,7 +2,6 @@ package loader
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,9 +11,6 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed lokstra.schema.json
-var schemaFS embed.FS
 
 // LoadConfig loads a deployment configuration from YAML file(s)
 // Supports single file or multiple files that will be merged
@@ -38,6 +34,9 @@ func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
 			merged = mergeConfigs(merged, config)
 		}
 	}
+
+	// Normalize server definitions (convert helper fields to apps) BEFORE validation
+	normalizeServerDefinitions(merged)
 
 	// Validate merged config
 	if err := ValidateConfig(merged); err != nil {
@@ -71,11 +70,12 @@ func loadSingleFile(path string) (*schema.DeployConfig, error) {
 // Source values override target values
 func mergeConfigs(target, source *schema.DeployConfig) *schema.DeployConfig {
 	result := &schema.DeployConfig{
-		Configs:                  mergeMap(target.Configs, source.Configs),
-		ServiceDefinitions:       mergeMaps(target.ServiceDefinitions, source.ServiceDefinitions),
-		Routers:                  mergeMaps(target.Routers, source.Routers),
-		RemoteServiceDefinitions: mergeMaps(target.RemoteServiceDefinitions, source.RemoteServiceDefinitions),
-		Deployments:              mergeMaps(target.Deployments, source.Deployments),
+		Configs:                    mergeMap(target.Configs, source.Configs),
+		ServiceDefinitions:         mergeMaps(target.ServiceDefinitions, source.ServiceDefinitions),
+		Routers:                    mergeMaps(target.Routers, source.Routers),
+		RouterOverrides:            mergeMaps(target.RouterOverrides, source.RouterOverrides),
+		ExternalServiceDefinitions: mergeMaps(target.ExternalServiceDefinitions, source.ExternalServiceDefinitions),
+		Deployments:                mergeMaps(target.Deployments, source.Deployments),
 	}
 	return result
 }
@@ -120,12 +120,8 @@ func mergeMaps[T any](target, source map[string]*T) map[string]*T {
 
 // ValidateConfig validates a deployment configuration against JSON schema
 func ValidateConfig(config *schema.DeployConfig) error {
-	// Load embedded schema
-	schemaData, err := schemaFS.ReadFile("lokstra.schema.json")
-	if err != nil {
-		return fmt.Errorf("failed to load schema: %w", err)
-	}
-
+	// Load embedded schema from schema package
+	schemaData := schema.GetSchemaBytes()
 	schemaLoader := gojsonschema.NewBytesLoader(schemaData)
 
 	// Convert config to map for validation
@@ -188,19 +184,27 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 		result["routers"] = routers
 	}
 
-	if len(config.RemoteServiceDefinitions) > 0 {
-		remotes := make(map[string]any)
-		for name, rs := range config.RemoteServiceDefinitions {
-			rsMap := map[string]any{
-				"url":      rs.URL,
-				"resource": rs.Resource,
+	if len(config.ExternalServiceDefinitions) > 0 {
+		externals := make(map[string]any)
+		for name, es := range config.ExternalServiceDefinitions {
+			esMap := map[string]any{
+				"url": es.URL,
 			}
-			if rs.ResourcePlural != "" {
-				rsMap["resource-plural"] = rs.ResourcePlural
+			if es.Resource != "" {
+				esMap["resource"] = es.Resource
 			}
-			remotes[name] = rsMap
+			if es.ResourcePlural != "" {
+				esMap["resource-plural"] = es.ResourcePlural
+			}
+			if es.Convention != "" {
+				esMap["convention"] = es.Convention
+			}
+			if es.Overrides != "" {
+				esMap["overrides"] = es.Overrides
+			}
+			externals[name] = esMap
 		}
-		result["remote-service-definitions"] = remotes
+		result["external-service-definitions"] = externals
 	}
 
 	if len(config.Deployments) > 0 {
@@ -225,14 +229,11 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 							appMap := map[string]any{
 								"addr": app.Addr,
 							}
-							if len(app.Services) > 0 {
-								appMap["required-services"] = app.Services
-							}
 							if len(app.Routers) > 0 {
 								appMap["routers"] = app.Routers
 							}
-							if len(app.RemoteServices) > 0 {
-								appMap["required-remote-services"] = app.RemoteServices
+							if len(app.PublishedServices) > 0 {
+								appMap["published-services"] = app.PublishedServices
 							}
 							apps[i] = appMap
 						}

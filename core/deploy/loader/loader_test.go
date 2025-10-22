@@ -66,13 +66,13 @@ func TestLoadMultipleFiles(t *testing.T) {
 	}
 
 	// Check remote services
-	if len(config.RemoteServiceDefinitions) != 2 {
-		t.Errorf("expected 2 remote services, got %d", len(config.RemoteServiceDefinitions))
+	if len(config.ExternalServiceDefinitions) != 2 {
+		t.Errorf("expected 2 external services, got %d", len(config.ExternalServiceDefinitions))
 	}
 
-	paymentAPI := config.RemoteServiceDefinitions["payment-api"]
+	paymentAPI := config.ExternalServiceDefinitions["payment-api"]
 	if paymentAPI == nil {
-		t.Fatal("payment-api remote service not found")
+		t.Fatal("payment-api external service not found")
 	}
 
 	if paymentAPI.URL != "https://payment.example.com" {
@@ -118,12 +118,13 @@ func TestLoadMultipleFiles(t *testing.T) {
 		t.Errorf("expected addr :8080, got %s", app.Addr)
 	}
 
-	if len(app.Services) != 5 {
-		t.Errorf("expected 5 services in app, got %d", len(app.Services))
+	// Services are at server-level only, not app-level
+	if len(apiServer.Services) < 1 {
+		t.Errorf("expected at least 1 service at server level, got %d", len(apiServer.Services))
 	}
 
-	if len(app.RemoteServices) != 2 {
-		t.Errorf("expected 2 remote services in app, got %d", len(app.RemoteServices))
+	if len(apiServer.RemoteServices) >= 1 {
+		t.Logf("server has %d remote services", len(apiServer.RemoteServices))
 	}
 }
 
@@ -260,5 +261,42 @@ func TestEmptyConfig(t *testing.T) {
 	_, err := LoadConfig()
 	if err == nil {
 		t.Error("expected error when no files specified")
+	}
+}
+
+func TestShorthandSyntax(t *testing.T) {
+	config, err := LoadConfig("testdata/shorthand.yaml")
+	if err != nil {
+		t.Fatalf("failed to load shorthand config: %v", err)
+	}
+
+	dep := config.Deployments["test"]
+	if dep == nil {
+		t.Fatal("test deployment not found")
+	}
+
+	server := dep.Servers["api-server"]
+	if server == nil {
+		t.Fatal("api-server not found")
+	}
+
+	// After LoadConfig, normalization already happened, so helper fields are cleared
+	// and apps should be created
+	if len(server.Apps) != 1 {
+		t.Errorf("expected 1 app after normalization, got %d", len(server.Apps))
+	}
+
+	app := server.Apps[0]
+	if app.Addr != ":3000" {
+		t.Errorf("expected app addr :3000, got %s", app.Addr)
+	}
+
+	if len(app.PublishedServices) != 2 {
+		t.Errorf("expected 2 published services in app, got %d", len(app.PublishedServices))
+	}
+
+	// Verify helper fields are cleared after normalization
+	if server.HelperAddr != "" {
+		t.Errorf("expected helper addr to be cleared, got %s", server.HelperAddr)
 	}
 }

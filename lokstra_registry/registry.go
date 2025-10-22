@@ -44,11 +44,18 @@ func GetAllRouters() map[string]router.Router {
 
 // ===== SERVICE =====
 
-// RegisterServiceType registers a service factory function in the global registry
+// RegisterServiceType registers a service factory in the global registry
 // local: factory for local service instances
 // remote: factory for remote service proxies (can be nil)
-func RegisterServiceType(serviceType string, local, remote deploy.ServiceFactory) {
-	deploy.Global().RegisterServiceType(serviceType, local, remote)
+// options: optional metadata for auto-router generation
+func RegisterServiceType(serviceType string, local, remote deploy.ServiceFactory, options ...deploy.RegisterServiceTypeOption) {
+	deploy.Global().RegisterServiceType(serviceType, local, remote, options...)
+}
+
+// GetServiceFactory returns the service factory for a service type
+// isLocal: true for local factory, false for remote factory
+func GetServiceFactory(serviceType string, isLocal bool) deploy.ServiceFactory {
+	return deploy.Global().GetServiceFactory(serviceType, isLocal)
 }
 
 // DefineService defines a service in the global registry (for code-based config)

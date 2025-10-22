@@ -1,14 +1,24 @@
 package schema
 
+import _ "embed"
+
+//go:embed lokstra.schema.json
+var schemaBytes []byte
+
+// GetSchemaBytes returns the embedded JSON schema for validation
+func GetSchemaBytes() []byte {
+	return schemaBytes
+}
+
 // DeployConfig is the root configuration structure for YAML files
 // This matches the JSON schema and supports multi-file merging
 type DeployConfig struct {
-	Configs                  map[string]any                  `yaml:"configs" json:"configs"`
-	ServiceDefinitions       map[string]*ServiceDef          `yaml:"service-definitions" json:"service-definitions"`
-	Routers                  map[string]*RouterDef           `yaml:"routers" json:"routers"`
-	RouterOverrides          map[string]*RouterOverrideDef   `yaml:"router-overrides,omitempty" json:"router-overrides,omitempty"`
-	RemoteServiceDefinitions map[string]*RemoteServiceSimple `yaml:"remote-service-definitions" json:"remote-service-definitions"`
-	Deployments              map[string]*DeploymentDefMap    `yaml:"deployments" json:"deployments"`
+	Configs                    map[string]any                  `yaml:"configs" json:"configs"`
+	ServiceDefinitions         map[string]*ServiceDef          `yaml:"service-definitions" json:"service-definitions"`
+	Routers                    map[string]*RouterDef           `yaml:"routers" json:"routers"`
+	RouterOverrides            map[string]*RouterOverrideDef   `yaml:"router-overrides,omitempty" json:"router-overrides,omitempty"`
+	ExternalServiceDefinitions map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
+	Deployments                map[string]*DeploymentDefMap    `yaml:"deployments" json:"deployments"`
 }
 
 // RouterDef defines a router auto-generated from a service
@@ -49,22 +59,31 @@ type ServerDefMap struct {
 	BaseURL        string       `yaml:"base-url" json:"base-url"`
 	Services       []string     `yaml:"required-services,omitempty" json:"required-services,omitempty"`               // Server-level services (shared across apps)
 	RemoteServices []string     `yaml:"required-remote-services,omitempty" json:"required-remote-services,omitempty"` // Server-level remote services (shared)
-	Apps           []*AppDefMap `yaml:"apps" json:"apps"`
+	Apps           []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
+
+	// Helper fields (1 server = 1 app shorthand)
+	// If these are present, a new app will be created and PREPENDED to Apps array
+	// This allows mixing shorthand with additional apps
+	HelperAddr              string   `yaml:"addr,omitempty" json:"addr,omitempty"`
+	HelperRouters           []string `yaml:"routers,omitempty" json:"routers,omitempty"`
+	HelperPublishedServices []string `yaml:"published-services,omitempty" json:"published-services,omitempty"`
 }
 
 // AppDefMap is an app using map structure
 type AppDefMap struct {
-	Addr           string   `yaml:"addr" json:"addr"`                                                             // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
-	Services       []string `yaml:"required-services,omitempty" json:"required-services,omitempty"`               // App-level services (app-specific)
-	Routers        []string `yaml:"routers,omitempty" json:"routers,omitempty"`                                   // Routers to include in this app (auto-published for discovery)
-	RemoteServices []string `yaml:"required-remote-services,omitempty" json:"required-remote-services,omitempty"` // App-level remote services (app-specific)
+	Addr              string   `yaml:"addr" json:"addr"`                                                 // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
+	Routers           []string `yaml:"routers,omitempty" json:"routers,omitempty"`                       // Routers to include in this app
+	PublishedServices []string `yaml:"published-services,omitempty" json:"published-services,omitempty"` // Services to auto-generate routers for
 }
 
-// RemoteServiceSimple defines a remote service (simple YAML structure)
+// RemoteServiceSimple defines an external service (outside this deployment)
+// For external services, you typically need to override everything since their API structure may differ
 type RemoteServiceSimple struct {
 	URL            string `yaml:"url" json:"url"`
-	Resource       string `yaml:"resource" json:"resource"`
-	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"`
+	Resource       string `yaml:"resource,omitempty" json:"resource,omitempty"`               // Resource name (singular)
+	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Resource name (plural)
+	Convention     string `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql)
+	Overrides      string `yaml:"overrides,omitempty" json:"overrides,omitempty"`             // Reference to RouterOverrideDef name for full customization
 }
 
 // ConfigDef defines a configuration value

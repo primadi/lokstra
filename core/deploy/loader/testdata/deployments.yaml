@@ -9,17 +9,17 @@ deployments:
     servers:
       api-server:
         base-url: https://api.example.com
+        required-services:
+          - db-pool
+          - logger
+          - cache
+          - user-service
+          - order-service
+        required-remote-services:
+          - payment-api
+          - notification-api
         apps:
           - addr: ":8080"
-            required-services:
-              - db-pool
-              - logger
-              - cache
-              - user-service
-              - order-service
-            required-remote-services:
-              - payment-api
-              - notification-api
 
   development:
     config-overrides:
@@ -28,9 +28,9 @@ deployments:
     servers:
       dev-server:
         base-url: http://localhost
+        required-services:
+          - db-pool
+          - logger
+          - user-service
         apps:
           - addr: ":3000"
-            required-services:
-              - db-pool
-              - logger
-              - user-service
