@@ -239,15 +239,11 @@ func LoadAndBuild(configPaths []string) error {
 				Apps:           make([]*deploy.AppTopology, 0, len(serverDef.Apps)),
 			}
 
-			// Collect SERVER-LEVEL services (shared across all apps)
+			// Collect SERVER-LEVEL services (published services only)
+			// Dependencies are auto-detected from service-definitions, not explicitly listed
 			serviceMap := make(map[string]bool)
 
-			// Add server-level services from YAML
-			for _, svcName := range serverDef.Services {
-				serviceMap[svcName] = true
-			}
-
-			// Add published services from all apps (these are also local services)
+			// Add published services from all apps (these are local services on this server)
 			for _, appDef := range serverDef.Apps {
 				for _, svcName := range appDef.PublishedServices {
 					serviceMap[svcName] = true
@@ -257,28 +253,9 @@ func LoadAndBuild(configPaths []string) error {
 			// Convert to slice
 			for svcName := range serviceMap {
 				serverTopo.Services = append(serverTopo.Services, svcName)
-			}
-
-			// Collect SERVER-LEVEL remote services
-			for _, remoteServiceName := range serverDef.RemoteServices {
-				// Keep the full service name (no trimming!)
-				// This ensures consistency: config name = runtime name
-				actualServiceName := remoteServiceName
-
-				// Auto-resolve URL from service locations (check published services first)
-				remoteURL, found := serviceLocations[actualServiceName]
-				if !found {
-					// Fallback to external-service-definitions
-					if remoteDef, ok := externalServices[actualServiceName]; ok {
-						remoteURL = remoteDef.URL
-					} else {
-						return fmt.Errorf("remote service '%s' not found - not published in any server and not in external-service-definitions", actualServiceName)
-					}
-				}
-
-				serverTopo.Services = append(serverTopo.Services, actualServiceName)
-				serverTopo.RemoteServices[actualServiceName] = remoteURL
-			}
+			} // TODO: Auto-detect remote services from factory dependencies
+			// For now, remote service resolution happens during service registration
+			// based on published-services across servers in deployment
 
 			// Build app topologies (only addr + routers, NO services)
 			for _, appDef := range serverDef.Apps {
@@ -488,11 +465,8 @@ func LoadAndBuildFromDir(dirPath string) error {
 				Apps:           make([]*deploy.AppTopology, 0, len(serverDef.Apps)),
 			}
 
-			// Collect SERVER-LEVEL services
+			// Collect SERVER-LEVEL services (published services only)
 			serviceMap := make(map[string]bool)
-			for _, svcName := range serverDef.Services {
-				serviceMap[svcName] = true
-			}
 			for _, appDef := range serverDef.Apps {
 				for _, svcName := range appDef.PublishedServices {
 					serviceMap[svcName] = true
@@ -500,24 +474,8 @@ func LoadAndBuildFromDir(dirPath string) error {
 			}
 			for svcName := range serviceMap {
 				serverTopo.Services = append(serverTopo.Services, svcName)
-			}
-
-			// Collect SERVER-LEVEL remote services
-			for _, remoteServiceName := range serverDef.RemoteServices {
-				// Keep the full service name (no trimming!)
-				// This ensures consistency: config name = runtime name
-				actualServiceName := remoteServiceName
-				remoteURL, found := serviceLocations[actualServiceName]
-				if !found {
-					if remoteDef, ok := externalServices[actualServiceName]; ok {
-						remoteURL = remoteDef.URL
-					} else {
-						return fmt.Errorf("remote service '%s' not found - not published in any server and not in external-service-definitions", actualServiceName)
-					}
-				}
-				serverTopo.Services = append(serverTopo.Services, actualServiceName)
-				serverTopo.RemoteServices[actualServiceName] = remoteURL
-			}
+			} // TODO: Auto-detect remote services from factory dependencies
+			// For now, remote service resolution happens during service registration
 
 			// Build app topologies
 			for _, appDef := range serverDef.Apps {

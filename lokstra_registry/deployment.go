@@ -42,8 +42,9 @@ func SetCurrentServer(compositeKey string) error {
 		return fmt.Errorf("server topology '%s' not found in global registry", compositeKey)
 	}
 
-	// Set current context
+	// Set current context (both in package variable and GlobalRegistry)
 	currentCompositeKey = compositeKey
+	deploy.Global().SetCurrentCompositeKey(compositeKey)
 	return nil
 }
 

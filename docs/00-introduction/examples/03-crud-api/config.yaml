@@ -26,7 +26,5 @@ deployments:
     servers:
       api:
         base-url: http://localhost
-        apps:
-          - addr: ":3002"
-            routers: [api]
-        required-services: [database, user-service]
+        addr: ":3002"
+        routers: [api]

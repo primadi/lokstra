@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment/repository"
 	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment/service"
 	"github.com/primadi/lokstra/lokstra_registry"
@@ -33,17 +34,20 @@ func main() {
 		repository.NewOrderRepositoryMemory, nil)
 
 	// Register services (application layer)
-	// Metadata is provided by XXXRemote structs (RemoteServiceMetaAdapter)
+	// Metadata provided via RegisterServiceType options (not in factory structs)
 	lokstra_registry.RegisterServiceType("user-service-factory",
 		service.UserServiceFactory,
 		service.UserServiceRemoteFactory,
-		// Metadata in UserServiceRemote.RemoteServiceMetaAdapter
+		deploy.WithResource("user", "users"),
+		deploy.WithConvention("rest"),
 	)
 
 	lokstra_registry.RegisterServiceType("order-service-factory",
 		service.OrderServiceFactory,
 		service.OrderServiceRemoteFactory,
-		// Metadata + custom routes in OrderServiceRemote.RemoteServiceMetaAdapter
+		deploy.WithResource("order", "orders"),
+		deploy.WithConvention("rest"),
+		deploy.WithRouteOverride("GetByUserID", "/users/{user_id}/orders"),
 	)
 
 	// 2. Load config (loads ALL deployments into Global registry)

@@ -8,26 +8,20 @@ import (
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/router/autogen"
 	"github.com/primadi/lokstra/core/router/convention"
-	"github.com/primadi/lokstra/core/service"
 )
 
 // BuildRouterFromDefinition creates a router instance from a RouterDef in the global registry
 // This is used for auto-generated routers from published-services
 //
-// Metadata Resolution Priority (3 sources with fallback):
+// Metadata Resolution Priority (2 sources with fallback):
 //  1. YAML config (router-overrides)          ← HIGHEST - Runtime override per deployment
-//  2. XXXRemote struct (RemoteServiceMeta)    ← MEDIUM - Service-level defaults in code
-//  3. RegisterServiceType options             ← LOWEST - Framework-level defaults
+//  2. RegisterServiceType options             ← MEDIUM - Framework-level defaults
+//  3. Auto-generate from service name         ← LOWEST - Fallback
 //
-// This allows flexibility:
-//   - Simple case: Just metadata in XXXRemote struct (recommended)
-//   - Override per deployment: Add YAML config
-//   - Framework defaults: Use RegisterServiceType options
-//
-// Resolution order:
-//  1. Try to instantiate remote service factory and check for RemoteServiceMeta
-//  2. Fall back to RouterDef from config (convention, resource, overrides)
-//  3. YAML overrides are MERGED on top (highest priority)
+// This provides clear DX:
+//   - Default: Metadata in RegisterServiceType (recommended)
+//   - Override: Add YAML config per deployment
+//   - Fallback: Auto-generate from service name
 func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 	// Get router definition from global registry
 	routerDef := deploy.Global().GetRouterDef(routerName)
@@ -46,7 +40,7 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 	var override autogen.RouteOverride
 	var metadataFound bool
 
-	// Strategy 1: Check metadata from RegisterServiceType options (from service type)
+	// Strategy 1: Check metadata from RegisterServiceType options
 	serviceDef := deploy.Global().GetServiceDef(routerDef.Service)
 	if serviceDef != nil {
 		metadata := deploy.Global().GetServiceMetadata(serviceDef.Type)
@@ -57,10 +51,22 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 				Resource:       metadata.Resource,
 				ResourcePlural: metadata.ResourcePlural,
 			}
-			// TODO: Convert metadata.RouteOverrides to autogen.RouteOverride
+
+			// Convert RouteOverrides map to autogen.RouteOverride
 			override = autogen.RouteOverride{
 				PathPrefix: metadata.PathPrefix,
 				Hidden:     metadata.HiddenMethods,
+			}
+			if len(metadata.RouteOverrides) > 0 {
+				override.Custom = make(map[string]autogen.Route)
+				for methodName, pathSpec := range metadata.RouteOverrides {
+					// Parse path spec: "POST /path" or just "/path"
+					method, path := parsePathSpec(pathSpec)
+					override.Custom[methodName] = autogen.Route{
+						Method: method,
+						Path:   path,
+					}
+				}
 			}
 
 			// Config can still override
@@ -78,39 +84,7 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 		}
 	}
 
-	// Strategy 2: Try to get metadata from service instance (ServiceMeta)
-	// This works for both local and remote services!
-	if !metadataFound {
-		serviceMeta := tryGetServiceMeta(svc)
-		if serviceMeta != nil {
-			// Service provides metadata - use it!
-			resource, plural := serviceMeta.GetResourceName()
-			conventionName := serviceMeta.GetConventionName()
-			serviceOverride := serviceMeta.GetRouteOverride()
-
-			rule = autogen.ConversionRule{
-				Convention:     convention.ConventionType(conventionName),
-				Resource:       resource,
-				ResourcePlural: plural,
-			}
-			override = serviceOverride
-
-			// Config can still override service metadata if explicitly set
-			if routerDef.Convention != "" {
-				rule.Convention = convention.ConventionType(routerDef.Convention)
-			}
-			if routerDef.Resource != "" {
-				rule.Resource = routerDef.Resource
-			}
-			if routerDef.ResourcePlural != "" {
-				rule.ResourcePlural = routerDef.ResourcePlural
-			}
-
-			metadataFound = true
-		}
-	}
-
-	// Strategy 3: Fall back to config-based metadata or auto-generate from service name
+	// Strategy 2: Fall back to auto-generate from service name
 	if !metadataFound {
 		// Auto-generate resource name from service name if not in config
 		resource := routerDef.Resource
@@ -174,53 +148,25 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 	return r, nil
 }
 
-// tryGetServiceMeta attempts to get ServiceMeta from a service instance
-// This works for both local and remote services that implement ServiceMeta
-func tryGetServiceMeta(svc any) service.ServiceMeta {
-	// Check if service implements ServiceMeta interface
-	if metaSvc, ok := svc.(service.ServiceMeta); ok {
-		return metaSvc
-	}
-	return nil
-}
-
-// tryGetRemoteServiceMeta attempts to instantiate remote service and get metadata
-// This creates a temporary remote service instance just to read metadata
-// DEPRECATED: Use tryGetServiceMeta instead (works for both local and remote)
-func tryGetRemoteServiceMeta(serviceName string) (result service.RemoteServiceMeta) {
-	// Get service definition to find its type
-	serviceDef := deploy.Global().GetServiceDef(serviceName)
-	if serviceDef == nil {
-		return nil
-	}
-
-	// Try to get remote service factory from registry
-	remoteFactory := GetServiceFactory(serviceDef.Type, false)
-	if remoteFactory == nil {
-		return nil
-	}
-
-	// Create temporary remote service instance
-	// We need to handle the case where factory expects proxy.Service
-	// but we only want to read metadata. Recover from panics.
-	defer func() {
-		if r := recover(); r != nil {
-			// Factory panicked (probably CastProxyService), return nil
-			result = nil
+// parsePathSpec parses a path specification that may include an HTTP method prefix
+// Examples:
+//   - "POST /users/{user_id}/orders"  → ("POST", "/users/{user_id}/orders")
+//   - "/users/{user_id}/orders"       → ("", "/users/{user_id}/orders")
+//   - "GET /orders"                   → ("GET", "/orders")
+//
+// Empty method means auto-detect from method name (Get* → GET, Create* → POST, etc.)
+func parsePathSpec(pathSpec string) (method string, path string) {
+	// Check if path starts with HTTP method
+	parts := strings.SplitN(strings.TrimSpace(pathSpec), " ", 2)
+	if len(parts) == 2 {
+		// Check if first part is a valid HTTP method
+		possibleMethod := strings.ToUpper(parts[0])
+		switch possibleMethod {
+		case "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS":
+			return possibleMethod, strings.TrimSpace(parts[1])
 		}
-	}()
-
-	// Try to create remote service instance
-	// Most remote services expect config["remote"] to be a proxy.Service
-	// but we don't have one. Pass nil and let factory handle it.
-	remoteSvc := remoteFactory(map[string]any{}, map[string]any{
-		"remote": nil, // Factory might panic on CastProxyService
-	})
-
-	// Check if it implements RemoteServiceMeta
-	if metaSvc, ok := remoteSvc.(service.RemoteServiceMeta); ok {
-		return metaSvc
 	}
 
-	return nil
+	// No method prefix, or invalid method - return empty method for auto-detect
+	return "", strings.TrimSpace(pathSpec)
 }

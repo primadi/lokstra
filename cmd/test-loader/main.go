@@ -29,12 +29,6 @@ func main() {
 		fmt.Printf("\n   📦 Deployment: %s\n", depName)
 		for serverName, server := range dep.Servers {
 			fmt.Printf("      🖥️  Server: %s (%s)\n", serverName, server.BaseURL)
-			if len(server.Services) > 0 {
-				fmt.Printf("         Server-level services: %v\n", server.Services)
-			}
-			if len(server.RemoteServices) > 0 {
-				fmt.Printf("         Server-level remote services: %v\n", server.RemoteServices)
-			}
 			for i, app := range server.Apps {
 				fmt.Printf("         App #%d: %s\n", i+1, app.Addr)
 				if len(app.Routers) > 0 {

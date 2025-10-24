@@ -44,10 +44,6 @@ deployments:
       api-server:
         base-url: "http://localhost"  # No port here!
         
-        # External payment service (remote only)
-        required-remote-services:
-          - payment-gateway  # Framework resolves URL from external-service-definitions
-        
         # Shorthand: 1 server = 1 app
         addr: ":3000"  # Port here!
         published-services:

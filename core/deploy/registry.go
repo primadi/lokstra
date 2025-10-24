@@ -3,12 +3,17 @@ package deploy
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/primadi/lokstra/core/deploy/resolver"
 	"github.com/primadi/lokstra/core/deploy/schema"
+	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/core/router/autogen"
+	"github.com/primadi/lokstra/core/router/convention"
+	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/internal/registry"
 )
 
@@ -50,6 +55,9 @@ type GlobalRegistry struct {
 	// Single source of truth for runtime topology
 	deploymentTopologies sync.Map // map[deploymentName]*DeploymentTopology
 	serverTopologies     sync.Map // map[compositeKey]*ServerTopology (key: "deployment.server")
+
+	// Current server context (for runtime service resolution)
+	currentCompositeKey string // "deployment.server" - set by SetCurrentServer
 }
 
 // ServiceFactoryEntry holds local and remote factory functions plus metadata
@@ -724,6 +732,7 @@ func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, d
 
 // GetServiceAny retrieves a service instance by name as any
 // If not found in eager registry, checks lazy registry and instantiates
+// If still not found, checks service-definitions and auto-creates lazy service
 func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 	// Check eager registry first
 	if svc, ok := g.serviceInstances.Load(name); ok {
@@ -733,7 +742,23 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 	// Check lazy registry and create if needed
 	onceAny, hasOnce := g.lazyServiceOnce.Load(name)
 	if !hasOnce {
-		return nil, false
+		// Not in lazy registry - check if in service-definitions
+		g.mu.RLock()
+		serviceDef, defExists := g.services[name]
+		g.mu.RUnlock()
+
+		if defExists {
+			// Auto-create lazy service from definition
+			g.autoRegisterLazyService(name, serviceDef)
+
+			// Now try again
+			onceAny, hasOnce = g.lazyServiceOnce.Load(name)
+			if !hasOnce {
+				return nil, false
+			}
+		} else {
+			return nil, false
+		}
 	}
 
 	once := onceAny.(*sync.Once)
@@ -771,6 +796,136 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 	// Return cached instance
 	svc, ok := g.serviceInstances.Load(name)
 	return svc, ok
+}
+
+// autoRegisterLazyService auto-registers a service from service-definitions as a lazy service
+// This enables zero-config pattern - services are created on-demand from YAML definitions
+// Logic: Check if published on another server → REMOTE, else → LOCAL from service-definitions
+func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.ServiceDef) {
+	// Get current deployment context
+	currentKey := g.GetCurrentCompositeKey()
+	if currentKey == "" {
+		// No current context - default to LOCAL
+		g.autoRegisterLocalService(name, def)
+		return
+	}
+
+	// Get current server topology
+	currentServerTopo, ok := g.GetServerTopology(currentKey)
+	if !ok {
+		// No topology found - default to LOCAL
+		g.autoRegisterLocalService(name, def)
+		return
+	}
+
+	// Check if service is published on another server (REMOTE)
+	remoteBaseURL, isRemote := currentServerTopo.RemoteServices[name]
+	if isRemote {
+		// Register as REMOTE service (HTTP proxy)
+		g.autoRegisterRemoteService(name, def, remoteBaseURL)
+		return
+	}
+
+	// Not remote - register as LOCAL
+	g.autoRegisterLocalService(name, def)
+}
+
+// autoRegisterLocalService registers a service as LOCAL (from factory)
+func (g *GlobalRegistry) autoRegisterLocalService(name string, def *schema.ServiceDef) {
+	// Get factory
+	factory := g.GetServiceFactory(def.Type, true) // true = local factory
+	if factory == nil {
+		panic(fmt.Sprintf("service factory '%s' not registered for service '%s'", def.Type, name))
+	}
+
+	// Parse dependencies from DependsOn field
+	deps := make(map[string]string)
+	if len(def.DependsOn) > 0 {
+		for _, depStr := range def.DependsOn {
+			// Format: "paramName:serviceName" or just "serviceName"
+			parts := strings.Split(depStr, ":")
+			if len(parts) == 2 {
+				paramName := parts[0]
+				serviceName := parts[1]
+				deps[paramName] = serviceName
+			} else {
+				// No explicit param name - use service name as key
+				deps[depStr] = depStr
+			}
+		}
+	}
+
+	// Register as lazy service with wrapper factory
+	// Factory expects service.Cached for dependencies, so we wrap resolved deps
+	g.RegisterLazyServiceWithDeps(name, func(resolvedDeps, cfg map[string]any) any {
+		// Wrap resolved dependencies as service.Cached
+		// This allows factories to use service.Cast[T](deps["key"])
+		lazyDeps := make(map[string]any)
+		for key, depSvc := range resolvedDeps {
+			depSvcCopy := depSvc // Capture for closure
+			lazyDeps[key] = service.LazyLoadWith(func() any { return depSvcCopy })
+		}
+
+		// Call original factory
+		return factory(lazyDeps, cfg)
+	}, deps, def.Config)
+}
+
+// autoRegisterRemoteService registers a service as REMOTE (HTTP proxy)
+func (g *GlobalRegistry) autoRegisterRemoteService(name string, def *schema.ServiceDef, remoteBaseURL string) {
+	// Get remote factory
+	factory := g.GetServiceFactory(def.Type, false) // false = remote factory
+	if factory == nil {
+		panic(fmt.Sprintf("remote service factory '%s' not registered for service '%s'", def.Type, name))
+	}
+
+	// Get service metadata for proxy.Service creation
+	metadata := g.GetServiceMetadata(def.Type)
+
+	// Create proxy.Service for HTTP calls
+	var proxyService *proxy.Service
+	if metadata != nil && metadata.Resource != "" {
+		// Use metadata from RegisterServiceType
+		proxyService = proxy.NewService(
+			remoteBaseURL,
+			autogen.ConversionRule{
+				Convention:     convention.ConventionType(metadata.Convention),
+				Resource:       metadata.Resource,
+				ResourcePlural: metadata.ResourcePlural,
+			},
+			autogen.RouteOverride{
+				PathPrefix: metadata.PathPrefix,
+				Hidden:     metadata.HiddenMethods,
+			},
+		)
+	} else {
+		// Fallback: auto-generate from service name
+		resourceName := strings.TrimSuffix(name, "-service")
+		resourcePlural := resourceName + "s" // Simple pluralization
+		proxyService = proxy.NewService(
+			remoteBaseURL,
+			autogen.ConversionRule{
+				Convention:     convention.REST,
+				Resource:       resourceName,
+				ResourcePlural: resourcePlural,
+			},
+			autogen.RouteOverride{},
+		)
+	}
+
+	// Build config with proxy.Service
+	remoteConfig := make(map[string]any)
+	// Copy service-level config if exists
+	for k, v := range def.Config {
+		remoteConfig[k] = v
+	}
+	// Add proxy.Service for remote calls
+	remoteConfig["remote"] = proxyService
+
+	// Register as lazy service (remote services have no dependencies)
+	g.RegisterLazyServiceWithDeps(name, func(_, cfg map[string]any) any {
+		return factory(nil, cfg)
+	}, nil, remoteConfig, WithRegistrationMode(LazyServiceSkip))
 }
 
 // RegisterMiddleware registers a middleware instance by name
@@ -864,4 +1019,18 @@ func (g *GlobalRegistry) GetServerTopology(compositeKey string) (*ServerTopology
 		return v.(*ServerTopology), true
 	}
 	return nil, false
+}
+
+// SetCurrentCompositeKey sets the current server context for runtime resolution
+func (g *GlobalRegistry) SetCurrentCompositeKey(compositeKey string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.currentCompositeKey = compositeKey
+}
+
+// GetCurrentCompositeKey returns the current server context
+func (g *GlobalRegistry) GetCurrentCompositeKey() string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.currentCompositeKey
 }

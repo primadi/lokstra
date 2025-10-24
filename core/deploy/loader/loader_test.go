@@ -117,15 +117,6 @@ func TestLoadMultipleFiles(t *testing.T) {
 	if app.Addr != ":8080" {
 		t.Errorf("expected addr :8080, got %s", app.Addr)
 	}
-
-	// Services are at server-level only, not app-level
-	if len(apiServer.Services) < 1 {
-		t.Errorf("expected at least 1 service at server level, got %d", len(apiServer.Services))
-	}
-
-	if len(apiServer.RemoteServices) >= 1 {
-		t.Logf("server has %d remote services", len(apiServer.RemoteServices))
-	}
 }
 
 func TestLoadFromDirectory(t *testing.T) {

@@ -57,10 +57,8 @@ type DeploymentDefMap struct {
 
 // ServerDefMap is a server using map structure
 type ServerDefMap struct {
-	BaseURL        string       `yaml:"base-url" json:"base-url"`
-	Services       []string     `yaml:"required-services,omitempty" json:"required-services,omitempty"`               // Server-level services (shared across apps)
-	RemoteServices []string     `yaml:"required-remote-services,omitempty" json:"required-remote-services,omitempty"` // Server-level remote services (shared)
-	Apps           []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
+	BaseURL string       `yaml:"base-url" json:"base-url"`
+	Apps    []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
 
 	// Helper fields (1 server = 1 app shorthand)
 	// If these are present, a new app will be created and PREPENDED to Apps array

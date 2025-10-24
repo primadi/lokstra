@@ -261,6 +261,34 @@ Step 5: Execute middleware chain
 - ✅ Manage dependencies (lazy loading)
 - ✅ Support local AND remote execution
 
+### Three Service Types
+
+Lokstra recognizes three distinct service patterns based on deployment needs:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SERVICE TYPES                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1️⃣  LOCAL ONLY (Infrastructure)                           │
+│      • Never exposed via HTTP                               │
+│      • Always loaded locally                                │
+│      • Examples: db, cache, logger, queue                   │
+│                                                             │
+│  2️⃣  REMOTE ONLY (External APIs)                           │
+│      • Third-party services                                 │
+│      • Always accessed via HTTP                             │
+│      • Examples: stripe, sendgrid, twilio                   │
+│                                                             │
+│  3️⃣  LOCAL + REMOTE (Business Logic)                       │
+│      • Your business services                               │
+│      • Can be local OR remote                               │
+│      • Auto-published via HTTP when needed                  │
+│      • Examples: user-service, order-service                │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ### Service Categories
 
 Lokstra supports three distinct service patterns based on deployment needs:
@@ -325,12 +353,12 @@ deployments:
 ```go
 // External service using proxy.Service
 type PaymentServiceRemote struct {
-    service.RemoteServiceMetaAdapter
+    service.ServiceMetaAdapter
 }
 
 func NewPaymentServiceRemote(proxyService *proxy.Service) *PaymentServiceRemote {
     return &PaymentServiceRemote{
-        RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
+        ServiceMetaAdapter: service.ServiceMetaAdapter{
             Resource:   "payment",
             Plural:     "payments",
             Convention: "rest",
@@ -367,14 +395,66 @@ Business services that can be deployed locally OR accessed remotely:
 **Characteristics:**
 - ✅ Has local implementation (business logic + DB)
 - ✅ Has remote implementation (proxy for microservices)
-- ✅ Published as router when local
+- ✅ Published as router when local (via `published-services`)
+- ✅ Auto-generates HTTP endpoints from service methods
 - ✅ Interface abstraction for deployment flexibility
 - Follow REST/RPC convention
+
+**How Auto-Publishing Works:**
+
+When a business service is listed in `published-services`, the framework:
+
+1. **Reads metadata** from service instance (if implements `ServiceMeta`)
+2. **Auto-generates router** using convention (REST/RPC)
+3. **Creates HTTP endpoints** for each public method
+4. **Makes service accessible** remotely via HTTP
+
+```yaml
+deployments:
+  microservice:
+    servers:
+      user-server:
+        published-services:
+          - user-service  # ← Framework auto-exposes UserService via HTTP
+```
+
+**What gets generated:**
+```
+UserService methods:
+  GetByID(p *GetByIDParams) (*User, error)
+  List(p *ListParams) ([]*User, error)
+  Create(p *CreateParams) (*User, error)
+
+Auto-generated routes (REST convention):
+  GET    /users           → UserService.List()
+  GET    /users/{id}      → UserService.GetByID()
+  POST   /users           → UserService.Create()
+```
+
+**No manual route registration needed!** The framework inspects the service and creates routes automatically.
 
 **Local Implementation:**
 ```go
 type UserService struct {
     DB *service.Cached[*Database]
+}
+
+// Optional: Implement ServiceMeta for custom routing
+func (s *UserService) GetResourceName() (string, string) {
+    return "user", "users"
+}
+
+func (s *UserService) GetConventionName() string {
+    return "rest"
+}
+
+func (s *UserService) GetRouteOverride() autogen.RouteOverride {
+    return autogen.RouteOverride{
+        Custom: map[string]autogen.Route{
+            // Custom route for non-standard method
+            "Activate": {Method: "POST", Path: "/users/{id}/activate"},
+        },
+    }
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
@@ -387,17 +467,19 @@ user, err := userService.GetByID(&GetByIDParams{ID: 123})
 // ✅ Direct method call - fast!
 ```
 
+**Note:** Implementing `ServiceMeta` is optional for local services. If not implemented, the framework uses metadata from service registration.
+
 **Remote Implementation:**
 ```go
 // Remote service client using proxy.Service
 type UserServiceRemote struct {
-    service.RemoteServiceMetaAdapter
+    service.ServiceMetaAdapter
 }
 
 // Constructor receives proxy.Service from framework
 func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
     return &UserServiceRemote{
-        RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
+        ServiceMetaAdapter: service.ServiceMetaAdapter{
             Resource:     "user",
             Plural:       "users",
             Convention:   "rest",
@@ -450,12 +532,12 @@ Lokstra provides two proxy patterns for different remote access scenarios:
 **Example:**
 ```go
 type UserServiceRemote struct {
-    service.RemoteServiceMetaAdapter
+    service.ServiceMetaAdapter
 }
 
 func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
     return &UserServiceRemote{
-        RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
+        ServiceMetaAdapter: service.ServiceMetaAdapter{
             Resource:     "user",
             Plural:       "users",
             Convention:   "rest",

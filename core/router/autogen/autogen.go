@@ -5,6 +5,7 @@ import (
 	"path"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/route"
@@ -87,12 +88,30 @@ func registerCustomRoute(router lokstra.Router, service any, methodName string, 
 		fullPath = path.Join(pathPrefix, route.Path)
 	}
 
+	// If method is empty, auto-detect from method name
+	httpMethod := route.Method
+	if httpMethod == "" {
+		// Auto-detect: Get*, List* → GET, Create* → POST, Update* → PUT, Delete* → DELETE
+		if strings.HasPrefix(methodName, "Get") || strings.HasPrefix(methodName, "List") {
+			httpMethod = "GET"
+		} else if strings.HasPrefix(methodName, "Create") {
+			httpMethod = "POST"
+		} else if strings.HasPrefix(methodName, "Update") {
+			httpMethod = "PUT"
+		} else if strings.HasPrefix(methodName, "Delete") {
+			httpMethod = "DELETE"
+		} else {
+			// Default to POST for unknown patterns
+			httpMethod = "POST"
+		}
+	}
+
 	// Merge middlewares: global middlewares + route-specific middlewares
 	var middlewares []any
 	middlewares = append(middlewares, globalMiddlewares...)
 	middlewares = append(middlewares, route.Middlewares...)
 
-	registerRoute(router, route.Method, fullPath, service, methodName, middlewares)
+	registerRoute(router, httpMethod, fullPath, service, methodName, middlewares)
 }
 
 // registerRoute registers a route by calling the appropriate router method

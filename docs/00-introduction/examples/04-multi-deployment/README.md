@@ -10,18 +10,18 @@ This example showcases Lokstra's **production-ready patterns** for building flex
 
 ### Key Features:
 - ✅ **Auto-router generation** from service methods using conventions
-- ✅ **Metadata-driven routing** with `RemoteServiceMeta` interface
-- ✅ **Single source of truth** for routing configuration
+- ✅ **Metadata-driven routing** via `RegisterServiceType` options
+- ✅ **Single source of truth** in service registration
 - ✅ **Seamless proxy services** with `proxy.Service` and `proxy.CallWithData`
 - ✅ **Single binary, multiple deployments** (monolith, microservices)
-- ✅ **YAML-driven configuration** with optional code-based overrides
+- ✅ **YAML-driven configuration** with optional metadata overrides
 - ✅ **Clean Architecture** with separated layers (contract, model, service, repository)
 
 ### What's New vs Manual Approach:
 - 🚀 **No manual handler creation** - auto-generated from service methods
 - 🚀 **No manual route definitions** - convention-based mapping
 - 🚀 **No manual proxy.Router calls** - `proxy.Service` handles it
-- 🚀 **Metadata in service code** - no redundant YAML config
+- 🚀 **Metadata in RegisterServiceType** - clean, centralized configuration
 - 🚀 **Clean separation** - contracts, models, services, repositories in separate packages
 
 ---
@@ -30,8 +30,8 @@ This example showcases Lokstra's **production-ready patterns** for building flex
 
 1. **Convention-Based Routing**: How services auto-generate RESTful endpoints
 2. **Clean Architecture**: Separation of concerns with contract, model, service, repository layers
-3. **Metadata Architecture**: Single source of truth in `RemoteServiceMetaAdapter`
-4. **3-Level Metadata System**: Service code → RegisterServiceType → YAML config
+3. **Metadata Architecture**: Single source of truth in `RegisterServiceType`
+4. **2-Level Metadata System**: RegisterServiceType → YAML config overrides
 5. **Auto-Proxy Pattern**: `proxy.CallWithData` with convention mapping
 6. **Deployment Flexibility**: Same code, different runtime behavior
 7. **Interface-Based DI**: Depend on contracts, not implementations
@@ -260,33 +260,33 @@ Dependencies point INWARD (toward domain)
 
 ---
 
-### 2. **RemoteServiceMeta Interface**
+### 2. **Metadata via RegisterServiceType**
 
-Services provide routing metadata via embedded `RemoteServiceMetaAdapter`:
+Services provide routing metadata via `RegisterServiceType` options:
 
-**service/user_service_remote.go**:
+**main.go**:
 ```go
-type UserServiceRemote struct {
-    service.RemoteServiceMetaAdapter  // Metadata + proxy.Service
-}
+lokstra_registry.RegisterServiceType("user-service-factory",
+    service.UserServiceFactory,
+    service.UserServiceRemoteFactory,
+    deploy.WithResource("user", "users"),
+    deploy.WithConvention("rest"),
+)
 
-func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
-    return &UserServiceRemote{
-        RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
-            Resource:     "user",
-            Plural:       "users",
-            Convention:   "rest",
-            ProxyService: proxyService,
-        },
-    }
-}
+lokstra_registry.RegisterServiceType("order-service-factory",
+    service.OrderServiceFactory,
+    service.OrderServiceRemoteFactory,
+    deploy.WithResource("order", "orders"),
+    deploy.WithConvention("rest"),
+    deploy.WithRouteOverride("GetByUserID", "GET /users/{user_id}/orders"),
+)
 ```
 
 **Benefits**:
-- ✅ Single source of truth for routing
+- ✅ Single source of truth in registration
 - ✅ Used by auto-router generation
-- ✅ Used by proxy.Service for HTTP calls
-- ✅ No separate field for proxy.Service
+- ✅ Clean separation: factories don't need metadata structs
+- ✅ Easy to see all metadata in one place
 
 ### 3. **Auto-Router Generation**
 
@@ -312,22 +312,20 @@ GET /users/{id} -> UserService.GetByID
 
 ### 4. **Custom Route Overrides**
 
-Services can override convention-based routes:
+Override convention-based routes via `RegisterServiceType`:
 
-**service/order_service_remote.go**:
+**main.go**:
 ```go
-RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
-    Resource:     "order",
-    Plural:       "orders",
-    Convention:   "rest",
-    ProxyService: proxyService,
-    Override: autogen.RouteOverride{
-        Custom: map[string]autogen.Route{
-            "GetByUserID": {Method: "GET", Path: "/users/{user_id}/orders"},
-        },
-    },
-}
+lokstra_registry.RegisterServiceType("order-service-factory",
+    service.OrderServiceFactory,
+    service.OrderServiceRemoteFactory,
+    deploy.WithResource("order", "orders"),
+    deploy.WithConvention("rest"),
+    deploy.WithRouteOverride("GetByUserID", "GET /users/{user_id}/orders"),
+)
 ```
+
+**Format**: `"METHOD /path"` or just `"/path"` (defaults to GET)
 
 Result:
 - `GetByID()` → `GET /orders/{id}` (convention)
@@ -352,17 +350,17 @@ func (u *UserServiceRemote) GetByID(params *GetUserParams) (*User, error) {
 
 **No manual URL construction, no manual JSON parsing!**
 
-### 6. **3-Level Metadata System**
+### 6. **2-Level Metadata System**
 
-Metadata can be provided in 3 places with priority:
+Metadata can be provided in 2 places with priority:
 
 ```
-Priority 1 (HIGH):  YAML config (router-overrides)     ← Deployment-specific
-Priority 2 (MED):   XXXRemote struct (code)            ← Service-level defaults
-Priority 3 (LOW):   RegisterServiceType options        ← Framework defaults
+Priority 1 (HIGH):  YAML config (router-overrides)     ← Deployment-specific overrides
+Priority 2 (MED):   RegisterServiceType options        ← Default metadata
+Priority 3 (LOW):   Auto-generate from service name    ← Fallback
 ```
 
-**Recommended**: Put metadata in `XXXRemote` struct only. Use YAML only for deployment-specific overrides.
+**Recommended**: Put metadata in `RegisterServiceType` options. Use YAML only for deployment-specific overrides.
 
 ---
 
@@ -478,27 +476,25 @@ deployments:
 func main() {
     // Register repositories (infrastructure layer)
     lokstra_registry.RegisterServiceType("user-repository-factory",
-        func(deps map[string]any, config map[string]any) any {
-            return repository.NewUserRepositoryMemory()
-        }, nil)
+        repository.NewUserRepositoryMemory, nil)
 
     lokstra_registry.RegisterServiceType("order-repository-factory",
-        func(deps map[string]any, config map[string]any) any {
-            return repository.NewOrderRepositoryMemory()
-        }, nil)
+        repository.NewOrderRepositoryMemory, nil)
 
-    // Register services (application layer)
-    // Metadata comes from XXXRemote structs!
+    // Register services (application layer) with metadata
     lokstra_registry.RegisterServiceType("user-service-factory",
         service.UserServiceFactory,
         service.UserServiceRemoteFactory,
-        // Metadata in UserServiceRemote.RemoteServiceMetaAdapter
+        deploy.WithResource("user", "users"),
+        deploy.WithConvention("rest"),
     )
 
     lokstra_registry.RegisterServiceType("order-service-factory",
         service.OrderServiceFactory,
         service.OrderServiceRemoteFactory,
-        // Metadata + custom routes in OrderServiceRemote.Override!
+        deploy.WithResource("order", "orders"),
+        deploy.WithConvention("rest"),
+        deploy.WithRouteOverride("GetByUserID", "GET /users/{user_id}/orders"),
     )
 
     // Load config - auto-builds ALL deployments
@@ -513,7 +509,8 @@ func main() {
 - ❌ No manual router setup
 - ❌ No manual handler registration
 - ❌ No deployment-specific registration functions
-- ✅ Just factory registration + LoadAndBuild!
+- ❌ No metadata structs in service code
+- ✅ Just factory registration with options + LoadAndBuild!
 
 ---
 
@@ -558,8 +555,9 @@ GET http://localhost:3005/users/1/orders
 2. Server startup (RunServer):
    ├─ Get router definitions for current server
    ├─ Call BuildRouterFromDefinition for each:
-   │  ├─ Instantiate remote factory (UserServiceRemoteFactory)
-   │  ├─ Read metadata from RemoteServiceMetaAdapter
+   │  ├─ Get service from registry (local or remote auto-resolved)
+   │  ├─ Read metadata from RegisterServiceType options
+   │  ├─ Merge YAML overrides if any
    │  ├─ Call autogen.NewFromService(svc, rule, override)
    │  │  ├─ Scan service methods via reflection
    │  │  ├─ Map methods to routes using convention
@@ -575,7 +573,7 @@ GET http://localhost:3005/users/1/orders
    ├─ Service method:
    │  ├─ Monolith: Direct method call (UserServiceImpl)
    │  └─ Microservices: HTTP proxy call (UserServiceRemote)
-   │     └─ proxy.CallWithData resolves method → HTTP using metadata
+   │     └─ proxy.CallWithData makes HTTP request to remote server
    └─ Return response
 ```
 
@@ -634,25 +632,26 @@ type UserService interface {
 
 ### 2. **Metadata-Driven Architecture**
 
-Single source of truth in service code:
+Single source of truth in service registration:
 ```go
-RemoteServiceMetaAdapter{
-    Resource:   "order",
-    Plural:     "orders",
-    Convention: "rest",
-    Override: autogen.RouteOverride{
-        Custom: map[string]autogen.Route{
-            "GetByUserID": {Method: "GET", Path: "/users/{user_id}/orders"},
-        },
-    },
-}
+lokstra_registry.RegisterServiceType("order-service-factory",
+    service.OrderServiceFactory,
+    service.OrderServiceRemoteFactory,
+    deploy.WithResource("order", "orders"),
+    deploy.WithConvention("rest"),
+    deploy.WithRouteOverride("GetByUserID", "GET /users/{user_id}/orders"),
+)
 ```
 
 Used by:
 - ✅ Auto-router generation (server-side)
-- ✅ Proxy.Service (client-side)
 - ✅ Documentation generation (future)
 - ✅ API gateway configuration (future)
+
+**Benefits**:
+- ✅ All metadata visible in one place (`main.go`)
+- ✅ No need to embed metadata in service structs
+- ✅ Clean separation of concerns
 
 ### 3. **Interface-Based Dependency Injection**
 

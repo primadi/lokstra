@@ -42,44 +42,44 @@ service-definitions:
 # Router Definitions (Optional Overrides)
 # ========================================
 # Auto-routers are generated from published-services using metadata
-# from XXXRemote service structs (primary source).
+# from RegisterServiceType options (primary source).
 # 
-# You can override here ONLY if you need deployment-specific customization:
-#   - Different resource names per deployment
-#   - Different conventions per environment
-#   - Additional route overrides not in code
-#
-# routers:
-#   user-service-router:
-#     service: user-service
-#     # Metadata already in UserServiceRemote, no override needed
-#
-#   order-service-router:
-#     service: order-service  
-#     # Metadata + custom routes already in OrderServiceRemote, no override needed
-#
+# You can override here ONLY if you need deployment-specific customization.
+
 # router-overrides:
-#   order-api-overrides:
-#     # Custom routes already in OrderServiceRemote.Override, no override needed
+#   order-custom-routes:
+#     custom:
+#       - name: GetByUserID
+#         method: GET
+#         path: /users/{user_id}/orders
+
+# routers:
+#   order-service-router:
+#     service: order-service
+#     overrides: order-custom-routes
 
 # ========================================
 # Deployments - MAP format
 # ========================================
-# Remote services are AUTO-RESOLVED from published-services!
-# No need for remote-service-definitions - URLs are discovered automatically.
+# 🎯 ZERO-CONFIG Dependencies - Framework Auto-Detects Everything!
 #
-# Example: If user-service is published at user-server:3004,
-# then required-remote-services: [user-service] will automatically
-# resolve to http://localhost:3004
+# Dependencies are AUTO-DETECTED from factory code (deps parameter):
+#   func OrderServiceFactory(deps map[string]any, config map[string]any) any {
+#       return &OrderServiceImpl{
+#           OrderRepo: service.Cast[...](deps["order-repository"]),  // ← Auto-detect!
+#           UserSvc:   service.Cast[...](deps["user-service"]),      // ← Auto-detect!
+#       }
+#   }
 #
-# SHORTHAND SYNTAX (1 server = 1 app):
-# You can use addr/services/remote-services/routers/published-services
-# directly at server level. These create a new app and prepend it to apps array.
-# This allows mixing shorthand with additional explicit apps.
+# Framework resolution:
+#   1. Parse depends-on from service-definitions
+#   2. For each dependency:
+#      - Check: Published locally? → Local (in-process)
+#      - Check: Published on another server? → Remote (HTTP)
+#      - Check: In service-definitions? → Create local
+#      - Not found → ERROR with suggestions
 #
-# Optional: You can still define external-service-definitions for:
-#   - External services (outside this config)
-#   - Override resource metadata per deployment
+# Result: ZERO config duplication! Code is the single source of truth.
 
 deployments:
   # ========================================
@@ -89,15 +89,10 @@ deployments:
     servers:
       api-server:
         base-url: "http://localhost"
-        # Infrastructure services (repositories)
-        required-services:
-          - user-repository
-          - order-repository
-        # Shorthand syntax (1 server = 1 app)
         addr: ":3003"
         published-services:
-          - user-service
-          - order-service
+          - user-service    # Auto-detects: user-repository (local)
+          - order-service   # Auto-detects: order-repository (local), user-service (local)
 
   # ========================================
   # MICROSERVICE: each service in its own process 
@@ -106,20 +101,13 @@ deployments:
     servers:
       user-server:
         base-url: "http://localhost"
-        required-services:
-          - user-repository
-        # Shorthand syntax
         addr: ":3004"
         published-services:
-          - user-service
+          - user-service  # Auto-detects: user-repository (local)
 
       order-server:
         base-url: "http://localhost"
-        required-services:
-          - order-repository
-        required-remote-services:
-          - user-service
-        # Shorthand syntax
         addr: ":3005"
         published-services:
-          - order-service
+          - order-service  # Auto-detects: order-repository (local), user-service (remote → user-server!)
+

@@ -6,10 +6,11 @@ This example demonstrates how to **integrate external APIs** (like payment gatew
 
 - ✅ Wrapping third-party APIs as Lokstra services
 - ✅ Using `proxy.Service` for remote HTTP calls
-- ✅ Custom route overrides for non-standard endpoints
-- ✅ `external-service-definitions` configuration
+- ✅ **Custom route overrides in code** (not config!) using `ServiceMeta`
+- ✅ `external-service-definitions` with auto-wrapper creation
 - ✅ Business services depending on external services
 - ✅ Error handling when external service fails
+- ✅ **Flexible metadata**: Works for both local and remote services
 - ✅ Difference between `proxy.Service` vs `proxy.Router` (see Example 07)
 
 ## 🏗️ Architecture
@@ -20,9 +21,11 @@ This example demonstrates how to **integrate external APIs** (like payment gatew
 │                                                            │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │  OrderService (Business Logic)                       │  │
-│  │  - CreateOrder()                                     │  │
-│  │  - GetOrder()                                        │  │
-│  │  - RefundOrder()                                     │  │
+│  │  - Create()    → POST /orders                        │  │
+│  │  - Get()       → GET /orders/{id}                    │  │
+│  │  - Refund()    → POST /orders/{id}/refund (custom)   │  │
+│  │                                                       │  │
+│  │  📋 ServiceMeta: route override for Refund()         │  │
 │  └─────────────────┬────────────────────────────────────┘  │
 │                    │ depends on                            │
 │                    ▼                                       │
@@ -31,6 +34,8 @@ This example demonstrates how to **integrate external APIs** (like payment gatew
 │  │  - CreatePayment()  → POST /payments                 │  │
 │  │  - GetPayment()     → GET /payments/{id}             │  │
 │  │  - Refund()         → POST /payments/{id}/refund     │  │
+│  │                                                       │  │
+│  │  📋 ServiceMeta: route overrides for all methods     │  │
 │  └─────────────────┬────────────────────────────────────┘  │
 │                    │ HTTP calls                            │
 └────────────────────┼───────────────────────────────────────┘
@@ -108,35 +113,40 @@ curl -X POST http://localhost:3000/orders/order_1/refund
 
 ### 1. External Service Definition
 
-Define external services in `config.yaml`:
+Define external services in `config.yaml` with **auto-wrapper creation**:
 
 ```yaml
 external-service-definitions:
-  payment-gateway-remote:
+  payment-gateway:
     url: "http://localhost:9000"
+    type: payment-service-remote-factory  # Auto-creates service wrapper!
 ```
 
-This tells Lokstra where the external API is located.
+**New DX improvement:** Framework automatically creates service definition from `external-service-definitions` when `type` is specified. No need to duplicate in `service-definitions`!
 
-### 2. Remote Service Wrapper
+### 2. Remote Service Wrapper with ServiceMeta
 
-Create a service that wraps the external API using `proxy.Service`:
+Create a service that wraps the external API using `ServiceMeta` (works for local & remote):
 
 ```go
 type PaymentServiceRemote struct {
-    service.RemoteServiceMetaAdapter
+    service.ServiceMetaAdapter  // Renamed from RemoteServiceMetaAdapter
 }
 
 func NewPaymentServiceRemote(proxyService *proxy.Service) *PaymentServiceRemote {
     return &PaymentServiceRemote{
-        RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
+        ServiceMetaAdapter: service.ServiceMetaAdapter{
             Resource:     "payment",
             Plural:       "payments",
             Convention:   "rest",
             ProxyService: proxyService,
+            // Route overrides IN CODE (not config!)
             Override: autogen.RouteOverride{
                 Custom: map[string]autogen.Route{
-                    "Refund": {Method: "POST", Path: "/payments/{id}/refund"},
+                    // All methods need overrides because names don't match REST convention
+                    "CreatePayment": {Method: "POST", Path: "/payments"},
+                    "GetPayment":    {Method: "GET", Path: "/payments/{id}"},
+                    "Refund":        {Method: "POST", Path: "/payments/{id}/refund"},
                 },
             },
         },
@@ -145,9 +155,10 @@ func NewPaymentServiceRemote(proxyService *proxy.Service) *PaymentServiceRemote 
 ```
 
 **Key points:**
-- Uses `RemoteServiceMetaAdapter` for convention-based routing
-- `Convention: "rest"` enables auto-routing (`CreatePayment` → `POST /payments`)
-- `Override.Custom` allows custom routes for non-standard endpoints
+- Uses `ServiceMetaAdapter` (renamed, works for both local & remote)
+- `Convention: "rest"` enables auto-routing for standard names
+- `Override.Custom` allows custom routes for **non-standard method names**
+- Method names like `CreatePayment` don't match REST convention (should be `Create`), so we override them
 
 ### 3. Remote Factory Pattern
 
@@ -171,19 +182,45 @@ lokstra_registry.RegisterServiceType(
 )
 ```
 
-### 4. Custom Route Overrides
+### 4. Custom Route Overrides in Code
 
-For non-standard endpoints that don't follow REST conventions:
+**New best practice:** Route overrides are now in **code**, not config!
+
+For external services with non-standard method names:
 
 ```go
 Override: autogen.RouteOverride{
     Custom: map[string]autogen.Route{
-        "Refund": {Method: "POST", Path: "/payments/{id}/refund"},
+        "CreatePayment": {Method: "POST", Path: "/payments"},
+        "GetPayment":    {Method: "GET", Path: "/payments/{id}"},
+        "Refund":        {Method: "POST", Path: "/payments/{id}/refund"},
     },
 },
 ```
 
-Without override, `Refund()` would auto-generate `PUT /payments/{id}` (standard REST). With override, it uses `POST /payments/{id}/refund` instead.
+For local services with custom actions:
+
+```go
+// In OrderService
+func (s *OrderService) GetRouteOverride() autogen.RouteOverride {
+    return autogen.RouteOverride{
+        Custom: map[string]autogen.Route{
+            "Refund": {Method: "POST", Path: "/orders/{id}/refund"},
+        },
+    }
+}
+```
+
+**Why in code?**
+- ✅ Type-safe and discoverable
+- ✅ Co-located with service implementation
+- ✅ No duplication between code and config
+- ✅ Easier refactoring
+
+**When to use overrides:**
+- Method name doesn't match REST convention (`CreatePayment` vs `Create`)
+- Custom actions (`POST /orders/{id}/refund` vs standard `PUT /orders/{id}`)
+- Non-standard HTTP methods
 
 ### 5. Business Service Using External Service
 
@@ -192,7 +229,25 @@ type OrderService struct {
     Payment *service.Cached[*PaymentServiceRemote]
 }
 
-func (s *OrderService) CreateOrder(p *CreateOrderParams) (*Order, error) {
+// Implement ServiceMeta for route overrides
+func (s *OrderService) GetResourceName() (string, string) {
+    return "order", "orders"
+}
+
+func (s *OrderService) GetConventionName() string {
+    return "rest"
+}
+
+func (s *OrderService) GetRouteOverride() autogen.RouteOverride {
+    return autogen.RouteOverride{
+        Custom: map[string]autogen.Route{
+            "Refund": {Method: "POST", Path: "/orders/{id}/refund"},
+        },
+    }
+}
+
+// Method names match REST convention (Create, Get, not CreateOrder, GetOrder)
+func (s *OrderService) Create(p *OrderCreateParams) (*Order, error) {
     // Create order first
     order := &Order{...}
     
@@ -213,40 +268,50 @@ func (s *OrderService) CreateOrder(p *CreateOrderParams) (*Order, error) {
 }
 ```
 
+**Key changes:**
+- ✅ Implement `ServiceMeta` interface for metadata
+- ✅ Method names: `Create`, `Get`, `Refund` (match REST convention)
+- ✅ Custom route override for `Refund` in code
+
 ## 🎯 Service Configuration
 
 In `config.yaml`:
 
 ```yaml
+# Define external API and auto-create wrapper
 external-service-definitions:
-  payment-gateway-remote:
+  payment-gateway:
     url: "http://localhost:9000"
+    type: payment-service-remote-factory  # Auto-creates service definition!
 
+# Define local business service
 service-definitions:
-  - name: order-service
-    factory-type: order-service-factory
-    
-  - name: payment-gateway-remote
-    factory-type: payment-service-remote-factory
+  order-service:
+    type: order-service-factory
+    depends-on:
+      - payment-gateway  # Direct reference to external service
 
 deployments:
-  - name: app
+  app:
     servers:
-      - name: api-server
-        url: "http://localhost:3000"
-        apps:
-          - addr: ":3000"
-            routers:
-              - api-router
-            service-dependencies:
-              order-service: {}
-              payment-gateway-remote: {}
+      api-server:
+        base-url: "http://localhost"
+        addr: ":3000"
+        
+        # External payment service (remote only)
+        required-remote-services:
+          - payment-gateway  # Framework resolves URL automatically
+        
+        # Auto-generates router with metadata from OrderService
+        published-services:
+          - order-service
 ```
 
-**Important:**
-- `external-service-definitions` defines the URL
-- `service-definitions` defines the service wrapper
-- `service-dependencies` includes both local and remote services
+**Important DX improvements:**
+- ✅ `external-service-definitions` with `type` auto-creates service wrapper
+- ✅ No duplication in `service-definitions` for external services
+- ✅ `published-services` auto-generates router with metadata from code
+- ✅ Route overrides in code, not config!
 
 ## 🔄 Request Flow
 
@@ -329,18 +394,25 @@ This pattern:
 
 ### 2. Convention-Based Routing
 
-`proxy.Service` auto-generates routes:
-- `CreatePayment()` → `POST /payments`
-- `GetPayment(id)` → `GET /payments/{id}`
-- `UpdatePayment(id)` → `PUT /payments/{id}`
-- `DeletePayment(id)` → `DELETE /payments/{id}`
+`proxy.Service` auto-generates routes for **standard REST method names**:
+- `Create()` → `POST /payments`
+- `Get(id)` → `GET /payments/{id}`
+- `Update(id)` → `PUT /payments/{id}`
+- `Delete(id)` → `DELETE /payments/{id}`
+
+**Non-standard names need overrides:**
+- `CreatePayment()` → Override: `POST /payments`
+- `GetPayment(id)` → Override: `GET /payments/{id}`
+- `Refund(id)` → Override: `POST /payments/{id}/refund`
 
 ### 3. Custom Routes for Non-Standard APIs
 
 Not all APIs follow REST conventions. Use `Override.Custom` for:
-- `POST /payments/{id}/refund` (not `PUT /payments/{id}`)
-- `POST /payments/{id}/capture`
-- `POST /users/{id}/reset-password`
+- Custom actions: `POST /payments/{id}/refund` (not `PUT /payments/{id}`)
+- Non-standard method names: `CreatePayment` vs `Create`
+- Special operations: `POST /users/{id}/reset-password`
+
+**Best practice:** If possible, use standard REST method names (`Create`, `Get`, `Update`, `Delete`) to avoid needing overrides. Use overrides only when necessary (custom actions, external API constraints).
 
 ### 4. Error Handling
 

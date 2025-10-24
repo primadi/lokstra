@@ -242,22 +242,6 @@
                       "description": "Server base URL",
                       "pattern": "^https?://"
                     },
-                    "required-services": {
-                      "type": "array",
-                      "description": "Server-level services (shared across all apps)",
-                      "items": {
-                        "type": "string",
-                        "pattern": "^[a-z][a-z0-9-]*$"
-                      }
-                    },
-                    "required-remote-services": {
-                      "type": "array",
-                      "description": "Server-level remote services (shared across all apps)",
-                      "items": {
-                        "type": "string",
-                        "pattern": "^[a-z][a-z0-9-]*$"
-                      }
-                    },
                     "apps": {
                       "type": "array",
                       "description": "Applications on this server (optional if using shorthand fields)",
