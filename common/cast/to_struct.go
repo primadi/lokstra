@@ -164,5 +164,16 @@ func tryConvert(val reflect.Value, targetType reflect.Type) (reflect.Value, bool
 			return reflect.ValueOf(float64(val.Int())), true
 		}
 	}
+
+	// Special case: time.Time
+	if targetType.String() == "time.Time" {
+		if val.Kind() == reflect.String {
+			t, err := ToTime(val.String())
+			if err == nil {
+				return reflect.ValueOf(t), true
+			}
+		}
+	}
+
 	return reflect.Value{}, false
 }

@@ -1,0 +1,126 @@
+# yaml-language-server: $schema=../../../../core/deploy/schema/lokstra.schema.json
+# ========================================
+# Middleware Configuration Example
+# ========================================
+#
+# This config demonstrates:
+#   1. Middleware definitions with configurations
+#   2. Using middleware names in code (r.Use("middleware-name"))
+#   3. Changing middleware parameters without rebuilding
+#
+
+# ========================================
+# Middleware Definitions
+# ========================================
+# Define middleware instances with their configurations
+# These can be referenced by name in code: r.Use("cors-api")
+#
+# Benefits:
+#   - Configuration is external (no rebuild needed for config changes)
+#   - Easy to swap middleware configurations per environment
+#   - Centralized middleware management
+
+middleware-definitions:
+  # CORS middleware for API endpoints
+  cors-api:
+    type: cors
+    config:
+      allowed-origins:
+        - "*"
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers:
+        - Content-Type
+        - Authorization
+        - X-API-Key
+      allow-credentials: false
+      max-age: 3600
+
+  # CORS for admin (more restrictive)
+  cors-admin:
+    type: cors
+    config:
+      allowed-origins:
+        - "https://admin.example.com"
+      allowed-methods:
+        - GET
+        - POST
+      allowed-headers:
+        - Content-Type
+        - Authorization
+      allow-credentials: true
+      max-age: 7200
+
+  # Recovery middleware for production
+  recovery-prod:
+    type: recovery
+    config:
+      log-stack-trace: true
+      include-stack-in-response: false  # Don't expose stack to clients
+
+  # Recovery for development (show more details)
+  recovery-dev:
+    type: recovery
+    config:
+      log-stack-trace: true
+      include-stack-in-response: true   # Show stack for debugging
+
+  # Request logger with details
+  request-logger-verbose:
+    type: request_logger
+    config:
+      log-headers: true
+      log-body: true
+      log-response: true
+      max-body-length: 1000
+
+  # Request logger minimal
+  request-logger-minimal:
+    type: request_logger
+    config:
+      log-headers: false
+      log-body: false
+      log-response: false
+
+  # Gzip compression
+  gzip-compression:
+    type: gzipcompression
+    config:
+      level: 6  # Compression level (1-9, 6 is default)
+      min-length: 1024  # Only compress responses larger than 1KB
+
+  # Body size limit
+  body-limit-api:
+    type: body-limit
+    config:
+      max-bytes: 1048576  # 1MB limit for API requests
+
+  # JWT authentication
+  jwt-auth:
+    type: jwtauth
+    config:
+      secret-key: "your-secret-key-here"
+      token-lookup: "header:Authorization"
+      auth-scheme: "Bearer"
+
+# ========================================
+# Usage in Code
+# ========================================
+#
+# Instead of:
+#   r.Use(lokstra_registry.CreateMiddleware("recovery-prod"))
+#
+# You can now use:
+#   r.Use("recovery-prod")
+#
+# Or for route-specific:
+#   r.GET("/api/users", handler, "cors-api", "jwt-auth")
+#
+# Benefits:
+#   - Cleaner code
+#   - Easier to change configurations
+#   - No need to rebuild when changing middleware settings

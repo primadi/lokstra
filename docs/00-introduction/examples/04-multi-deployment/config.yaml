@@ -118,7 +118,7 @@ deployments:
         required-services:
           - order-repository
         required-remote-services:
-          - user-service-remote
+          - user-service
         # Shorthand syntax
         addr: ":3005"
         published-services:

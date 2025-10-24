@@ -48,6 +48,73 @@ func getOrBuildBindMeta(t reflect.Type) *bindMeta {
 	for i := range numField {
 		field := t.Field(i)
 
+		// If this field is an anonymous (embedded) struct, iterate its inner fields
+		// and create combined index entries so embedded struct fields (like
+		// request.PagingRequest) are discoverable for binding.
+		if field.Anonymous {
+			ft := field.Type
+			if ft.Kind() == reflect.Pointer {
+				ft = ft.Elem()
+			}
+			if ft.Kind() == reflect.Struct {
+				// iterate inner struct fields
+				innerNum := ft.NumField()
+				for j := range innerNum {
+					inner := ft.Field(j)
+					tagType, paramName, isWildcard := parseBindingTag(inner)
+					if tagType == "" {
+						continue
+					}
+
+					// build combined index (outer field index + inner field index)
+					combinedIndex := make([]int, 0, len(field.Index)+len(inner.Index))
+					combinedIndex = append(combinedIndex, field.Index...)
+					combinedIndex = append(combinedIndex, inner.Index...)
+
+					// Determine indexed key/value for slice-of-struct inner fields
+					isIndexedKeyValue := false
+					var indexKey, indexValue []int
+					if inner.Type.Kind() == reflect.Slice && inner.Type.Elem().Kind() == reflect.Struct {
+						structType := inner.Type.Elem()
+						for k := 0; k < structType.NumField(); k++ {
+							f := structType.Field(k)
+							switch f.Name {
+							case "Key", "Field":
+								indexKey = f.Index
+							case "Value":
+								indexValue = f.Index
+							}
+						}
+						if len(indexKey) > 0 && len(indexValue) > 0 {
+							isIndexedKeyValue = true
+						}
+					}
+
+					isMap := false
+					if inner.Type.Kind() == reflect.Map && inner.Type.Key().Kind() == reflect.String {
+						isMap = true
+					}
+
+					fieldMeta := bindFieldMeta{
+						Field:             inner,
+						Index:             combinedIndex,
+						Name:              paramName,
+						Tag:               tagType,
+						IsSlice:           inner.Type.Kind() == reflect.Slice,
+						IsUnmarshalJSON:   implementsUnmarshalJSON(inner.Type),
+						IsIndexedKeyValue: isIndexedKeyValue,
+						IndexKey:          indexKey,
+						IndexValue:        indexValue,
+						IsMap:             isMap,
+						IsWildcard:        isWildcard,
+					}
+					bm.Fields = append(bm.Fields, fieldMeta)
+				}
+				// continue to next top-level field
+				continue
+			}
+		}
+
 		tagType, paramName, isWildcard := parseBindingTag(field)
 		if tagType == "" {
 			continue
@@ -56,18 +123,10 @@ func getOrBuildBindMeta(t reflect.Type) *bindMeta {
 		isIndexedKeyValue := false
 		var indexKey, indexValue []int
 		// Check if it's a slice of struct with Key and Value fields
-		// we look for fields named "Key"/ "Field" and "Value"
-		// used for indexed key-value pairs in query/header
-		// e.g. ?filter[status]=active&filter[role]=admin
-		// will be bound to []struct{ Key, Value string }{
-		//   { Key: "status", Value: "active" },
-		//   { Key: "role", Value: "admin" },
-		// }
 		if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct {
 			structType := field.Type.Elem()
-
-			for i := range structType.NumField() {
-				f := structType.Field(i)
+			for k := 0; k < structType.NumField(); k++ {
+				f := structType.Field(k)
 				switch f.Name {
 				case "Key", "Field":
 					indexKey = f.Index
@@ -82,12 +141,6 @@ func getOrBuildBindMeta(t reflect.Type) *bindMeta {
 		}
 
 		// Check if it's a map[string]string or map[string]any
-		// used for map binding in query/header/body
-		// e.g. ?meta[foo]=bar&meta[baz]=qux
-		// will be bound to map[string]string{
-		//   "foo": "bar",
-		//   "baz": "qux",
-		// }
 		isMap := false
 		if field.Type.Kind() == reflect.Map && field.Type.Key().Kind() == reflect.String {
 			isMap = true

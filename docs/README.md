@@ -29,6 +29,7 @@ Understand what Lokstra is, why it exists, and what problems it solves.
 - [Architecture](00-introduction/architecture.md) - High-level design
 - [Key Features](00-introduction/key-features.md) - What makes Lokstra special
 - [Quick Start](00-introduction/quick-start.md) - Your first Lokstra app in 5 minutes
+- **[Examples](00-introduction/examples/README.md)** - 4 progressive examples (4-6 hours)
 
 ---
 
@@ -97,11 +98,15 @@ Practical guides for specific use cases and patterns.
 
 Full working applications demonstrating real-world patterns.
 
+> **Note**: For learning examples, start with [00-introduction/examples](00-introduction/examples/README.md)  
+> This section (05-examples) will contain complete production applications (coming soon)
+
+Planned:
 - Blog API (CRUD, auth, pagination)
 - E-commerce Backend (complex business logic)
 - Microservices Architecture (distributed system)
 - API Gateway Pattern
-- Single Binary Multi-Deployment
+- Real-time Chat Application
 
 ---
 

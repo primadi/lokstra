@@ -1,6 +1,8 @@
 package request
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type HandlerFunc func(c *Context) error
 
@@ -15,12 +17,17 @@ type Handler struct {
 }
 
 func NewHandler(h HandlerFunc, mw ...HandlerFunc) *Handler {
-	return &Handler{
-		handlers: append(mw, h),
-	}
-}
+	// FIX: Create a NEW slice to prevent aliasing when append doesn't reallocate
+	// This happens when len(mw) < cap(mw), causing multiple handlers to share
+	// the same underlying array and overwriting each other
+	handlers := make([]HandlerFunc, len(mw)+1)
+	copy(handlers, mw)
+	handlers[len(mw)] = h
 
-// ServeHTTP implements http.Handler.
+	return &Handler{
+		handlers: handlers,
+	}
+} // ServeHTTP implements http.Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c := NewContext(w, r, h.handlers)
 	c.FinalizeResponse(c.executeHandler())

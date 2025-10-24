@@ -1,16 +1,17 @@
 # Router - Essential Guide
 
 > **HTTP routing made flexible and intuitive**  
-> **Time**: 30-40 minutes • **Level**: Beginner
+> **Time**: 45 minutes (with examples) • **Level**: Beginner
 
 ---
 
 ## 📖 What You'll Learn
 
 - ✅ Create routers and register routes
-- ✅ Write handlers in 4 essential forms (out of 29 total!)
+- ✅ Write handlers in 5 essential forms (out of 29 total!)
 - ✅ Handle path parameters and query strings
 - ✅ Organize routes with groups
+- ✅ Master 3 response patterns (Manual, Generic, Opinionated)
 - ✅ Apply middleware to routes
 
 ---
@@ -384,61 +385,116 @@ r.GET("/public", publicEndpoint)      // No middleware
 
 All examples are runnable! Navigate to each folder and `go run main.go`
 
-### [01 - Basic Routes](examples/01-basic-routes/)
-**Learn**: GET, POST, simple handlers  
-**Time**: 5 minutes
+**Total learning time**: ~45 minutes
+
+### [01 - Basic Routes](examples/01-basic-routes/) ⏱️ 5 min
+**Learn**: Router basics, GET/POST, auto JSON conversion
 
 ```go
 r.GET("/ping", func() string { return "pong" })
 r.GET("/users", func() []User { return users })
-r.POST("/users", func(user *User) error { ... })
+r.POST("/users", func(req *CreateUserRequest) (*User, error) { ... })
 ```
+
+**Key Concepts**: Router creation, HTTP methods, automatic JSON, request binding, validation
 
 ---
 
-### [02 - Route Parameters](examples/02-route-parameters/)
-**Learn**: Path params, query params, request binding  
-**Time**: 7 minutes
+### [02 - Route Parameters](examples/02-route-parameters/) ⏱️ 7 min
+**Learn**: Path params, query params, type conversion
 
 ```go
-r.GET("/users/{id}", getUserHandler)
-r.GET("/search", searchHandler)  // ?q=term&page=1
+// Path parameter
+r.GET("/users/{id}", func(req *GetUserRequest) (*User, error) {
+    // req.ID extracted from path
+})
+
+// Query parameters
+r.GET("/products", func(req *SearchRequest) ([]Product, error) {
+    // req.Category, req.MinPrice from ?category=x&min_price=y
+})
 ```
+
+**Key Concepts**: `path:"id"`, `query:"name"`, default values, automatic type conversion
 
 ---
 
-### [03 - Route Groups](examples/03-route-groups/)
-**Learn**: API versioning, grouped routes  
-**Time**: 7 minutes
+### [03 - Route Groups](examples/03-route-groups/) ⏱️ 7 min
+**Learn**: API versioning, route organization, nested groups
 
 ```go
-r.Group("/v1", func(v1 Router) { ... })
-r.Group("/v2", func(v2 Router) { ... })
+// API v1
+v1 := r.AddGroup("/v1")
+v1.GET("/users", getUsersV1)
+
+// API v2
+v2 := r.AddGroup("/v2")
+v2.GET("/users", getUsersV2)  // Enhanced version
+
+// Nested groups
+admin := r.AddGroup("/admin")
+adminUsers := admin.AddGroup("/users")
 ```
+
+**Key Concepts**: Route groups, prefixes, API versioning, `PrintRoutes()` debugging
 
 ---
 
-### [04 - With Middleware](examples/04-with-middleware/)
-**Learn**: Global, per-route, and group middleware  
-**Time**: 10 minutes
+### [04 - Handler Forms](examples/04-handler-forms/) ⏱️ 10 min
+**Learn**: 5 essential handler patterns, when to use each
 
 ```go
-r.Use(loggingMiddleware)
-r.GET("/private", handler, authMiddleware)
+// Form 1: Simple return
+func() string { return "pong" }
+
+// Form 2: With error (most common!)
+func() ([]User, error) { return users, nil }
+
+// Form 3: Request binding
+func(req *CreateUserRequest) (*User, error) { ... }
+
+// Form 4: Full control with context
+func(ctx *request.Context, req *GetUserRequest) (*User, error) { ... }
+
+// Form 5: Custom response
+func(ctx *request.Context) (*response.Response, error) { ... }
 ```
+
+**Key Concepts**: Handler signatures, flexibility, context access, decision guide
 
 ---
 
-### [05 - Complete API](examples/05-complete-api/)
-**Learn**: Full REST API with all concepts  
-**Time**: 15 minutes
+### [05 - Response Patterns](examples/05-response-patterns/) ⏱️ 15 min ⭐
+**Learn**: 3 response types, 2 response paths, when to use each
 
-Complete user management API:
-- CRUD operations
-- Path & query parameters
-- Request validation
-- Error handling
-- Middleware
+**3 Response Types:**
+```go
+// 1. Manual (http.ResponseWriter)
+func(ctx *request.Context) error {
+    ctx.W.Write([]byte(`{"message":"hello"}`))
+}
+
+// 2. Generic (response.Response) - JSON, HTML, text
+func() (*response.Response, error) {
+    resp := response.NewResponse()
+    resp.Json(data)  // or .Html(), .Text()
+    return resp, nil
+}
+
+// 3. Opinionated (response.ApiHelper) - Structured JSON
+func() (*response.ApiHelper, error) {
+    api := response.NewApiHelper()
+    api.Ok(data)  // Standard format
+    return api, nil
+}
+```
+
+**Key Concepts**: 
+- Manual vs Generic vs Opinionated responses
+- When to use each type
+- ApiHelper standard JSON format (success, error, validation)
+- PagingRequest for list endpoints
+- Decision guide for REST APIs
 
 ---
 
@@ -562,24 +618,83 @@ r.GET("/ping", func(ctx *request.Context) (string, error) {
 
 ---
 
+### 4. **Use ApiHelper for REST APIs**
+```go
+// ✅ Good - Consistent JSON structure
+r.GET("/users", func() (*response.ApiHelper, error) {
+    api := response.NewApiHelper()
+    users, err := db.GetUsers()
+    if err != nil {
+        api.InternalError("Database error")
+        return api, nil
+    }
+    api.Ok(users)
+    return api, nil
+})
+
+// 🚫 Inconsistent - no standard format
+r.GET("/users", func() (map[string]any, error) {
+    users, err := db.GetUsers()
+    return map[string]any{"data": users}, err
+})
+```
+
+---
+
+### 5. **Use PagingRequest for Lists**
+```go
+// ✅ Good - Standard pagination
+type ListUsersRequest struct {
+    request.PagingRequest  // Embeds page, page_size, order_by, etc
+    Status string `query:"status"`
+}
+
+r.GET("/users", func(req *ListUsersRequest) (*response.ApiHelper, error) {
+    req.SetDefaults()  // Apply default page, page_size
+    users, total := db.GetUsers(req.GetOffset(), req.GetLimit())
+    
+    api := response.NewApiHelper()
+    api.OkList(users, &api_formatter.ListMeta{
+        Page:      req.Page,
+        PageSize:  req.PageSize,
+        TotalRows: total,
+    })
+    return api, nil
+})
+
+// 🚫 Bad - Reinventing pagination
+type CustomPaging struct {
+    P  int `query:"p"`
+    Sz int `query:"sz"`
+}
+```
+
+---
+
 ## 📚 What's Next?
 
 You now understand:
-- ✅ Creating routers
-- ✅ Registering routes with multiple handler forms
-- ✅ Path and query parameters
-- ✅ Route groups
+- ✅ Creating routers and registering routes
+- ✅ 5 essential handler forms (simple, error, binding, context, response)
+- ✅ Path and query parameters with automatic binding
+- ✅ Route groups for organization
+- ✅ 3 response patterns (Manual, Generic, Opinionated)
+- ✅ PagingRequest for list endpoints
 - ✅ Basic middleware usage
 
 ### Next Steps:
 
-**Immediate**: 
-👉 [02 - Service](../02-service/README.md) - Learn service patterns
+**Continue Learning (Recommended order)**:  
+1. 👉 **[02 - Service](../02-service/README.md)** - Service patterns and dependency injection ⭐ CRITICAL
+2. 👉 **[03 - Middleware](../03-middleware/README.md)** - Deep dive into middleware patterns
+3. 👉 **[04 - Configuration](../04-configuration/README.md)** - Config-driven development
+4. 👉 **[05 - App and Server](../05-app-and-server/README.md)** - Application lifecycle
+5. 👉 **[06 - Complete API](../06-putting-it-together/README.md)** - Build a real TODO API
 
-**Related**:
-- [03 - Middleware](../03-middleware/README.md) - Deep dive middleware
-- [Deep Dive: All 29 Handler Forms](../../02-deep-dive/router/handler-forms.md)
-- [Deep Dive: Router Lifecycle](../../02-deep-dive/router/lifecycle.md)
+**Deep Dive Topics**:
+- [All 29 Handler Forms](../../02-deep-dive/router/handler-forms.md) (coming soon)
+- [Router Lifecycle](../../02-deep-dive/router/lifecycle.md) (coming soon)
+- [Advanced Routing](../../02-deep-dive/router/advanced.md) (coming soon)
 
 ---
 

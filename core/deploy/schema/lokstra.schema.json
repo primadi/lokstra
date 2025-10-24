@@ -21,6 +21,29 @@
         }
       }
     },
+    "middleware-definitions": {
+      "type": "object",
+      "description": "Middleware definitions with types and configurations",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Middleware factory type identifier",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "config": {
+              "type": "object",
+              "description": "Middleware-specific configuration",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
     "service-definitions": {
       "type": "object",
       "description": "Service definitions",

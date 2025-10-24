@@ -17,6 +17,10 @@ var (
 	typeOfApiHelper    = reflect.TypeOf((*response.ApiHelper)(nil))
 	typeOfResponseVal  = reflect.TypeOf(response.Response{})
 	typeOfApiHelperVal = reflect.TypeOf(response.ApiHelper{})
+
+	// MiddlewareResolver resolves middleware by name from registry
+	// Set by deploy package to avoid import cycle
+	MiddlewareResolver func(name string) request.HandlerFunc
 )
 
 // handlerMetadata contains signature information extracted during registration
@@ -479,45 +483,6 @@ func adaptHandler(path string, h any) request.HandlerFunc {
 			return nil
 		}
 
-	// Pattern: func(*Context) (Response, error) - value return
-	// Less common but supported for flexibility
-	case func(*request.Context) (response.Response, error):
-		return func(c *request.Context) error {
-			resp, err := v(c)
-			if err != nil {
-				return err
-			}
-			*c.Resp = resp
-			return nil
-		}
-
-	// Pattern: func(*Context) (ApiHelper, error) - value return
-	case func(*request.Context) (response.ApiHelper, error):
-		return func(c *request.Context) error {
-			api, err := v(c)
-			if err != nil {
-				return err
-			}
-			*c.Resp = *api.Resp()
-			return nil
-		}
-
-	// Pattern: func(*Context) Response - value return, no error
-	case func(*request.Context) response.Response:
-		return func(c *request.Context) error {
-			resp := v(c)
-			*c.Resp = resp
-			return nil
-		}
-
-	// Pattern: func(*Context) ApiHelper - value return, no error
-	case func(*request.Context) response.ApiHelper:
-		return func(c *request.Context) error {
-			api := v(c)
-			*c.Resp = *api.Resp()
-			return nil
-		}
-
 	// ========================================================================
 	// TIER 1: FAST PATH - Simple handlers without Context
 	// For stateless/mock handlers
@@ -634,12 +599,43 @@ func adaptHandler(path string, h any) request.HandlerFunc {
 	}
 }
 
-func adaptMiddlewares(mw []any) []request.HandlerFunc {
-	var adapted []request.HandlerFunc
+// adaptMiddlewares supports both HandlerFunc and string names
+// Strings are NOT resolved here - lazy resolution happens during Build()
+func adaptMiddlewares(mw []any) []any {
+	var adapted []any
 	for _, m := range mw {
-		adapted = append(adapted, adaptHandler("middleware", m))
+		if name, ok := m.(string); ok {
+			// Keep string as-is for lazy resolution
+			adapted = append(adapted, name)
+		} else {
+			// Resolve function middleware immediately
+			adapted = append(adapted, adaptHandler("middleware", m))
+		}
 	}
 	return adapted
+}
+
+// resolveMiddlewares converts all string names to HandlerFunc
+// Called during Build() to resolve lazy middleware names
+func resolveMiddlewares(mw []any) []request.HandlerFunc {
+	var resolved []request.HandlerFunc
+	for _, m := range mw {
+		if name, ok := m.(string); ok {
+			// Lazy resolve string name to HandlerFunc
+			if MiddlewareResolver == nil {
+				panic("MiddlewareResolver not set - cannot resolve middleware names")
+			}
+			middleware := MiddlewareResolver(name)
+			if middleware == nil {
+				panic(fmt.Sprintf("middleware not found: %s", name))
+			}
+			resolved = append(resolved, middleware)
+		} else {
+			// Already a HandlerFunc
+			resolved = append(resolved, m.(request.HandlerFunc))
+		}
+	}
+	return resolved
 }
 
 func cleanPath(p string) string {

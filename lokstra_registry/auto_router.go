@@ -2,6 +2,7 @@ package lokstra_registry
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/router"
@@ -27,58 +28,111 @@ import (
 //  1. Try to instantiate remote service factory and check for RemoteServiceMeta
 //  2. Fall back to RouterDef from config (convention, resource, overrides)
 //  3. YAML overrides are MERGED on top (highest priority)
-func BuildRouterFromDefinition(routerName string, app *deploy.App) (router.Router, error) {
+func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 	// Get router definition from global registry
 	routerDef := deploy.Global().GetRouterDef(routerName)
 	if routerDef == nil {
 		return nil, fmt.Errorf("router definition '%s' not found in global registry", routerName)
 	}
 
-	// Get service instance from app (this is the LOCAL service implementation)
-	serviceInstance := service.LazyLoadFrom[any](app, routerDef.Service)
-	if serviceInstance == nil {
+	// Get service instance from global registry (already registered as lazy in SetCurrentServer)
+	svc, ok := deploy.Global().GetServiceAny(routerDef.Service)
+	if !ok {
 		return nil, fmt.Errorf("service '%s' not found for router '%s'", routerDef.Service, routerName)
 	}
-
-	svc := serviceInstance.MustGet()
 
 	// Build conversion rule and override
 	var rule autogen.ConversionRule
 	var override autogen.RouteOverride
+	var metadataFound bool
 
-	// Strategy 1: Try to get metadata from REMOTE service factory
-	// For auto-router generation, we need metadata from XXXRemote, not XXXImpl
-	remoteServiceMeta := tryGetRemoteServiceMeta(routerDef.Service)
+	// Strategy 1: Check metadata from RegisterServiceType options (from service type)
+	serviceDef := deploy.Global().GetServiceDef(routerDef.Service)
+	if serviceDef != nil {
+		metadata := deploy.Global().GetServiceMetadata(serviceDef.Type)
+		if metadata != nil && metadata.Resource != "" {
+			// Use metadata from RegisterServiceType
+			rule = autogen.ConversionRule{
+				Convention:     convention.ConventionType(metadata.Convention),
+				Resource:       metadata.Resource,
+				ResourcePlural: metadata.ResourcePlural,
+			}
+			// TODO: Convert metadata.RouteOverrides to autogen.RouteOverride
+			override = autogen.RouteOverride{
+				PathPrefix: metadata.PathPrefix,
+				Hidden:     metadata.HiddenMethods,
+			}
 
-	if remoteServiceMeta != nil {
-		// Remote service provides metadata - use it!
-		resource, plural := remoteServiceMeta.GetResourceName()
-		conventionName := remoteServiceMeta.GetConventionName()
-		serviceOverride := remoteServiceMeta.GetRouteOverride()
+			// Config can still override
+			if routerDef.Convention != "" {
+				rule.Convention = convention.ConventionType(routerDef.Convention)
+			}
+			if routerDef.Resource != "" {
+				rule.Resource = routerDef.Resource
+			}
+			if routerDef.ResourcePlural != "" {
+				rule.ResourcePlural = routerDef.ResourcePlural
+			}
 
-		rule = autogen.ConversionRule{
-			Convention:     convention.ConventionType(conventionName),
-			Resource:       resource,
-			ResourcePlural: plural,
+			metadataFound = true
 		}
-		override = serviceOverride
+	}
 
-		// Config can still override service metadata if explicitly set
+	// Strategy 2: Try to get metadata from service instance (ServiceMeta)
+	// This works for both local and remote services!
+	if !metadataFound {
+		serviceMeta := tryGetServiceMeta(svc)
+		if serviceMeta != nil {
+			// Service provides metadata - use it!
+			resource, plural := serviceMeta.GetResourceName()
+			conventionName := serviceMeta.GetConventionName()
+			serviceOverride := serviceMeta.GetRouteOverride()
+
+			rule = autogen.ConversionRule{
+				Convention:     convention.ConventionType(conventionName),
+				Resource:       resource,
+				ResourcePlural: plural,
+			}
+			override = serviceOverride
+
+			// Config can still override service metadata if explicitly set
+			if routerDef.Convention != "" {
+				rule.Convention = convention.ConventionType(routerDef.Convention)
+			}
+			if routerDef.Resource != "" {
+				rule.Resource = routerDef.Resource
+			}
+			if routerDef.ResourcePlural != "" {
+				rule.ResourcePlural = routerDef.ResourcePlural
+			}
+
+			metadataFound = true
+		}
+	}
+
+	// Strategy 3: Fall back to config-based metadata or auto-generate from service name
+	if !metadataFound {
+		// Auto-generate resource name from service name if not in config
+		resource := routerDef.Resource
+		resourcePlural := routerDef.ResourcePlural
+		conventionType := convention.REST // Default convention
+
+		if resource == "" {
+			// Auto-generate from service name: "order-service" -> "order"
+			resource = strings.TrimSuffix(routerDef.Service, "-service")
+		}
+		if resourcePlural == "" {
+			// Simple pluralization
+			resourcePlural = resource + "s"
+		}
 		if routerDef.Convention != "" {
-			rule.Convention = convention.ConventionType(routerDef.Convention)
+			conventionType = convention.ConventionType(routerDef.Convention)
 		}
-		if routerDef.Resource != "" {
-			rule.Resource = routerDef.Resource
-		}
-		if routerDef.ResourcePlural != "" {
-			rule.ResourcePlural = routerDef.ResourcePlural
-		}
-	} else {
-		// Strategy 2: Fall back to config-based metadata
+
 		rule = autogen.ConversionRule{
-			Convention:     convention.ConventionType(routerDef.Convention),
-			Resource:       routerDef.Resource,
-			ResourcePlural: routerDef.ResourcePlural,
+			Convention:     conventionType,
+			Resource:       resource,
+			ResourcePlural: resourcePlural,
 		}
 		override = autogen.RouteOverride{}
 	}
@@ -120,8 +174,19 @@ func BuildRouterFromDefinition(routerName string, app *deploy.App) (router.Route
 	return r, nil
 }
 
+// tryGetServiceMeta attempts to get ServiceMeta from a service instance
+// This works for both local and remote services that implement ServiceMeta
+func tryGetServiceMeta(svc any) service.ServiceMeta {
+	// Check if service implements ServiceMeta interface
+	if metaSvc, ok := svc.(service.ServiceMeta); ok {
+		return metaSvc
+	}
+	return nil
+}
+
 // tryGetRemoteServiceMeta attempts to instantiate remote service and get metadata
 // This creates a temporary remote service instance just to read metadata
+// DEPRECATED: Use tryGetServiceMeta instead (works for both local and remote)
 func tryGetRemoteServiceMeta(serviceName string) (result service.RemoteServiceMeta) {
 	// Get service definition to find its type
 	serviceDef := deploy.Global().GetServiceDef(serviceName)

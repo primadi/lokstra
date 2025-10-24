@@ -14,6 +14,7 @@ func GetSchemaBytes() []byte {
 // This matches the JSON schema and supports multi-file merging
 type DeployConfig struct {
 	Configs                    map[string]any                  `yaml:"configs" json:"configs"`
+	MiddlewareDefinitions      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
 	ServiceDefinitions         map[string]*ServiceDef          `yaml:"service-definitions" json:"service-definitions"`
 	Routers                    map[string]*RouterDef           `yaml:"routers" json:"routers"`
 	RouterOverrides            map[string]*RouterOverrideDef   `yaml:"router-overrides,omitempty" json:"router-overrides,omitempty"`
@@ -79,11 +80,13 @@ type AppDefMap struct {
 // RemoteServiceSimple defines an external service (outside this deployment)
 // For external services, you typically need to override everything since their API structure may differ
 type RemoteServiceSimple struct {
-	URL            string `yaml:"url" json:"url"`
-	Resource       string `yaml:"resource,omitempty" json:"resource,omitempty"`               // Resource name (singular)
-	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Resource name (plural)
-	Convention     string `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql)
-	Overrides      string `yaml:"overrides,omitempty" json:"overrides,omitempty"`             // Reference to RouterOverrideDef name for full customization
+	URL            string         `yaml:"url" json:"url"`
+	Type           string         `yaml:"type,omitempty" json:"type,omitempty"`                       // Factory type (auto-creates service wrapper)
+	Resource       string         `yaml:"resource,omitempty" json:"resource,omitempty"`               // Resource name (singular)
+	ResourcePlural string         `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Resource name (plural)
+	Convention     string         `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql)
+	Overrides      string         `yaml:"overrides,omitempty" json:"overrides,omitempty"`             // Reference to RouterOverrideDef name for full customization
+	Config         map[string]any `yaml:"config,omitempty" json:"config,omitempty"`                   // Additional config for factory
 }
 
 // ConfigDef defines a configuration value

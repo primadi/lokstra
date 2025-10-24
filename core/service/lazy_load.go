@@ -48,19 +48,22 @@ type Cached[T any] struct {
 //	    db.Query("...")
 //	}
 func LazyLoad[T any](serviceName string) *Cached[T] {
-	return LazyLoadWith(func() T {
-		// Load from global registry
-		if reg := registry.Global(); reg != nil {
-			if svc, ok := reg.GetServiceAny(serviceName); ok {
-				if typed, ok := svc.(T); ok {
-					return typed
+	return &Cached[T]{
+		serviceName: serviceName,
+		loader: func() T {
+			// Load from global registry
+			if reg := registry.Global(); reg != nil {
+				if svc, ok := reg.GetServiceAny(serviceName); ok {
+					if typed, ok := svc.(T); ok {
+						return typed
+					}
 				}
 			}
-		}
-		// Return zero value if not found
-		var zero T
-		return zero
-	})
+			// Return zero value if not found
+			var zero T
+			return zero
+		},
+	}
 }
 
 // Get retrieves the service instance. The service is initialized on first call

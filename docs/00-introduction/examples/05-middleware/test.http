@@ -1,0 +1,90 @@
+### Public Endpoints (No Auth Required)
+
+# Test basic endpoint
+GET http://localhost:3000/
+
+###
+
+# Test public endpoint
+GET http://localhost:3000/public
+
+###
+
+# Test health endpoint (skipped in logging)
+GET http://localhost:3000/health
+
+###
+
+### Protected Endpoints (Requires X-API-Key: secret-key-123)
+
+# Test without API key - should return 401
+GET http://localhost:3000/protected
+
+###
+
+# Test with invalid API key - should return 403
+GET http://localhost:3000/protected
+X-API-Key: wrong-key
+
+###
+
+# Test with valid API key - should return 200
+GET http://localhost:3000/protected
+X-API-Key: secret-key-123
+
+###
+
+# Test API profile endpoint
+GET http://localhost:3000/api/profile
+X-API-Key: secret-key-123
+
+###
+
+# Test API data endpoint
+GET http://localhost:3000/api/data
+X-API-Key: secret-key-123
+
+###
+
+### Admin Endpoints (Requires X-API-Key: admin-key-456)
+
+# Test admin with regular key - should return 403
+GET http://localhost:3000/api/admin/dashboard
+X-API-Key: secret-key-123
+
+###
+
+# Test admin with admin key - should return 200
+GET http://localhost:3000/api/admin/dashboard
+X-API-Key: admin-key-456
+
+###
+
+# Test admin users endpoint
+GET http://localhost:3000/api/admin/users
+X-API-Key: admin-key-456
+
+###
+
+### Test Endpoints
+
+# Test panic recovery - should return 500 with error message
+GET http://localhost:3000/panic
+
+###
+
+# Test slow request - should show in logs with duration
+GET http://localhost:3000/slow
+
+###
+
+# Test middleware chain
+GET http://localhost:3000/chain
+
+###
+
+### Rate Limiting Test
+
+# Run this 11+ times to trigger rate limit
+# @name RateLimit
+GET http://localhost:3000/

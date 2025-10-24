@@ -125,7 +125,9 @@ curl http://localhost:8080/ping    # → "pong"
 curl http://localhost:8080/users   # → ["Alice","Bob","Charlie"]
 ```
 
-**💭 Note**: This is a simplified introduction example. For complete runnable examples, see the [Quick Start](quick-start.md) guide and [Examples](../01-essentials/06-putting-it-together/README.md) section.
+**💭 Note**: This is a simplified introduction example. For complete runnable examples with proper project structure, see:
+- [Quick Start](quick-start.md) - Your first working API in 5 minutes
+- [Examples](examples/README.md) - 4 progressive examples from basics to production
 
 ---
 
@@ -358,10 +360,12 @@ After working through this documentation:
 👉 [Architecture](architecture.md) - Deep dive into design
 
 ### I want to code NOW
-👉 [Quick Start](quick-start.md) - Build your first API in 5 minutes
+👉 [Quick Start](quick-start.md) - Build your first API in 5 minutes  
+👉 [Examples](examples/README.md) - 4 progressive examples (hello-world → production)
 
 ### I want to learn systematically
-👉 [Essentials](../01-essentials/README.md) - Step-by-step tutorial
+👉 [Examples](examples/README.md) - Hands-on progressive learning (4-6 hours)  
+👉 [Essentials](../01-essentials/README.md) - Step-by-step deep dive
 
 ---
 
@@ -377,7 +381,29 @@ Before moving on, remember:
 
 ---
 
-## 🚀 Roadmap
+## � Learning with Examples
+
+We provide **4 progressive examples** that build on each other:
+
+### [Example 01: Hello World](examples/01-hello-world/)
+⏱️ 15 minutes • Learn router basics and simple handlers
+
+### [Example 02: Handler Forms](examples/02-handler-forms/)
+⏱️ 30 minutes • Explore all 29 handler variations
+
+### [Example 03: CRUD API](examples/03-crud-api/)
+⏱️ 1 hour • Build with services, DI, and manual routing
+
+### [Example 04: Multi-Deployment](examples/04-multi-deployment/) ⭐
+⏱️ 2-3 hours • Production architecture with Clean Architecture, auto-router, and microservices
+
+**Total**: 4-6 hours from zero to production-ready patterns!
+
+👉 [Start with examples](examples/README.md)
+
+---
+
+## �🚀 Roadmap
 
 ### Next Release
 We're actively working on:

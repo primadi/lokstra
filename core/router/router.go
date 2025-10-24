@@ -39,6 +39,8 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - string (middleware name from config or registry)
+	//  - route.WithXXX options
 	GET(path string, h any, middleware ...any) Router
 	// route registration for POST method
 	//
@@ -59,6 +61,8 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - string (middleware name from config or registry)
+	//  - route.WithXXX options
 	POST(path string, h any, middleware ...any) Router
 	// route registration for PUT method
 	//
@@ -79,6 +83,8 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - string (middleware name from config or registry)
+	//  - route.WithXXX options
 	PUT(path string, h any, middleware ...any) Router
 	// route registration for DELETE metod
 	//
@@ -99,6 +105,8 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - string (middleware name from config or registry)
+	//  - route.WithXXX options
 	DELETE(path string, h any, middleware ...any) Router
 	// route registration for PATCH method
 	//
@@ -119,6 +127,8 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - string (middleware name from config or registry)
+	//  - route.WithXXX options
 	PATCH(path string, h any, middleware ...any) Router
 	// route registration for ANY method (all methods)
 	//
@@ -139,6 +149,8 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - string (middleware name from config or registry)
+	//  - route.WithXXX options
 	ANY(path string, h any, middleware ...any) Router
 
 	// route registration for GET method with prefix match
@@ -160,6 +172,7 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - route.WithXXX options
 	GETPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for POST method with prefix match
 	//
@@ -180,6 +193,7 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - route.WithXXX options
 	POSTPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for PUT method with prefix match
 	//
@@ -200,6 +214,7 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - route.WithXXX options
 	PUTPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for DELETE method with prefix match
 	//
@@ -220,6 +235,7 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - route.WithXXX options
 	DELETEPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for PATCH method with prefix match
 	//
@@ -240,6 +256,7 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - route.WithXXX options
 	PATCHPrefix(prefix string, h any, middleware ...any) Router
 	// route registration for ANY method with prefix match
 	//
@@ -260,6 +277,7 @@ type Router interface {
 	//  - func(*lokstra.RequestContext) error
 	//  - request.HandlerFunc
 	//  - func(*lokstra.RequestContext, any) error
+	//  - route.WithXXX options
 	ANYPrefix(prefix string, h any, middleware ...any) Router
 
 	// create a sub- router with prefix, and call the fn to register routes on it
@@ -270,7 +288,12 @@ type Router interface {
 	AddGroup(prefix string) Router
 
 	// add global middleware(s) to this router
-	// e.g. r.Use(middleware...)
+	// middleware can be:
+	//  - func(*lokstra.RequestContext) error
+	//  - request.HandlerFunc
+	//  - func(*lokstra.RequestContext, any) error
+	//  - string (middleware name from config or registry)
+	// e.g. r.Use(middleware...) or r.Use("cors", "recovery")
 	Use(middleware ...any) Router
 
 	// set whether this router should override parent middleware when adding routes

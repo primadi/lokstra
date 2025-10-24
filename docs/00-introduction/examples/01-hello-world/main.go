@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// Create router
-	r := lokstra.NewRouterWithEngine("api", "chi")
+	r := lokstra.NewRouter("api")
 
 	// Simple routes
 	r.GET("/", func() string {

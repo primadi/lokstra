@@ -17,7 +17,7 @@ type routerImpl struct {
 	pathPrefix string
 
 	routes           []*route.Route
-	middlewares      []request.HandlerFunc
+	middlewares      []any // Mixed: request.HandlerFunc or string (lazy)
 	overrideParentMw bool
 	children         []*routerImpl
 
@@ -101,11 +101,15 @@ func (r *routerImpl) Build() {
 				rt.Name = strings.Join([]string{rt.Method, "[", pref, nm, "]"}, "")
 				rt.FullName += rt.Name
 			}
+
+			// Resolve route-level lazy middlewares
+			resolvedRouteMw := resolveMiddlewares(rt.Middleware)
+
 			var fullMw []request.HandlerFunc
 			if rt.OverrideParentMw {
-				fullMw = rt.Middleware
+				fullMw = resolvedRouteMw
 			} else {
-				fullMw = append(fullMiddlewares, rt.Middleware...)
+				fullMw = append(fullMiddlewares, resolvedRouteMw...)
 			}
 			rt.FullMiddleware = fullMw
 			r.routerEngine.Handle(rt.Method+" "+fullPath, request.NewHandler(
@@ -299,12 +303,15 @@ func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []re
 		baseName += r.name + "."
 	}
 	basePrefix := fullPrefix + r.pathPrefix
+
+	// Resolve lazy middlewares at this level
 	var baseMw []request.HandlerFunc
 	if r.overrideParentMw {
-		baseMw = r.middlewares
+		baseMw = resolveMiddlewares(r.middlewares)
 	} else {
-		baseMw = append(fullMw, r.middlewares...)
+		baseMw = append(fullMw, resolveMiddlewares(r.middlewares)...)
 	}
+
 	// Use current router name for routes directly in this router
 	currentRouterName := r.name
 	if currentRouterName == "" {

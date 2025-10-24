@@ -71,6 +71,7 @@ func loadSingleFile(path string) (*schema.DeployConfig, error) {
 func mergeConfigs(target, source *schema.DeployConfig) *schema.DeployConfig {
 	result := &schema.DeployConfig{
 		Configs:                    mergeMap(target.Configs, source.Configs),
+		MiddlewareDefinitions:      mergeMaps(target.MiddlewareDefinitions, source.MiddlewareDefinitions),
 		ServiceDefinitions:         mergeMaps(target.ServiceDefinitions, source.ServiceDefinitions),
 		Routers:                    mergeMaps(target.Routers, source.Routers),
 		RouterOverrides:            mergeMaps(target.RouterOverrides, source.RouterOverrides),

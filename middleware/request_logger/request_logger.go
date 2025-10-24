@@ -7,7 +7,7 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/old_registry"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 const REQUEST_LOGGER_TYPE = "request_logger"
@@ -122,8 +122,8 @@ func MiddlewareFactory(params map[string]any) request.HandlerFunc {
 }
 
 func Register() {
-	old_registry.RegisterMiddlewareFactory(REQUEST_LOGGER_TYPE, MiddlewareFactory,
-		old_registry.AllowOverride(true))
+	lokstra_registry.RegisterMiddlewareFactory(REQUEST_LOGGER_TYPE, MiddlewareFactory,
+		lokstra_registry.AllowOverride(true))
 }
 
 // formatDuration formats duration for display

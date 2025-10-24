@@ -8,7 +8,7 @@ type Route struct {
 	Method           string
 	Path             string
 	Handler          request.HandlerFunc
-	Middleware       []request.HandlerFunc
+	Middleware       []any // Mixed: request.HandlerFunc or string (lazy)
 	OverrideParentMw bool
 
 	// populated during Build()

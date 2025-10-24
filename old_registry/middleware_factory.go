@@ -13,9 +13,9 @@ type middlewareEntry struct {
 	config map[string]any
 }
 
-var mwFactoryRegistry sync.Map
+var mwFactoryRegistry sync.Map // map[string]MiddlewareFactory
 
-var mwEntryRegistry sync.Map
+var mwEntryRegistry sync.Map // map[string]middlewareEntry
 
 // Registers a middleware factory function for a given middleware type.
 // If allowOverride is false and a factory for the same type already exists, it panics.

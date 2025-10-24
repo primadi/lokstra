@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// Parse command line flags
-	server := flag.String("server", "monolith.api-server", "Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
+	server := flag.String("server", "microservice.order-server", "Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
 	flag.Parse()
 
 	fmt.Println("")
@@ -27,14 +27,10 @@ func main() {
 
 	// Register repositories (infrastructure layer)
 	lokstra_registry.RegisterServiceType("user-repository-factory",
-		func(deps map[string]any, config map[string]any) any {
-			return repository.NewUserRepositoryMemory()
-		}, nil)
+		repository.NewUserRepositoryMemory, nil)
 
 	lokstra_registry.RegisterServiceType("order-repository-factory",
-		func(deps map[string]any, config map[string]any) any {
-			return repository.NewOrderRepositoryMemory()
-		}, nil)
+		repository.NewOrderRepositoryMemory, nil)
 
 	// Register services (application layer)
 	// Metadata is provided by XXXRemote structs (RemoteServiceMetaAdapter)

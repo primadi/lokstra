@@ -40,57 +40,6 @@ func normalizeServerDefinitions(config *schema.DeployConfig) {
 			serverDef.HelperPublishedServices = nil
 		}
 	}
-} // BuildDeployment builds a Deployment from loaded configuration
-func BuildDeployment(config *schema.DeployConfig, deploymentName string, registry *deploy.GlobalRegistry) (*deploy.Deployment, error) {
-	// Get deployment definition
-	depDef, ok := config.Deployments[deploymentName]
-	if !ok {
-		return nil, fmt.Errorf("deployment %s not found in config", deploymentName)
-	}
-
-	// Register configs from YAML
-	for name, value := range config.Configs {
-		registry.DefineConfig(&schema.ConfigDef{
-			Name:  name,
-			Value: value,
-		})
-	}
-
-	// Resolve configs
-	if err := registry.ResolveConfigs(); err != nil {
-		return nil, fmt.Errorf("failed to resolve configs: %w", err)
-	}
-
-	// Register services from YAML
-	for name, svc := range config.ServiceDefinitions {
-		svc.Name = name // Set name from map key
-		registry.DefineService(svc)
-	}
-
-	// Create deployment
-	dep := deploy.NewWithRegistry(deploymentName, registry)
-
-	// Apply config overrides
-	for key, value := range depDef.ConfigOverrides {
-		dep.SetConfigOverride(key, value)
-	}
-
-	// Create servers and apps
-	for serverName, serverDef := range depDef.Servers {
-		server := dep.NewServer(serverName, serverDef.BaseURL)
-
-		for _, appDef := range serverDef.Apps {
-			_ = server.NewApp(appDef.Addr)
-
-			// Services are at server-level only (shared across all apps)
-			// No app-level services
-
-			// TODO: Add routers when router system is ready
-			// TODO: Add remote services when remote service system is ready
-		}
-	}
-
-	return dep, nil
 }
 
 // LoadAndBuild loads config and builds ALL deployments into Global registry
@@ -119,10 +68,61 @@ func LoadAndBuild(configPaths []string) error {
 		return fmt.Errorf("failed to resolve configs: %w", err)
 	}
 
+	// Register middlewares from YAML
+	for name, mw := range config.MiddlewareDefinitions {
+		mw.Name = name // Set name from map key
+		registry.DefineMiddleware(mw)
+	}
+
 	// Normalize server definitions (convert helper fields to apps)
 	normalizeServerDefinitions(config)
 
-	// Register services from YAML
+	// Auto-create service wrappers for external services with factory type
+	// This allows external-service-definitions to directly specify the factory
+	// without needing a separate service-definitions entry
+	for name, extSvc := range externalServices {
+		if extSvc.Type != "" {
+			// Check if service definition already exists (manual override)
+			if _, exists := config.ServiceDefinitions[name]; exists {
+				continue // Skip auto-creation, use manual definition
+			}
+
+			// Auto-create service definition
+			autoServiceDef := &schema.ServiceDef{
+				Name:      name,
+				Type:      extSvc.Type,
+				DependsOn: nil, // External services have no dependencies
+				Config:    make(map[string]any),
+			}
+
+			// Copy external service config if provided
+			if extSvc.Config != nil {
+				for k, v := range extSvc.Config {
+					autoServiceDef.Config[k] = v
+				}
+			}
+
+			// Add URL, resource, convention metadata to config
+			autoServiceDef.Config["url"] = extSvc.URL
+			if extSvc.Resource != "" {
+				autoServiceDef.Config["resource"] = extSvc.Resource
+			}
+			if extSvc.ResourcePlural != "" {
+				autoServiceDef.Config["resource_plural"] = extSvc.ResourcePlural
+			}
+			if extSvc.Convention != "" {
+				autoServiceDef.Config["convention"] = extSvc.Convention
+			}
+			if extSvc.Overrides != "" {
+				autoServiceDef.Config["overrides"] = extSvc.Overrides
+			}
+
+			// Add to service definitions (will be registered below)
+			config.ServiceDefinitions[name] = autoServiceDef
+		}
+	}
+
+	// Register services from YAML (includes auto-created external services)
 	for name, svc := range config.ServiceDefinitions {
 		svc.Name = name // Set name from map key
 		registry.DefineService(svc)
@@ -201,18 +201,10 @@ func LoadAndBuild(configPaths []string) error {
 		registry.DefineRouterOverride(name, overrideDef)
 	}
 
-	// Build ALL deployments
+	// Build ALL deployments (2-Layer Architecture: YAML -> Topology only)
 	for deploymentName, depDef := range config.Deployments {
-		// Create deployment
-		dep := deploy.NewWithRegistry(deploymentName, registry)
-
-		// Apply config overrides
-		for key, value := range depDef.ConfigOverrides {
-			dep.SetConfigOverride(key, value)
-		}
-
-		// First pass: Build service location registry (service-name → base-url)
-		// This maps published services to their server URLs
+		// Build service location registry (service-name → base-url)
+		// This maps published services to their server URLs for remote service resolution
 		serviceLocations := make(map[string]string)
 		for _, serverDef := range depDef.Servers {
 			for _, appDef := range serverDef.Apps {
@@ -224,66 +216,93 @@ func LoadAndBuild(configPaths []string) error {
 			}
 		}
 
-		// Second pass: Create servers and apps
-		for serverName, serverDef := range depDef.Servers {
-			server := dep.NewServer(serverName, serverDef.BaseURL)
-
-			// Create apps
-			for _, appDef := range serverDef.Apps {
-				app := server.NewApp(appDef.Addr)
-
-				// Add server-level services (shared across all apps on this server)
-				if len(serverDef.Services) > 0 {
-					app.AddServices(serverDef.Services...)
-				}
-
-				// Auto-add published services (they must be local)
-				if len(appDef.PublishedServices) > 0 {
-					app.AddServices(appDef.PublishedServices...)
-				}
-
-				// Add server-level remote services (auto-resolved)
-				for _, remoteServiceName := range serverDef.RemoteServices {
-					// Extract the actual service name (remove -remote suffix if present)
-					actualServiceName := strings.TrimSuffix(remoteServiceName, "-remote")
-
-					// Auto-resolve URL from service locations
-					remoteURL, found := serviceLocations[actualServiceName]
-					if !found {
-						// Fallback to external-service-definitions if exists
-						if remoteDef, ok := externalServices[remoteServiceName]; ok {
-							remoteURL = remoteDef.URL
-						} else {
-							return fmt.Errorf("remote service '%s' not found - not published in any server and not in external-service-definitions", actualServiceName)
-						}
-					}
-
-					// Get optional overrides from YAML
-					var remoteDef *schema.RemoteServiceSimple
-					if def, ok := externalServices[remoteServiceName]; ok {
-						remoteDef = def
-					}
-
-					// Add as remote service with auto-resolved URL
-					app.AddRemoteServiceByName(actualServiceName, remoteURL, remoteDef)
-				}
-
-				// Add router names (routers are registered separately in code)
-				for _, routerName := range appDef.Routers {
-					app.AddRouter(routerName, nil) // nil because actual router is in global registry
-				}
-
-				// Auto-generate routers from published-services
-				for _, serviceName := range appDef.PublishedServices {
-					// Auto-generated router name: serviceName + "-router"
-					routerName := serviceName + "-router"
-					app.AddRouter(routerName, nil)
-				}
-			}
+		// Create and store topology (NEW 2-Layer Architecture)
+		deployTopo := &deploy.DeploymentTopology{
+			Name:            deploymentName,
+			ConfigOverrides: make(map[string]any),
+			Servers:         make(map[string]*deploy.ServerTopology),
 		}
 
-		// Register deployment in global registry
-		registry.RegisterDeployment(deploymentName, dep)
+		// Copy config overrides
+		for key, value := range depDef.ConfigOverrides {
+			deployTopo.ConfigOverrides[key] = value
+		}
+
+		// Build server topologies
+		for serverName, serverDef := range depDef.Servers {
+			serverTopo := &deploy.ServerTopology{
+				Name:           serverName,
+				DeploymentName: deploymentName,
+				BaseURL:        serverDef.BaseURL,
+				Services:       make([]string, 0),
+				RemoteServices: make(map[string]string),
+				Apps:           make([]*deploy.AppTopology, 0, len(serverDef.Apps)),
+			}
+
+			// Collect SERVER-LEVEL services (shared across all apps)
+			serviceMap := make(map[string]bool)
+
+			// Add server-level services from YAML
+			for _, svcName := range serverDef.Services {
+				serviceMap[svcName] = true
+			}
+
+			// Add published services from all apps (these are also local services)
+			for _, appDef := range serverDef.Apps {
+				for _, svcName := range appDef.PublishedServices {
+					serviceMap[svcName] = true
+				}
+			}
+
+			// Convert to slice
+			for svcName := range serviceMap {
+				serverTopo.Services = append(serverTopo.Services, svcName)
+			}
+
+			// Collect SERVER-LEVEL remote services
+			for _, remoteServiceName := range serverDef.RemoteServices {
+				// Keep the full service name (no trimming!)
+				// This ensures consistency: config name = runtime name
+				actualServiceName := remoteServiceName
+
+				// Auto-resolve URL from service locations (check published services first)
+				remoteURL, found := serviceLocations[actualServiceName]
+				if !found {
+					// Fallback to external-service-definitions
+					if remoteDef, ok := externalServices[actualServiceName]; ok {
+						remoteURL = remoteDef.URL
+					} else {
+						return fmt.Errorf("remote service '%s' not found - not published in any server and not in external-service-definitions", actualServiceName)
+					}
+				}
+
+				serverTopo.Services = append(serverTopo.Services, actualServiceName)
+				serverTopo.RemoteServices[actualServiceName] = remoteURL
+			}
+
+			// Build app topologies (only addr + routers, NO services)
+			for _, appDef := range serverDef.Apps {
+				appTopo := &deploy.AppTopology{
+					Addr:    appDef.Addr,
+					Routers: make([]string, 0, len(appDef.Routers)+len(appDef.PublishedServices)),
+				}
+
+				// Collect routers
+				appTopo.Routers = append(appTopo.Routers, appDef.Routers...)
+				// Auto-generated routers from published services
+				for _, serviceName := range appDef.PublishedServices {
+					routerName := serviceName + "-router"
+					appTopo.Routers = append(appTopo.Routers, routerName)
+				}
+
+				serverTopo.Apps = append(serverTopo.Apps, appTopo)
+			}
+
+			deployTopo.Servers[serverName] = serverTopo
+		}
+
+		// Store topology in global registry
+		registry.StoreDeploymentTopology(deployTopo)
 	}
 
 	return nil
@@ -291,6 +310,236 @@ func LoadAndBuild(configPaths []string) error {
 
 // LoadAndBuildFromDir loads all YAML files from a directory and builds ALL deployments
 func LoadAndBuildFromDir(dirPath string) error {
-	// For now, just return an error suggesting to use LoadAndBuild
-	return fmt.Errorf("LoadAndBuildFromDir not yet implemented for new pattern, use LoadAndBuild with explicit paths")
+	// Use LoadConfigFromDir to scan directory for YAML files
+	config, err := LoadConfigFromDir(dirPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config from directory: %w", err)
+	}
+
+	// Process the config (same logic as LoadAndBuild but starting from loaded config)
+	registry := deploy.Global()
+
+	// Get external service definitions
+	externalServices := config.ExternalServiceDefinitions
+
+	// Register configs from YAML
+	for name, value := range config.Configs {
+		registry.DefineConfig(&schema.ConfigDef{
+			Name:  name,
+			Value: value,
+		})
+	}
+
+	// Resolve configs
+	if err := registry.ResolveConfigs(); err != nil {
+		return fmt.Errorf("failed to resolve configs: %w", err)
+	}
+
+	// Register middlewares from YAML
+	for name, mw := range config.MiddlewareDefinitions {
+		mw.Name = name // Set name from map key
+		registry.DefineMiddleware(mw)
+	}
+
+	// Normalize server definitions (convert helper fields to apps)
+	normalizeServerDefinitions(config)
+
+	// Auto-create service wrappers for external services with factory type
+	// This allows external-service-definitions to directly specify the factory
+	// without needing a separate service-definitions entry
+	for name, extSvc := range externalServices {
+		if extSvc.Type != "" {
+			// Check if service definition already exists (manual override)
+			if _, exists := config.ServiceDefinitions[name]; exists {
+				continue // Skip auto-creation, use manual definition
+			}
+
+			// Auto-create service definition
+			autoServiceDef := &schema.ServiceDef{
+				Name:      name,
+				Type:      extSvc.Type,
+				DependsOn: nil, // External services have no dependencies
+				Config:    make(map[string]any),
+			}
+
+			// Copy external service config if provided
+			if extSvc.Config != nil {
+				for k, v := range extSvc.Config {
+					autoServiceDef.Config[k] = v
+				}
+			}
+
+			// Add URL, resource, convention metadata to config
+			autoServiceDef.Config["url"] = extSvc.URL
+			if extSvc.Resource != "" {
+				autoServiceDef.Config["resource"] = extSvc.Resource
+			}
+			if extSvc.ResourcePlural != "" {
+				autoServiceDef.Config["resource_plural"] = extSvc.ResourcePlural
+			}
+			if extSvc.Convention != "" {
+				autoServiceDef.Config["convention"] = extSvc.Convention
+			}
+			if extSvc.Overrides != "" {
+				autoServiceDef.Config["overrides"] = extSvc.Overrides
+			}
+
+			// Add to service definitions (will be registered below)
+			config.ServiceDefinitions[name] = autoServiceDef
+		}
+	}
+
+	// Register services from YAML (includes auto-created external services)
+	for name, svc := range config.ServiceDefinitions {
+		svc.Name = name // Set name from map key
+		registry.DefineService(svc)
+	}
+
+	// Auto-generate router definitions for published services
+	publishedServicesMap := make(map[string]bool)
+	for _, depDef := range config.Deployments {
+		for _, serverDef := range depDef.Servers {
+			for _, appDef := range serverDef.Apps {
+				for _, serviceName := range appDef.PublishedServices {
+					publishedServicesMap[serviceName] = true
+				}
+			}
+		}
+	}
+
+	// Define routers for each published service
+	for serviceName := range publishedServicesMap {
+		routerName := serviceName + "-router"
+
+		serviceDef, ok := config.ServiceDefinitions[serviceName]
+		if !ok {
+			return fmt.Errorf("published service '%s' not found in service-definitions", serviceName)
+		}
+
+		metadata := registry.GetServiceMetadata(serviceDef.Type)
+
+		var resourceName, resourcePlural, convention, overrides string
+
+		if yamlRouter, exists := config.Routers[routerName]; exists {
+			resourceName = yamlRouter.Resource
+			resourcePlural = yamlRouter.ResourcePlural
+			convention = yamlRouter.Convention
+			overrides = yamlRouter.Overrides
+		}
+
+		if resourceName == "" && metadata != nil && metadata.Resource != "" {
+			resourceName = metadata.Resource
+			resourcePlural = metadata.ResourcePlural
+			convention = metadata.Convention
+		}
+
+		if resourceName == "" {
+			resourceName = strings.TrimSuffix(serviceName, "-service")
+			resourcePlural = resourceName + "s"
+			convention = "rest"
+		}
+
+		registry.DefineRouter(routerName, &schema.RouterDef{
+			Service:        serviceName,
+			Convention:     convention,
+			Resource:       resourceName,
+			ResourcePlural: resourcePlural,
+			Overrides:      overrides,
+		})
+	}
+
+	// Register router overrides from YAML
+	for name, overrideDef := range config.RouterOverrides {
+		registry.DefineRouterOverride(name, overrideDef)
+	}
+
+	// Build ALL deployments (create topology only)
+	for deploymentName, depDef := range config.Deployments {
+		// Build service location registry
+		serviceLocations := make(map[string]string)
+		for _, serverDef := range depDef.Servers {
+			for _, appDef := range serverDef.Apps {
+				for _, serviceName := range appDef.PublishedServices {
+					fullURL := serverDef.BaseURL + appDef.Addr
+					serviceLocations[serviceName] = fullURL
+				}
+			}
+		}
+
+		// Create and store topology
+		deployTopo := &deploy.DeploymentTopology{
+			Name:            deploymentName,
+			ConfigOverrides: make(map[string]any),
+			Servers:         make(map[string]*deploy.ServerTopology),
+		}
+
+		for key, value := range depDef.ConfigOverrides {
+			deployTopo.ConfigOverrides[key] = value
+		}
+
+		// Build server topologies
+		for serverName, serverDef := range depDef.Servers {
+			serverTopo := &deploy.ServerTopology{
+				Name:           serverName,
+				DeploymentName: deploymentName,
+				BaseURL:        serverDef.BaseURL,
+				Services:       make([]string, 0),
+				RemoteServices: make(map[string]string),
+				Apps:           make([]*deploy.AppTopology, 0, len(serverDef.Apps)),
+			}
+
+			// Collect SERVER-LEVEL services
+			serviceMap := make(map[string]bool)
+			for _, svcName := range serverDef.Services {
+				serviceMap[svcName] = true
+			}
+			for _, appDef := range serverDef.Apps {
+				for _, svcName := range appDef.PublishedServices {
+					serviceMap[svcName] = true
+				}
+			}
+			for svcName := range serviceMap {
+				serverTopo.Services = append(serverTopo.Services, svcName)
+			}
+
+			// Collect SERVER-LEVEL remote services
+			for _, remoteServiceName := range serverDef.RemoteServices {
+				// Keep the full service name (no trimming!)
+				// This ensures consistency: config name = runtime name
+				actualServiceName := remoteServiceName
+				remoteURL, found := serviceLocations[actualServiceName]
+				if !found {
+					if remoteDef, ok := externalServices[actualServiceName]; ok {
+						remoteURL = remoteDef.URL
+					} else {
+						return fmt.Errorf("remote service '%s' not found - not published in any server and not in external-service-definitions", actualServiceName)
+					}
+				}
+				serverTopo.Services = append(serverTopo.Services, actualServiceName)
+				serverTopo.RemoteServices[actualServiceName] = remoteURL
+			}
+
+			// Build app topologies
+			for _, appDef := range serverDef.Apps {
+				appTopo := &deploy.AppTopology{
+					Addr:    appDef.Addr,
+					Routers: make([]string, 0, len(appDef.Routers)+len(appDef.PublishedServices)),
+				}
+
+				appTopo.Routers = append(appTopo.Routers, appDef.Routers...)
+				for _, serviceName := range appDef.PublishedServices {
+					routerName := serviceName + "-router"
+					appTopo.Routers = append(appTopo.Routers, routerName)
+				}
+
+				serverTopo.Apps = append(serverTopo.Apps, appTopo)
+			}
+
+			deployTopo.Servers[serverName] = serverTopo
+		}
+
+		registry.StoreDeploymentTopology(deployTopo)
+	}
+
+	return nil
 }

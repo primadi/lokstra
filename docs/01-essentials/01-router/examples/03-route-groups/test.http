@@ -1,0 +1,41 @@
+### Example 03: Route Groups
+### Server: http://localhost:3000
+
+### Root
+GET http://localhost:3000/
+
+### API v1 - Simple list
+GET http://localhost:3000/v1/users
+
+### API v1 - Single user
+GET http://localhost:3000/v1/users/1
+
+### API v2 - Enhanced list with metadata
+GET http://localhost:3000/v2/users
+
+### API v2 - Single user with metadata
+GET http://localhost:3000/v2/users/1
+
+### Admin - Root
+GET http://localhost:3000/admin
+
+### Admin - Stats
+GET http://localhost:3000/admin/stats
+
+### Admin - Config
+GET http://localhost:3000/admin/config
+
+### Admin - List users
+GET http://localhost:3000/admin/users
+
+### Admin - Create user
+POST http://localhost:3000/admin/users
+Content-Type: application/json
+
+{
+  "name": "Charlie",
+  "email": "charlie@example.com"
+}
+
+### Admin - Delete user
+DELETE http://localhost:3000/admin/users/1
