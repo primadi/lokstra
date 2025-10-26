@@ -92,13 +92,13 @@ func (r *routerImpl) Build() {
 			if rt.Name == "" {
 				pref := ""
 				if strings.HasSuffix(rt.FullPath, "/") {
-					pref = "PREF:"
+					pref = "Prefix"
 				}
-				nm := strings.ReplaceAll(strings.Trim(fullPath, "/"), "/", "_")
+				nm := fullPath
 				if nm == "" {
-					nm = "root"
+					nm = "/"
 				}
-				rt.Name = strings.Join([]string{rt.Method, "[", pref, nm, "]"}, "")
+				rt.Name = strings.Join([]string{rt.Method, pref, "_", nm}, "")
 				rt.FullName += rt.Name
 			}
 
@@ -290,6 +290,54 @@ func (r *routerImpl) Use(middleware ...any) Router {
 	return r
 }
 
+// UpdateRoute implements Router.
+func (r *routerImpl) UpdateRoute(name string, options ...any) error {
+	r.assertNotBuilt()
+
+	// Find route by name
+	var targetRoute *route.Route
+	for _, rt := range r.routes {
+		if rt.Name == name {
+			targetRoute = rt
+			break
+		}
+	}
+
+	// If not found in this router, search in children
+	if targetRoute == nil {
+		for _, child := range r.children {
+			if err := child.UpdateRoute(name, options...); err == nil {
+				return nil // Found and updated in child
+			}
+		}
+		// If still not found, search in chain
+		if r.nextChain != nil {
+			return r.nextChain.UpdateRoute(name, options...)
+		}
+		return fmt.Errorf("route '%s' not found in router '%s'", name, r.name)
+	}
+
+	// Process options
+	var mws []any
+	for _, opt := range options {
+		// Apply RouteOption to the route
+		if routeOpt, ok := opt.(route.RouteHandlerOption); ok {
+			routeOpt.Apply(targetRoute)
+			continue
+		}
+		// Collect middlewares
+		mws = append(mws, opt)
+	}
+
+	// Append middlewares (same logic as handle method)
+	if len(mws) > 0 {
+		adaptedMws := adaptMiddlewares(mws)
+		targetRoute.Middleware = append(targetRoute.Middleware, adaptedMws...)
+	}
+
+	return nil
+}
+
 // WithOverrideParentMiddleware implements Router.
 func (r *routerImpl) WithOverrideParentMiddleware(override bool) Router {
 	r.overrideParentMw = override
@@ -364,7 +412,7 @@ func (r *routerImpl) PrintRoutes() {
 		if routerNameDisplay == "" {
 			routerNameDisplay = r.name
 		}
-		fmt.Printf("[%s] %s %s -> %s%s\n", routerNameDisplay, rt.Method, rt.FullPath, rt.FullName, mwDescr)
+		fmt.Printf("[%s] %s %s -> %s%s\n", routerNameDisplay, rt.Method, rt.FullPath, rt.Name, mwDescr)
 	})
 }
 

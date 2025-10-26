@@ -134,44 +134,18 @@ func TestGlobalRegistry_ServiceDefinition(t *testing.T) {
 	}
 }
 
+// TestGlobalRegistry_RouterOverride - DEPRECATED
+// Router overrides are now inline in RouterDef, this test is kept for reference
+// but the functionality has been removed in favor of inline overrides
 func TestGlobalRegistry_RouterOverride(t *testing.T) {
-	reg := NewGlobalRegistry()
+	t.Skip("Router overrides are now inline in RouterDef, DefineRouterOverride/GetRouterOverride have been removed")
 
-	// Define router override
-	reg.DefineRouterOverride("user-public-api", &schema.RouterOverrideDef{
-		PathPrefix:  "/api/v1",
-		Middlewares: []string{"cors", "rate-limit"},
-		Hidden:      []string{"Delete", "BulkDelete"},
-		Custom: []schema.RouteDef{
-			{
-				Name:        "Create",
-				Path:        "/register",
-				Middlewares: []string{"recaptcha"},
-			},
-			{
-				Name: "AdminReset",
-				Path: "/admin/reset",
-			},
-		},
-	})
-
-	// Retrieve override
-	override := reg.GetRouterOverride("user-public-api")
-	if override == nil {
-		t.Fatal("user-public-api override not found")
-	}
-
-	if override.PathPrefix != "/api/v1" {
-		t.Errorf("expected path prefix '/api/v1', got '%s'", override.PathPrefix)
-	}
-
-	if len(override.Hidden) != 2 {
-		t.Errorf("expected 2 hidden methods, got %d", len(override.Hidden))
-	}
-
-	if len(override.Custom) != 2 {
-		t.Errorf("expected 2 custom route overrides, got %d", len(override.Custom))
-	}
+	// This test is now obsolete because:
+	// 1. RouterOverrideDef struct has been deleted
+	// 2. DefineRouterOverride() method has been removed
+	// 3. GetRouterOverride() method has been removed
+	// 4. Overrides are now specified directly in RouterDef with inline fields:
+	//    - PathPrefix, Middlewares, Hidden, Custom
 }
 
 func TestGlobalRegistry_FactoryRegistration(t *testing.T) {

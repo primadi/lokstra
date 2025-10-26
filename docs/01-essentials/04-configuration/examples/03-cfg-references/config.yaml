@@ -1,0 +1,61 @@
+# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Configuration with CFG references - DRY principle
+
+# Define shared config values
+configs:
+  database:
+    host: localhost
+    port: 5432
+    username: admin
+    password: secret123
+  
+  api:
+    version: v1
+    base_path: /api
+    timeout: 30s
+  
+  features:
+    enable_auth: true
+    enable_logging: true
+    enable_metrics: false
+
+# Use CFG references throughout configuration
+services:
+  - name: postgres-service
+    type: database
+    config:
+      host: ${@CFG:database.host}
+      port: ${@CFG:database.port}
+      user: ${@CFG:database.username}
+      password: ${@CFG:database.password}
+      database: myapp
+
+  - name: cache-service
+    type: redis
+    config:
+      host: ${@CFG:database.host}  # Reuse database host
+      port: 6379
+
+routers:
+  - name: api
+    routes:
+      - path: ${@CFG:api.base_path}/health
+        handler: HealthCheckHandler
+        method: GET
+      
+      - path: ${@CFG:api.base_path}/${@CFG:api.version}/users
+        handler: GetUsersHandler
+        method: GET
+      
+      - path: ${@CFG:api.base_path}/${@CFG:api.version}/config
+        handler: GetConfigHandler
+        method: GET
+
+servers:
+  - name: web-server
+    address: :8080
+    apps:
+      - name: api-app
+        routers:
+          - api

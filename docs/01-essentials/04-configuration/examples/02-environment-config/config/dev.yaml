@@ -1,0 +1,9 @@
+# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Development environment overrides
+servers:
+  - name: dev-server
+    address: localhost:3000
+    apps:
+      - name: main-app
+        debug: true

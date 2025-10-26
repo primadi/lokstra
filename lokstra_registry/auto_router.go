@@ -29,10 +29,15 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 		return nil, fmt.Errorf("router definition '%s' not found in global registry", routerName)
 	}
 
+	// Derive service name from router name
+	// Router name format: "{service-name}-router"
+	// Example: "user-service-router" → "user-service"
+	serviceName := strings.TrimSuffix(routerName, "-router")
+
 	// Get service instance from global registry (already registered as lazy in SetCurrentServer)
-	svc, ok := deploy.Global().GetServiceAny(routerDef.Service)
+	svc, ok := deploy.Global().GetServiceAny(serviceName)
 	if !ok {
-		return nil, fmt.Errorf("service '%s' not found for router '%s'", routerDef.Service, routerName)
+		return nil, fmt.Errorf("service '%s' not found for router '%s'", serviceName, routerName)
 	}
 
 	// Build conversion rule and override
@@ -41,7 +46,7 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 	var metadataFound bool
 
 	// Strategy 1: Check metadata from RegisterServiceType options
-	serviceDef := deploy.Global().GetServiceDef(routerDef.Service)
+	serviceDef := deploy.Global().GetServiceDef(serviceName)
 	if serviceDef != nil {
 		metadata := deploy.Global().GetServiceMetadata(serviceDef.Type)
 		if metadata != nil && metadata.Resource != "" {
@@ -59,12 +64,11 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 			}
 			if len(metadata.RouteOverrides) > 0 {
 				override.Custom = make(map[string]autogen.Route)
-				for methodName, pathSpec := range metadata.RouteOverrides {
-					// Parse path spec: "POST /path" or just "/path"
-					method, path := parsePathSpec(pathSpec)
+				for methodName, routeMetadata := range metadata.RouteOverrides {
+					// RouteMetadata already contains Method, Path, and Middlewares
 					override.Custom[methodName] = autogen.Route{
-						Method: method,
-						Path:   path,
+						Method: routeMetadata.Method,
+						Path:   routeMetadata.Path,
 					}
 				}
 			}
@@ -93,7 +97,7 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 
 		if resource == "" {
 			// Auto-generate from service name: "order-service" -> "order"
-			resource = strings.TrimSuffix(routerDef.Service, "-service")
+			resource = strings.TrimSuffix(serviceName, "-service")
 		}
 		if resourcePlural == "" {
 			// Simple pluralization
@@ -111,62 +115,33 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 		override = autogen.RouteOverride{}
 	}
 
-	// If overrides are specified in config, apply them
-	if routerDef.Overrides != "" {
-		overrideDef := deploy.Global().GetRouterOverride(routerDef.Overrides)
-		if overrideDef == nil {
-			return nil, fmt.Errorf("router override '%s' not found", routerDef.Overrides)
-		}
-
-		// Merge config override with service override
-		if overrideDef.PathPrefix != "" {
-			override.PathPrefix = overrideDef.PathPrefix
-		}
-		if len(overrideDef.Hidden) > 0 {
-			override.Hidden = append(override.Hidden, overrideDef.Hidden...)
-		}
-
-		// Convert custom routes from config schema to autogen.Route
-		if len(overrideDef.Custom) > 0 {
-			if override.Custom == nil {
-				override.Custom = make(map[string]autogen.Route)
-			}
-			for _, customRoute := range overrideDef.Custom {
-				override.Custom[customRoute.Name] = autogen.Route{
-					Method: customRoute.Method,
-					Path:   customRoute.Path,
-				}
-			}
-		}
-
-		// TODO: Convert middlewares
+	// Apply inline overrides from YAML config (if any)
+	if routerDef.PathPrefix != "" {
+		override.PathPrefix = routerDef.PathPrefix
 	}
+	if len(routerDef.Hidden) > 0 {
+		override.Hidden = append(override.Hidden, routerDef.Hidden...)
+	}
+
+	// Convert custom routes from config schema to autogen.Route
+	if len(routerDef.Custom) > 0 {
+		if override.Custom == nil {
+			override.Custom = make(map[string]autogen.Route)
+		}
+		for _, customRoute := range routerDef.Custom {
+			override.Custom[customRoute.Name] = autogen.Route{
+				Method: customRoute.Method,
+				Path:   customRoute.Path,
+			}
+		}
+	}
+
+	// NOTE: Middlewares are applied in deployment.go after router creation
+	// Router-level: via router.ApplyMiddlewares()
+	// Route-level: via router.UpdateRoute()
 
 	// Create router from service using autogen
 	r := autogen.NewFromService(svc, rule, override)
 
 	return r, nil
-}
-
-// parsePathSpec parses a path specification that may include an HTTP method prefix
-// Examples:
-//   - "POST /users/{user_id}/orders"  → ("POST", "/users/{user_id}/orders")
-//   - "/users/{user_id}/orders"       → ("", "/users/{user_id}/orders")
-//   - "GET /orders"                   → ("GET", "/orders")
-//
-// Empty method means auto-detect from method name (Get* → GET, Create* → POST, etc.)
-func parsePathSpec(pathSpec string) (method string, path string) {
-	// Check if path starts with HTTP method
-	parts := strings.SplitN(strings.TrimSpace(pathSpec), " ", 2)
-	if len(parts) == 2 {
-		// Check if first part is a valid HTTP method
-		possibleMethod := strings.ToUpper(parts[0])
-		switch possibleMethod {
-		case "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS":
-			return possibleMethod, strings.TrimSpace(parts[1])
-		}
-	}
-
-	// No method prefix, or invalid method - return empty method for auto-detect
-	return "", strings.TrimSpace(pathSpec)
 }

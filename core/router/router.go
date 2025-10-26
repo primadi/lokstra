@@ -296,6 +296,32 @@ type Router interface {
 	// e.g. r.Use(middleware...) or r.Use("cors", "recovery")
 	Use(middleware ...any) Router
 
+	// UpdateRoute updates an existing route's configuration by route name.
+	// This can update method, path, and append additional middlewares.
+	// Middlewares are APPENDED, not replaced.
+	//
+	// Supported options:
+	//   - string: Treated as middleware name
+	//   - request.HandlerFunc: Middleware function
+	//   - route.WithXXX options: Route configuration (e.g., route.WithOverrideParentMwOption)
+	//   - route.WithMethodOption: Update HTTP method (e.g., route.WithMethodOption("POST"))
+	//   - route.WithPathOption: Update path (e.g., route.WithPathOption("/new/path"))
+	//
+	// Returns error if route with given name is not found.
+	//
+	// Example:
+	//   // Append middlewares to existing route
+	//   r.UpdateRoute("hello", "auth", "rate-limiter")
+	//
+	//   // Update method and path
+	//   r.UpdateRoute("hello", route.WithMethodOption("POST"), route.WithPathOption("/v2/hello"))
+	//
+	//   // Combine: update path and add middlewares
+	//   r.UpdateRoute("hello", route.WithPathOption("/auth/login"), "auth", "rate-limiter")
+	//
+	// Note: This must be called before Build() or ServeHTTP()
+	UpdateRoute(name string, options ...any) error
+
 	// set whether this router should override parent middleware when adding routes
 	WithOverrideParentMiddleware(override bool) Router
 

@@ -16,28 +16,25 @@ type DeployConfig struct {
 	Configs                    map[string]any                  `yaml:"configs" json:"configs"`
 	MiddlewareDefinitions      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
 	ServiceDefinitions         map[string]*ServiceDef          `yaml:"service-definitions" json:"service-definitions"`
-	Routers                    map[string]*RouterDef           `yaml:"routers" json:"routers"`
-	RouterOverrides            map[string]*RouterOverrideDef   `yaml:"router-overrides,omitempty" json:"router-overrides,omitempty"`
+	RouterDefinitions          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"` // Renamed from Routers
 	ExternalServiceDefinitions map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
 	Deployments                map[string]*DeploymentDefMap    `yaml:"deployments" json:"deployments"`
 }
 
 // RouterDef defines a router auto-generated from a service
+// Service name is derived from router name by removing "-router" suffix
+// Example: "user-service-router" → service is "user-service"
 type RouterDef struct {
-	Service        string `yaml:"service" json:"service"`                                     // Service name to generate router from
-	Convention     string `yaml:"convention" json:"convention"`                               // Convention type (rest, rpc, graphql)
-	Resource       string `yaml:"resource,omitempty" json:"resource,omitempty"`               // Singular form, e.g., "user"
-	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Plural form, e.g., "users"
-	Overrides      string `yaml:"overrides,omitempty" json:"overrides,omitempty"`             // Reference to RouterOverrideDef name
-}
+	// Basic configuration
+	Convention     string `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql) - optional if set in RegisterServiceType
+	Resource       string `yaml:"resource,omitempty" json:"resource,omitempty"`               // Singular form, e.g., "user" - optional if set in RegisterServiceType
+	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Plural form, e.g., "users" - optional if set in RegisterServiceType
 
-// RouterOverrideDef defines route overrides for a service router
-// This is the YAML representation of autogen.RouteOverride
-type RouterOverrideDef struct {
+	// Override configuration (inline - no more references)
 	PathPrefix  string     `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"` // e.g., "/api/v1"
 	Middlewares []string   `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Router-level middleware names
 	Hidden      []string   `yaml:"hidden,omitempty" json:"hidden,omitempty"`           // Methods to hide
-	Custom      []RouteDef `yaml:"custom,omitempty" json:"custom,omitempty"`           // Custom route definitions (array in YAML, converted to map at runtime)
+	Custom      []RouteDef `yaml:"custom,omitempty" json:"custom,omitempty"`           // Custom route definitions (array in YAML)
 }
 
 // RouteDef defines a single route override
@@ -83,8 +80,13 @@ type RemoteServiceSimple struct {
 	Resource       string         `yaml:"resource,omitempty" json:"resource,omitempty"`               // Resource name (singular)
 	ResourcePlural string         `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Resource name (plural)
 	Convention     string         `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql)
-	Overrides      string         `yaml:"overrides,omitempty" json:"overrides,omitempty"`             // Reference to RouterOverrideDef name for full customization
 	Config         map[string]any `yaml:"config,omitempty" json:"config,omitempty"`                   // Additional config for factory
+
+	// Inline overrides (no more references)
+	PathPrefix  string     `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"` // e.g., "/api/v1"
+	Middlewares []string   `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Router-level middleware names
+	Hidden      []string   `yaml:"hidden,omitempty" json:"hidden,omitempty"`           // Methods to hide
+	Custom      []RouteDef `yaml:"custom,omitempty" json:"custom,omitempty"`           // Custom route definitions
 }
 
 // ConfigDef defines a configuration value

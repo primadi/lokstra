@@ -166,7 +166,12 @@ func GetAllRouters() map[string]router.Router {
 //	    nil,
 //	)
 func RegisterServiceType(serviceType string, local, remote any, options ...deploy.RegisterServiceTypeOption) {
-	deploy.Global().RegisterServiceType(serviceType, local, remote, options...)
+	// Convert options to []any for variadic parameter
+	anyOptions := make([]any, len(options))
+	for i, opt := range options {
+		anyOptions[i] = opt
+	}
+	deploy.Global().RegisterServiceType(serviceType, local, remote, anyOptions...)
 }
 
 // GetServiceFactory returns the service factory for a service type

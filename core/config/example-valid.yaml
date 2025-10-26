@@ -1,3 +1,5 @@
+# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
 # Valid Lokstra Configuration Example
 # This file demonstrates all available configuration options with proper schema validation
 
