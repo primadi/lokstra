@@ -102,6 +102,25 @@
               "type": "string",
               "description": "Path prefix for all routes (e.g., '/api/v1') - works for both auto-generated and manual routers"
             },
+            "path-rewrites": {
+              "type": "array",
+              "description": "Regex-based path rewrite rules - works for both auto-generated and manual routers",
+              "items": {
+                "type": "object",
+                "required": ["pattern", "replacement"],
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "description": "Regex pattern to match in path (e.g., '^/api/v1/(.*)$')"
+                  },
+                  "replacement": {
+                    "type": "string",
+                    "description": "Replacement string (e.g., '/api/v2/$1')"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
             "middlewares": {
               "type": "array",
               "description": "Router-level middleware names - works for both auto-generated and manual routers",
@@ -196,6 +215,25 @@
             "path-prefix": {
               "type": "string",
               "description": "Path prefix for routes (e.g., '/api/v1')"
+            },
+            "path-rewrites": {
+              "type": "array",
+              "description": "Regex-based path rewrite rules",
+              "items": {
+                "type": "object",
+                "required": ["pattern", "replacement"],
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "description": "Regex pattern to match in path (e.g., '^/api/v1/(.*)$')"
+                  },
+                  "replacement": {
+                    "type": "string",
+                    "description": "Replacement string (e.g., '/api/v2/$1')"
+                  }
+                },
+                "additionalProperties": false
+              }
             },
             "middlewares": {
               "type": "array",

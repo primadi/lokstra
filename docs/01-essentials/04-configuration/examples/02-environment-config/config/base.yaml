@@ -1,20 +1,23 @@
-# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
 # Base configuration - shared across all environments
-routers:
-  - name: api
-    routes:
-      - path: /health
-        handler: HealthCheckHandler
-        method: GET
-      - path: /info
-        handler: InfoHandler
-        method: GET
 
-servers:
-  - name: ${APP_NAME:my-app}
-    address: ${APP_HOST:localhost}:${APP_PORT:8080}
-    apps:
-      - name: main-app
-        routers:
-          - api
+# Define services
+service-definitions:
+  health-service:
+    type: health-service-factory
+  
+  info-service:
+    type: info-service-factory
+
+# Define routers
+router-definitions:
+  health-service-router:
+    convention: rest
+    resource: health
+    resource-plural: healths
+  
+  info-service-router:
+    convention: rest
+    resource: info
+    resource-plural: infos

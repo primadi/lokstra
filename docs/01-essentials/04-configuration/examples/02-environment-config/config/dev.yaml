@@ -1,9 +1,21 @@
-# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
 # Development environment overrides
-servers:
-  - name: dev-server
-    address: localhost:3000
-    apps:
-      - name: main-app
-        debug: true
+
+configs:
+  app.port: "3000"
+  app.host: "localhost"
+  app.debug: true
+
+deployments:
+  development:
+    config-overrides:
+      app.name: "my-app-dev"
+    servers:
+      dev-server:
+        base-url: http://localhost:3000
+        apps:
+          - addr: ":3000"
+            routers:
+              - health-service-router
+              - info-service-router

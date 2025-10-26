@@ -265,6 +265,16 @@ func RunCurrentServer(timeout time.Duration) error {
 					log.Printf("🔧 Applied path prefix override to %s router '%s': %s\n", routerType, routerName, routerDef.PathPrefix)
 				}
 
+				// Apply path rewrites if specified
+				if len(routerDef.PathRewrites) > 0 {
+					rewrites := make(map[string]string)
+					for _, rw := range routerDef.PathRewrites {
+						rewrites[rw.Pattern] = rw.Replacement
+					}
+					r.SetPathRewrites(rewrites)
+					log.Printf("🔧 Applied %d path rewrite rule(s) to router '%s'\n", len(rewrites), routerName)
+				}
+
 				// Apply router-level middleware overrides if specified
 				if len(routerDef.Middlewares) > 0 {
 					// Convert middleware names to []any

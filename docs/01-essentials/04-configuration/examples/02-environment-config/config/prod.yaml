@@ -1,9 +1,21 @@
-# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
 # Production environment overrides
-servers:
-  - name: prod-server
-    address: 0.0.0.0:8080
-    apps:
-      - name: main-app
-        debug: false
+
+configs:
+  app.port: "8080"
+  app.host: "0.0.0.0"
+  app.debug: false
+
+deployments:
+  production:
+    config-overrides:
+      app.name: "my-app-prod"
+    servers:
+      prod-server:
+        base-url: http://0.0.0.0:8080
+        apps:
+          - addr: ":8080"
+            routers:
+              - health-service-router
+              - info-service-router
