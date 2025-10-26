@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'core/deploy/schema/lokstra.schema.json'
-      - 'docs/schema/**'
-      - '.github/workflows/publish-schema.yml'
+      - "core/deploy/schema/lokstra.schema.json"
+      - "docs/schema/**"
+      - ".github/workflows/publish-schema.yml"
 
 jobs:
   publish:
