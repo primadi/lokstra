@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title }} - {{ site.title }}</title>
+  <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+  <style>
+    /* Custom Dark Theme for Lokstra */
+    :root {
+      --primary: #667eea;
+      --primary-dark: #5568d3;
+      --secondary: #764ba2;
+      --bg-dark: #0d1117;
+      --bg-darker: #010409;
+      --text-primary: #c9d1d9;
+      --text-secondary: #8b949e;
+      --border: #30363d;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+    }
+
+    /* Header gradient */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      padding: 3rem 1rem;
+    }
+
+    .project-name {
+      margin-bottom: 0.5rem;
+    }
+
+    .project-tagline {
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+
+    .btn {
+      background-color: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.3);
+      transition: all 0.3s;
+    }
+
+    .btn:hover {
+      background-color: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.5);
+      transform: translateY(-2px);
+    }
+
+    /* Main content */
+    .main-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    /* Logo styling */
+    img[alt="Lokstra Logo"] {
+      display: block;
+      margin: 0 auto 2rem;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+
+    /* Links */
+    a {
+      color: var(--primary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    a:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3rem;
+      margin-top: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+    }
+
+    /* Code blocks */
+    pre {
+      background-color: var(--bg-darker);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+
+    code {
+      background-color: rgba(110,118,129,0.2);
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+    }
+
+    /* Blockquotes */
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding-left: 1rem;
+      margin-left: 0;
+      color: var(--text-secondary);
+      background-color: rgba(102,126,234,0.05);
+      padding: 1rem;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* Tables */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1rem 0;
+    }
+
+    table th,
+    table td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+    }
+
+    table th {
+      background-color: var(--bg-darker);
+      font-weight: bold;
+    }
+
+    table tr:hover {
+      background-color: rgba(102,126,234,0.05);
+    }
+
+    /* HR */
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+
+    /* Feature cards (for landing page) */
+    .feature-card {
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background-color: rgba(13,17,23,0.5);
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(102,126,234,0.2);
+      border-color: var(--primary);
+    }
+
+    .feature-card h3 {
+      margin-top: 0;
+      color: var(--primary);
+      border: none;
+    }
+
+    /* Quick links styling */
+    div[style*="border: 1px solid #444"] {
+      border-color: var(--border) !important;
+      background-color: rgba(13,17,23,0.5) !important;
+      transition: all 0.3s;
+    }
+
+    div[style*="border: 1px solid #444"]:hover {
+      border-color: var(--primary) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102,126,234,0.15);
+    }
+
+    /* Footer */
+    .site-footer {
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .site-footer a {
+      color: var(--text-secondary);
+    }
+
+    .site-footer a:hover {
+      color: var(--primary);
+    }
+
+    /* Responsive */
+    @media screen and (max-width: 768px) {
+      .page-header {
+        padding: 2rem 1rem;
+      }
+
+      .project-name {
+        font-size: 1.5rem;
+      }
+
+      .btn {
+        display: block;
+        margin: 0.5rem 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="page-header">
+    <h1 class="project-name">{{ site.title }}</h1>
+    <h2 class="project-tagline">{{ site.description }}</h2>
+    <a href="{{ site.baseurl }}/" class="btn">Home</a>
+    <a href="{{ site.baseurl }}/01-essentials/" class="btn">Documentation</a>
+    <a href="{{ site.baseurl }}/00-introduction/examples/" class="btn">Examples</a>
+    <a href="https://github.com/{{ site.github.owner_name }}/{{ site.github.repository_name }}" class="btn">View on GitHub</a>
+  </section>
+
+  <section class="main-content">
+    {{ content }}
+
+    <footer class="site-footer">
+      <span class="site-footer-owner">
+        <a href="{{ site.github.repository_url }}">{{ site.github.repository_name }}</a> is maintained by 
+        <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>.
+      </span>
+      <span class="site-footer-credits">
+        This page was generated by <a href="https://pages.github.com">GitHub Pages</a>.
+      </span>
+    </footer>
+  </section>
+</body>
+</html>

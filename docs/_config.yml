@@ -1,0 +1,57 @@
+# Lokstra Framework - Jekyll Configuration
+# GitHub Pages will automatically use this configuration
+
+title: Lokstra
+description: Modern Go Web Framework with Declarative Service Management and Lazy Dependency Injection
+url: https://primadi.github.io
+baseurl: /lokstra
+
+# Theme - Using midnight for dark mode
+theme: jekyll-theme-midnight
+
+# Enable plugins
+plugins:
+  - jekyll-relative-links
+  - jekyll-optional-front-matter
+  - jekyll-readme-index
+  - jekyll-titles-from-headings
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+
+# Relative links
+relative_links:
+  enabled: true
+  collections: false
+
+# Optional front matter
+optional_front_matter:
+  remove_originals: false
+
+# Use README.md as index
+readme_index:
+  enabled: true
+  remove_originals: false
+
+# Extract titles from headings
+titles_from_headings:
+  enabled: true
+  strip_title: false
+  collections: false
+
+# Exclude from processing
+exclude:
+  - node_modules
+  - vendor
+  - .git
+  - .gitignore
+  - LICENSE
+
+# Include assets
+include:
+  - assets
