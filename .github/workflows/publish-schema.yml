@@ -8,6 +8,7 @@ on:
       - "core/deploy/schema/lokstra.schema.json"
       - "docs/schema/**"
       - ".github/workflows/publish-schema.yml"
+  workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
   publish:
