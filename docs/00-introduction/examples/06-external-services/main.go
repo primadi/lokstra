@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
 	svc "github.com/primadi/lokstra/docs/00-introduction/examples/06-external-services/service"
 	"github.com/primadi/lokstra/lokstra_registry"
@@ -18,8 +19,21 @@ func main() {
 	flag.Parse()
 
 	// Register service factories
-	lokstra_registry.RegisterServiceType("order-service-factory", svc.OrderServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("payment-service-remote-factory", nil, svc.PaymentServiceRemoteFactory)
+	lokstra_registry.RegisterServiceType("order-service-factory",
+		svc.OrderServiceFactory, nil,
+		deploy.WithResource("order", "orders"),
+		deploy.WithConvention("rest"),
+		deploy.WithRouteOverride("Refund", "POST /orders/{id}/refund"),
+	)
+
+	lokstra_registry.RegisterServiceType("payment-service-remote-factory",
+		nil, svc.PaymentServiceRemoteFactory,
+		deploy.WithResource("payment", "payments"),
+		deploy.WithConvention("rest"),
+		deploy.WithRouteOverride("CreatePayment", "POST /payments"),
+		deploy.WithRouteOverride("GetPayment", "GET /payments/{id}"),
+		deploy.WithRouteOverride("Refund", "POST /payments/{id}/refund"),
+	)
 
 	// Load config and build deployment topology
 	if err := loader.LoadAndBuild([]string{"config.yaml"}); err != nil {

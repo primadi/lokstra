@@ -182,33 +182,31 @@ curl -X POST http://localhost:3000/orders \
 
 **What you'll learn:**
 - ✅ **External service definition**: Auto-create wrappers with `type` field
-- ✅ **ServiceMeta interface**: Flexible metadata for local & remote services
-- ✅ **Route overrides**: Custom routes in code (`Refund` → `POST /orders/{id}/refund`)
+- ✅ **Clean metadata pattern**: All metadata in `RegisterServiceType` options
+- ✅ **Route overrides**: Custom routes via `deploy.WithRouteOverride()`
 - ✅ **Smart method names**: Use `Create`, `Get`, `Refund` (match REST convention when possible)
-- ✅ **DX improvements**: No duplication between code and config!
+- ✅ **DX improvements**: Single source of truth - no duplication!
 
 **Key Pattern:**
 ```go
-// External service implements ServiceMeta
+// Simple service wrapper - no embedded metadata!
 type PaymentServiceRemote struct {
-    service.ServiceMetaAdapter
+    proxyService *proxy.Service
 }
 
-// Route overrides in code (co-located with implementation!)
-func NewPaymentServiceRemote(proxyService *proxy.Service) *PaymentServiceRemote {
-    return &PaymentServiceRemote{
-        ServiceMetaAdapter: service.ServiceMetaAdapter{
-            Resource: "payment",
-            Plural: "payments",
-            Override: autogen.RouteOverride{
-                Custom: map[string]autogen.Route{
-                    "CreatePayment": {Method: "POST", Path: "/payments"},
-                    "Refund": {Method: "POST", Path: "/payments/{id}/refund"},
-                },
-            },
-        },
-    }
+func (s *PaymentServiceRemote) CreatePayment(p *CreatePaymentParams) (*Payment, error) {
+    return proxy.CallWithData[*Payment](s.proxyService, "CreatePayment", p)
 }
+
+// Metadata in RegisterServiceType (single source of truth!)
+lokstra_registry.RegisterServiceType(
+    "payment-service-remote-factory",
+    nil, service.PaymentServiceRemoteFactory,
+    deploy.WithResource("payment", "payments"),
+    deploy.WithConvention("rest"),
+    deploy.WithRouteOverride("CreatePayment", "POST /payments"),
+    deploy.WithRouteOverride("Refund", "POST /payments/{id}/refund"),
+)
 ```
 
 **Code size**: ~400 lines  
@@ -229,7 +227,7 @@ func NewPaymentServiceRemote(proxyService *proxy.Service) *PaymentServiceRemote 
 | **03** | ✅ Manual Router, ✅ Services, ✅ Dependency Injection |
 | **04** | ✅ Auto-Router, ✅ Clean Architecture, ✅ Microservices |
 | **05** | ✅ Global Middleware, ✅ Auth, ✅ Production Patterns |
-| **06** | ✅ External APIs, ✅ ServiceMeta, ✅ Route Overrides |
+| **06** | ✅ External APIs, ✅ Clean Metadata, ✅ Route Overrides |
 
 ### 🎓 Skills Progression
 
@@ -319,13 +317,18 @@ r.GET("/admin", AdminHandler, AuthMiddleware, AdminOnlyMiddleware)
 
 ### Example 06 → External Services Integration
 ```go
-// ServiceMeta with route overrides in code
+// Clean service wrapper - no embedded metadata
 type PaymentServiceRemote struct {
-    service.ServiceMetaAdapter
+    proxyService *proxy.Service
 }
 
-// Framework reads metadata from service instance
-// No config duplication needed!
+// Metadata in RegisterServiceType (single source of truth!)
+lokstra_registry.RegisterServiceType(
+    "payment-service-remote-factory",
+    nil, service.PaymentServiceRemoteFactory,
+    deploy.WithResource("payment", "payments"),
+    deploy.WithRouteOverride("CreatePayment", "POST /payments"),
+)
 ```
 
 ---

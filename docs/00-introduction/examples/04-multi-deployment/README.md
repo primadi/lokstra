@@ -441,7 +441,6 @@ deployments:
     servers:
       api-server:
         base-url: "http://localhost"
-        required-services: [user-repository, order-repository]
         addr: ":3003"
         published-services:
           - user-service
@@ -451,24 +450,22 @@ deployments:
     servers:
       user-server:
         base-url: "http://localhost"
-        required-services: [user-repository]
         addr: ":3004"
         published-services: [user-service]
 
       order-server:
         base-url: "http://localhost"
-        required-services: [order-repository]
-        required-remote-services: [user-service-remote]  # Auto-resolved!
         addr: ":3005"
         published-services: [order-service]
+        # Framework auto-detects user-service-remote from topology
 ```
 
 **Key Points**:
 - **Layered architecture**: Repositories (infrastructure) → Services (application)
 - `published-services`: Services that expose HTTP endpoints
-- `required-remote-services`: Services accessed via HTTP proxy
-- URLs auto-resolved from `published-services` in other servers
-- No manual router definitions needed!
+- URLs auto-resolved from topology (which server publishes which service)
+- Dependencies auto-loaded from `service-definitions`
+- No manual service listing needed!
 
 ### main.go
 
@@ -727,13 +724,17 @@ router-overrides:
 Auto-resolve service URLs:
 
 ```yaml
+external-service-definitions:
+  user-service:
+    url: "http://user-service.default.svc.cluster.local"
+    type: user-service-remote-factory
+    
 deployments:
   kubernetes:
     servers:
       order-server:
-        required-remote-services:
-          - user-service-remote:
-              url: "http://user-service.default.svc.cluster.local"
+        published-services: [order-service]
+        # user-service-remote auto-detected from external-service-definitions
 ```
 
 ---

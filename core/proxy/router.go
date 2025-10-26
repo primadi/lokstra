@@ -41,26 +41,6 @@ func (p *Router) Serve(req *http.Request) (*http.Response, error) {
 	return http.DefaultClient.Do(remoteReq)
 }
 
-// Get performs a simple GET request.
-func (p *Router) Get(path string, headers map[string]string) (*http.Response, error) {
-	req, _ := http.NewRequest(http.MethodGet, path, nil)
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	return p.Serve(req)
-}
-
-// PostJSON sends JSON payload to remote/local router.
-func (p *Router) PostJSON(path string, data any, headers map[string]string) (*http.Response, error) {
-	body, _ := json.Marshal(data)
-	req, _ := http.NewRequest(http.MethodPost, path, bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	return p.Serve(req)
-}
-
 // DoJSON performs any method with JSON body and returns decoded response.
 func (p *Router) DoJSON(method, path string, headers map[string]string,
 	reqBody, respBody any) error {
@@ -82,7 +62,8 @@ func (p *Router) DoJSON(method, path string, headers map[string]string,
 
 	if resp.StatusCode >= 400 {
 		data, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("http %d: %s", resp.StatusCode, string(data))
+		rawErr := fmt.Errorf("http %d: %s", resp.StatusCode, string(data))
+		return ParseRouterError(rawErr)
 	}
 
 	if respBody != nil {

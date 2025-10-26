@@ -2,6 +2,8 @@
 
 > **Understanding Lokstra's design - how all the pieces fit together**
 
+**📝 Note**: All code examples in this document are **runnable** - you can copy-paste and execute them directly. Examples are using the actual Lokstra API, not simplified pseudocode.
+
 ---
 
 ## 🎯 Overview
@@ -15,7 +17,7 @@ Lokstra is built on **6 core components** that work together to create a flexibl
 │                                              │
 │  ┌─────────────────────────────────────────┐ │
 │  │               APP                       │ │
-│  │  (HTTP Listener - ServeMux/FastHTTP)    │ │
+│  │  (HTTP Listener - Standard net/http)    │ │
 │  │                                         │ │
 │  │  ┌────────────────────────────────────┐ │ │
 │  │  │           ROUTER                   │ │ │
@@ -59,30 +61,31 @@ Let's explore each component:
 
 ### Example Usage
 ```go
-// server.go
-type Server struct {
-    Name         string
-    DeploymentID string
-    Apps         []*App
-}
+import "github.com/primadi/lokstra"
 
 func main() {
+    // Create routers
+    apiV1Router := lokstra.NewRouter("api-v1")
+    apiV2Router := lokstra.NewRouter("api-v2")
+    adminRouter := lokstra.NewRouter("admin")
+    
+    setupApiV1Router(apiV1Router)
+    setupApiV2Router(apiV2Router)
+    setupAdminRouter(adminRouter)
+    
     // Create server with multiple apps
-    server := &Server{
-        Name: "my-server",
-        Apps: []*App{
-            NewApp("api-v1", ":8080", apiV1Router),
-            NewApp("api-v2", ":8081", apiV2Router),
-            NewApp("admin", ":9000", adminRouter),
-        },
-    }
+    server := lokstra.NewServer("my-server",
+        lokstra.NewApp("api-v1", ":8080", apiV1Router),
+        lokstra.NewApp("api-v2", ":8081", apiV2Router),
+        lokstra.NewApp("admin", ":9000", adminRouter),
+    )
     
     // Run with graceful shutdown (30s timeout)
     server.Run(30 * time.Second)
 }
 ```
 
-**When server receives SIGTERM**:
+**When server receives SIGTERM/SIGINT**:
 1. Stop accepting new connections
 2. Wait for active requests (max 30s)
 3. Close all apps
@@ -104,30 +107,40 @@ func main() {
 
 ### Two Engine Types
 
-#### Engine 1: Go Standard (ServeMux)
+#### Engine 1: Go Standard (ServeMux) - Default
 ```go
+// Default engine (ServeMux)
 app := lokstra.NewApp("api", ":8080", router)
-// Uses net/http standard library
 ```
 
-#### Engine 2: FastHTTP (High Performance)
+#### Engine 2: Custom Listener (Advanced)
 ```go
-app := lokstra.NewAppFastHTTP("api", ":8080", router)
-// Uses valyala/fasthttp for speed
+// Custom configuration
+app := lokstra.NewAppWithConfig("api", ":8080", "fasthttp", 
+    map[string]any{
+        // custom config options
+    }, 
+    router,
+)
 ```
+
+**Note:** Lokstra currently uses Go's standard `net/http` with ServeMux. FastHTTP support can be added via custom listener configuration if needed.
 
 ### Example
 ```go
-// app.go
-type App struct {
-    Name   string
-    Addr   string      // ":8080"
-    Router *Router     // The router to serve
-}
+import "github.com/primadi/lokstra"
 
-func (a *App) Run() error {
-    // Standard Go HTTP server
-    return http.ListenAndServe(a.Addr, a.Router)
+func main() {
+    // Create router
+    router := lokstra.NewRouter("api")
+    router.GET("/ping", func() string { return "pong" })
+    
+    // Create app
+    app := lokstra.NewApp("api", ":8080", router)
+    
+    // Create server and run
+    server := lokstra.NewServer("my-server", app)
+    server.Run(30 * time.Second)
 }
 ```
 
@@ -180,16 +193,39 @@ api.GET("/products", getProducts)  // /api/v1/products
 r := lokstra.NewRouter("api")
 
 // Global middleware (all routes)
-r.Use(logging.Middleware())
+r.Use(loggingMiddleware, corsMiddleware)
 
 // Group middleware
 auth := r.Group("/admin")
 auth.Use(authMiddleware)
-auth.GET("/users", getUsers)      // Has logging + auth
-auth.GET("/settings", getSettings) // Has logging + auth
+auth.GET("/users", getUsers)      // Has logging + cors + auth
+auth.GET("/settings", getSettings) // Has logging + cors + auth
 
-// Route-specific middleware
-r.GET("/public", publicHandler)  // Only has logging
+// Route-level middleware (single route only)
+r.GET("/special", specialHandler, rateLimitMiddleware, cacheMiddleware)
+// Has: logging + cors + rateLimit + cache
+
+// No middleware (only global)
+r.GET("/public", publicHandler)  // Only has logging + cors
+```
+
+**Middleware by name:**
+```go
+// Register middleware in registry
+lokstra_registry.RegisterMiddleware("auth", authMiddleware)
+lokstra_registry.RegisterMiddleware("cors", corsMiddleware)
+lokstra_registry.RegisterMiddleware("logging", loggingMiddleware)
+
+// Use by name (string reference)
+r := lokstra.NewRouter("api")
+r.Use("logging", "cors")
+
+auth := r.Group("/admin")
+auth.Use("auth")
+auth.GET("/users", getUsers)
+
+// Mix direct function and by-name
+r.GET("/special", specialHandler, "rateLimit", cacheMiddleware)
 ```
 
 #### 3. Implements http.Handler
@@ -222,12 +258,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 - Error handling and response writing
 
 See `core/router/router_impl.go` for real implementation details.
-```
 
 ### Routing Algorithm
 
 ```
 Request: GET /api/users/123
+```
 
 Step 1: Match method
   ✅ GET routes only
@@ -248,8 +284,7 @@ Step 5: Execute middleware chain
 
 📖 **Learn more**: [Router Guide](../01-essentials/01-router/README.md)
 
-
-
+---
 ## 🔧 Component 4: Service
 
 **Purpose**: Business logic layer with dependency injection and service abstraction
@@ -270,17 +305,17 @@ Lokstra recognizes three distinct service patterns based on deployment needs:
 │                    SERVICE TYPES                            │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  1️⃣  LOCAL ONLY (Infrastructure)                           │
+│  1️.  LOCAL ONLY (Infrastructure)                            │
 │      • Never exposed via HTTP                               │
 │      • Always loaded locally                                │
 │      • Examples: db, cache, logger, queue                   │
 │                                                             │
-│  2️⃣  REMOTE ONLY (External APIs)                           │
+│  2️.  REMOTE ONLY (External APIs)                            │
 │      • Third-party services                                 │
 │      • Always accessed via HTTP                             │
 │      • Examples: stripe, sendgrid, twilio                   │
 │                                                             │
-│  3️⃣  LOCAL + REMOTE (Business Logic)                       │
+│  3️.  LOCAL + REMOTE (Business Logic)                        │
 │      • Your business services                               │
 │      • Can be local OR remote                               │
 │      • Auto-published via HTTP when needed                  │
@@ -309,16 +344,44 @@ Services that never need HTTP exposure:
 - ❌ No remote variant exists
 - Used by other services via dependency injection
 
+**Example configuration:**
 ```yaml
+service-definitions:
+  db-service:
+    type: database-factory
+  
+  redis-service:
+    type: redis-factory
+  
+  logger-service:
+    type: logger-factory
+  
+  user-repository:
+    type: user-repository-factory
+    depends-on: [db-service]
+  
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository, redis-service, logger-service]
+
 deployments:
   app:
     servers:
       api-server:
-        required-services:
-          - db-service       # ✅ Infrastructure - local only
-          - redis-service    # ✅ Infrastructure - local only
-          - logger-service   # ✅ Infrastructure - local only
+        published-services:
+          - user-service
+        # Framework resolves dependency chain:
+        # user-service → [user-repository, redis-service, logger-service]
+        # user-repository → [db-service]
+        # All services created lazily when first accessed
 ```
+
+**How it works:**
+- Define services in `service-definitions` with `depends-on`
+- Framework automatically resolves entire dependency chain
+- Services created lazily (only when first accessed)
+- No need to worry about load order - dependencies resolved on-demand
+- Clean zero-config deployment!
 
 #### 2. Remote-Only Services (External)
 Third-party APIs or external systems wrapped as Lokstra service:
@@ -337,52 +400,74 @@ Third-party APIs or external systems wrapped as Lokstra service:
 - Can override routes for non-standard APIs
 
 ```yaml
+service-definitions:
+  order-repository:
+    type: order-repository-factory
+    depends-on: [db-service]
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [order-repository, payment-gateway]
+
 external-service-definitions:
-  payment-gateway-remote:
+  payment-gateway:
     url: "https://payment-api.example.com"
+    type: payment-service-remote-factory
 
 deployments:
   app:
     servers:
       api-server:
-        required-remote-services:
-          - payment-gateway-remote  # ✅ External - remote only
+        # Framework auto-detects external services from URL
+        published-services:
+          - order-service  # Depends on payment-gateway (external)
 ```
+
+**How it works:**
+- Define external service in `external-service-definitions` with URL
+- Add to `depends-on` in `service-definitions`
+- Framework automatically creates remote proxy
+- Auto-resolves based on URL presence!
 
 **Implementation with proxy.Service:**
 ```go
-// External service using proxy.Service
+// Simple external service wrapper
 type PaymentServiceRemote struct {
-    service.ServiceMetaAdapter
+    proxyService *proxy.Service
 }
 
 func NewPaymentServiceRemote(proxyService *proxy.Service) *PaymentServiceRemote {
     return &PaymentServiceRemote{
-        ServiceMetaAdapter: service.ServiceMetaAdapter{
-            Resource:   "payment",
-            Plural:     "payments",
-            Convention: "rest",
-            ProxyService: proxyService,
-            // Override for non-standard routes
-            Override: autogen.RouteOverride{
-                Custom: map[string]autogen.Route{
-                    "Refund": {Method: "POST", Path: "/payments/{id}/refund"},
-                },
-            },
-        },
+        proxyService: proxyService,
     }
 }
 
 func (s *PaymentServiceRemote) CreatePayment(p *CreatePaymentParams) (*Payment, error) {
-    return proxy.CallWithData[*Payment](s.GetProxyService(), "CreatePayment", p)
+    return proxy.CallWithData[*Payment](s.proxyService, "CreatePayment", p)
 }
 
 func (s *PaymentServiceRemote) Refund(p *RefundParams) (*Refund, error) {
-    return proxy.CallWithData[*Refund](s.GetProxyService(), "Refund", p)
+    return proxy.CallWithData[*Refund](s.proxyService, "Refund", p)
 }
+
+// Factory for remote service
+func PaymentServiceRemoteFactory(deps map[string]any, config map[string]any) any {
+    return NewPaymentServiceRemote(
+        service.CastProxyService(config["remote"]),
+    )
+}
+
+// Register service type with metadata
+lokstra_registry.RegisterServiceType(
+    "payment-service-remote-factory",
+    nil, PaymentServiceRemoteFactory,
+    deploy.WithResource("payment", "payments"),
+    deploy.WithConvention("rest"),
+    deploy.WithRouteOverride("Refund", "POST /payments/{id}/refund"),
+)
 ```
 
-📖 **See**: [Example 06 - External Services](../examples/06-external-services/) for complete demo
+📖 **See**: [Example 06 - External Services](./examples/06-external-services/) for complete demo
 
 #### 3. Local + Remote Services (Business Logic)
 Business services that can be deployed locally OR accessed remotely:
@@ -410,6 +495,11 @@ When a business service is listed in `published-services`, the framework:
 4. **Makes service accessible** remotely via HTTP
 
 ```yaml
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
+
 deployments:
   microservice:
     servers:
@@ -418,23 +508,13 @@ deployments:
           - user-service  # ← Framework auto-exposes UserService via HTTP
 ```
 
-**What gets generated:**
-```
-UserService methods:
-  GetByID(p *GetByIDParams) (*User, error)
-  List(p *ListParams) ([]*User, error)
-  Create(p *CreateParams) (*User, error)
+2. **Auto-generates router** using convention (REST/RPC)
+3. **Creates HTTP endpoints** for each public method
+4. **Makes service accessible** remotely via HTTP
 
-Auto-generated routes (REST convention):
-  GET    /users           → UserService.List()
-  GET    /users/{id}      → UserService.GetByID()
-  POST   /users           → UserService.Create()
-```
-
-**No manual route registration needed!** The framework inspects the service and creates routes automatically.
-
-**Local Implementation:**
+**Example - User Service with REST convention:**
 ```go
+// UserService methods:
 type UserService struct {
     DB *service.Cached[*Database]
 }
@@ -471,26 +551,21 @@ user, err := userService.GetByID(&GetByIDParams{ID: 123})
 
 **Remote Implementation:**
 ```go
-// Remote service client using proxy.Service
+// Simple remote service wrapper
 type UserServiceRemote struct {
-    service.ServiceMetaAdapter
+    proxyService *proxy.Service
 }
 
 // Constructor receives proxy.Service from framework
 func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
     return &UserServiceRemote{
-        ServiceMetaAdapter: service.ServiceMetaAdapter{
-            Resource:     "user",
-            Plural:       "users",
-            Convention:   "rest",
-            ProxyService: proxyService,
-        },
+        proxyService: proxyService,
     }
 }
 
 // Method uses proxy.CallWithData for HTTP calls
 func (s *UserServiceRemote) GetByID(p *GetByIDParams) (*User, error) {
-    return proxy.CallWithData[*User](s.GetProxyService(), "GetByID", p)
+    return proxy.CallWithData[*User](s.proxyService, "GetByID", p)
 }
 
 // Factory for remote service (framework calls this)
@@ -499,6 +574,14 @@ func UserServiceRemoteFactory(deps map[string]any, config map[string]any) any {
         service.CastProxyService(config["remote"]),
     )
 }
+
+// Metadata in RegisterServiceType (not in struct!)
+lokstra_registry.RegisterServiceType(
+    "user-service-factory",
+    UserServiceFactory, UserServiceRemoteFactory,
+    deploy.WithResource("user", "users"),
+    deploy.WithConvention("rest"),
+)
 
 // Usage in different deployment
 userRemote := lokstra_registry.GetService[*UserServiceRemote]("user-service-remote")
@@ -531,24 +614,28 @@ Lokstra provides two proxy patterns for different remote access scenarios:
 
 **Example:**
 ```go
+// Simple remote wrapper
 type UserServiceRemote struct {
-    service.ServiceMetaAdapter
+    proxyService *proxy.Service
 }
 
 func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
     return &UserServiceRemote{
-        ServiceMetaAdapter: service.ServiceMetaAdapter{
-            Resource:     "user",
-            Plural:       "users",
-            Convention:   "rest",
-            ProxyService: proxyService,
-        },
+        proxyService: proxyService,
     }
 }
 
+// Metadata from RegisterServiceType
+lokstra_registry.RegisterServiceType(
+    "user-service-factory",
+    UserServiceFactory, UserServiceRemoteFactory,
+    deploy.WithResource("user", "users"),
+    deploy.WithConvention("rest"),
+)
+
 // Auto-generates: GET /users/{id}
 func (s *UserServiceRemote) GetByID(p *GetByIDParams) (*User, error) {
-    return proxy.CallWithData[*User](s.GetProxyService(), "GetByID", p)
+    return proxy.CallWithData[*User](s.proxyService, "GetByID", p)
 }
 ```
 
@@ -674,10 +761,16 @@ func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
 
 ```yaml
 # config.yaml
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
+
 deployments:
   microservice:
     servers:
       user-server:
+        base-url: "http://localhost"
         addr: ":3004"
         published-services:
           - user-service  # ← Makes UserService available via HTTP
@@ -705,6 +798,15 @@ Auto-generates:
 **Lokstra automatically resolves service locations:**
 
 ```yaml
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [order-repository, user-service]
+
 deployments:
   microservice:
     servers:
@@ -716,15 +818,16 @@ deployments:
       order-server:
         base-url: "http://localhost"
         addr: ":3005"
-        required-remote-services: [user-service-remote]
         published-services: [order-service]
+        # No manual service listing needed!
 ```
 
 **How it works:**
 1. `user-service` published at `http://localhost:3004`
-2. `order-server` needs `user-service-remote`
+2. `order-service` depends on `IUserService` (from service-definitions)
 3. Lokstra **auto-discovers**: `user-service` → `http://localhost:3004`
-4. Creates remote client with correct URL
+4. Creates `user-service-remote` client automatically
+5. Injects remote client into OrderService
 
 **No manual URL configuration needed!** ✅
 
@@ -829,30 +932,57 @@ func (s *UserService) GetByID(id int) (*User, error) {
 
 **Same code, different topology:**
 
-```go
-// OrderService code (unchanged)
-type OrderService struct {
-    Users *service.Cached[IUserService]
-}
+```yaml
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [order-repository, user-service]
 
-// Monolith: UserService is local
+# Monolith: UserService is local
 deployments:
   monolith:
     servers:
       api-server:
-        published-services: [user-service, order-service]
-        # OrderService.Users → UserService (in-process)
-
-// Microservices: UserService is remote  
-deployments:
+        base-url: "http://localhost"
+        addr: ":3003"
+        published-services:
+          - user-service
+          - order-service
+        # Framework auto-loads all dependencies:
+        # user-repository, order-repository, etc.
+  
+  # Microservices: UserService is remote  
   microservice:
     servers:
       user-server:
+        base-url: "http://localhost"
+        addr: ":3004"
         published-services: [user-service]
+      
       order-server:
-        required-remote-services: [user-service-remote]
+        base-url: "http://localhost"
+        addr: ":3005"
         published-services: [order-service]
         # OrderService.Users → UserServiceRemote (HTTP)
+        # Framework auto-detects from topology
+```
+
+**OrderService code (unchanged):**
+
+```go
+type OrderService struct {
+    Users *service.Cached[IUserService]
+}
+
+func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
+    // In monolith: direct method call
+    // In microservice: HTTP call
+    user, err := s.Users.MustGet().GetByID(&GetByIDParams{ID: p.UserID})
+}
 ```
 
 **Key benefit**: Deploy as monolith OR microservices **without code changes!**
@@ -956,9 +1086,13 @@ r.Use(func(ctx *request.Context, next func() error) error {
 ```go
 // Register
 lokstra_registry.RegisterMiddleware("auth", authMiddleware)
+lokstra_registry.RegisterMiddleware("logging", loggingMiddleware)
 
-// Use by name
-r.Use(middleware.ByName("auth"))
+// Use by name (string)
+r.Use("auth", "logging")
+
+// Mix direct and by-name
+r.Use(corsMiddleware, "auth")
 ```
 
 📖 **Learn more**: [Middleware Guide](../01-essentials/03-middleware/README.md)
@@ -986,14 +1120,22 @@ r.Use(middleware.ByName("auth"))
 service-definitions:
   user-repository:
     type: user-repository-factory
+    depends-on: [db-service]
   
   user-service:
     type: user-service-factory
     depends-on: [user-repository]
   
+  order-repository:
+    type: order-repository-factory
+    depends-on: [db-service]
+  
   order-service:
     type: order-service-factory
     depends-on: [order-repository, user-service]
+  
+  db-service:
+    type: database-factory
 
 # ========================================
 # Deployments (Topology)
@@ -1004,31 +1146,38 @@ deployments:
     servers:
       api-server:
         base-url: "http://localhost"
-        required-services:
-          - user-repository
-          - order-repository
-        # Shorthand syntax (1 server = 1 app)
         addr: ":3003"
         published-services:
           - user-service
           - order-service
+        # Framework resolves dependency chains:
+        # user-service → [user-repository] → [db-service]
+        # order-service → [order-repository, user-service] → [db-service]
+        # All created lazily when first accessed
   
   # Microservices: Each service in separate process
   microservice:
     servers:
       user-server:
         base-url: "http://localhost"
-        required-services: [user-repository]
         addr: ":3004"
         published-services: [user-service]
+        # Resolves: user-service → [user-repository] → [db-service]
       
       order-server:
         base-url: "http://localhost"
-        required-services: [order-repository]
-        required-remote-services: [user-service-remote]
         addr: ":3005"
         published-services: [order-service]
+        # Resolves: order-service → [order-repository, user-service-remote]
+        # order-repository → [db-service]
+        # Auto-detects: user-service from user-server
 ```
+
+**Key improvements:**
+- ✅ No `required-services` - framework resolves dependency chains automatically
+- ✅ No `required-remote-services` - framework auto-detects remote services
+- ✅ Lazy loading - services created only when first accessed
+- ✅ Zero-config - just list `published-services`!
 
 ### Key Configuration Concepts
 
@@ -1058,20 +1207,46 @@ deployments:
 
 **Each deployment is independent topology**
 
-#### 3. Required Services vs Required Remote Services
+#### 3. Zero-Config Service Resolution
+
+**No manual service listing needed!**
+
+The framework automatically:
+- ✅ Loads all dependencies from `service-definitions`
+- ✅ Detects remote services from published services in other servers
+- ✅ Creates local or remote instances based on availability
 
 ```yaml
-servers:
-  order-server:
-    required-services:
-      - order-repository      # Local: loaded in this process
-    required-remote-services:
-      - user-service-remote   # Remote: HTTP proxy to another server
-```
+service-definitions:
+  order-repository:
+    type: order-repository-factory
+    depends-on: [db-service]
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [order-repository, user-service]
+  
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
 
-**Difference:**
-- `required-services`: Instantiated locally (in-process)
-- `required-remote-services`: HTTP client to remote service
+deployments:
+  microservice:
+    servers:
+      user-server:
+        base-url: "http://localhost"
+        addr: ":3004"
+        published-services: [user-service]
+      
+      order-server:
+        base-url: "http://localhost"
+        addr: ":3005"
+        published-services: [order-service]
+        # Framework automatically:
+        # - Loads order-repository (local)
+        # - Detects user-service published on user-server
+        # - Creates user-service-remote proxy
+```
 
 #### 4. Published Services
 Services exposed via HTTP endpoints:
@@ -1084,37 +1259,23 @@ servers:
 ```
 
 **What happens:**
-1. Auto-router generated from service metadata
 2. HTTP routes created for each method
 3. Service becomes accessible remotely
 
-#### 5. Shorthand Syntax (Helper Fields)
-For simple 1 server = 1 app pattern:
+#### 5. Service Auto-Discovery
+
+**Framework automatically discovers service locations from topology!**
 
 ```yaml
-servers:
-  api-server:
-    # Instead of explicit apps array:
-    # apps:
-    #   - addr: ":3003"
-    #     published-services: [user-service]
-    
-    # Use shorthand at server level:
-    addr: ":3003"
-    published-services: [user-service]
-    # Automatically creates app and prepends to apps array
-```
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [order-repository, user-service]
 
-**Benefits:**
-- Less YAML boilerplate
-- Cleaner for common case
-- Can still mix with explicit apps if needed
-
-#### 6. Service Auto-Resolution
-
-**No manual URL configuration!**
-
-```yaml
 deployments:
   microservice:
     servers:
@@ -1124,13 +1285,18 @@ deployments:
         published-services: [user-service]
       
       order-server:
-        required-remote-services: [user-service-remote]
+        base-url: "http://localhost"
+        addr: ":3005"
+        published-services: [order-service]
+        # No manual service listing needed!
+        # Framework auto-detects user-service from topology
 ```
 
 **Lokstra automatically:**
-1. Detects `user-service` published at `http://localhost:3004`
-2. Resolves `user-service-remote` → `http://localhost:3004`
-3. Creates remote client with correct URL
+1. Reads `order-service` dependencies from its `service-definitions`
+2. Finds `user-service` published at `http://localhost:3004`
+3. Auto-creates `user-service-remote` → `http://localhost:3004`
+4. Injects remote client into OrderService
 
 ### Multi-Deployment Architecture
 

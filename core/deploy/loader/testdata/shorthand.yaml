@@ -7,15 +7,15 @@ service-definitions:
     type: user-factory
   order-service:
     type: order-factory
+  database:
+    type: database-factory
 
 deployments:
   test:
     servers:
       api-server:
         base-url: http://localhost
-        required-services:
-          - database
-        # Shorthand syntax
+        # Shorthand syntax - framework auto-loads dependencies
         addr: ":3000"
         published-services:
           - user-service

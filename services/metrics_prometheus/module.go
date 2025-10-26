@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/old_registry"
+	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -147,6 +147,6 @@ func ServiceFactory(params map[string]any) any {
 }
 
 func Register() {
-	old_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
-		old_registry.AllowOverride(true))
+	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
+		nil)
 }

@@ -822,7 +822,7 @@ func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.Servic
 	remoteBaseURL, isRemote := currentServerTopo.RemoteServices[name]
 	if isRemote {
 		// Register as REMOTE service (HTTP proxy)
-		g.autoRegisterRemoteService(name, def, remoteBaseURL)
+		g.AutoRegisterRemoteService(name, def, remoteBaseURL)
 		return
 	}
 
@@ -871,8 +871,8 @@ func (g *GlobalRegistry) autoRegisterLocalService(name string, def *schema.Servi
 	}, deps, def.Config)
 }
 
-// autoRegisterRemoteService registers a service as REMOTE (HTTP proxy)
-func (g *GlobalRegistry) autoRegisterRemoteService(name string, def *schema.ServiceDef, remoteBaseURL string) {
+// AutoRegisterRemoteService registers a service as REMOTE (HTTP proxy)
+func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.ServiceDef, remoteBaseURL string) {
 	// Get remote factory
 	factory := g.GetServiceFactory(def.Type, false) // false = remote factory
 	if factory == nil {
@@ -886,6 +886,24 @@ func (g *GlobalRegistry) autoRegisterRemoteService(name string, def *schema.Serv
 	var proxyService *proxy.Service
 	if metadata != nil && metadata.Resource != "" {
 		// Use metadata from RegisterServiceType
+		override := autogen.RouteOverride{
+			PathPrefix: metadata.PathPrefix,
+			Hidden:     metadata.HiddenMethods,
+		}
+
+		// Convert RouteOverrides map to Custom routes
+		if len(metadata.RouteOverrides) > 0 {
+			override.Custom = make(map[string]autogen.Route)
+			for methodName, pathSpec := range metadata.RouteOverrides {
+				// Parse path spec: "POST /path" or just "/path"
+				method, path := parsePathSpec(pathSpec)
+				override.Custom[methodName] = autogen.Route{
+					Method: method,
+					Path:   path,
+				}
+			}
+		}
+
 		proxyService = proxy.NewService(
 			remoteBaseURL,
 			autogen.ConversionRule{
@@ -893,10 +911,7 @@ func (g *GlobalRegistry) autoRegisterRemoteService(name string, def *schema.Serv
 				Resource:       metadata.Resource,
 				ResourcePlural: metadata.ResourcePlural,
 			},
-			autogen.RouteOverride{
-				PathPrefix: metadata.PathPrefix,
-				Hidden:     metadata.HiddenMethods,
-			},
+			override,
 		)
 	} else {
 		// Fallback: auto-generate from service name
@@ -1033,4 +1048,81 @@ func (g *GlobalRegistry) GetCurrentCompositeKey() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.currentCompositeKey
+}
+
+// ===== SHUTDOWN =====
+
+// Shutdownable is an interface for services that need cleanup on shutdown
+type Shutdownable interface {
+	Shutdown() error
+}
+
+// ShutdownServices gracefully shuts down all services that implement the Shutdownable interface.
+// This function iterates through all registered service instances and calls Shutdown() on those
+// that implement the Shutdownable interface.
+//
+// Services are shutdown in reverse order of their registration (LIFO) to respect dependencies.
+//
+// Example service with shutdown:
+//
+//	type DatabaseService struct {
+//	    conn *sql.DB
+//	}
+//
+//	func (s *DatabaseService) Shutdown() error {
+//	    return s.conn.Close()
+//	}
+func (g *GlobalRegistry) ShutdownServices() {
+	// Create a snapshot to avoid issues during shutdown
+	var snapshot []struct {
+		name string
+		svc  any
+	}
+
+	g.serviceInstances.Range(func(key, value any) bool {
+		snapshot = append(snapshot, struct {
+			name string
+			svc  any
+		}{
+			name: key.(string),
+			svc:  value,
+		})
+		return true
+	})
+
+	// Shutdown in reverse order (LIFO)
+	for i := len(snapshot) - 1; i >= 0; i-- {
+		item := snapshot[i]
+		if shutdownable, ok := item.svc.(Shutdownable); ok {
+			if err := shutdownable.Shutdown(); err != nil {
+				fmt.Printf("[ShutdownServices] Failed to shutdown service %s: %v\n", item.name, err)
+			} else {
+				fmt.Printf("[ShutdownServices] Successfully shutdown service: %s\n", item.name)
+			}
+		}
+	}
+	fmt.Println("[ShutdownServices] Gracefully shutdown all services.")
+}
+
+// parsePathSpec parses a path specification that may include an HTTP method prefix
+// Examples:
+//   - "POST /users/{user_id}/orders"  → ("POST", "/users/{user_id}/orders")
+//   - "/users/{user_id}/orders"       → ("", "/users/{user_id}/orders")
+//   - "GET /orders"                   → ("GET", "/orders")
+//
+// Empty method means auto-detect from method name (Get* → GET, Create* → POST, etc.)
+func parsePathSpec(pathSpec string) (method string, path string) {
+	// Check if path starts with HTTP method
+	parts := strings.SplitN(strings.TrimSpace(pathSpec), " ", 2)
+	if len(parts) == 2 {
+		// Check if first part is a valid HTTP method
+		possibleMethod := strings.ToUpper(parts[0])
+		switch possibleMethod {
+		case "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS":
+			return possibleMethod, strings.TrimSpace(parts[1])
+		}
+	}
+
+	// No method prefix, or invalid method - return empty method for auto-detect
+	return "", strings.TrimSpace(pathSpec)
 }

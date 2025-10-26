@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/core/proxy"
-	"github.com/primadi/lokstra/core/router/autogen"
 	"github.com/primadi/lokstra/core/service"
 )
 
@@ -50,49 +49,32 @@ type RefundResponse struct {
 // PaymentServiceRemote is a proxy to external payment gateway
 // This demonstrates wrapping a third-party API as a Lokstra service
 type PaymentServiceRemote struct {
-	service.RemoteServiceMetaAdapter
+	proxyService *proxy.Service
 }
 
 // NewPaymentServiceRemote creates a new payment service proxy
 func NewPaymentServiceRemote(proxyService *proxy.Service) *PaymentServiceRemote {
 	return &PaymentServiceRemote{
-		RemoteServiceMetaAdapter: service.RemoteServiceMetaAdapter{
-			Resource:     "payment",
-			Plural:       "payments",
-			Convention:   "rest",
-			ProxyService: proxyService,
-			// Route overrides for external API endpoints
-			// External APIs often have non-standard method names
-			Override: autogen.RouteOverride{
-				Custom: map[string]autogen.Route{
-					// Map CreatePayment -> POST /payments
-					"CreatePayment": {Method: "POST", Path: "/payments"},
-					// Map GetPayment -> GET /payments/{id}
-					"GetPayment": {Method: "GET", Path: "/payments/{id}"},
-					// Map Refund -> POST /payments/{id}/refund
-					"Refund": {Method: "POST", Path: "/payments/{id}/refund"},
-				},
-			},
-		},
+		proxyService: proxyService,
 	}
 }
 
 // CreatePayment creates a new payment via external gateway
 func (s *PaymentServiceRemote) CreatePayment(p *CreatePaymentParams) (*Payment, error) {
-	// Auto-generates: POST /payments
-	return proxy.CallWithData[*Payment](s.GetProxyService(), "CreatePayment", p)
+	// Uses custom route: POST /payments (from RegisterServiceType)
+	return proxy.CallWithData[*Payment](s.proxyService, "CreatePayment", p)
 }
 
 // GetPayment retrieves payment status
 func (s *PaymentServiceRemote) GetPayment(p *GetPaymentParams) (*Payment, error) {
-	// Auto-generates: GET /payments/{id}
-	return proxy.CallWithData[*Payment](s.GetProxyService(), "GetPayment", p)
+	// Uses custom route: GET /payments/{id} (from RegisterServiceType)
+	return proxy.CallWithData[*Payment](s.proxyService, "GetPayment", p)
 }
 
 // Refund processes a refund for a payment
 func (s *PaymentServiceRemote) Refund(p *RefundParams) (*RefundResponse, error) {
-	// Uses custom route: POST /payments/{id}/refund
-	return proxy.CallWithData[*RefundResponse](s.GetProxyService(), "Refund", p)
+	// Uses custom route: POST /payments/{id}/refund (from RegisterServiceType)
+	return proxy.CallWithData[*RefundResponse](s.proxyService, "Refund", p)
 }
 
 // ========================================

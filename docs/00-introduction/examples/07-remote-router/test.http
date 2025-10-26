@@ -1,0 +1,35 @@
+### Example 07 - Remote Router (proxy.Router)
+### Mock Weather API: http://localhost:9001
+### Main App: http://localhost:3001
+
+# ========================================
+# Mock Weather API (Direct Access)
+# ========================================
+
+### Get current weather - Jakarta
+GET http://localhost:9001/weather/jakarta
+
+### Get current weather - Bandung
+GET http://localhost:9001/weather/bandung
+
+### Get forecast - Jakarta (5 days)
+GET http://localhost:9001/forecast/jakarta?days=5
+
+### Get forecast - Surabaya (3 days)
+GET http://localhost:9001/forecast/surabaya?days=3
+
+# ========================================
+# Main App - Weather Reports
+# ========================================
+
+### Create weather report - Jakarta with forecast
+POST http://localhost:3001/weather-reports?city=jakarta&forecast=true&days=5
+
+### Create weather report - Bandung (current only)
+POST http://localhost:3001/weather-reports?city=bandung&forecast=false
+
+### Create weather report - Surabaya with 3-day forecast
+POST http://localhost:3001/weather-reports?city=surabaya&forecast=true&days=3
+
+### Create weather report - Invalid city (should fail)
+POST http://localhost:3001/weather-reports?city=tokyo&forecast=false

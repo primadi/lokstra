@@ -79,20 +79,15 @@ func main() {
 
 	// Method 2: Auto-generated router (Service as Router - MAGIC!)
 	// Metadata comes from RegisterServiceType options - no Remote struct needed!
-	autoUserRouter := lokstra_registry.NewRouterFromServiceType(
-		"user-service",
-		lokstra_registry.GetService[*service.UserService]("user-service"),
-	)
+	// Service instance is automatically created from factory!
+	autoUserRouter := lokstra_registry.NewRouterFromServiceType("user-service-factory")
 
 	fmt.Println("✅ Auto-generated router for user-service (ZERO manual routing!):")
 	fmt.Println("   GET /users       → List() method")
 	fmt.Println("   GET /users/{id}  → GetByID() method")
 	fmt.Println()
 
-	autoProductRouter := lokstra_registry.NewRouterFromServiceType(
-		"product-service",
-		lokstra_registry.GetService[*service.ProductService]("product-service"),
-	)
+	autoProductRouter := lokstra_registry.NewRouterFromServiceType("product-service-factory")
 
 	fmt.Println("✅ Auto-generated router for product-service (ZERO manual routing!):")
 	fmt.Println("   GET /products       → List() method")

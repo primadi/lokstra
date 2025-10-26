@@ -1,7 +1,0 @@
-@baseUrl = http://localhost:8080
-
-### Basic Router Example
-GET {{baseUrl}}/ping
-
-### Query String Parameter
-GET {{baseUrl}}/hello?name=John

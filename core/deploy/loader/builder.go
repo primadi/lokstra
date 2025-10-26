@@ -11,7 +11,11 @@ import (
 // normalizeServerDefinitions converts server-level helper fields to a new app
 // This allows shorthand syntax: addr/routers/published-services at server level
 // for the common case of 1 server = 1 app
-// If helper fields are present, a NEW app is created and PREPENDED to Apps array
+//
+// Smart merging behavior:
+//   - If helper has addr: Create new app and prepend to Apps array
+//   - If helper has NO addr but has routers/published-services: Merge into first existing app
+//   - If no existing apps: Create new app (even without addr - will fail validation later)
 func normalizeServerDefinitions(config *schema.DeployConfig) {
 	for _, depDef := range config.Deployments {
 		for _, serverDef := range depDef.Servers {
@@ -24,15 +28,35 @@ func normalizeServerDefinitions(config *schema.DeployConfig) {
 				continue // No helper fields, skip
 			}
 
-			// Create a new app from helper fields
-			newApp := &schema.AppDefMap{
-				Addr:              serverDef.HelperAddr,
-				Routers:           serverDef.HelperRouters,
-				PublishedServices: serverDef.HelperPublishedServices,
-			}
+			// Case 1: Helper has addr - create new app and prepend
+			if serverDef.HelperAddr != "" {
+				newApp := &schema.AppDefMap{
+					Addr:              serverDef.HelperAddr,
+					Routers:           serverDef.HelperRouters,
+					PublishedServices: serverDef.HelperPublishedServices,
+				}
+				// PREPEND new app to Apps array (so it becomes first)
+				serverDef.Apps = append([]*schema.AppDefMap{newApp}, serverDef.Apps...)
+			} else if len(serverDef.Apps) > 0 {
+				// Case 2: Helper has NO addr but has routers/published-services
+				// Merge into first existing app
+				firstApp := serverDef.Apps[0]
 
-			// PREPEND new app to Apps array (so it becomes first)
-			serverDef.Apps = append([]*schema.AppDefMap{newApp}, serverDef.Apps...)
+				// Merge routers (append, no duplicates)
+				firstApp.Routers = mergeStringSlices(firstApp.Routers, serverDef.HelperRouters)
+
+				// Merge published-services (append, no duplicates)
+				firstApp.PublishedServices = mergeStringSlices(firstApp.PublishedServices, serverDef.HelperPublishedServices)
+			} else {
+				// Case 3: Helper has NO addr and NO existing apps
+				// Create new app anyway (will fail validation if addr is required)
+				newApp := &schema.AppDefMap{
+					Addr:              serverDef.HelperAddr, // Empty
+					Routers:           serverDef.HelperRouters,
+					PublishedServices: serverDef.HelperPublishedServices,
+				}
+				serverDef.Apps = append(serverDef.Apps, newApp)
+			}
 
 			// Clear helper fields
 			serverDef.HelperAddr = ""
@@ -40,6 +64,34 @@ func normalizeServerDefinitions(config *schema.DeployConfig) {
 			serverDef.HelperPublishedServices = nil
 		}
 	}
+}
+
+// mergeStringSlices merges two string slices without duplicates
+func mergeStringSlices(a, b []string) []string {
+	if len(b) == 0 {
+		return a
+	}
+	if len(a) == 0 {
+		return b
+	}
+
+	// Create a set from first slice
+	seen := make(map[string]bool, len(a))
+	for _, item := range a {
+		seen[item] = true
+	}
+
+	// Append items from second slice that are not in first
+	result := make([]string, len(a))
+	copy(result, a)
+	for _, item := range b {
+		if !seen[item] {
+			result = append(result, item)
+			seen[item] = true
+		}
+	}
+
+	return result
 }
 
 // LoadAndBuild loads config and builds ALL deployments into Global registry
@@ -253,7 +305,17 @@ func LoadAndBuild(configPaths []string) error {
 			// Convert to slice
 			for svcName := range serviceMap {
 				serverTopo.Services = append(serverTopo.Services, svcName)
-			} // TODO: Auto-detect remote services from factory dependencies
+			}
+
+			// Add external services to RemoteServices map
+			// External services are ALWAYS remote (never local)
+			for extSvcName, extSvc := range externalServices {
+				if extSvc.URL != "" {
+					serverTopo.RemoteServices[extSvcName] = extSvc.URL
+				}
+			}
+
+			// TODO: Auto-detect remote services from published-services across servers
 			// For now, remote service resolution happens during service registration
 			// based on published-services across servers in deployment
 
@@ -474,7 +536,17 @@ func LoadAndBuildFromDir(dirPath string) error {
 			}
 			for svcName := range serviceMap {
 				serverTopo.Services = append(serverTopo.Services, svcName)
-			} // TODO: Auto-detect remote services from factory dependencies
+			}
+
+			// Add external services to RemoteServices map
+			// External services are ALWAYS remote (never local)
+			for extSvcName, extSvc := range externalServices {
+				if extSvc.URL != "" {
+					serverTopo.RemoteServices[extSvcName] = extSvc.URL
+				}
+			}
+
+			// TODO: Auto-detect remote services from published-services across servers
 			// For now, remote service resolution happens during service registration
 
 			// Build app topologies

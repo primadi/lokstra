@@ -1,8 +1,0 @@
-{
-  "id": "invalid-uuid",
-  "code": "WRONG-PREFIX",
-  "name": "X",
-  "sku": "ABC-123",
-  "price": -100,
-  "quantity": 0
-}

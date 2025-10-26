@@ -291,3 +291,66 @@ func TestShorthandSyntax(t *testing.T) {
 		t.Errorf("expected helper addr to be cleared, got %s", server.HelperAddr)
 	}
 }
+
+func TestSmartMerging(t *testing.T) {
+	// Test smart merging behavior: helper fields without addr should merge into first app
+	config, err := LoadConfig("testdata/deployments.yaml")
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+
+	// Check production deployment
+	prodDep := config.Deployments["production"]
+	if prodDep == nil {
+		t.Fatal("production deployment not found")
+	}
+
+	apiServer := prodDep.Servers["api-server"]
+	if apiServer == nil {
+		t.Fatal("api-server not found")
+	}
+
+	// Should have 1 app (helper merged into first app)
+	if len(apiServer.Apps) != 1 {
+		t.Errorf("expected 1 app after smart merge, got %d", len(apiServer.Apps))
+	}
+
+	app := apiServer.Apps[0]
+
+	// App should have addr from explicit app definition
+	if app.Addr != ":8080" {
+		t.Errorf("expected addr :8080, got %s", app.Addr)
+	}
+
+	// App should have published-services from helper fields (merged)
+	if len(app.PublishedServices) != 2 {
+		t.Errorf("expected 2 published services (merged from helper), got %d", len(app.PublishedServices))
+	}
+
+	expectedServices := map[string]bool{
+		"user-service":  false,
+		"order-service": false,
+	}
+
+	for _, svc := range app.PublishedServices {
+		if _, exists := expectedServices[svc]; exists {
+			expectedServices[svc] = true
+		} else {
+			t.Errorf("unexpected service: %s", svc)
+		}
+	}
+
+	for svc, found := range expectedServices {
+		if !found {
+			t.Errorf("expected service not found: %s", svc)
+		}
+	}
+
+	// Verify helper fields are cleared
+	if apiServer.HelperAddr != "" {
+		t.Errorf("expected helper addr to be cleared, got %s", apiServer.HelperAddr)
+	}
+	if len(apiServer.HelperPublishedServices) > 0 {
+		t.Errorf("expected helper published-services to be cleared, got %d items", len(apiServer.HelperPublishedServices))
+	}
+}

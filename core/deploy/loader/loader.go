@@ -127,9 +127,7 @@ func ValidateConfig(config *schema.DeployConfig) error {
 
 	// Convert config to map for validation
 	configMap := configToMap(config)
-	documentLoader := gojsonschema.NewGoLoader(configMap)
-
-	// Validate
+	documentLoader := gojsonschema.NewGoLoader(configMap) // Validate
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
 		return fmt.Errorf("validation error: %w", err)

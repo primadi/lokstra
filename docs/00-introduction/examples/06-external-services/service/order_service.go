@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/primadi/lokstra/core/router/autogen"
 	"github.com/primadi/lokstra/core/service"
 )
 
@@ -44,9 +43,7 @@ type OrderRefundParams struct {
 // ========================================
 
 // OrderService handles order processing and payment integration
-// Embeds ServiceMetaAdapter to provide auto-router metadata
 type OrderService struct {
-	service.ServiceMetaAdapter
 	Payment *service.Cached[*PaymentServiceRemote]
 }
 
@@ -162,18 +159,6 @@ func (s *OrderService) Refund(p *OrderRefundParams) (*Order, error) {
 
 func OrderServiceFactory(deps map[string]any, config map[string]any) any {
 	return &OrderService{
-		ServiceMetaAdapter: service.ServiceMetaAdapter{
-			Resource:   "order",
-			Plural:     "orders",
-			Convention: "rest",
-			// Custom route for Refund action
-			Override: autogen.RouteOverride{
-				Custom: map[string]autogen.Route{
-					// POST /orders/{id}/refund
-					"Refund": {Method: "POST", Path: "/orders/{id}/refund"},
-				},
-			},
-		},
-		Payment: service.LazyLoad[*PaymentServiceRemote]("payment-gateway"),
+		Payment: service.Cast[*PaymentServiceRemote](deps["payment-gateway"]),
 	}
 }

@@ -79,8 +79,7 @@ lokstra_registry.RegisterServiceType(
 )
 
 // 3. Auto-generate router with ONE LINE!
-userSvc := service.NewUserService()
-router := lokstra_registry.NewRouterFromServiceType("user-service", userSvc)
+router := lokstra_registry.NewRouterFromServiceType("user-service")
 
 // Done! ALL REST endpoints created automatically:
 //   GET    /users       → List()
@@ -408,9 +407,10 @@ Auto-Generated Endpoints:
    - Auto-generate REST endpoints
    - Works locally AND remotely (for microservices)
 
-2. **Two Ways to Provide Metadata:**
-   - **Simple (this example):** Via `RegisterServiceType` options
-   - **Advanced (microservices):** Via Remote struct with `RemoteServiceMetaAdapter`
+2. **Clean Metadata Pattern:**
+   - **All metadata in `RegisterServiceType`** (single source of truth)
+   - No embedded structs, no ServiceMeta interfaces
+   - Clean service code, centralized configuration
 
 3. **Clean File Structure**
    - Separate files for model, contract, service
@@ -444,11 +444,11 @@ Auto-Generated Endpoints:
 - `core/router/autogen/autogen.go` - Auto-router implementation
 - `core/router/convention/` - Convention registry
 - `core/deploy/service_options.go` - Metadata options
-- `docs/00-introduction/examples/04-multi-deployment/` - Complete microservices example with Remote structs
+- `docs/00-introduction/examples/04-multi-deployment/` - Complete microservices example
 
 ---
 
 **Remember:** 
-- **Simple examples:** Use `RegisterServiceType` with metadata options
-- **Microservices:** Use Remote struct with `RemoteServiceMetaAdapter`
-- **Both approaches** auto-generate routes - choose what fits your needs! 🎉
+- **All metadata in `RegisterServiceType`** with options (single source of truth)
+- **Clean service code** - no embedded metadata, no interfaces
+- **Works for both local and remote services** - same pattern! 🎉

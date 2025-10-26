@@ -7,7 +7,7 @@ import (
 	"github.com/primadi/lokstra/common/customtype"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/old_registry"
+	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
@@ -206,6 +206,6 @@ func ServiceFactory(params map[string]any) any {
 }
 
 func Register() {
-	old_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
-		old_registry.AllowOverride(true))
+	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
+		nil)
 }

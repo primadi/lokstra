@@ -10,10 +10,7 @@ import (
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
-	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/core/router"
-	"github.com/primadi/lokstra/core/router/autogen"
-	"github.com/primadi/lokstra/core/router/convention"
 	"github.com/primadi/lokstra/core/server"
 	"github.com/primadi/lokstra/core/service"
 )
@@ -72,111 +69,9 @@ func registerLazyServicesForServer(compositeKey string) error {
 		remoteURL, isRemote := serverTopo.RemoteServices[serviceName]
 
 		if isRemote && remoteURL != "" {
-			// Register REMOTE service
-			serviceType := serviceDef.Type
-			factory := registry.GetServiceFactory(serviceType, false) // false = remote factory
-			if factory == nil {
-				return fmt.Errorf("service factory %s (remote) not registered for service %s", serviceType, serviceName)
-			}
-
-			// Get service metadata for proxy.Service creation
-			metadata := registry.GetServiceMetadata(serviceType)
-
-			// Try to read metadata from service instance (ServiceMeta interface)
-			// This allows services to provide their own metadata and route overrides
-			var instanceMetadata *deploy.ServiceMetadata
-			var routeOverride autogen.RouteOverride
-
-			// Create temporary instance with nil proxyService to read metadata
-			defer func() {
-				if r := recover(); r != nil {
-					// Factory might panic on nil proxy.Service, that's OK
-					// We'll use metadata from registration instead
-					log.Printf("   ⚠️  Factory panicked when creating temp instance for metadata (%s): %v", serviceName, r)
-				}
-			}()
-
-			tempInstance := factory(map[string]any{}, map[string]any{"remote": nil})
-			if serviceMeta, ok := tempInstance.(service.ServiceMeta); ok {
-				resource, plural := serviceMeta.GetResourceName()
-				conventionName := serviceMeta.GetConventionName()
-				routeOverride = serviceMeta.GetRouteOverride()
-
-				log.Printf("   📋 Read metadata from service instance (%s): resource=%s/%s, convention=%s, custom routes=%d",
-					serviceName, resource, plural, conventionName, len(routeOverride.Custom))
-
-				instanceMetadata = &deploy.ServiceMetadata{
-					Resource:       resource,
-					ResourcePlural: plural,
-					Convention:     conventionName,
-				}
-			}
-
-			// Merge metadata: instance > registration > fallback
-			finalMetadata := metadata
-			if instanceMetadata != nil {
-				finalMetadata = instanceMetadata
-			}
-
-			// Create proxy.Service with metadata
-			var proxyService *proxy.Service
-			if finalMetadata != nil && finalMetadata.Resource != "" {
-				// Merge metadata overrides with instance overrides
-				finalOverride := autogen.RouteOverride{
-					PathPrefix:  finalMetadata.PathPrefix,
-					Hidden:      finalMetadata.HiddenMethods,
-					Custom:      routeOverride.Custom,      // From ServiceMeta
-					Middlewares: routeOverride.Middlewares, // From ServiceMeta
-				}
-
-				// If override has PathPrefix, use it (higher priority than metadata)
-				if routeOverride.PathPrefix != "" {
-					finalOverride.PathPrefix = routeOverride.PathPrefix
-				}
-
-				// Merge hidden methods
-				if len(routeOverride.Hidden) > 0 {
-					finalOverride.Hidden = append(finalOverride.Hidden, routeOverride.Hidden...)
-				}
-
-				// Use metadata from RegisterServiceType options
-				proxyService = proxy.NewService(
-					remoteURL,
-					autogen.ConversionRule{
-						Convention:     convention.ConventionType(finalMetadata.Convention),
-						Resource:       finalMetadata.Resource,
-						ResourcePlural: finalMetadata.ResourcePlural,
-					},
-					finalOverride,
-				)
-			} else {
-				// Fallback: auto-generate from service name
-				resourceName := strings.TrimSuffix(serviceName, "-service")
-				resourcePlural := resourceName + "s" // Simple pluralization
-				proxyService = proxy.NewService(
-					remoteURL,
-					autogen.ConversionRule{
-						Convention:     convention.REST, // Default to REST
-						Resource:       resourceName,
-						ResourcePlural: resourcePlural,
-					},
-					autogen.RouteOverride{},
-				)
-			}
-
-			// Build config with proxy.Service
-			remoteConfig := make(map[string]any)
-			// Copy service-level config if exists
-			for k, v := range serviceDef.Config {
-				remoteConfig[k] = v
-			}
-			// Add proxy.Service for remote calls (key must be "remote" not "proxy.Service")
-			remoteConfig["remote"] = proxyService
-
-			// Remote services don't have dependencies (they're proxies)
-			registry.RegisterLazyServiceWithDeps(serviceName, func(resolvedDeps, cfg map[string]any) any {
-				return factory(nil, cfg)
-			}, nil, remoteConfig, deploy.WithRegistrationMode(deploy.LazyServiceSkip))
+			// Register REMOTE service via core registry
+			// This delegates to AutoRegisterRemoteService which handles metadata properly
+			registry.AutoRegisterRemoteService(serviceName, serviceDef, remoteURL)
 		} else {
 			// Register LOCAL service
 			// Convert DependsOn to deps map

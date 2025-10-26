@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/old_registry"
+	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi/auth"
 )
 
@@ -130,6 +130,6 @@ func ServiceFactory(params map[string]any) any {
 }
 
 func Register() {
-	old_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
-		old_registry.AllowOverride(true))
+	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
+		nil)
 }

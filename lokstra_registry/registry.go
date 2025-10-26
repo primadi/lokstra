@@ -388,3 +388,41 @@ func GetConfig[T any](name string, defaultValue T) T {
 
 	return defaultValue
 }
+
+// ===== SHUTDOWN =====
+
+// Shutdownable is an interface for services that need cleanup on shutdown
+type Shutdownable interface {
+	Shutdown() error
+}
+
+// ShutdownServices gracefully shuts down all services that implement the Shutdownable interface.
+// This function iterates through all registered service instances and calls Shutdown() on those
+// that implement the Shutdownable interface.
+//
+// Example service with shutdown:
+//
+//	type DatabaseService struct {
+//	    conn *sql.DB
+//	}
+//
+//	func (s *DatabaseService) Shutdown() error {
+//	    return s.conn.Close()
+//	}
+//
+// Usage in main.go:
+//
+//	defer lokstra_registry.ShutdownServices()
+//
+// Or with signal handling:
+//
+//	c := make(chan os.Signal, 1)
+//	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+//	go func() {
+//	    <-c
+//	    lokstra_registry.ShutdownServices()
+//	    os.Exit(0)
+//	}()
+func ShutdownServices() {
+	deploy.Global().ShutdownServices()
+}

@@ -1,5 +1,5 @@
 # Test wrong field name
-services:
+service-definitions:
   database:
     type: database-factory
 
@@ -10,4 +10,4 @@ deployments:
         base-url: http://localhost
         apps:
           - addr: ":3000"
-            required-services: [database]
+            published-services: [database]
