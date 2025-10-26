@@ -1,0 +1,161 @@
+### Handler Forms & Response Methods - Complete Test Suite
+### Use REST Client extension in VS Code
+
+###
+### GROUP 1: Simple Forms (Auto ApiHelper Wrapping)
+###
+
+### 1. Return string - Auto wrapped in ApiHelper
+GET http://localhost:3001/ping
+###
+
+### 2. Return map + error - Auto wrapped
+GET http://localhost:3001/time
+###
+
+### 3. Return slice - Auto wrapped
+GET http://localhost:3001/users
+###
+
+###
+### GROUP 2: Request Binding
+###
+
+### 4. Create user - JSON binding + validation (SUCCESS)
+POST http://localhost:3001/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+###
+
+### 5. Get user by ID - Path param binding
+GET http://localhost:3001/users/123
+###
+
+### 6. Update user - Context + binding
+PUT http://localhost:3001/users/456
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com"
+}
+###
+
+### 7. Header binding - Read from HTTP headers
+GET http://localhost:3001/headers
+Authorization: Bearer my-secret-token
+User-Agent: Mozilla/5.0
+X-Custom-Header: custom-value
+###
+
+###
+### GROUP 3: Response Method 1 - ApiHelper (Opiniated)
+###
+
+### 8. Api.Ok - Standard success
+GET http://localhost:3001/api-ok
+###
+
+### 9. Api.OkWithMessage - Success with custom message
+GET http://localhost:3001/api-ok-message
+###
+
+### 10. Api.Created - 201 Created (with struct binding)
+POST http://localhost:3001/api-created
+Content-Type: application/json
+
+{
+  "name": "New Resource",
+  "type": "example",
+  "metadata": {
+    "created_by": "test"
+  }
+}
+###
+
+### 11. Api.Error - Custom 404 error
+GET http://localhost:3001/api-not-found
+###
+
+### 12. Api.BadRequest - 400 error
+GET http://localhost:3001/api-bad-request
+###
+
+###
+### GROUP 4: Response Method 2 - response.Response (Generic, Not Opiniated)
+###
+
+### 13. response.Json() - Custom JSON structure
+GET http://localhost:3001/resp-json
+###
+
+### 14. response.Html() - HTML response
+GET http://localhost:3001/resp-html
+###
+
+### 15. response.Text() - Plain text
+GET http://localhost:3001/resp-text
+###
+
+### 16. response with custom status (202)
+POST http://localhost:3001/resp-custom-status
+###
+
+### 17. response.Stream() - File download
+GET http://localhost:3001/resp-download
+###
+
+###
+### GROUP 5: Response Method 3 - Manual (http.ResponseWriter)
+###
+
+### 18. Manual JSON response
+GET http://localhost:3001/manual-json
+###
+
+### 19. Manual with custom headers (check headers in response)
+GET http://localhost:3001/manual-custom
+###
+
+### 20. Manual text response
+GET http://localhost:3001/manual-text
+###
+
+###
+### GROUP 6: Error Handling
+###
+
+### 21. Return error - Auto 500
+GET http://localhost:3001/error-500
+###
+
+### 22. Validation error - Missing fields (400)
+POST http://localhost:3001/validate
+Content-Type: application/json
+
+{}
+###
+
+### 23. Validation error - Invalid email (400)
+POST http://localhost:3001/validate
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email"
+}
+###
+
+### 24. Validation success - Valid data
+POST http://localhost:3001/validate
+Content-Type: application/json
+
+{
+  "name": "Valid User",
+  "email": "valid@example.com"
+}
+###

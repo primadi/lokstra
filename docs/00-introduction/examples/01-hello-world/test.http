@@ -1,0 +1,17 @@
+### Hello World Example Tests
+### Use REST Client extension in VS Code to run these
+
+###
+### 1. Root endpoint - Returns plain text
+GET http://localhost:3000/
+###
+
+###
+### 2. Ping endpoint - Returns plain text
+GET http://localhost:3000/pingx
+###
+
+###
+### 3. Time endpoint - Returns JSON
+GET http://localhost:3000/time
+###

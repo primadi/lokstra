@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=./lokstra.json
+
+# Test invalid config - missing required field
+servers:
+  - name: auth-server
+    baseUrl: http://localhost
+    apps:
+      - addr: :8080
+
+services:
+  - name: cors
+    config:
+      allowed_origins:
+        - "http://localhost:3000"
+        - "http://localhost:8080"
+      
+      

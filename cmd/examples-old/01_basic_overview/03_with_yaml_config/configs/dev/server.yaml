@@ -1,4 +1,0 @@
-server:
-  name: lokstra-server
-  global_setting:
-    log_level: info

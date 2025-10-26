@@ -1,62 +1,124 @@
 package kvstore_redis
 
 import (
-	"github.com/primadi/lokstra/core/registration"
-	"github.com/primadi/lokstra/core/service"
+	"context"
+	"encoding/json"
+	"time"
+
+	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/serviceapi"
 	"github.com/redis/go-redis/v9"
 )
 
-const REDIS_SERVICENAME_KEY = "redis"
+const SERVICE_TYPE = "kvstore_redis"
 
-type module struct{}
-
-// Description implements registration.Module.
-func (m *module) Description() string {
-	return "Redis key-value store service"
+// Config represents the configuration for Redis-based KvStore service.
+type Config struct {
+	Addr     string `json:"addr" yaml:"addr"`         // host:port address
+	Password string `json:"password" yaml:"password"` // password
+	DB       int    `json:"db" yaml:"db"`             // database number
+	PoolSize int    `json:"pool_size" yaml:"pool_size"`
+	Prefix   string `json:"prefix" yaml:"prefix"` // key prefix for namespacing
 }
 
-// Name implements registration.Module.
-func (m *module) Name() string {
-	return "kvstore_redis"
+type kvStoreRedis struct {
+	client *redis.Client
+	prefix string
 }
 
-// Register implements registration.Module.
-func (m *module) Register(regCtx registration.Context) error {
-	factory := func(config any) (service.Service, error) {
-		var redisServiceName string
-		switch cfg := config.(type) {
-		case string:
-			redisServiceName = cfg
-		case map[string]string:
-			redisServiceName = cfg[REDIS_SERVICENAME_KEY]
-		default:
-			return nil, registration.ErrUnsupportedConfig(config)
-		}
-		rs, err := regCtx.GetService(redisServiceName)
-		if err != nil {
-			return nil, err
-		}
-		redisClient, ok := rs.(*redis.Client)
-		if !ok {
-			return nil, registration.ErrInvalidServiceType(redisServiceName, "redis.Client")
-		}
-		return New(redisClient), nil
+var _ serviceapi.KvStore = (*kvStoreRedis)(nil)
+
+func (k *kvStoreRedis) prefixKey(key string) string {
+	if k.prefix != "" {
+		return k.prefix + ":" + key
 	}
-
-	regCtx.RegisterServiceFactory(m.Name(), factory)
-	return nil
+	return key
 }
 
-var _ registration.Module = (*module)(nil)
-
-func GetModule() registration.Module {
-	return &module{}
+func (k *kvStoreRedis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return k.client.Set(ctx, k.prefixKey(key), data, ttl).Err()
 }
 
-func GetService(regCtx registration.Context, name string) (*Service, error) {
-	svc, err := registration.GetService[*Service](regCtx, name)
+func (k *kvStoreRedis) Get(ctx context.Context, key string, dest any) error {
+	data, err := k.client.Get(ctx, k.prefixKey(key)).Bytes()
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, dest)
+}
+
+func (k *kvStoreRedis) Delete(ctx context.Context, key string) error {
+	return k.client.Del(ctx, k.prefixKey(key)).Err()
+}
+
+func (k *kvStoreRedis) DeleteKeys(ctx context.Context, keys ...string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	prefixedKeys := make([]string, len(keys))
+	for i, key := range keys {
+		prefixedKeys[i] = k.prefixKey(key)
+	}
+	return k.client.Del(ctx, prefixedKeys...).Err()
+}
+
+func (k *kvStoreRedis) Keys(ctx context.Context, pattern string) ([]string, error) {
+	prefixedPattern := k.prefixKey(pattern)
+	keys, err := k.client.Keys(ctx, prefixedPattern).Result()
 	if err != nil {
 		return nil, err
 	}
-	return svc, nil
+
+	// Remove prefix from returned keys
+	if k.prefix != "" {
+		prefixLen := len(k.prefix) + 1 // +1 for the colon
+		for i, key := range keys {
+			if len(key) > prefixLen {
+				keys[i] = key[prefixLen:]
+			}
+		}
+	}
+
+	return keys, nil
+}
+
+func (k *kvStoreRedis) Shutdown() error {
+	if k.client != nil {
+		return k.client.Close()
+	}
+	return nil
+}
+
+func Service(cfg *Config) *kvStoreRedis {
+	client := redis.NewClient(&redis.Options{
+		Addr:     cfg.Addr,
+		Password: cfg.Password,
+		DB:       cfg.DB,
+		PoolSize: cfg.PoolSize,
+	})
+	return &kvStoreRedis{
+		client: client,
+		prefix: cfg.Prefix,
+	}
+}
+
+func ServiceFactory(params map[string]any) any {
+	cfg := &Config{
+		Addr:     utils.GetValueFromMap(params, "addr", "localhost:6379"),
+		Password: utils.GetValueFromMap(params, "password", ""),
+		DB:       utils.GetValueFromMap(params, "db", 0),
+		PoolSize: utils.GetValueFromMap(params, "pool_size", 10),
+		Prefix:   utils.GetValueFromMap(params, "prefix", "kv"),
+	}
+	return Service(cfg)
+}
+
+func Register() {
+	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
+		nil)
 }

@@ -1,8 +1,0 @@
-# modules:
-#   - name: user-module
-#     path: ./plugins/user_module.so
-#     entry: UserModule
-#     settings:
-#       welcome_message: "Welcome, user!"
-#     permissions:
-#       allow_services: [ main-db ]

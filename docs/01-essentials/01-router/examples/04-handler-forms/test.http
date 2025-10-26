@@ -1,0 +1,87 @@
+### Example 04: Handler Forms
+### Server: http://localhost:3000
+
+###############################
+# Form 1: Simple Return Value
+###############################
+
+### Ping - Simple string
+GET http://localhost:3000/ping
+
+### Time - Map return
+GET http://localhost:3000/time
+
+###############################
+# Form 2: Return with Error
+###############################
+
+### List Users - Might return error
+GET http://localhost:3000/users
+
+### Users Might Fail - Simulated error
+GET http://localhost:3000/users-might-fail
+
+###############################
+# Form 3: Request Binding
+###############################
+
+### Create User - Valid
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Charlie",
+  "email": "charlie@example.com"
+}
+
+### Create User - Invalid (missing name)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### Get User by ID
+GET http://localhost:3000/users/1
+
+### Get User by ID - Not found
+GET http://localhost:3000/users/999
+
+###############################
+# Form 4: Context + Request
+###############################
+
+### Get User Details - Check server logs for User-Agent
+GET http://localhost:3000/users/1/details
+User-Agent: MyCustomApp/1.0
+
+###############################
+# Form 5: Custom Response
+###############################
+
+### Custom Response - Success with headers (use -i to see headers)
+GET http://localhost:3000/users/1/custom
+
+### Custom Response - 404 error
+GET http://localhost:3000/users/999/custom
+
+###############################
+# Comparison
+###############################
+
+### Compare Form 1
+GET http://localhost:3000/compare/form1
+
+### Compare Form 2
+GET http://localhost:3000/compare/form2
+
+### Compare Form 3 - With query param
+GET http://localhost:3000/compare/form3?text=hello+world
+
+### Compare Form 3 - Without param (uses default)
+GET http://localhost:3000/compare/form3
+
+### Compare Form 4 - Check server logs
+GET http://localhost:3000/compare/form4
+User-Agent: ComparisonTest/1.0

@@ -2,142 +2,115 @@ package request
 
 import (
 	"context"
-	"io"
 	"net/http"
-	"strings"
-	"sync"
 
 	"github.com/primadi/lokstra/core/response"
 )
 
 type Context struct {
+	// Embedding standard context for easy access
 	context.Context
-	*response.Response
 
-	Writer          http.ResponseWriter
-	Request         *http.Request
-	rawRequestBody  []byte
-	requestBodyOnce sync.Once
-	requestBodyErr  error
+	// Helper to access request methods and fields
+	Req *RequestHelper
+	// Helper to access response methods and fields
+	Resp *response.Response
+	// Helper for opinionated API responses (wraps data in ApiResponse)
+	Api *response.ApiHelper
+
+	// Direct access to primitives (for advanced usage)
+	W *writerWrapper
+	R *http.Request
+
+	// Internal index to track middleware/handler execution
+	index    int
+	handlers []HandlerFunc
+
+	value map[string]any
 }
 
-func NewContext(w http.ResponseWriter, r *http.Request) (*Context, func()) {
-	ctx, cancel := context.WithCancel(r.Context())
-	req := r.WithContext(ctx)
-	resp := response.NewResponse()
+func NewContext(w http.ResponseWriter, r *http.Request, handlers []HandlerFunc) *Context {
+	api := response.NewApiHelper()
 
-	return &Context{
-		Context:  ctx,
-		Response: resp,
-		Writer:   response.NewResponseWriterWrapper(w),
-		Request:  req,
-	}, cancel
-}
-
-func ContextFromRequest(r *http.Request) (*Context, bool) {
-	rc, ok := r.Context().(*Context)
-	return rc, ok
-}
-
-func (ctx *Context) GetPathParam(name string) string {
-	return ctx.Request.PathValue(name)
-}
-
-func (ctx *Context) GetPathParamWithDefault(name string, defaultValue string) string {
-	if value := ctx.Request.PathValue(name); value != "" {
-		return value
+	ctx := &Context{
+		Context:  context.Background(),
+		W:        newWriterWrapper(w),
+		R:        r,
+		handlers: handlers,
+		Resp:     api.Resp(), // Direct assignment to Resp
+		Api:      api,        // Initialize API helper
 	}
-	return defaultValue
+
+	// Initialize request helper
+	ctx.Req = newRequestHelper(ctx)
+
+	return ctx
 }
 
-func (ctx *Context) GetQueryParam(name string) string {
-	return ctx.Request.URL.Query().Get(name)
-}
-
-func (ctx *Context) GetQueryParamWithDefault(name string, defaultValue string) string {
-	if value := ctx.Request.URL.Query().Get(name); value != "" {
-		return value
+// Call inside middleware
+func (c *Context) Next() error {
+	if c.index >= len(c.handlers) {
+		return nil
 	}
-	return defaultValue
+	h := c.handlers[c.index]
+	c.index++
+	return h(c)
 }
 
-// ShouldStopMiddlewareChain checks if middleware chain should stop due to error or HTTP error status.
-// This helper ensures consistent error checking across all middleware implementations.
-//
-// Returns true if:
-//   - err is not nil (any error occurred)
-//   - ctx.StatusCode >= 400 (HTTP error status)
-//
-// Usage in middleware:
-//
-//	err := next(ctx)
-//	if ctx.ShouldStopMiddlewareChain(err) {
-//	    return err
-//	}
-//	// Continue with post-processing...
-func (ctx *Context) ShouldStopMiddlewareChain(err error) bool {
-	// Pure check function - no side effects
-	return err != nil || ctx.StatusCode >= 400 || ctx.Err() != nil
-}
-
-func (ctx *Context) GetHeader(name string) string {
-	return ctx.Request.Header.Get(name)
-}
-
-func (ctx *Context) GetHeaderWithDefault(name, defaultValue string) string {
-	if value := ctx.Request.Header.Get(name); value != "" {
-		return value
+// Finalizes the response, writing status code and body if not already written
+func (c *Context) FinalizeResponse(err error) {
+	if c.W.ManualWritten() {
+		// User already wrote directly to ResponseWriter, do nothing
+		return
 	}
-	return defaultValue
-}
 
-func (ctx *Context) GetHeaders(name string) []string {
-	if hdr, ok := ctx.Request.Header[name]; ok {
-		return hdr
-	}
-	return nil
-}
-
-func (ctx *Context) IsHeaderContainValue(name, value string) bool {
-	if hdr, ok := ctx.Request.Header[name]; ok {
-		for _, v := range hdr {
-			if strings.Contains(v, value) {
-				return true
+	if err != nil {
+		// Check if error is ValidationError
+		if valErr, ok := err.(*ValidationError); ok {
+			// Use Api helper to format validation error properly
+			c.Api.ValidationError("Validation failed", valErr.FieldErrors)
+		} else {
+			// Handle other errors
+			st := c.Resp.RespStatusCode
+			if st == 0 || st < http.StatusBadRequest {
+				c.Api.InternalError(err.Error())
+				// c.Resp.WithStatus(http.StatusInternalServerError).
+				//   Json(map[string]string{"error": err.Error()})
 			}
 		}
 	}
-	return false
+
+	c.Resp.WriteHttp(c.W)
 }
 
-func (ctx *Context) cacheRequestBody() {
-	ctx.requestBodyOnce.Do(func() {
-		if ctx.Request.Body == nil {
-			return
-		}
-		body, err := io.ReadAll(ctx.Request.Body)
-		if err != nil {
-			ctx.requestBodyErr = err
-		} else {
-			ctx.rawRequestBody = body
-		}
-	})
+func (c *Context) executeHandler() error {
+	return c.Next()
 }
 
-func (ctx *Context) GetRawRequestBody() ([]byte, error) {
-	ctx.cacheRequestBody()
-	return ctx.rawRequestBody, ctx.requestBodyErr
-}
-
-// GetRawResponseBody returns the raw response body data
-// It accesses the RawData field from the Response object
-func (ctx *Context) GetRawResponseBody() ([]byte, error) {
-	if ctx.Response == nil {
-		return nil, nil
+// Adds a value to the context storage
+func (c *Context) Set(key string, value any) {
+	if c.value == nil {
+		c.value = make(map[string]any)
 	}
-	return ctx.Response.RawData, nil
+	c.value[key] = value
 }
 
-// HTMX renders HTMX content with the specified status code
-func (ctx *Context) HTMX(html string) error {
-	return ctx.Response.WithHeader("Vary", "HX-Request").HTML(html)
+// Retrieves a value from the context storage
+func (c *Context) Get(key string) any {
+	return c.value[key]
+}
+
+// Adds a value to the context
+type contextKey string
+
+func (c *Context) SetContextValue(key string, value any) {
+	c.Context = context.WithValue(c.Context, contextKey(key), value)
+}
+
+// Retrieves a value from the context
+func (c *Context) GetContextValue(key string) any {
+	if c.Context == nil {
+		return nil
+	}
+	return c.Context.Value(contextKey(key))
 }

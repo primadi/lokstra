@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# ========================================
+# Multi-Deployment Configuration
+# ========================================
+#
+# This single config defines 3 different deployments:
+#   1. monolith     - All services in one process (dev/small apps)
+#   2. user-service - Only user endpoints (microservices)
+#   3. order-service - Only order endpoints (microservices)
+#
+
+# ========================================
+# Service Definitions (Global) - MAP format
+# ========================================
+# Clean Architecture Layers:
+#   - Repository: Data access (infrastructure)
+#   - Service: Business logic (application)
+#   - Contract: Interfaces & DTOs (application)
+#   - Model: Domain entities (domain)
+
+service-definitions:
+  # Infrastructure layer - Repositories
+  user-repository:
+    type: user-repository-factory
+
+  order-repository:
+    type: order-repository-factory
+
+  # Application layer - Services
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - user-repository
+
+  order-service:
+    type: order-service-factory
+    depends-on:
+      - order-repository
+      - user-service  # Can be local OR remote
+
+# ========================================
+# Router Definitions (Optional Overrides)
+# ========================================
+# Auto-routers are generated from published-services using metadata
+# from RegisterServiceType options (primary source).
+# 
+# You can override here ONLY if you need deployment-specific customization.
+
+# router-overrides:
+#   order-custom-routes:
+#     custom:
+#       - name: GetByUserID
+#         method: GET
+#         path: /users/{user_id}/orders
+
+# routers:
+#   order-service-router:
+#     service: order-service
+#     overrides: order-custom-routes
+
+# ========================================
+# Deployments - MAP format
+# ========================================
+# 🎯 ZERO-CONFIG Dependencies - Framework Auto-Detects Everything!
+#
+# Dependencies are AUTO-DETECTED from factory code (deps parameter):
+#   func OrderServiceFactory(deps map[string]any, config map[string]any) any {
+#       return &OrderServiceImpl{
+#           OrderRepo: service.Cast[...](deps["order-repository"]),  // ← Auto-detect!
+#           UserSvc:   service.Cast[...](deps["user-service"]),      // ← Auto-detect!
+#       }
+#   }
+#
+# Framework resolution:
+#   1. Parse depends-on from service-definitions
+#   2. For each dependency:
+#      - Check: Published locally? → Local (in-process)
+#      - Check: Published on another server? → Remote (HTTP)
+#      - Check: In service-definitions? → Create local
+#      - Not found → ERROR with suggestions
+#
+# Result: ZERO config duplication! Code is the single source of truth.
+
+deployments:
+  # ========================================
+  # MONOLITH: All services in one process
+  # ========================================
+  monolith:
+    servers:
+      api-server:
+        base-url: "http://localhost"
+        addr: ":3003"
+        published-services:
+          - user-service    # Auto-detects: user-repository (local)
+          - order-service   # Auto-detects: order-repository (local), user-service (local)
+
+  # ========================================
+  # MICROSERVICE: each service in its own process 
+  # ========================================
+  microservice:
+    servers:
+      user-server:
+        base-url: "http://localhost"
+        addr: ":3004"
+        published-services:
+          - user-service  # Auto-detects: user-repository (local)
+
+      order-server:
+        base-url: "http://localhost"
+        addr: ":3005"
+        published-services:
+          - order-service  # Auto-detects: order-repository (local), user-service (remote → user-server!)
+

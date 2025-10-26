@@ -1,396 +1,79 @@
 package cors
 
 import (
+	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/primadi/lokstra/core/request"
 )
 
-func TestConfig_Parsing(t *testing.T) {
-	tests := []struct {
-		name     string
-		config   any
-		expected *Config
-	}{
-		{
-			name:   "nil config - use defaults",
-			config: nil,
-			expected: &Config{
-				AllowOrigins:     []string{"*"},
-				AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-				AllowHeaders:     []string{"*"},
-				ExposeHeaders:    []string{},
-				AllowCredentials: false,
-				MaxAge:           86400,
-			},
-		},
-		{
-			name: "map config with all settings",
-			config: map[string]any{
-				"allow_origins":     []string{"http://localhost:3000", "https://app.example.com"},
-				"allow_methods":     []string{"GET", "POST", "PUT"},
-				"allow_headers":     []string{"Content-Type", "Authorization"},
-				"exposed_headers":   []string{"X-Total-Count", "X-Page-Count"},
-				"allow_credentials": true,
-				"max_age":           3600,
-			},
-			expected: &Config{
-				AllowOrigins:     []string{"http://localhost:3000", "https://app.example.com"},
-				AllowMethods:     []string{"GET", "POST", "PUT"},
-				AllowHeaders:     []string{"Content-Type", "Authorization"},
-				ExposeHeaders:    []string{"X-Total-Count", "X-Page-Count"},
-				AllowCredentials: true,
-				MaxAge:           3600,
-			},
-		},
-		{
-			name: "map config with string methods",
-			config: map[string]any{
-				"allow_origins": []string{"*"},
-				"allow_methods": "GET,POST,PUT",
-				"allow_headers": "Content-Type,Authorization",
-			},
-			expected: &Config{
-				AllowOrigins:     []string{"*"},
-				AllowMethods:     []string{"GET", "POST", "PUT"},
-				AllowHeaders:     []string{"Content-Type", "Authorization"},
-				ExposeHeaders:    []string{},
-				AllowCredentials: false,
-				MaxAge:           86400,
-			},
-		},
-		{
-			name: "struct config",
-			config: &Config{
-				AllowOrigins:     []string{"https://myapp.com"},
-				AllowMethods:     []string{"GET", "POST"},
-				AllowHeaders:     []string{"*"},
-				ExposeHeaders:    []string{"X-Custom-Header"},
-				AllowCredentials: true,
-				MaxAge:           7200,
-			},
-			expected: &Config{
-				AllowOrigins:     []string{"https://myapp.com"},
-				AllowMethods:     []string{"GET", "POST"},
-				AllowHeaders:     []string{"*"},
-				ExposeHeaders:    []string{"X-Custom-Header"},
-				AllowCredentials: true,
-				MaxAge:           7200,
-			},
-		},
-		{
-			name: "struct value config",
-			config: Config{
-				AllowOrigins:     []string{"http://localhost:8080"},
-				AllowMethods:     []string{"GET"},
-				AllowHeaders:     []string{"Accept"},
-				ExposeHeaders:    []string{},
-				AllowCredentials: false,
-				MaxAge:           1800,
-			},
-			expected: &Config{
-				AllowOrigins:     []string{"http://localhost:8080"},
-				AllowMethods:     []string{"GET"},
-				AllowHeaders:     []string{"Accept"},
-				ExposeHeaders:    []string{},
-				AllowCredentials: false,
-				MaxAge:           1800,
-			},
-		},
-	}
+func TestCorsMiddleware_AllOrigins(t *testing.T) {
+	h := Middleware([]string{"*"})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			middleware := factory(tt.config)
-			if middleware == nil {
-				t.Fatal("Expected middleware function, got nil")
-			}
-
-			// Test that middleware can be created - detailed config testing in other tests
-		})
-	}
-}
-
-func TestCorsMiddleware_Module(t *testing.T) {
-	module := GetModule()
-
-	if module.Name() != MODULE_NAME {
-		t.Errorf("Expected module name %s, got %s", MODULE_NAME, module.Name())
-	}
-
-	if module.Description() == "" {
-		t.Error("Expected non-empty description")
-	}
-}
-
-func TestCorsMiddleware_ActualRequest(t *testing.T) {
-	// Create middleware with custom config
-	config := map[string]any{
-		"allow_origins":     []string{"http://localhost:3000"},
-		"allow_credentials": true,
-		"expose_headers":    []string{"X-Total-Count"},
-	}
-	middleware := factory(config)
-
-	// Create a test handler
-	testHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		ctx.Response.Message = "Success"
-		return nil
-	}
-
-	// Wrap the handler with middleware
-	wrappedHandler := middleware(testHandler)
-
-	// Create test request with Origin header
-	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("Origin", "http://localhost:3000")
-	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
-
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
-	}
-
-	// Check CORS headers
-	headers := ctx.Response.GetHeaders()
-
-	if headers.Get("Access-Control-Allow-Origin") != "http://localhost:3000" {
-		t.Errorf("Expected Access-Control-Allow-Origin to be 'http://localhost:3000', got '%s'",
-			headers.Get("Access-Control-Allow-Origin"))
-	}
-
-	if headers.Get("Access-Control-Allow-Credentials") != "true" {
-		t.Errorf("Expected Access-Control-Allow-Credentials to be 'true', got '%s'",
-			headers.Get("Access-Control-Allow-Credentials"))
-	}
-
-	if headers.Get("Access-Control-Expose-Headers") != "X-Total-Count" {
-		t.Errorf("Expected Access-Control-Expose-Headers to be 'X-Total-Count', got '%s'",
-			headers.Get("Access-Control-Expose-Headers"))
-	}
-}
-
-func TestCorsMiddleware_PreflightRequest(t *testing.T) {
-	// Create middleware with custom config
-	config := map[string]any{
-		"allow_origins": []string{"*"},
-		"allow_methods": []string{"GET", "POST", "PUT", "DELETE"},
-		"allow_headers": []string{"Content-Type", "Authorization"},
-		"max_age":       7200,
-	}
-	middleware := factory(config)
-
-	// Create a test handler (should not be called for OPTIONS)
-	testHandler := func(ctx *request.Context) error {
-		t.Error("Handler should not be called for OPTIONS request")
-		return nil
-	}
-
-	// Wrap the handler with middleware
-	wrappedHandler := middleware(testHandler)
-
-	// Create preflight OPTIONS request
-	req := httptest.NewRequest("OPTIONS", "/test", nil)
+	// Test GET with Origin
+	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Origin", "http://example.com")
-	req.Header.Set("Access-Control-Request-Method", "POST")
-	req.Header.Set("Access-Control-Request-Headers", "Content-Type")
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
+	ctx := request.NewContext(w, req, nil)
+	h(ctx)
 
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
+	if w.Header().Get("Access-Control-Allow-Origin") != "http://example.com" {
+		t.Errorf("Allow-Origin header not set correctly: %s", w.Header().Get("Access-Control-Allow-Origin"))
 	}
-
-	// Check response status
-	if ctx.Response.StatusCode != 204 {
-		t.Errorf("Expected status code 204, got %d", ctx.Response.StatusCode)
-	}
-
-	// Check CORS headers
-	headers := ctx.Response.GetHeaders()
-
-	if !strings.Contains(headers.Get("Access-Control-Allow-Methods"), "GET") {
-		t.Errorf("Expected Access-Control-Allow-Methods to contain 'GET', got '%s'",
-			headers.Get("Access-Control-Allow-Methods"))
-	}
-
-	if !strings.Contains(headers.Get("Access-Control-Allow-Headers"), "Content-Type") {
-		t.Errorf("Expected Access-Control-Allow-Headers to contain 'Content-Type', got '%s'",
-			headers.Get("Access-Control-Allow-Headers"))
-	}
-
-	if headers.Get("Access-Control-Max-Age") != "7200" {
-		t.Errorf("Expected Access-Control-Max-Age to be '7200', got '%s'",
-			headers.Get("Access-Control-Max-Age"))
+	if w.Header().Get("Access-Control-Allow-Credentials") != "true" {
+		t.Errorf("Allow-Credentials header not set correctly")
 	}
 }
 
-func TestCorsMiddleware_WildcardHeaders(t *testing.T) {
-	// Create middleware with wildcard headers
-	config := map[string]any{
-		"allow_origins": []string{"*"},
-		"allow_headers": []string{"*"},
+func TestCorsMiddleware_AllowedOrigin(t *testing.T) {
+	h := Middleware([]string{"http://allowed.com"})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Origin", "http://allowed.com")
+	w := httptest.NewRecorder()
+	ctx := request.NewContext(w, req, nil)
+	h(ctx)
+
+	if w.Header().Get("Access-Control-Allow-Origin") != "http://allowed.com" {
+		t.Errorf("Allow-Origin header not set correctly for allowed origin")
 	}
-	middleware := factory(config)
+}
 
-	testHandler := func(ctx *request.Context) error {
-		return nil
+func TestCorsMiddleware_DisallowedOrigin(t *testing.T) {
+	h := Middleware([]string{"http://allowed.com"})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Origin", "http://forbidden.com")
+	w := httptest.NewRecorder()
+	ctx := request.NewContext(w, req, nil)
+	h(ctx)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected 403 for forbidden origin, got %d", w.Code)
 	}
+}
 
-	wrappedHandler := middleware(testHandler)
+func TestCorsMiddleware_OPTIONS(t *testing.T) {
+	h := Middleware([]string{"*"})
 
-	// Create preflight OPTIONS request with custom headers
-	req := httptest.NewRequest("OPTIONS", "/test", nil)
+	req := httptest.NewRequest("OPTIONS", "/", nil)
 	req.Header.Set("Origin", "http://example.com")
-	req.Header.Set("Access-Control-Request-Headers", "X-Custom-Header, X-Another-Header")
+	req.Header.Set("Access-Control-Request-Headers", "X-Custom-Header, Authorization")
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
+	ctx := request.NewContext(w, req, nil)
+	h(ctx)
 
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
+	if w.Header().Get("Access-Control-Allow-Origin") != "http://example.com" {
+		t.Errorf("Allow-Origin header not set correctly on OPTIONS")
 	}
-
-	// Check that requested headers are echoed back
-	headers := ctx.Response.GetHeaders()
-	allowHeaders := headers.Get("Access-Control-Allow-Headers")
-
-	if !strings.Contains(allowHeaders, "X-Custom-Header") {
-		t.Errorf("Expected Access-Control-Allow-Headers to contain 'X-Custom-Header', got '%s'", allowHeaders)
+	if w.Header().Get("Access-Control-Allow-Headers") != "X-Custom-Header, Authorization" {
+		t.Errorf("Allow-Headers header not set correctly on OPTIONS: %s", w.Header().Get("Access-Control-Allow-Headers"))
 	}
-}
-
-func TestCorsMiddleware_NoOriginHeader(t *testing.T) {
-	// Create middleware
-	middleware := factory(nil)
-
-	testHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		return nil
+	if w.Header().Get("Access-Control-Allow-Methods") != "GET, POST, PUT, DELETE, OPTIONS" {
+		t.Errorf("Allow-Methods header not set correctly on OPTIONS: %s", w.Header().Get("Access-Control-Allow-Methods"))
 	}
-
-	wrappedHandler := middleware(testHandler)
-
-	// Create request without Origin header
-	req := httptest.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
-
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
-	}
-
-	// Check that no CORS headers are set
-	headers := ctx.Response.GetHeaders()
-
-	if headers.Get("Access-Control-Allow-Origin") != "" {
-		t.Errorf("Expected no Access-Control-Allow-Origin header, got '%s'",
-			headers.Get("Access-Control-Allow-Origin"))
-	}
-}
-
-func TestCorsMiddleware_OriginNotAllowed(t *testing.T) {
-	// Create middleware with specific allowed origins
-	config := map[string]any{
-		"allow_origins": []string{"http://localhost:3000"},
-	}
-	middleware := factory(config)
-
-	testHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		return nil
-	}
-
-	wrappedHandler := middleware(testHandler)
-
-	// Create request with non-allowed origin
-	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("Origin", "http://evil.com")
-	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
-
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
-	}
-
-	// Check that no CORS headers are set
-	headers := ctx.Response.GetHeaders()
-
-	if headers.Get("Access-Control-Allow-Origin") != "" {
-		t.Errorf("Expected no Access-Control-Allow-Origin header for non-allowed origin, got '%s'",
-			headers.Get("Access-Control-Allow-Origin"))
-	}
-}
-
-func TestParseStringSlice(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    any
-		expected []string
-	}{
-		{
-			name:     "string slice",
-			input:    []string{"a", "b", "c"},
-			expected: []string{"a", "b", "c"},
-		},
-		{
-			name:     "any slice",
-			input:    []any{"a", "b", "c"},
-			expected: []string{"a", "b", "c"},
-		},
-		{
-			name:     "comma separated string",
-			input:    "a,b,c",
-			expected: []string{"a", "b", "c"},
-		},
-		{
-			name:     "single string",
-			input:    "single",
-			expected: []string{"single"},
-		},
-		{
-			name:     "comma separated with spaces",
-			input:    "a, b , c",
-			expected: []string{"a", "b", "c"},
-		},
-		{
-			name:     "invalid type",
-			input:    123,
-			expected: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := parseStringSlice(tt.input)
-
-			if len(result) != len(tt.expected) {
-				t.Errorf("Expected length %d, got %d", len(tt.expected), len(result))
-				return
-			}
-
-			for i, v := range result {
-				if v != tt.expected[i] {
-					t.Errorf("Expected %s at index %d, got %s", tt.expected[i], i, v)
-				}
-			}
-		})
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"reflect"
 	"time"
-
-	"github.com/vmihailenco/msgpack/v5"
 )
 
+// Attempt to convert any value to int
+//   - return 0 and nil, if val is nil
+//   - return 0 and error, if conversion failed
 func ToInt(val any) (int, error) {
 	if val == nil {
 		return 0, nil // No content
@@ -38,6 +39,8 @@ func ToInt(val any) (int, error) {
 	return 0, fmt.Errorf("unexpected cast to int: %T", val)
 }
 
+// Attempt to convert any value to float64
+//   - if val is string, try to parse it using t
 func ToFloat64(val any) (float64, error) {
 	if val == nil {
 		return 0, nil // No content
@@ -62,34 +65,26 @@ func ToFloat64(val any) (float64, error) {
 	return 0, fmt.Errorf("unexpected cast to float64: %T", val)
 }
 
-func ToStruct(val any, structOut any) error {
-	if val == nil {
-		return nil // No content
-	}
-
-	data, err := msgpack.Marshal(val)
-	if err != nil {
-		return fmt.Errorf("marshal error: %w", err)
-	}
-
-	if err := msgpack.Unmarshal(data, structOut); err != nil {
-		return fmt.Errorf("unmarshal to struct error: %w", err)
-	}
-
-	return nil
-}
-
+// Attempt to convert any value to time.Time
+//   - return zero time and nil, if val is nil
+//   - if val is string, try to parse it using time.DateTime, time.DateOnly, time.TimeOnly, time.RFC3339, time.RFC3339Nano
+//   - if val is int64 or float64, treat it as Unix timestamp
 func ToTime(val any) (time.Time, error) {
+	if val == nil {
+		return time.Time{}, nil // No content
+	}
 	switch v := val.(type) {
 	case time.Time:
 		return v, nil
 	case string:
 		// Try different time formats
 		formats := []string{
-			time.RFC3339,
-			time.RFC3339Nano,
-			"2006-01-02T15:04:05Z07:00",
-			"2006-01-02 15:04:05",
+			time.DateTime,    // "2006-01-02 15:04:05"
+			time.DateOnly,    // "2006-01-02"
+			time.TimeOnly,    // "15:04:05"
+			time.RFC3339,     // "2006-01-02T15:04:05Z07:00"
+			time.RFC3339Nano, // "2006-01-02T15:04:05.999999999Z07:00"
+
 		}
 		for _, format := range formats {
 			if t, err := time.Parse(format, v); err == nil {
@@ -106,7 +101,12 @@ func ToTime(val any) (time.Time, error) {
 	}
 }
 
-func ToType[T any](val any) (T, error) {
+// Attempt to convert any value to type T
+//   - return zero value of T and nil, if val is nil
+//   - return zero value of T and error, if conversion failed
+//   - support basic types (int, float64, string, bool), struct, pointer to struct, slice of struct
+//   - for struct and slice of struct, use ToStruct for conversion
+func ToType[T any](val any, strict bool) (T, error) {
 	var zero T
 
 	if val == nil {
@@ -137,9 +137,9 @@ func ToType[T any](val any) (T, error) {
 	tType := reflect.TypeOf(zero)
 
 	// handle pointer to struct
-	if tType.Kind() == reflect.Ptr && tType.Elem().Kind() == reflect.Struct {
+	if tType.Kind() == reflect.Pointer && tType.Elem().Kind() == reflect.Struct {
 		ptr := reflect.New(tType.Elem()) // pointer to struct
-		if err := ToStruct(val, ptr.Interface()); err != nil {
+		if err := ToStruct(val, ptr.Interface(), strict); err != nil {
 			return zero, err
 		}
 		return ptr.Interface().(T), nil
@@ -148,7 +148,7 @@ func ToType[T any](val any) (T, error) {
 	// handle struct directly
 	if tType.Kind() == reflect.Struct {
 		ptr := reflect.New(tType) // Create a pointer to the struct type
-		if err := ToStruct(val, ptr.Interface()); err != nil {
+		if err := ToStruct(val, ptr.Interface(), strict); err != nil {
 			return zero, err
 		}
 		// return the dereferenced pointer as the type T
@@ -157,7 +157,7 @@ func ToType[T any](val any) (T, error) {
 
 	if tType.Kind() == reflect.Slice {
 		slicePtr := reflect.New(tType).Interface()
-		if err := ToStruct(val, slicePtr); err != nil {
+		if err := ToStruct(val, slicePtr, strict); err != nil {
 			return zero, err
 		}
 		return reflect.ValueOf(slicePtr).Elem().Interface().(T), nil
@@ -170,6 +170,11 @@ func ToType[T any](val any) (T, error) {
 	return zero, fmt.Errorf("unexpected cast to %T: %T", zero, val)
 }
 
+// Attempt to convert any slice to slice of type T
+//   - return zero value of T and nil, if slice is nil
+//   - return zero value of T and error, if conversion failed
+//   - T must be a slice type
+//   - each element in the input slice must be assignable to the element type of T
 func SliceConvert[T any](slice any) (T, error) {
 	var zero T
 	if slice == nil {
@@ -202,6 +207,7 @@ func SliceConvert[T any](slice any) (T, error) {
 	return result.Interface().(T), nil
 }
 
+// Check if a value is empty
 func IsEmpty(val any) bool {
 	if val == nil {
 		return true
@@ -222,7 +228,7 @@ func IsEmpty(val any) bool {
 		return v.Float() == 0
 	case reflect.Slice, reflect.Map, reflect.Array:
 		return v.Len() == 0
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		return v.IsNil()
 	case reflect.Struct:
 		// Optionally: check if all fields in struct are empty

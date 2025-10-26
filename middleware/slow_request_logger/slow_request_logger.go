@@ -1,160 +1,175 @@
 package slow_request_logger
 
 import (
+	"fmt"
+	"log"
 	"time"
 
-	"github.com/primadi/lokstra/common/json"
-	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/serviceapi"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-const NAME = "slow_request_logger"
-const THRESHOLDKEY = "threshold"
-const DEFAULT_THRESHOLD = 1200 * time.Millisecond // Default threshold for slow requests
+const SLOW_REQUEST_LOGGER_TYPE = "slow_request_logger"
+const PARAMS_THRESHOLD = "threshold"
+const PARAMS_ENABLE_COLORS = "enable_colors"
+const PARAMS_SKIP_PATHS = "skip_paths"
 
 type Config struct {
-	IncludeRequestBody  bool          `json:"include_request_body" yaml:"include_request_body"`
-	IncludeResponseBody bool          `json:"include_response_body" yaml:"include_response_body"`
-	Threshold           time.Duration `json:"threshold" yaml:"threshold"`
+	// Threshold is the minimum duration to consider a request as slow
+	// Requests faster than this will not be logged
+	Threshold time.Duration
+
+	// EnableColors enables colored output for terminal
+	EnableColors bool
+
+	// SkipPaths is a list of paths to skip logging
+	// Example: ["/health", "/metrics"]
+	SkipPaths []string
+
+	// CustomLogger is a custom logging function
+	// If nil, uses default log.Printf
+	CustomLogger func(format string, args ...any)
 }
 
-type SlowRequestLogger struct{}
-
-// Description implements registration.Module.
-func (r *SlowRequestLogger) Description() string {
-	return "Logs slow requests and their metadata."
-}
-
-var logger serviceapi.Logger
-
-// Register implements registration.Module.
-func (r *SlowRequestLogger) Register(regCtx registration.Context) error {
-	if svc, err := regCtx.GetService("logger"); err == nil {
-		logger = svc.(serviceapi.Logger)
+func DefaultConfig() *Config {
+	return &Config{
+		Threshold:    500 * time.Millisecond, // 500ms default
+		EnableColors: true,
+		SkipPaths:    []string{},
+		CustomLogger: nil,
 	}
-	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
 }
 
-// Name implements registration.Module.
-func (r *SlowRequestLogger) Name() string {
-	return NAME
+// ANSI color codes
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorYellow = "\033[33m"
+	colorCyan   = "\033[36m"
+)
+
+// logs only slow requests that exceed the threshold
+func Middleware(cfg *Config) request.HandlerFunc {
+	defConfig := DefaultConfig()
+	if cfg.Threshold == 0 {
+		cfg.Threshold = defConfig.Threshold
+	}
+	if cfg.SkipPaths == nil {
+		cfg.SkipPaths = defConfig.SkipPaths
+	}
+	if cfg.CustomLogger == nil {
+		cfg.CustomLogger = log.Printf
+	}
+
+	return request.HandlerFunc(func(c *request.Context) error {
+		// Check if path should be skipped
+		requestPath := c.R.URL.Path
+		for _, skipPath := range cfg.SkipPaths {
+			if requestPath == skipPath {
+				return c.Next()
+			}
+		}
+
+		// Record start time
+		start := time.Now()
+
+		// Call next handler
+		err := c.Next()
+
+		// Calculate duration
+		duration := time.Since(start)
+
+		// Only log if request is slow
+		if duration >= cfg.Threshold {
+			// Get status code from writer wrapper
+			statusCode := c.W.StatusCode()
+			if statusCode == 0 {
+				statusCode = 200 // Default if not set
+			}
+
+			// Determine color based on duration severity
+			durationColor := colorYellow
+			if duration >= cfg.Threshold*2 {
+				durationColor = colorRed // Extra slow
+			}
+
+			// Format and log slow request
+			if cfg.EnableColors {
+				msg := fmt.Sprintf("%s[SLOW REQUEST]%s %s%s%s %s - Status: %d - Duration: %s%s%s (threshold: %s)",
+					colorRed,
+					colorReset,
+					colorCyan,
+					c.R.Method,
+					colorReset,
+					c.R.URL.Path,
+					statusCode,
+					durationColor,
+					formatDuration(duration),
+					colorReset,
+					formatDuration(cfg.Threshold),
+				)
+				cfg.CustomLogger("%s", msg)
+			} else {
+				msg := fmt.Sprintf("[SLOW REQUEST] [%s] %s - Status: %d - Duration: %s (threshold: %s)",
+					c.R.Method,
+					c.R.URL.Path,
+					statusCode,
+					formatDuration(duration),
+					formatDuration(cfg.Threshold),
+				)
+				cfg.CustomLogger("%s", msg)
+			}
+		}
+
+		return err
+	})
 }
 
-func factory(config any) midware.Func {
+func MiddlewareFactory(params map[string]any) request.HandlerFunc {
+	defConfig := DefaultConfig()
+	if params == nil {
+		return Middleware(defConfig)
+	}
+
+	// Handle threshold - could be int (milliseconds) or duration string
+	threshold := defConfig.Threshold
+	if thresholdVal, ok := params[PARAMS_THRESHOLD]; ok {
+		switch v := thresholdVal.(type) {
+		case int:
+			threshold = time.Duration(v) * time.Millisecond
+		case int64:
+			threshold = time.Duration(v) * time.Millisecond
+		case time.Duration:
+			threshold = v
+		case string:
+			if d, err := time.ParseDuration(v); err == nil {
+				threshold = d
+			}
+		}
+	}
+
 	cfg := &Config{
-		IncludeRequestBody:  false,
-		IncludeResponseBody: false,
-		Threshold:           DEFAULT_THRESHOLD,
+		Threshold:    threshold,
+		EnableColors: utils.GetValueFromMap(params, PARAMS_ENABLE_COLORS, defConfig.EnableColors),
+		SkipPaths:    utils.GetValueFromMap(params, PARAMS_SKIP_PATHS, defConfig.SkipPaths),
+		CustomLogger: nil, // Cannot be set via params
 	}
-
-	switch c := config.(type) {
-	case map[string]any:
-		if thany, ok := c[THRESHOLDKEY]; ok {
-			if th, ok := thany.(string); ok {
-				if dur, err := time.ParseDuration(th); err == nil {
-					cfg.Threshold = dur
-				}
-			}
-		}
-		if val, ok := c["include_request_body"]; ok {
-			if b, ok := val.(bool); ok {
-				cfg.IncludeRequestBody = b
-			}
-		}
-		if val, ok := c["include_response_body"]; ok {
-			if b, ok := val.(bool); ok {
-				cfg.IncludeResponseBody = b
-			}
-		}
-	case string:
-		if dur, err := time.ParseDuration(c); err == nil {
-			cfg.Threshold = dur
-		}
-	case *Config:
-		cfg = c
-	case Config:
-		cfg = &c
-	}
-
-	return func(next request.HandlerFunc) request.HandlerFunc {
-		return func(ctx *request.Context) error {
-			startTime := time.Now()
-			defer func() {
-				duration := time.Since(startTime)
-
-				if duration >= cfg.Threshold && logger != nil {
-					// Prepare base log fields
-					logFields := serviceapi.LogFields{
-						"method":     ctx.Request.Method,
-						"path":       ctx.Request.URL.Path,
-						"query":      ctx.Request.URL.RawQuery,
-						"remote_ip":  ctx.Request.RemoteAddr,
-						"user_agent": ctx.Request.Header.Get("User-Agent"),
-					}
-
-					// Include request body if configured
-					if cfg.IncludeRequestBody {
-						bodyBytes, err := ctx.GetRawRequestBody()
-						if err == nil && len(bodyBytes) > 0 {
-							// Try to parse as JSON for better logging
-							var jsonBody any
-							if err := json.Unmarshal(bodyBytes, &jsonBody); err == nil {
-								logFields["request_body"] = jsonBody
-							} else {
-								// If not JSON, log as string (truncate if too long)
-								bodyStr := string(bodyBytes)
-								if len(bodyStr) > 1000 {
-									bodyStr = bodyStr[:1000] + "... (truncated)"
-								}
-								logFields["request_body"] = bodyStr
-							}
-						}
-					}
-
-					// Include response body if configured
-					if cfg.IncludeResponseBody {
-						responseBody, err := ctx.GetRawResponseBody()
-						if err == nil && len(responseBody) > 0 {
-							var jsonBody any
-							if err := json.Unmarshal(responseBody, &jsonBody); err == nil {
-								logFields["response_body"] = jsonBody
-							} else {
-								bodyStr := string(responseBody)
-								if len(bodyStr) > 1000 {
-									bodyStr = bodyStr[:1000] + "... (truncated)"
-								}
-								logFields["response_body"] = bodyStr
-							}
-						}
-					}
-					logFields["duration"] = duration.String()
-					logFields["status"] = ctx.Response.StatusCode
-
-					logger.WithFields(logFields).Infof("Slow request detected")
-				}
-			}()
-
-			// Call the next handler in the chain
-			return next(ctx)
-		}
-	}
+	return Middleware(cfg)
 }
 
-var _ registration.Module = (*SlowRequestLogger)(nil)
-
-// return SlowRequestLogger with name "lokstra.slow_request_logger"
-func GetModule() registration.Module {
-	return &SlowRequestLogger{}
+func Register() {
+	lokstra_registry.RegisterMiddlewareFactory(SLOW_REQUEST_LOGGER_TYPE, MiddlewareFactory,
+		lokstra_registry.AllowOverride(true))
 }
 
-// Preferred way to get slow request logger middleware execution
-func GetMidware(cfg *Config) *midware.Execution {
-	return &midware.Execution{
-		Name:         NAME,
-		Config:       cfg,
-		MiddlewareFn: factory(cfg),
-		Priority:     20,
+// formatDuration formats duration for display
+func formatDuration(d time.Duration) string {
+	if d < time.Millisecond {
+		return d.Round(time.Microsecond).String()
 	}
+	if d < time.Second {
+		return d.Round(time.Millisecond).String()
+	}
+	return d.Round(10 * time.Millisecond).String()
 }

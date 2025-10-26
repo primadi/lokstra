@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/serviceapi"
 
 	"github.com/jackc/pgx/v5"
@@ -18,7 +17,6 @@ type pgxPostgresPool struct {
 	pool *pgxpool.Pool
 }
 
-var _ service.Service = (*pgxPostgresPool)(nil)
 var _ serviceapi.DbPool = (*pgxPostgresPool)(nil)
 
 func (p *pgxPostgresPool) GetSetting(key string) any {
@@ -77,6 +75,12 @@ func (p *pgxPostgresPool) AcquireMultiTenant(ctx context.Context, schema string,
 
 type pgxConnWrapper struct {
 	conn *pgxpool.Conn
+}
+
+// Shutdown implements serviceapi.DbConn.
+func (c *pgxConnWrapper) Shutdown() error {
+	c.conn.Release()
+	return nil
 }
 
 // Ping implements serviceapi.DbConn.

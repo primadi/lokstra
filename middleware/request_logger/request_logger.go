@@ -1,169 +1,138 @@
 package request_logger
 
 import (
+	"fmt"
+	"log"
 	"time"
 
-	"github.com/primadi/lokstra/common/json"
-
-	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/serviceapi"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-const NAME = "request_logger"
+const REQUEST_LOGGER_TYPE = "request_logger"
+const PARAMS_ENABLE_COLORS = "enable_colors"
+const PARAMS_SKIP_PATHS = "skip_paths"
 
-// Config holds the configuration for request logger middleware
 type Config struct {
-	IncludeRequestBody  bool `json:"include_request_body" yaml:"include_request_body"`
-	IncludeResponseBody bool `json:"include_response_body" yaml:"include_response_body"`
+	// EnableColors enables colored output for terminal
+	EnableColors bool
+
+	// SkipPaths is a list of paths to skip logging
+	// Example: ["/health", "/metrics"]
+	SkipPaths []string
+
+	// CustomLogger is a custom logging function
+	// If nil, uses default log.Printf
+	CustomLogger func(format string, args ...any)
 }
 
-type RequestLogger struct{}
-
-// Description implements registration.Module.
-func (r *RequestLogger) Description() string {
-	return "Logs incoming requests and their metadata with optional request/response body logging."
-}
-
-var logger serviceapi.Logger
-
-// Register implements registration.Module.
-func (r *RequestLogger) Register(regCtx registration.Context) error {
-	if svc, err := regCtx.GetService("logger"); err == nil {
-		logger = svc.(serviceapi.Logger)
+func DefaultConfig() *Config {
+	return &Config{
+		EnableColors: true,
+		SkipPaths:    []string{},
+		CustomLogger: nil,
 	}
-	return regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 20)
 }
 
-// Name implements registration.Module.
-func (r *RequestLogger) Name() string {
-	return NAME
+// ANSI color codes
+const (
+	colorReset = "\033[0m"
+	// colorRed    = "\033[31m"
+	// colorGreen  = "\033[32m"
+	// colorYellow = "\033[33m"
+	// colorBlue   = "\033[34m"
+	colorCyan = "\033[36m"
+	colorGray = "\033[90m"
+)
+
+// logs all incoming HTTP requests
+func Middleware(cfg *Config) request.HandlerFunc {
+	defConfig := DefaultConfig()
+	if cfg.SkipPaths == nil {
+		cfg.SkipPaths = defConfig.SkipPaths
+	}
+	if cfg.CustomLogger == nil {
+		cfg.CustomLogger = log.Printf
+	}
+
+	return request.HandlerFunc(func(c *request.Context) error {
+		// Check if path should be skipped
+		requestPath := c.R.URL.Path
+		for _, skipPath := range cfg.SkipPaths {
+			if requestPath == skipPath {
+				return c.Next()
+			}
+		}
+
+		// Record start time
+		start := time.Now()
+
+		// Call next handler
+		err := c.Next()
+
+		// Calculate duration
+		duration := time.Since(start)
+
+		// Get status code from writer wrapper
+		statusCode := c.W.StatusCode()
+		if statusCode == 0 {
+			statusCode = 200 // Default if not set
+		}
+
+		// Format and log request
+		if cfg.EnableColors {
+			msg := fmt.Sprintf("%s%s%s %s %s%d %s%s",
+				colorCyan,
+				c.R.Method,
+				colorReset,
+				c.R.URL.Path,
+				colorGray,
+				statusCode,
+				formatDuration(duration),
+				colorReset,
+			)
+			cfg.CustomLogger("%s", msg)
+		} else {
+			msg := fmt.Sprintf("[%s] %s - Status: %d - Duration: %s",
+				c.R.Method,
+				c.R.URL.Path,
+				statusCode,
+				formatDuration(duration),
+			)
+			cfg.CustomLogger("%s", msg)
+		}
+
+		return err
+	})
 }
 
-func factory(config any) midware.Func {
-	// Parse configuration
+func MiddlewareFactory(params map[string]any) request.HandlerFunc {
+	defConfig := DefaultConfig()
+	if params == nil {
+		return Middleware(defConfig)
+	}
+
 	cfg := &Config{
-		IncludeRequestBody:  false,
-		IncludeResponseBody: false,
+		EnableColors: utils.GetValueFromMap(params, PARAMS_ENABLE_COLORS, defConfig.EnableColors),
+		SkipPaths:    utils.GetValueFromMap(params, PARAMS_SKIP_PATHS, defConfig.SkipPaths),
+		CustomLogger: nil, // Cannot be set via params
 	}
-
-	if config != nil {
-		switch v := config.(type) {
-		case map[string]any:
-			if val, ok := v["include_request_body"]; ok {
-				if b, ok := val.(bool); ok {
-					cfg.IncludeRequestBody = b
-				}
-			}
-			if val, ok := v["include_response_body"]; ok {
-				if b, ok := val.(bool); ok {
-					cfg.IncludeResponseBody = b
-				}
-			}
-		case *Config:
-			cfg = v
-		case Config:
-			cfg = &v
-		}
-	}
-
-	return func(next request.HandlerFunc) request.HandlerFunc {
-		return func(ctx *request.Context) error {
-			// Prepare base log fields
-			logFields := serviceapi.LogFields{
-				"method":     ctx.Request.Method,
-				"path":       ctx.Request.URL.Path,
-				"query":      ctx.Request.URL.RawQuery,
-				"remote_ip":  ctx.Request.RemoteAddr,
-				"user_agent": ctx.Request.Header.Get("User-Agent"),
-			}
-
-			// Include request body if configured
-			if cfg.IncludeRequestBody {
-				bodyBytes, err := ctx.GetRawRequestBody()
-				if err == nil && len(bodyBytes) > 0 {
-					// Try to parse as JSON for better logging
-					var jsonBody any
-					if err := json.Unmarshal(bodyBytes, &jsonBody); err == nil {
-						logFields["request_body"] = jsonBody
-					} else {
-						// If not JSON, log as string (truncate if too long)
-						bodyStr := string(bodyBytes)
-						if len(bodyStr) > 1000 {
-							bodyStr = bodyStr[:1000] + "... (truncated)"
-						}
-						logFields["request_body"] = bodyStr
-					}
-				}
-			}
-
-			// Check if logger is available
-			if logger == nil {
-				// Skip logging if no logger service is available - fail silently
-				return next(ctx)
-			}
-
-			loggerWithFields := logger.WithFields(logFields)
-			loggerWithFields.Infof("Incoming request")
-
-			startTime := time.Now()
-
-			// Execute the request
-			err := next(ctx)
-
-			// Log completion
-			duration := time.Since(startTime)
-			completionFields := serviceapi.LogFields{
-				"duration":    duration.String(),
-				"duration_ms": duration.Milliseconds(),
-				"status":      ctx.Response.StatusCode,
-			}
-
-			// Include response body if configured
-			if cfg.IncludeResponseBody {
-				responseBody, err := ctx.GetRawResponseBody()
-				if err == nil && len(responseBody) > 0 {
-					var jsonBody any
-					if err := json.Unmarshal(responseBody, &jsonBody); err == nil {
-						completionFields["response_body"] = jsonBody
-					} else {
-						bodyStr := string(responseBody)
-						if len(bodyStr) > 1000 {
-							bodyStr = bodyStr[:1000] + "... (truncated)"
-						}
-						completionFields["response_body"] = bodyStr
-					}
-				}
-			}
-
-			// Log appropriate level based on status code
-			completionLogger := loggerWithFields.WithFields(completionFields)
-			if ctx.Response.StatusCode >= 500 {
-				completionLogger.Errorf("Request completed with server error")
-			} else if ctx.Response.StatusCode >= 400 {
-				completionLogger.Warnf("Request completed with client error")
-			} else {
-				completionLogger.Infof("Request completed successfully")
-			}
-
-			return err
-		}
-	}
+	return Middleware(cfg)
 }
 
-var _ registration.Module = (*RequestLogger)(nil)
-
-func GetModule() registration.Module {
-	return &RequestLogger{}
+func Register() {
+	lokstra_registry.RegisterMiddlewareFactory(REQUEST_LOGGER_TYPE, MiddlewareFactory,
+		lokstra_registry.AllowOverride(true))
 }
 
-// Preferred way to get request logger middleware execution
-func GetMidware(config *Config) *midware.Execution {
-	return &midware.Execution{
-		Name:         NAME,
-		Config:       config,
-		MiddlewareFn: factory(config),
-		Priority:     20,
+// formatDuration formats duration for display
+func formatDuration(d time.Duration) string {
+	if d < time.Millisecond {
+		return d.Round(time.Microsecond).String()
 	}
+	if d < time.Second {
+		return d.Round(time.Millisecond).String()
+	}
+	return d.Round(10 * time.Millisecond).String()
 }

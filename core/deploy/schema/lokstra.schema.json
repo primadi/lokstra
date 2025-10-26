@@ -1,0 +1,310 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lokstra.dev/schemas/deploy.json",
+  "title": "Lokstra Deployment Configuration",
+  "description": "Schema for Lokstra deployment configuration files",
+  "type": "object",
+  "properties": {
+    "configs": {
+      "type": "object",
+      "description": "Global configuration definitions",
+      "patternProperties": {
+        "^[A-Z][A-Z0-9_]*$": {
+          "description": "Configuration value (string, number, boolean, or object)",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "object" },
+            { "type": "array" }
+          ]
+        }
+      }
+    },
+    "middleware-definitions": {
+      "type": "object",
+      "description": "Middleware definitions with types and configurations",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Middleware factory type identifier",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "config": {
+              "type": "object",
+              "description": "Middleware-specific configuration",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "service-definitions": {
+      "type": "object",
+      "description": "Service definitions",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Service factory type identifier",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "depends-on": {
+              "type": "array",
+              "description": "List of service dependencies",
+              "items": {
+                "type": "string",
+                "description": "Dependency in format 'paramName:serviceName' or just 'serviceName'",
+                "pattern": "^([a-zA-Z][a-zA-Z0-9]*:)?[a-z][a-z0-9-]*$"
+              }
+            },
+            "config": {
+              "type": "object",
+              "description": "Service-specific configuration",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "routers": {
+      "type": "object",
+      "description": "Router definitions (auto-generated from services)",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "required": ["service"],
+          "properties": {
+            "service": {
+              "type": "string",
+              "description": "Service name to create router from",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "convention": {
+              "type": "string",
+              "description": "Convention type (rest, rpc, graphql)",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "resource": {
+              "type": "string",
+              "description": "Singular form of resource name (e.g., 'user')",
+              "pattern": "^[a-z][a-z-]*$"
+            },
+            "resource-plural": {
+              "type": "string",
+              "description": "Plural form of resource name (e.g., 'users')",
+              "pattern": "^[a-z][a-z-]*$"
+            },
+            "overrides": {
+              "type": "string",
+              "description": "Reference to router-overrides definition name",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "router-overrides": {
+      "type": "object",
+      "description": "Router override definitions",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "properties": {
+            "path-prefix": {
+              "type": "string",
+              "description": "Path prefix for all routes (e.g., '/api/v1')"
+            },
+            "middlewares": {
+              "type": "array",
+              "description": "Router-level middleware names",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              }
+            },
+            "hidden": {
+              "type": "array",
+              "description": "Method names to hide from router",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][a-zA-Z0-9]*$"
+              }
+            },
+            "custom": {
+              "type": "array",
+              "description": "Custom route definitions",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Method name",
+                    "pattern": "^[A-Z][a-zA-Z0-9]*$"
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method override (GET, POST, PUT, DELETE, PATCH)",
+                    "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path override (e.g., '/custom/{id}')"
+                  },
+                  "middlewares": {
+                    "type": "array",
+                    "description": "Route-specific middleware names",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9-]*$"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "external-service-definitions": {
+      "type": "object",
+      "description": "External service definitions (services outside this deployment). For external services, you typically need to override everything since their API structure may differ from internal conventions.",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "required": ["url"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Base URL of external service",
+              "pattern": "^https?://"
+            },
+            "resource": {
+              "type": "string",
+              "description": "Resource name (singular) - Override of RegisterServiceType metadata",
+              "pattern": "^[a-z][a-z-]*$"
+            },
+            "resource-plural": {
+              "type": "string",
+              "description": "Plural form of resource name - Override",
+              "pattern": "^[a-z][a-z-]*$"
+            },
+            "convention": {
+              "type": "string",
+              "description": "Convention type (rest, rpc, graphql) - Override of RegisterServiceType metadata",
+              "pattern": "^[a-z][a-z-]*$"
+            },
+            "overrides": {
+              "type": "string",
+              "description": "Reference to router-overrides definition for full path customization",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "deployments": {
+      "type": "object",
+      "description": "Deployment configurations",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "properties": {
+            "config-overrides": {
+              "type": "object",
+              "description": "Configuration overrides for this deployment",
+              "additionalProperties": true
+            },
+            "servers": {
+              "type": "object",
+              "description": "Server definitions",
+              "patternProperties": {
+                "^[a-z][a-z0-9-]*$": {
+                  "type": "object",
+                  "required": ["base-url"],
+                  "properties": {
+                    "base-url": {
+                      "type": "string",
+                      "description": "Server base URL",
+                      "pattern": "^https?://"
+                    },
+                    "apps": {
+                      "type": "array",
+                      "description": "Applications on this server (optional if using shorthand fields)",
+                      "items": {
+                        "type": "object",
+                        "required": ["addr"],
+                        "properties": {
+                          "addr": {
+                            "type": "string",
+                            "description": "Application address (e.g., ':8080', '127.0.0.1:8080', 'unix:/tmp/app.sock')",
+                            "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
+                          },
+                          "routers": {
+                            "type": "array",
+                            "description": "Routers to include in this app",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9-]*$"
+                            }
+                          },
+                          "published-services": {
+                            "type": "array",
+                            "description": "Services to auto-generate routers for",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9-]*$"
+                            }
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "addr": {
+                      "type": "string",
+                      "description": "Shorthand: Application address (creates new app prepended to apps array)",
+                      "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
+                    },
+                    "routers": {
+                      "type": "array",
+                      "description": "Shorthand: Routers for the shorthand app",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9-]*$"
+                      }
+                    },
+                    "published-services": {
+                      "type": "array",
+                      "description": "Shorthand: Services to auto-generate routers for in the shorthand app",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9-]*$"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

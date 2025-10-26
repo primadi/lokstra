@@ -1,0 +1,6 @@
+# Test invalid config - invalid baseUrl format
+servers:
+  - name: test-server
+    baseUrl: not-a-valid-url
+    apps:
+      - addr: :8080

@@ -1,0 +1,473 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lokstra Configuration Schema",
+  "description": "Schema for Lokstra framework YAML configuration files",
+  "type": "object",
+  "properties": {
+    "configs": {
+      "type": "array",
+      "description": "General configuration key-value pairs",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Configuration key name",
+            "minLength": 1
+          },
+          "value": {
+            "description": "Configuration value (can be string, number, bool, object, etc.)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "services": {
+      "oneOf": [
+        {
+          "type": "array",
+          "description": "Simple mode: Flat array of service configurations",
+          "items": { "$ref": "#/definitions/service" }
+        },
+        {
+          "type": "object",
+          "description": "Layered mode: Services grouped by layer name. Each layer can only depend on previous layers.",
+          "minProperties": 1,
+          "patternProperties": {
+            ".*": {
+              "type": "array",
+              "description": "Services in this layer",
+              "items": { "$ref": "#/definitions/service-layered" },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "examples": [
+            {
+              "infrastructure": [
+                { "name": "db", "type": "Database" }
+              ],
+              "repository": [
+                { "name": "user-repo", "type": "UserRepository", "depends-on": ["db"], "config": { "db_service": "db" } }
+              ],
+              "business": [
+                { "name": "user-service", "type": "UserService", "depends-on": ["user-repo"], "config": { "repo_service": "user-repo" } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "middlewares": {
+      "type": "array",
+      "description": "Middleware configurations",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Middleware name",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "description": "Middleware type, if empty same as name"
+          },
+          "enable": {
+            "type": "boolean",
+            "description": "Whether the middleware is enabled (default: true)",
+            "default": true
+          },
+          "config": {
+            "type": "object",
+            "description": "Middleware-specific configuration",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "routers": {
+      "type": "array",
+      "description": "Router configurations (independent of servers)",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Router name",
+            "minLength": 1
+          },
+          "path-prefix": {
+            "type": "string",
+            "description": "Path prefix for this router (e.g., /api/v1, /admin)",
+            "pattern": "^/[a-zA-Z0-9/_-]*$",
+            "examples": ["/api/v1", "/admin", "/public"]
+          },
+          "middlewares": {
+            "type": "array",
+            "description": "Middleware names to apply to this router",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "servers": {
+      "type": "array",
+      "description": "Server configurations",
+      "items": {
+        "type": "object",
+        "required": ["name", "apps"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Server name",
+            "minLength": 1
+          },
+          "base-url": {
+            "type": "string",
+            "description": "Base URL of the server (default: http://localhost). Supports plain URLs and environment variable placeholders: ${KEY}, ${KEY:default}, ${@RESOLVER:KEY}, ${@RESOLVER:KEY:default}. Use @ prefix for custom resolvers (AWS, VAULT, etc.).",
+            "pattern": "^([A-Za-z][A-Za-z0-9+.-]*://[^\\s]+|\\$\\{(@[A-Za-z_][A-Za-z0-9_]*:)?[A-Za-z_][A-Za-z0-9_]*(:[^}]*)?\\})$",
+            "examples": [
+              "http://localhost",
+              "https://api.example.com",
+              "unix:///var/run/app.sock",
+              "${BASE_URL}",
+              "${BASE_URL:http://localhost}",
+              "${BASE_URL:http://localhost:8080}",
+              "${API_URL:https://api.example.com/v1}",
+              "${@ENV:BASE_URL}",
+              "${@ENV:BASE_URL:http://localhost}",
+              "${@AWS:base-url-secret}",
+              "${@AWS:base-url-secret:http://fallback}",
+              "${@VAULT:path/to/url:https://default.com}"
+            ]
+          },
+          "deployment-id": {
+            "type": "string",
+            "description": "Deployment ID for grouping servers"
+          },
+          "apps": {
+            "type": "array",
+            "description": "Applications within this server",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["addr"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "App name (auto-generated if not provided)"
+                },
+                "addr": {
+                  "type": "string",
+                  "description": "Listen address (e.g., :8080, localhost:3000)",
+                  "minLength": 1
+                },
+                "listener-type": {
+                  "type": "string",
+                  "description": "Listener type (default: default)",
+                  "default": "default"
+                },
+                "routers": {
+                  "type": "array",
+                  "description": "Router names to mount on this app",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "services": {
+                  "type": "array",
+                  "description": "Service names hosted by this app (for auto local/remote detection)",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "reverse-proxies": {
+                  "type": "array",
+                  "description": "Reverse proxy configurations for this app",
+                  "items": {
+                    "type": "object",
+                    "required": ["prefix", "target"],
+                    "properties": {
+                      "prefix": {
+                        "type": "string",
+                        "description": "Path prefix to match for proxying",
+                        "pattern": "^/[a-zA-Z0-9/_-]*$",
+                        "minLength": 1
+                      },
+                      "target": {
+                        "type": "string",
+                        "description": "Target URL to proxy requests to",
+                        "minLength": 1
+                      },
+                      "strip-prefix": {
+                        "type": "boolean",
+                        "description": "Whether to strip the matched path prefix before forwarding",
+                        "default": false
+                      },
+                      "rewrite": {
+                        "type": "object",
+                        "description": "Path rewrite rules",
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "description": "Pattern to match in path"
+                          },
+                          "to": {
+                            "type": "string",
+                            "description": "Replacement pattern"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+
+
+
+
+  "definitions": {
+    "dbpool_pg": {
+      "$id": "dbpool_pg",
+      "type": "object",
+      "properties": {
+        "dsn": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": ["string", "integer"] },
+        "database": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "min_conns": { "type": ["integer", "string"] },
+        "max_conns": { "type": ["integer", "string"] },
+        "max_idle_time": { "type": "string" },
+        "max_lifetime": { "type": "string" },
+        "sslmode": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "dsn": { "not": { "minLength": 1 } }
+            },
+            "required": []
+          },
+          "then": {
+            "required": ["host", "port", "database"]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+
+    "service": {
+      "$id": "service",
+      "type": "object",
+      "required": ["name"],
+      "description": "Service configuration (simple mode)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Service name",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Service type, if empty same as name"
+        },
+        "enable": {
+          "type": "boolean",
+          "description": "Whether the service is enabled (default: true)",
+          "default": true
+        },
+        "depends-on": {
+          "type": "array",
+          "description": "Services this service depends on (for dependency injection)",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "config": {
+          "type": "object",
+          "description": "Service-specific configuration",
+          "additionalProperties": true
+        },
+        "auto-router": {
+          "type": "object",
+          "description": "Auto-router configuration for generating HTTP routes from service",
+          "properties": {
+            "convention": {
+              "type": "string",
+              "description": "Router convention (e.g., rest, rpc, graphql)",
+              "default": "rest",
+              "examples": ["rest", "rpc", "graphql"]
+            },
+            "path-prefix": {
+              "type": "string",
+              "description": "Path prefix for this service's routes",
+              "pattern": "^/[a-zA-Z0-9/_-]*$",
+              "examples": ["/api/v1", "/admin", "/public"]
+            },
+            "resource-name": {
+              "type": "string",
+              "description": "Resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["user", "order", "product"]
+            },
+            "plural-resource-name": {
+              "type": "string",
+              "description": "Plural resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["users", "orders", "products"]
+            },            
+            "routes": {
+              "type": "array",
+              "description": "Route overrides for specific methods",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Method/function name to override",
+                    "minLength": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method override",
+                    "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path override (relative to path-prefix)",
+                    "pattern": "^/[a-zA-Z0-9/_{}:-]*$"
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "service-layered": {
+      "$id": "service-layered",
+      "type": "object",
+      "required": ["name"],
+      "description": "Service configuration (layered mode with depends-on)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Service name",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Service type, if empty same as name"
+        },
+        "enable": {
+          "type": "boolean",
+          "description": "Whether the service is enabled (default: true)",
+          "default": true
+        },
+        "depends-on": {
+          "type": "array",
+          "description": "Services this service depends on (must be from previous layers or simple services). All dependencies must be used in config.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "examples": [["db", "cache"], ["user-repo"]]
+        },
+        "config": {
+          "type": "object",
+          "description": "Service-specific configuration. Values matching service names must be in depends-on.",
+          "additionalProperties": true
+        },
+        "auto-router": {
+          "type": "object",
+          "description": "Auto-router configuration for generating HTTP routes from service",
+          "properties": {
+            "convention": {
+              "type": "string",
+              "description": "Router convention (e.g., rest, rpc, graphql)",
+              "default": "rest",
+              "examples": ["rest", "rpc", "graphql"]
+            },
+            "path-prefix": {
+              "type": "string",
+              "description": "Path prefix for this service's routes",
+              "pattern": "^/[a-zA-Z0-9/_-]*$",
+              "examples": ["/api/v1", "/admin", "/public"]
+            },
+            "resource-name": {
+              "type": "string",
+              "description": "Resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["user", "order", "product"]
+            },
+            "plural-resource-name": {
+              "type": "string",
+              "description": "Plural resource name for convention-based routing",
+              "minLength": 1,
+              "examples": ["users", "orders", "products"]
+            },
+            "routes": {
+              "type": "array",
+              "description": "Route overrides for specific methods",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Method/function name to override",
+                    "minLength": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method override",
+                    "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path override (relative to path-prefix)",
+                    "pattern": "^/[a-zA-Z0-9/_{}:-]*$"
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

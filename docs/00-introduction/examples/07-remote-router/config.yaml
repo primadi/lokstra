@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# ========================================
+# Example 07 - Remote Router
+# ========================================
+#
+# Demonstrates:
+#   - proxy.Router for quick API access
+#   - No service wrapper needed
+#   - Direct HTTP calls to external API
+#   - Simple URL config (no router-definitions needed)
+
+# ========================================
+# Service Definitions
+# ========================================
+
+service-definitions:
+  # Weather service - Uses proxy.Router for quick API calls
+  weather-service:
+    type: weather-service-factory
+    config:
+      weather-api-url: "http://localhost:9001"  # Direct URL config
+
+# ========================================
+# Deployments
+# ========================================
+
+deployments:
+  app:
+    servers:
+      api-server:
+        base-url: "http://localhost"
+        addr: ":3001"
+        published-services:
+          - weather-service  # Exposes weather reports

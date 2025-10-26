@@ -6,282 +6,176 @@ import (
 	"testing"
 
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/serviceapi"
+	"github.com/primadi/lokstra/core/response/api_formatter"
+	"github.com/primadi/lokstra/core/router"
 )
 
-// mockLogger implements serviceapi.Logger for testing
-type mockLogger struct{}
-
-func (m *mockLogger) Debugf(msg string, v ...any)                              {}
-func (m *mockLogger) Infof(msg string, v ...any)                               {}
-func (m *mockLogger) Warnf(msg string, v ...any)                               {}
-func (m *mockLogger) Errorf(msg string, v ...any)                              {}
-func (m *mockLogger) Fatalf(msg string, v ...any)                              {}
-func (m *mockLogger) GetLogLevel() serviceapi.LogLevel                         { return serviceapi.LogLevelInfo }
-func (m *mockLogger) SetLogLevel(level serviceapi.LogLevel)                    {}
-func (m *mockLogger) WithField(key string, value any) serviceapi.Logger        { return m }
-func (m *mockLogger) WithFields(fields serviceapi.LogFields) serviceapi.Logger { return m }
-func (m *mockLogger) SetFormat(format string)                                  {}
-func (m *mockLogger) SetOutput(output string)                                  {}
-
-var Logger serviceapi.Logger
-
-func setupLogger() {
-	// Set a mock logger for testing
-	Logger = &mockLogger{}
-}
-
-func TestConfig_Parsing(t *testing.T) {
-	testCases := []struct {
-		name     string
-		config   any
-		expected bool
+func TestRecovery(t *testing.T) {
+	tests := []struct {
+		name             string
+		config           *Config
+		panicValue       any
+		expectStatus     int
+		expectStackTrace bool
 	}{
 		{
-			name:     "nil config - default to true",
-			config:   nil,
-			expected: true,
-		},
-		{
-			name: "map config with enable_stack_trace true",
-			config: map[string]any{
-				"enable_stack_trace": true,
-			},
-			expected: true,
-		},
-		{
-			name: "map config with enable_stack_trace false",
-			config: map[string]any{
-				"enable_stack_trace": false,
-			},
-			expected: false,
-		},
-		{
-			name: "struct config",
+			name: "recover from string panic",
 			config: &Config{
 				EnableStackTrace: false,
+				EnableLogging:    false,
 			},
-			expected: false,
+			panicValue:       "something went wrong",
+			expectStatus:     500,
+			expectStackTrace: false,
 		},
 		{
-			name: "struct value config",
-			config: Config{
+			name: "recover with stack trace enabled (logged only)",
+			config: &Config{
 				EnableStackTrace: true,
+				EnableLogging:    true, // Stack trace logged to console, not in response
 			},
-			expected: true,
+			panicValue:       "error with trace",
+			expectStatus:     500,
+			expectStackTrace: false, // Stack trace logged, not returned in response
+		},
+		{
+			name: "recover from nil panic",
+			config: &Config{
+				EnableStackTrace: false,
+				EnableLogging:    false,
+			},
+			panicValue:       nil,
+			expectStatus:     500,
+			expectStackTrace: false,
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware := factory(tt.config)
-			if middleware == nil {
-				t.Error("Expected middleware to be created")
+			// Setup formatter
+			api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
+
+			// Create router
+			r := router.New("test-router")
+
+			// Add recovery middleware
+			r.Use(Middleware(tt.config))
+
+			// Add handler that panics
+			r.GET("/panic", func(c *request.Context) error {
+				panic(tt.panicValue)
+			})
+
+			// Create request
+			req := httptest.NewRequest("GET", "/panic", nil)
+
+			// Record response
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			// Check status code
+			if w.Code != tt.expectStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectStatus, w.Code)
 			}
-			// Note: We can't easily test the actual EnableStackTrace value
-			// without exposing it, but we can test that the factory accepts the config
+
+			// Check response body
+			body := w.Body.String()
+			if body == "" {
+				t.Error("Expected error response body, got empty")
+			}
+
+			// Check stack trace presence
+			hasStackTrace := strings.Contains(body, "stack_trace")
+			if hasStackTrace != tt.expectStackTrace {
+				t.Errorf("Expected stack trace present=%v, got %v", tt.expectStackTrace, hasStackTrace)
+			}
+
+			t.Logf("Recovery response: %s", body)
 		})
 	}
 }
 
-func TestRecoveryMiddleware_Module(t *testing.T) {
-	module := GetModule()
+func TestRecoveryWithCustomHandler(t *testing.T) {
+	// Setup formatter
+	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
-	if module.Name() != NAME {
-		t.Errorf("Expected module name to be '%s', got '%s'", NAME, module.Name())
+	customHandlerCalled := false
+
+	cfg := &Config{
+		EnableStackTrace: false,
+		EnableLogging:    false,
+		CustomHandler: func(c *request.Context, recovered any, stack []byte) error {
+			customHandlerCalled = true
+			return c.Api.Ok(map[string]any{
+				"custom_recovery": true,
+				"panic_value":     recovered,
+			})
+		},
 	}
 
-	description := module.Description()
-	if description == "" {
-		t.Error("Expected non-empty description")
-	}
+	r := router.New("test-router")
+	r.Use(Middleware(cfg))
 
-	if !strings.Contains(description, "panic") {
-		t.Error("Expected description to mention panic recovery")
-	}
-}
-
-func TestRecoveryMiddleware_PanicRecovery(t *testing.T) {
-	// Setup logger for test
-	setupLogger()
-
-	// Create middleware with stack trace enabled
-	middleware := factory(map[string]any{
-		"enable_stack_trace": true,
+	r.GET("/panic", func(c *request.Context) error {
+		panic("custom handled panic")
 	})
 
-	// Create a handler that panics
-	panicHandler := func(ctx *request.Context) error {
-		panic("test panic message")
-	}
-
-	// Wrap the handler with recovery middleware
-	wrappedHandler := middleware(panicHandler)
-
-	// Create test context
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/panic", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
+	r.ServeHTTP(w, req)
 
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-
-	// Should not return an error (panic should be recovered)
-	if err != nil {
-		t.Errorf("Expected no error returned from recovered panic, got: %v", err)
+	if !customHandlerCalled {
+		t.Error("Expected custom handler to be called")
 	}
 
-	// Should set internal server error status
-	if ctx.Response.StatusCode != 500 {
-		t.Errorf("Expected status code 500, got %d", ctx.Response.StatusCode)
-	}
-
-	// Response should indicate internal server error
-	if ctx.Response.Message != "Internal Server Error" {
-		t.Errorf("Expected 'Internal Server Error' message, got '%s'", ctx.Response.Message)
-	}
-
-	// Success should be false
-	if ctx.Response.Success != false {
-		t.Errorf("Expected Success to be false, got %v", ctx.Response.Success)
+	body := w.Body.String()
+	if !strings.Contains(body, "custom_recovery") {
+		t.Errorf("Expected custom recovery response, got: %s", body)
 	}
 }
 
-func TestRecoveryMiddleware_NormalExecution(t *testing.T) {
-	// Create middleware
-	middleware := factory(nil)
+func TestRecoveryDoesNotAffectNormalRequests(t *testing.T) {
+	// Setup formatter
+	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
-	// Create a normal handler that doesn't panic
-	normalHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		ctx.Response.Message = "Success"
-		return nil
-	}
+	r := router.New("test-router")
+	r.Use(Middleware(&Config{
+		EnableStackTrace: false,
+		EnableLogging:    false,
+	}))
 
-	// Wrap the handler with recovery middleware
-	wrappedHandler := middleware(normalHandler)
-
-	// Create test context
-	req := httptest.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
-
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-
-	// Should work normally
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
-	}
-
-	if ctx.Response.StatusCode != 200 {
-		t.Errorf("Expected status code 200, got %d", ctx.Response.StatusCode)
-	}
-
-	if ctx.Response.Message != "Success" {
-		t.Errorf("Expected 'Success' message, got '%s'", ctx.Response.Message)
-	}
-}
-
-func TestRecoveryMiddleware_DisabledStackTrace(t *testing.T) {
-	// Create middleware with stack trace disabled
-	middleware := factory(map[string]any{
-		"enable_stack_trace": false,
+	r.GET("/normal", func(c *request.Context) error {
+		return c.Api.Ok("success")
 	})
 
-	// Create a handler that panics
-	panicHandler := func(ctx *request.Context) error {
-		panic("test panic without stack trace")
-	}
-
-	// Wrap the handler with recovery middleware
-	wrappedHandler := middleware(panicHandler)
-
-	// Create test context
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/normal", nil)
 	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
+	r.ServeHTTP(w, req)
 
-	// Execute the wrapped handler
-	err := wrappedHandler(ctx)
-
-	// Should not return an error (panic should be recovered)
-	if err != nil {
-		t.Errorf("Expected no error returned from recovered panic, got: %v", err)
+	if w.Code != 200 {
+		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	// Should still set internal server error status
-	if ctx.Response.StatusCode != 500 {
-		t.Errorf("Expected status code 500, got %d", ctx.Response.StatusCode)
+	body := w.Body.String()
+	if !strings.Contains(body, "success") {
+		t.Errorf("Expected normal response, got: %s", body)
 	}
-
-	// Note: We can't easily test that stack trace is not logged without
-	// intercepting the logger, but we can verify the middleware still works
 }
 
-func TestRecoveryMiddleware_ConfigEdgeCases(t *testing.T) {
-	// Test with invalid config type
-	middleware := factory("invalid config")
-	if middleware == nil {
-		t.Error("Expected middleware to be created even with invalid config")
+func TestRecoveryFactory(t *testing.T) {
+	// Test with nil params
+	middleware1 := MiddlewareFactory(nil)
+	if middleware1 == nil {
+		t.Error("Expected middleware with nil params")
 	}
 
-	// Test with map containing wrong type
-	middleware2 := factory(map[string]any{
-		"enable_stack_trace": "not a boolean",
-	})
+	// Test with custom params
+	params := map[string]any{
+		PARAMS_ENABLE_STACK_TRACE: true,
+		PARAMS_ENABLE_LOGGING:     false,
+	}
+	middleware2 := MiddlewareFactory(params)
 	if middleware2 == nil {
-		t.Error("Expected middleware to be created even with wrong type in config")
+		t.Error("Expected middleware with custom params")
 	}
-
-	// Test with empty map
-	middleware3 := factory(map[string]any{})
-	if middleware3 == nil {
-		t.Error("Expected middleware to be created with empty config map")
-	}
-}
-
-func TestRecoveryMiddleware_CustomHook(t *testing.T) {
-	called := false
-	var hookErr any
-	var hookStack string
-
-	// Simulate setting a custom hook
-	SetRecoverHook(func(ctx *request.Context, err any, stack string) {
-		called = true
-		hookErr = err
-		hookStack = stack
-	})
-
-	// Create middleware
-	m := factory(map[string]any{"enable_stack_trace": true})
-
-	panicHandler := func(ctx *request.Context) error {
-		panic("custom hook panic")
-	}
-
-	wrapped := m(panicHandler)
-
-	req := httptest.NewRequest("GET", "/hook", nil)
-	w := httptest.NewRecorder()
-	ctx, cancel := request.NewContext(w, req)
-	defer cancel()
-
-	_ = wrapped(ctx)
-
-	if !called {
-		t.Error("Custom recovery hook was not called")
-	}
-	if hookErr == nil || hookErr != "custom hook panic" {
-		t.Errorf("Custom hook received wrong error: %v", hookErr)
-	}
-	if hookStack == "" {
-		t.Error("Custom hook did not receive stack trace")
-	}
-
-	// Reset hook after test
-	SetRecoverHook(nil)
 }

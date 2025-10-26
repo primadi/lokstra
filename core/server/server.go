@@ -10,100 +10,92 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/core/app"
-
-	"github.com/primadi/lokstra/core/registration"
 )
 
+// Callback to shutdown services - set by registry to avoid circular dependency
+var shutdownServicesCallback func()
+
+// SetShutdownServicesCallback allows registry to set the callback function
+func SetShutdownServicesCallback(callback func()) {
+	shutdownServicesCallback = callback
+}
+
 type Server struct {
-	ctx      registration.Context
-	name     string
-	apps     []*app.App
-	settings map[string]any
+	Name         string
+	BaseUrl      string // Base URL of the server
+	DeploymentID string // Deployment ID for grouping servers
+	Apps         []*app.App
+
+	built bool
 }
 
-// NewServer creates a new Server instance with the given context and name.
-func NewServer(ctx registration.Context, name string) *Server {
-	return &Server{
-		ctx:      ctx,
-		name:     name,
-		apps:     make([]*app.App, 0),
-		settings: make(map[string]any),
-	}
-}
-
+// GetName returns the server name (implements ServerInterface)
 func (s *Server) GetName() string {
-	return s.name
+	return s.Name
 }
 
-// AddApp registers an application to the server.
-func (s *Server) AddApp(app *app.App) {
-	s.apps = append(s.apps, app)
-}
-
-// NewApp creates a new application instance and registers it to the server.
-func (s *Server) NewApp(name string, addr string) *app.App {
-	newApp := app.NewApp(s.ctx, name, addr)
-	s.AddApp(newApp)
-	return newApp
-}
-
-func (s *Server) RegisterModule(module registration.Module) error {
-	if err := module.Register(s.ctx); err != nil {
-		return fmt.Errorf("failed to register module '%s': %w", module.Name(), err)
-	}
-	return nil
-}
-
-// SetSetting sets a configuration setting for the server.
-func (s *Server) SetSetting(key string, value any) {
-	s.settings[key] = value
-}
-
-// SetSettingsIfAbsent sets multiple configuration settings, only if they are not already set.
-func (s *Server) SetSettingsIfAbsent(settings map[string]any) {
-	for key, value := range settings {
-		if _, exists := s.settings[key]; !exists {
-			s.settings[key] = value
-		}
+// Create a new Server instance with given apps
+func New(name string, apps ...*app.App) *Server {
+	return &Server{
+		Name: name,
+		Apps: apps,
 	}
 }
 
-// GetSetting retrieves a configuration setting by key.
-func (s *Server) GetSetting(key string) (any, bool) {
-	value, exists := s.settings[key]
-	return value, exists
+// Print server start information, including each app's details
+func (s *Server) PrintStartInfo() {
+	s.build()
+	fmt.Printf("Server '%s' starting with %d app(s):\n", s.Name, len(s.Apps))
+	for _, a := range s.Apps {
+		a.PrintStartInfo()
+	}
+	fmt.Println("Press CTRL+C to stop the server...")
 }
 
-func (s *Server) MergeAppsWithSameAddress() {
-	for i, app := range s.apps {
-		if app.IsMerged() {
-			continue
-		}
-		for j := i + 1; j < len(s.apps); j++ {
-			if s.apps[j].IsMerged() {
-				continue
-			}
-			if app.GetAddr() == s.apps[j].GetAddr() {
-				app.MergeOtherApp(s.apps[j])
-			}
+func (s *Server) AddApp(a *app.App) {
+	if s.built {
+		panic("Cannot add app after server is built")
+	}
+	s.Apps = append(s.Apps, a)
+}
+
+func (s *Server) build() {
+	if s.built {
+		return
+	}
+	s.built = true
+	addrMap := make(map[string]*app.App)
+	var mergedApps []*app.App
+
+	for _, a := range s.Apps {
+		addr := a.GetAddress()
+		if existing, ok := addrMap[addr]; ok {
+			// Merge the existing app with the new one
+			existing.AddRouter(a.GetRouter())
+		} else {
+			addrMap[addr] = a
+			mergedApps = append(mergedApps, a)
 		}
 	}
+
+	s.Apps = mergedApps
 }
 
-// Start starts all registered apps concurrently.
+// Start the server. It blocks until the server stops or returns an error.
+// Shutdown must be called separately.
 func (s *Server) Start() error {
 	var wg sync.WaitGroup
-	errCh := make(chan error, len(s.apps))
+	errCh := make(chan error, len(s.Apps))
 
-	s.MergeAppsWithSameAddress()
+	s.build()
 
 	// Start each app in its own goroutine
-	for _, ap := range s.apps {
+	for _, ap := range s.Apps {
 		wg.Add(1)
 		go func(a *app.App) {
 			defer wg.Done()
 			if err := a.Start(); err != nil {
-				errCh <- fmt.Errorf("app '%s' failed: %w", ap.GetName(), err)
+				errCh <- fmt.Errorf("app '%s' failed: %w", a.GetName(), err)
 			}
 		}(ap)
 	}
@@ -111,40 +103,81 @@ func (s *Server) Start() error {
 	wg.Wait()
 	close(errCh)
 
-	if len(errCh) > 0 {
-		return <-errCh
-	}
-	return nil
-}
-
-// Shutdown gracefully stops all registered apps.
-func (s *Server) Shutdown(shutdownTimeout time.Duration) error {
 	var errs []error
-	for _, app := range s.apps {
-		if err := app.Shutdown(shutdownTimeout); err != nil {
-			fmt.Printf("Failed to shutdown app '%s': %v\n", app.GetName(), err)
-			errs = append(errs, fmt.Errorf("app '%s': %w", app.GetName(), err))
-		} else {
-			fmt.Printf("App '%s' has been gracefully shutdown.\n", app.GetName())
+	for err := range errCh {
+		if err != nil {
+			errs = append(errs, err)
 		}
 	}
-
-	if err := s.ctx.ShutdownAllServices(); err != nil {
-		fmt.Printf("Failed to shutdown all services: %v\n", err)
-		errs = append(errs, fmt.Errorf("shutdown all services: %w", err))
-	} else {
-		fmt.Println("All services have been gracefully shutdown.")
-	}
-
-	fmt.Println("Server has been gracefully shutdown.")
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
 	return nil
 }
 
-// StartAndWaitForShutdown starts the server and waits for shutdown signal.
-func (s *Server) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
+// Shutdown gracefully all apps within the given timeout.
+func (s *Server) Shutdown(timeout any) error {
+	// Convert timeout to time.Duration
+	var duration time.Duration
+	switch t := timeout.(type) {
+	case time.Duration:
+		duration = t
+	case int:
+		duration = time.Duration(t) * time.Second
+	case string:
+		var err error
+		duration, err = time.ParseDuration(t)
+		if err != nil {
+			return fmt.Errorf("invalid timeout format: %v", err)
+		}
+	default:
+		duration = 5 * time.Second // default
+	}
+
+	return s.shutdown(duration)
+}
+
+// Internal shutdown method with time.Duration
+func (s *Server) shutdown(timeout time.Duration) error {
+	var wg sync.WaitGroup
+
+	errCh := make(chan error, len(s.Apps))
+	for _, ap := range s.Apps {
+		wg.Add(1)
+		go func(a *app.App) {
+			defer wg.Done()
+			if err := a.Shutdown(timeout); err != nil {
+				fmt.Printf("Failed to shutdown app '%s': %v\n", a.GetName(), err)
+				errCh <- fmt.Errorf("app '%s': %w", a.GetName(), err)
+			} else {
+				fmt.Printf("App '%s' has been gracefully shutdown.\n", a.GetName())
+			}
+		}(ap)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	// Shutdown any remaining services via callback to avoid circular dependency
+	if shutdownServicesCallback != nil {
+		shutdownServicesCallback()
+	}
+
+	var errs []error
+	for err := range errCh {
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+// Starts the server and blocks until a termination signal is received.
+// It shuts down gracefully with the given timeout.
+func (s *Server) Run(timeout time.Duration) error {
 	// Run server in background
 	errCh := make(chan error, 1)
 	go func() {
@@ -160,16 +193,19 @@ func (s *Server) StartAndWaitForShutdown(shutdownTimeout time.Duration) error {
 	select {
 	case sig := <-stop:
 		fmt.Println("Received shutdown signal:", sig)
-		if err := s.Shutdown(shutdownTimeout); err != nil {
+		if err := s.shutdown(timeout); err != nil {
 			return fmt.Errorf("shutdown error: %w", err)
 		}
 		return nil
 	case err := <-errCh:
-		return fmt.Errorf("server error: %w", err)
+		return err
 	}
 }
 
-// ListApps returns the list of registered applications.
-func (s *Server) ListApps() []*app.App {
-	return s.apps
+type ServerInterface interface {
+	GetName() string
+	Start() error
+	Shutdown(timeout any) error
 }
+
+var _ ServerInterface = (*Server)(nil)

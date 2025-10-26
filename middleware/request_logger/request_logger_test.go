@@ -1,351 +1,227 @@
 package request_logger
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/core/response"
+	"github.com/primadi/lokstra/core/response/api_formatter"
+	"github.com/primadi/lokstra/core/router"
 )
 
-func TestConfig_Parsing(t *testing.T) {
+func TestRequestLogger(t *testing.T) {
 	tests := []struct {
-		name     string
-		config   any
-		expected Config
+		name      string
+		config    *Config
+		path      string
+		method    string
+		shouldLog bool
 	}{
 		{
-			name: "map config with both flags true",
-			config: map[string]any{
-				"include_request_body":  true,
-				"include_response_body": true,
+			name: "log GET request",
+			config: &Config{
+				EnableColors: false,
+				SkipPaths:    []string{},
 			},
-			expected: Config{
-				IncludeRequestBody:  true,
-				IncludeResponseBody: true,
-			},
+			path:      "/api/test",
+			method:    "GET",
+			shouldLog: true,
 		},
 		{
-			name: "map config with both flags false",
-			config: map[string]any{
-				"include_request_body":  false,
-				"include_response_body": false,
+			name: "skip health check path",
+			config: &Config{
+				EnableColors: false,
+				SkipPaths:    []string{"/health", "/metrics"},
 			},
-			expected: Config{
-				IncludeRequestBody:  false,
-				IncludeResponseBody: false,
-			},
+			path:      "/health",
+			method:    "GET",
+			shouldLog: false,
 		},
 		{
-			name: "map config with partial settings",
-			config: map[string]any{
-				"include_request_body": true,
+			name: "log POST request",
+			config: &Config{
+				EnableColors: false,
+				SkipPaths:    []string{},
 			},
-			expected: Config{
-				IncludeRequestBody:  true,
-				IncludeResponseBody: false,
-			},
-		},
-		{
-			name:   "nil config",
-			config: nil,
-			expected: Config{
-				IncludeRequestBody:  false,
-				IncludeResponseBody: false,
-			},
-		},
-		{
-			name: "struct config",
-			config: Config{
-				IncludeRequestBody:  true,
-				IncludeResponseBody: true,
-			},
-			expected: Config{
-				IncludeRequestBody:  true,
-				IncludeResponseBody: true,
-			},
+			path:      "/api/create",
+			method:    "POST",
+			shouldLog: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware := factory(tt.config)
-			if middleware == nil {
-				t.Fatal("Expected middleware to be created")
+			// Setup formatter
+			api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
+
+			// Capture logs
+			var logOutput []string
+			tt.config.CustomLogger = func(format string, args ...any) {
+				msg := fmt.Sprintf(format, args...)
+				logOutput = append(logOutput, msg)
 			}
-			// Note: We can't easily test the internal config parsing without
-			// making the parsing function public or adding more complex test setup
+
+			// Create router
+			r := router.New("test-router")
+
+			// Add logger middleware
+			r.Use(Middleware(tt.config))
+
+			// Add test handler
+			switch tt.method {
+			case "GET":
+				r.GET(tt.path, func(c *request.Context) error {
+					return c.Api.Ok("success")
+				})
+			case "POST":
+				r.POST(tt.path, func(c *request.Context) error {
+					return c.Api.Ok("success")
+				})
+			default:
+				r.GET(tt.path, func(c *request.Context) error {
+					return c.Api.Ok("success")
+				})
+			}
+
+			// Create request
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+
+			// Record response
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			// Check if logged
+			logged := len(logOutput) > 0
+			if logged != tt.shouldLog {
+				t.Errorf("Expected logged=%v, got %v", tt.shouldLog, logged)
+			}
+
+			if tt.shouldLog && logged {
+				logLine := logOutput[0]
+				t.Logf("Log output: %s", logLine)
+
+				// Verify log contains method and path
+				if !strings.Contains(logLine, tt.method) {
+					t.Errorf("Log should contain method %s", tt.method)
+				}
+				if !strings.Contains(logLine, tt.path) {
+					t.Errorf("Log should contain path %s", tt.path)
+				}
+			}
 		})
 	}
 }
 
-func TestRequestLogger_Module(t *testing.T) {
-	module := &RequestLogger{}
+func TestRequestLoggerWithColors(t *testing.T) {
+	// Setup formatter
+	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
-	if module.Name() != NAME {
-		t.Errorf("Expected name %s, got %s", NAME, module.Name())
+	var logOutput []string
+	cfg := &Config{
+		EnableColors: true,
+		CustomLogger: func(format string, args ...any) {
+			msg := fmt.Sprintf(format, args...)
+			logOutput = append(logOutput, msg)
+		},
 	}
 
-	description := module.Description()
-	if !strings.Contains(description, "request") {
-		t.Errorf("Expected description to contain 'request', got: %s", description)
-	}
-}
+	r := router.New("test-router")
+	r.Use(Middleware(cfg))
 
-func TestRequestLogger_BasicLogging(t *testing.T) {
-	// Create middleware with default config
-	middleware := factory(nil)
-
-	// Create a test handler
-	testHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		return nil
-	}
-
-	// Wrap the handler with middleware
-	wrappedHandler := middleware(testHandler)
-
-	// Create test request
-	req := httptest.NewRequest("GET", "/test?param=value", nil)
-	req.Header.Set("User-Agent", "test-agent")
-
-	// Create test context
-	ctx := &request.Context{
-		Request:  req,
-		Response: response.NewResponse(),
-	}
-	ctx.Response.StatusCode = 200
-
-	// Execute the middleware
-	err := wrappedHandler(ctx)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-}
-
-func TestRequestLogger_WithRequestBody(t *testing.T) {
-	// Create middleware with request body logging enabled
-	config := map[string]any{
-		"include_request_body": true,
-	}
-	middleware := factory(config)
-
-	// Create a test handler
-	testHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		return nil
-	}
-
-	// Wrap the handler with middleware
-	wrappedHandler := middleware(testHandler)
-
-	// Test with JSON body
-	t.Run("JSON request body", func(t *testing.T) {
-		jsonBody := `{"name":"test","value":123}`
-		req := httptest.NewRequest("POST", "/test", strings.NewReader(jsonBody))
-		req.Header.Set("Content-Type", "application/json")
-
-		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
-		defer cancel()
-		ctx.Response.StatusCode = 201
-
-		err := wrappedHandler(ctx)
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-
-		// Verify that request body is still readable using GetRawRequestBody
-		body, err := ctx.GetRawRequestBody()
-		if err != nil {
-			t.Errorf("Expected to be able to read body after middleware, got error: %v", err)
-		}
-
-		var parsed map[string]any
-		if err := json.Unmarshal(body, &parsed); err != nil {
-			t.Errorf("Expected valid JSON body after middleware, got error: %v", err)
-		}
+	r.GET("/test", func(c *request.Context) error {
+		return c.Api.Ok("success")
 	})
 
-	// Test with text body
-	t.Run("Text request body", func(t *testing.T) {
-		textBody := "plain text body"
-		req := httptest.NewRequest("POST", "/test", strings.NewReader(textBody))
-		req.Header.Set("Content-Type", "text/plain")
+	req := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 
-		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
-		defer cancel()
-		ctx.Response.StatusCode = 200
+	if len(logOutput) == 0 {
+		t.Fatal("Expected log output")
+	}
 
-		err := wrappedHandler(ctx)
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
+	// Verify ANSI color codes are present
+	logLine := logOutput[0]
+	if !strings.Contains(logLine, "\033[") {
+		t.Error("Expected ANSI color codes in output")
+	}
 
-		// Verify that request body is still readable using GetRawRequestBody
-		body, err := ctx.GetRawRequestBody()
-		if err != nil {
-			t.Errorf("Expected to be able to read body after middleware, got error: %v", err)
-		}
-
-		if string(body) != textBody {
-			t.Errorf("Expected body to be '%s', got '%s'", textBody, string(body))
-		}
-	})
+	t.Logf("Colored output: %s", logLine)
 }
 
-func TestRequestLogger_ErrorStatusLogging(t *testing.T) {
-	middleware := factory(nil)
+func TestRequestLoggerDuration(t *testing.T) {
+	// Setup formatter
+	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
+	var logOutput []string
+	cfg := &Config{
+		EnableColors: false,
+		CustomLogger: func(format string, args ...any) {
+			msg := fmt.Sprintf(format, args...)
+			logOutput = append(logOutput, msg)
+		},
+	}
+
+	r := router.New("test-router")
+	r.Use(Middleware(cfg))
+
+	r.GET("/slow", func(c *request.Context) error {
+		time.Sleep(10 * time.Millisecond) // Simulate slow request
+		return c.Api.Ok("success")
+	})
+
+	req := httptest.NewRequest("GET", "/slow", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if len(logOutput) == 0 {
+		t.Fatal("Expected log output")
+	}
+
+	logLine := logOutput[0]
+	// Log should contain duration
+	if !strings.Contains(logLine, "ms") && !strings.Contains(logLine, "µs") && !strings.Contains(logLine, "s") {
+		t.Error("Log should contain duration")
+	}
+
+	t.Logf("Log with duration: %s", logLine)
+}
+
+func TestRequestLoggerFactory(t *testing.T) {
+	// Test with nil params
+	middleware1 := MiddlewareFactory(nil)
+	if middleware1 == nil {
+		t.Error("Expected middleware with nil params")
+	}
+
+	// Test with custom params
+	params := map[string]any{
+		PARAMS_ENABLE_COLORS: false,
+		PARAMS_SKIP_PATHS:    []string{"/health"},
+	}
+	middleware2 := MiddlewareFactory(params)
+	if middleware2 == nil {
+		t.Error("Expected middleware with custom params")
+	}
+}
+
+func TestFormatDuration(t *testing.T) {
 	tests := []struct {
-		name       string
-		statusCode int
-		expectErr  bool
+		duration time.Duration
+		contains string
 	}{
-		{"Success 200", 200, false},
-		{"Client Error 400", 400, false},
-		{"Client Error 404", 404, false},
-		{"Server Error 500", 500, false},
+		{100 * time.Microsecond, "µs"},
+		{5 * time.Millisecond, "ms"},
+		{2 * time.Second, "s"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testHandler := func(ctx *request.Context) error {
-				ctx.Response.StatusCode = tt.statusCode
-				return nil
-			}
-
-			wrappedHandler := middleware(testHandler)
-
-			req := httptest.NewRequest("GET", "/test", nil)
-			ctx := &request.Context{
-				Request:  req,
-				Response: response.NewResponse(),
-			}
-			ctx.Response.StatusCode = tt.statusCode
-
-			err := wrappedHandler(ctx)
-			if (err != nil) != tt.expectErr {
-				t.Errorf("Expected error: %v, got: %v", tt.expectErr, err)
-			}
-		})
+		result := formatDuration(tt.duration)
+		if !strings.Contains(result, tt.contains) {
+			t.Errorf("formatDuration(%v) = %s, expected to contain %s", tt.duration, result, tt.contains)
+		}
 	}
-}
-
-func TestRequestLogger_LongBodyTruncation(t *testing.T) {
-	config := map[string]any{
-		"include_request_body": true,
-	}
-	middleware := factory(config)
-
-	testHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		return nil
-	}
-
-	wrappedHandler := middleware(testHandler)
-
-	// Create a body longer than 1000 characters
-	longBody := strings.Repeat("a", 1500)
-	req := httptest.NewRequest("POST", "/test", strings.NewReader(longBody))
-
-	ctx := &request.Context{
-		Request:  req,
-		Response: response.NewResponse(),
-	}
-	ctx.Response.StatusCode = 200
-
-	err := wrappedHandler(ctx)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-
-	// The middleware should handle long bodies gracefully
-	// (actual truncation testing would require access to logs)
-}
-
-func TestRequestLogger_WithResponseBody(t *testing.T) {
-	// Create middleware with response body logging enabled
-	config := map[string]any{
-		"include_response_body": true,
-	}
-	middleware := factory(config)
-
-	// Create a test handler that sets response data
-	testHandler := func(ctx *request.Context) error {
-		ctx.Response.StatusCode = 200
-		responseData := map[string]any{
-			"message": "success",
-			"data":    []string{"item1", "item2"},
-		}
-		// Set raw data to simulate response body
-		jsonData, _ := json.Marshal(responseData)
-		ctx.Response.RawData = jsonData
-		return nil
-	}
-
-	// Wrap the handler with middleware
-	wrappedHandler := middleware(testHandler)
-
-	// Test with JSON response
-	t.Run("JSON response body", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/test", nil)
-		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
-		defer cancel()
-
-		err := wrappedHandler(ctx)
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-
-		// Verify that response body can be read using GetRawResponseBody
-		body, err := ctx.GetRawResponseBody()
-		if err != nil {
-			t.Errorf("Expected to be able to read response body, got error: %v", err)
-		}
-
-		var parsed map[string]any
-		if err := json.Unmarshal(body, &parsed); err != nil {
-			t.Errorf("Expected valid JSON response body, got error: %v", err)
-		}
-
-		if parsed["message"] != "success" {
-			t.Errorf("Expected message to be 'success', got %v", parsed["message"])
-		}
-	})
-
-	// Test with empty response body
-	t.Run("Empty response body", func(t *testing.T) {
-		emptyHandler := func(ctx *request.Context) error {
-			ctx.Response.StatusCode = 204 // No Content
-			// No response data set
-			return nil
-		}
-
-		wrappedEmptyHandler := middleware(emptyHandler)
-
-		req := httptest.NewRequest("GET", "/test", nil)
-		w := httptest.NewRecorder()
-		ctx, cancel := request.NewContext(w, req)
-		defer cancel()
-
-		err := wrappedEmptyHandler(ctx)
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-
-		// Verify that empty response body doesn't cause issues
-		body, err := ctx.GetRawResponseBody()
-		if err != nil {
-			t.Errorf("Expected no error for empty response body, got: %v", err)
-		}
-
-		if len(body) != 0 {
-			t.Errorf("Expected empty response body, got: %s", string(body))
-		}
-	})
 }

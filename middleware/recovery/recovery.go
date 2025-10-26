@@ -1,114 +1,93 @@
 package recovery
 
 import (
+	"fmt"
+	"log"
 	"runtime/debug"
 
-	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/serviceapi"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-const NAME = "recovery"
+const RECOVERY_TYPE = "recovery"
+const PARAMS_ENABLE_STACK_TRACE = "enable_stack_trace"
+const PARAMS_ENABLE_LOGGING = "enable_logging"
 
-// Config holds the configuration for recovery middleware
 type Config struct {
-	EnableStackTrace bool `json:"enable_stack_trace" yaml:"enable_stack_trace"`
+	// EnableStackTrace includes stack trace in error response (for debugging)
+	// Should be disabled in production
+	EnableStackTrace bool
+
+	// EnableLogging logs panic details to console
+	EnableLogging bool
+
+	// CustomHandler is a custom function to handle recovered panics
+	// If nil, uses default error response
+	CustomHandler func(c *request.Context, recovered any, stack []byte) error
 }
 
-type RecoveryMiddleware struct{}
-
-// Description implements registration.Module.
-func (r *RecoveryMiddleware) Description() string {
-	return "Recover from panic and return 500 error response. Should be the outermost middleware."
-}
-
-var logger serviceapi.Logger
-
-// Register implements registration.Module.
-func (r *RecoveryMiddleware) Register(regCtx registration.Context) error {
-	regCtx.RegisterMiddlewareFactoryWithPriority(NAME, factory, 10)
-	if svc, err := regCtx.GetService("logger"); err == nil {
-		logger = svc.(serviceapi.Logger)
+func DefaultConfig() *Config {
+	return &Config{
+		EnableStackTrace: false, // Disabled by default for security
+		EnableLogging:    true,
+		CustomHandler:    nil,
 	}
-	return nil
 }
 
-// Name implements registration.Module.
-func (r *RecoveryMiddleware) Name() string {
-	return NAME
-}
-
-func factory(config any) midware.Func {
-	// Parse configuration
-	cfg := &Config{
-		EnableStackTrace: true, // Default to true for backward compatibility
+// middleware to recover from panics and return error response
+func Middleware(cfg *Config) request.HandlerFunc {
+	defConfig := DefaultConfig()
+	if cfg.CustomHandler == nil {
+		cfg.CustomHandler = defConfig.CustomHandler
 	}
 
-	if config != nil {
-		switch v := config.(type) {
-		case map[string]any:
-			if val, ok := v["enable_stack_trace"]; ok {
-				if b, ok := val.(bool); ok {
-					cfg.EnableStackTrace = b
+	return request.HandlerFunc(func(c *request.Context) error {
+		defer func() {
+			if r := recover(); r != nil {
+				// Capture stack trace
+				stack := debug.Stack()
+
+				// Log panic if enabled
+				if cfg.EnableLogging {
+					log.Printf("[PANIC RECOVERY] %v\n%s", r, stack)
 				}
+
+				// Use custom handler if provided
+				if cfg.CustomHandler != nil {
+					err := cfg.CustomHandler(c, r, stack)
+					if err != nil {
+						log.Printf("[RECOVERY] Custom handler error: %v", err)
+					}
+					return
+				}
+
+				// Default error response - use InternalError which properly writes response
+				message := fmt.Sprintf("Internal server error: %v", r)
+				c.Api.InternalError(message)
 			}
-		case bool:
-			cfg.EnableStackTrace = v
-		case *Config:
-			cfg = v
-		case Config:
-			cfg = &v
-		}
-	}
+		}()
 
-	return func(next request.HandlerFunc) request.HandlerFunc {
-		return func(ctx *request.Context) error {
-			defer func() {
-				if err := recover(); err != nil {
-					_ = ctx.ErrorInternal("Internal Server Error")
-
-					logFields := serviceapi.LogFields{
-						"error": err,
-					}
-
-					debugStack := ""
-					// Include stack trace only if enabled
-					if cfg.EnableStackTrace {
-						debugStack = string(debug.Stack())
-						logFields["stack"] = debugStack
-					}
-
-					// Only log if logger is available
-					if logger != nil {
-						logger.WithFields(logFields).
-							Errorf("Recovered from panic in middleware")
-					}
-
-					if OnRecover != nil {
-						OnRecover(ctx, err, debugStack)
-					}
-				}
-			}()
-
-			return next(ctx)
-		}
-	}
+		// Continue to next handler
+		return c.Next()
+	})
 }
 
-var _ registration.Module = (*RecoveryMiddleware)(nil)
+func MiddlewareFactory(params map[string]any) request.HandlerFunc {
+	defConfig := DefaultConfig()
+	if params == nil {
+		return Middleware(defConfig)
+	}
 
-// return RecoveryMiddleware with name "lokstra.recovery"
-func GetModule() registration.Module {
-	return &RecoveryMiddleware{}
+	cfg := &Config{
+		EnableStackTrace: utils.GetValueFromMap(params, PARAMS_ENABLE_STACK_TRACE, defConfig.EnableStackTrace),
+		EnableLogging:    utils.GetValueFromMap(params, PARAMS_ENABLE_LOGGING, defConfig.EnableLogging),
+		CustomHandler:    nil, // Cannot be set via params
+	}
+	return Middleware(cfg)
 }
 
-// Preferred way to get recovery middleware execution
-func GetMidware(enableStackTrace bool) *midware.Execution {
-	return &midware.Execution{
-		Name:         NAME,
-		Config:       enableStackTrace,
-		MiddlewareFn: factory(enableStackTrace),
-		Priority:     10,
-	}
+func Register() {
+	lokstra_registry.RegisterMiddlewareFactory(RECOVERY_TYPE, MiddlewareFactory,
+		lokstra_registry.AllowOverride(true))
 }

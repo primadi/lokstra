@@ -1,0 +1,28 @@
+# Additional Services (will be merged with base.yaml)
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - db:db-pool
+      - logger
+      - cache
+    config:
+      enable-caching: true
+
+  order-service:
+    type: order-service-factory
+    depends-on:
+      - dbOrder:db-pool
+      - userSvc:user-service
+      - logger
+
+# External Services (renamed from remote-service-definitions)
+external-service-definitions:
+  payment-api:
+    url: https://payment.example.com
+    resource: payment
+    resource-plural: payments
+
+  notification-api:
+    url: https://notifications.example.com
+    resource: notification

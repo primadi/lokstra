@@ -2,486 +2,370 @@ package router
 
 import (
 	"fmt"
-	"io/fs"
-	"mime"
 	"net/http"
-	"slices"
 	"strings"
-
-	"github.com/primadi/lokstra/common/static_files"
-	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
+	"sync"
 
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/serviceapi"
-
-	"github.com/valyala/fasthttp"
-	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"github.com/primadi/lokstra/core/route"
+	"github.com/primadi/lokstra/core/router/engine"
 )
 
-type RouterImpl struct {
-	meta     *RouterMeta
-	r_engine serviceapi.RouterEngine
+type routerImpl struct {
+	name       string
+	engineType string
+	pathPrefix string
+
+	routes           []*route.Route
+	middlewares      []any // Mixed: request.HandlerFunc or string (lazy)
+	overrideParentMw bool
+	children         []*routerImpl
+
+	isChained bool
+	nextChain *routerImpl
+
+	isRoot bool
+
+	isBuilt      bool
+	routerEngine engine.RouterEngine
+	startServe   sync.Once
 }
 
-// RawHandle implements Router.
-func (r *RouterImpl) RawHandle(prefix string, stripPrefix bool, handler http.Handler) Router {
-	r.meta.RawHandles = append(r.meta.RawHandles, &RawHandleMeta{
-		Prefix:  prefix,
-		Handler: handler,
-		Strip:   stripPrefix,
-	})
-	return r
-}
-
-func NewListener(ctx registration.Context, config map[string]any) serviceapi.HttpListener {
-	return NewListenerWithEngine(ctx, "", config)
-}
-
-func NewListenerWithEngine(ctx registration.Context, listenerType string,
-	config map[string]any) serviceapi.HttpListener {
-
-	lType := NormalizeListenerType(listenerType)
-
-	factory, found := ctx.GetServiceFactory(lType)
-	if !found {
-		panic(fmt.Sprintf("Listener type %s not found", lType))
-	}
-
-	lsAny, err := factory(config)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create listener for app %s: %v", lType, err))
-	}
-	ls, ok := lsAny.(serviceapi.HttpListener)
-	if !ok {
-		panic(fmt.Sprintf("listener for app %s is not of type serviceapi.HttpListener", lType))
-	}
-	return ls
-}
-
-func NewRouter(regCtx registration.Context, config map[string]any) Router {
-	return NewRouterWithEngine(regCtx, "", config)
-}
-
-func NewRouterWithEngine(regCtx registration.Context, engineType string,
-	config map[string]any) Router {
-
-	serviceType := NormalizeRouterType(engineType)
-
-	factory, found := regCtx.GetServiceFactory(serviceType)
-	if !found {
-		panic(fmt.Sprintf("Router engine %s not found", serviceType))
-	}
-
-	rtAny, err := factory(config)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create router engine %s: %v", engineType, err))
-	}
-	rt := rtAny.(serviceapi.RouterEngine)
-	if rt == nil {
-		panic(fmt.Sprintf("Router engine %s is not initialized", engineType))
-	}
-	return &RouterImpl{
-		meta:     NewRouterMeta(),
-		r_engine: rt,
+func New(name string) Router {
+	return &routerImpl{
+		name:       name,
+		engineType: "default",
+		pathPrefix: "",
+		isRoot:     true,
 	}
 }
 
-// GetMeta implements Router.
-func (r *RouterImpl) GetMeta() *RouterMeta {
-	return r.meta
-}
-
-// DELETE implements Router.
-func (r *RouterImpl) DELETE(path string, handler any, mw ...any) Router {
-	return r.Handle("DELETE", path, handler, mw...)
-}
-
-// DumpRoutes implements Router.
-func (r *RouterImpl) DumpRoutes() {
-	r.meta.DumpRoutes()
-}
-
-// AddRouter implements Router.
-func (r *RouterImpl) AddRouter(other Router) Router {
-	otherMeta := other.GetMeta()
-
-	// Merge all routes
-	r.meta.Routes = append(r.meta.Routes, otherMeta.Routes...)
-
-	// Merge all groups
-	r.meta.Groups = append(r.meta.Groups, otherMeta.Groups...)
-
-	// Merge static mounts
-	r.meta.StaticMounts = append(r.meta.StaticMounts, otherMeta.StaticMounts...)
-
-	// Merge reverse proxies
-	r.meta.ReverseProxies = append(r.meta.ReverseProxies, otherMeta.ReverseProxies...)
-
-	// Merge raw handles
-	r.meta.RawHandles = append(r.meta.RawHandles, otherMeta.RawHandles...)
-
-	// Merge RPC handles
-	r.meta.RPCHandles = append(r.meta.RPCHandles, otherMeta.RPCHandles...)
-
-	// Middleware: TIDAK di-merge secara otomatis untuk menghindari efek samping
-	// Middleware dari router lain tetap melekat pada route/group asalnya
-	// Jika ingin merge middleware, gunakan Use() secara eksplisit setelah AddRouter()
-
-	return r
-}
-
-// FastHttpHandler implements Router.
-func (r *RouterImpl) FastHttpHandler() fasthttp.RequestHandler {
-	return fasthttpadaptor.NewFastHTTPHandler(r.r_engine)
-}
-
-// GET implements Router.
-func (r *RouterImpl) GET(path string, handler any, mw ...any) Router {
-	return r.Handle("GET", path, handler, mw...)
-}
-
-// GetMiddleware implements Router.
-func (r *RouterImpl) GetMiddleware() []*midware.Execution {
-	mwf := make([]*midware.Execution, len(r.meta.Middleware))
-	copy(mwf, r.meta.Middleware)
-	return mwf
-}
-
-// Group implements Router.
-func (r *RouterImpl) Group(prefix string, mw ...any) Router {
-	rm := NewRouterMeta()
-	rm.Prefix = r.cleanPrefix(prefix)
-
-	for _, m := range mw {
-		rm.UseMiddleware(m)
-	}
-
-	r.meta.Groups = append(r.meta.Groups, rm)
-	return &GroupImpl{
-		parent: r,
-		meta:   rm,
+func NewWithEngine(name string, engineType string) Router {
+	return &routerImpl{
+		name:       name,
+		engineType: engineType,
+		pathPrefix: "",
+		isRoot:     true,
 	}
 }
 
-// GroupBlock implements Router.
-func (r *RouterImpl) GroupBlock(prefix string, fn func(gr Router)) Router {
-	gr := r.Group(prefix)
-	fn(gr)
-	return r
+// IsChained implements Router.
+func (r *routerImpl) IsChained() bool {
+	return r.isChained
 }
 
-// Handle implements Router.
-func (r *RouterImpl) Handle(method request.HTTPMethod, path string, handler any,
-	mw ...any) Router {
-	r.meta.Handle(method, r.cleanPrefix(path), handler, false, mw...)
-	return r
-}
-
-// HandleOverrideMiddleware implements Router.
-func (r *RouterImpl) HandleOverrideMiddleware(method request.HTTPMethod, path string,
-	handler any, mw ...any) Router {
-	r.meta.Handle(method, r.cleanPrefix(path), handler, true, mw...)
-	return r
-}
-
-// MountReverseProxy implements Router.
-func (r *RouterImpl) MountReverseProxy(prefix string, target string,
-	overrideMiddleware bool, mw ...any) Router {
-	r.meta.MountReverseProxy(prefix, target, overrideMiddleware, mw...)
-	return r
-}
-
-// MountStatic implements Router.
-func (r *RouterImpl) MountStatic(prefix string, spa bool, sources ...fs.FS) Router {
-	r.meta.MountStatic(prefix, spa, sources...)
-	return r
-}
-
-// MountHtmx implements Router.
-func (r *RouterImpl) MountHtmx(prefix string, si *static_files.ScriptInjection, sources ...fs.FS) Router {
-	r.meta.MountHtmx(prefix, si, sources...)
-	return r
-}
-
-// MountRpcService implements Router.
-func (r *RouterImpl) MountRpcService(path string, svc any, overrideMiddleware bool, mw ...any) Router {
-	r.meta.MountRpcService(path, svc, overrideMiddleware, mw...)
-	return r
-}
-
-// OverrideMiddleware implements Router.
-func (r *RouterImpl) OverrideMiddleware() bool {
-	return r.meta.OverrideMiddleware
-}
-
-// PATCH implements Router.
-func (r *RouterImpl) PATCH(path string, handler any, mw ...any) Router {
-	return r.Handle("PATCH", path, handler, mw...)
-}
-
-// POST implements Router.
-func (r *RouterImpl) POST(path string, handler any, mw ...any) Router {
-	return r.Handle("POST", path, handler, mw...)
-}
-
-// PUT implements Router.
-func (r *RouterImpl) PUT(path string, handler any, mw ...any) Router {
-	return r.Handle("PUT", path, handler, mw...)
-}
-
-// Prefix implements Router.
-func (r *RouterImpl) Prefix() string {
-	return r.meta.Prefix
-}
-
-// RecurseAllHandler implements Router.
-func (r *RouterImpl) RecurseAllHandler(callback func(rt *RouteMeta)) {
-	for _, route := range r.meta.Routes {
-		callback(route)
+// GetNextChain implements Router.
+func (r *routerImpl) GetNextChain() Router {
+	if r.nextChain == nil {
+		return nil
 	}
+	return r.nextChain
+}
+
+// IsBuilt implements Router.
+func (r *routerImpl) IsBuilt() bool {
+	return r.isBuilt
+}
+
+// Guard: forbid adding routes after build
+func (r *routerImpl) assertNotBuilt() {
+	if r.isBuilt {
+		panic("router: cannot register routes after Build()")
+	}
+}
+
+// Build implements Router.
+func (r *routerImpl) Build() {
+	if r.isBuilt || r.isChained {
+		return
+	}
+	if !r.isRoot {
+		panic("router [" + r.name + "] is not root router, Build() can only be called on the root router")
+	}
+
+	r.routerEngine = engine.CreateEngine(r.engineType)
+	r.walkBuildRecursive("", "", nil, r.name,
+		func(rt *route.Route, fullName, fullPath string, fullMiddlewares []request.HandlerFunc, routerName string) {
+			rt.RouterName = routerName // Set the router name for this route
+			rt.FullName = fullName
+			rt.FullPath = fullPath
+			if rt.Name == "" {
+				pref := ""
+				if strings.HasSuffix(rt.FullPath, "/") {
+					pref = "PREF:"
+				}
+				nm := strings.ReplaceAll(strings.Trim(fullPath, "/"), "/", "_")
+				if nm == "" {
+					nm = "root"
+				}
+				rt.Name = strings.Join([]string{rt.Method, "[", pref, nm, "]"}, "")
+				rt.FullName += rt.Name
+			}
+
+			// Resolve route-level lazy middlewares
+			resolvedRouteMw := resolveMiddlewares(rt.Middleware)
+
+			var fullMw []request.HandlerFunc
+			if rt.OverrideParentMw {
+				fullMw = resolvedRouteMw
+			} else {
+				fullMw = append(fullMiddlewares, resolvedRouteMw...)
+			}
+			rt.FullMiddleware = fullMw
+			r.routerEngine.Handle(rt.Method+" "+fullPath, request.NewHandler(
+				rt.Handler, fullMw...))
+		})
 }
 
 // ServeHTTP implements Router.
-func (r *RouterImpl) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	r.r_engine.ServeHTTP(w, req)
+func (r *routerImpl) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.startServe.Do(func() {
+		// build router on first serve, do only once
+		r.Build()
+	})
+	r.routerEngine.ServeHTTP(w, req)
+}
+
+func (r *routerImpl) handle(method string, path string, h any, middleware []any) Router {
+	r.assertNotBuilt()
+
+	rt := &route.Route{
+		Method: method,
+		Path:   path,
+	}
+
+	var mws []any
+	// Remove RouteOption from middleware list
+	for _, mw := range middleware {
+		if n, ok := mw.(route.RouteHandlerOption); ok {
+			n.Apply(rt)
+			continue
+		}
+		mws = append(mws, mw)
+	}
+
+	rt.Middleware = adaptMiddlewares(mws)
+	rt.Handler = adaptHandler(path, h)
+	r.routes = append(r.routes, rt)
+	return r
+}
+
+// ANY implements Router.
+func (r *routerImpl) ANY(path string, h any, middleware ...any) Router {
+	return r.handle("ANY", cleanPath(path), h, middleware)
+}
+
+// ANYPrefix implements Router.
+func (r *routerImpl) ANYPrefix(prefix string, h any, middleware ...any) Router {
+	return r.handle("ANY", cleanPrefix(prefix), h, middleware)
+}
+
+// AddGroup implements Router.
+func (r *routerImpl) AddGroup(path string) Router {
+	r.assertNotBuilt()
+	path = cleanPath(path)
+	child := &routerImpl{
+		name:       normalizeGroupName("", path),
+		pathPrefix: path,
+	}
+	r.children = append(r.children, child)
+	return child
+}
+
+// Clone implements Router.
+func (r *routerImpl) Clone() Router {
+	return &routerImpl{
+		name:             r.name,
+		engineType:       r.engineType,
+		pathPrefix:       r.pathPrefix,
+		routes:           r.routes,
+		middlewares:      r.middlewares,
+		overrideParentMw: r.overrideParentMw,
+		children:         r.children,
+		isRoot:           true,
+	}
+}
+
+// DELETE implements Router.
+func (r *routerImpl) DELETE(path string, h any, middleware ...any) Router {
+	return r.handle("DELETE", cleanPath(path), h, middleware)
+}
+
+// DELETEPrefix implements Router.
+func (r *routerImpl) DELETEPrefix(prefix string, h any, middleware ...any) Router {
+	return r.handle("DELETE", cleanPrefix(prefix), h, middleware)
+}
+
+// EngineType implements Router.
+func (r *routerImpl) EngineType() string {
+	return r.engineType
+}
+
+// GET implements Router.
+func (r *routerImpl) GET(path string, h any, middleware ...any) Router {
+	return r.handle("GET", cleanPath(path), h, middleware)
+}
+
+// GETPrefix implements Router.
+func (r *routerImpl) GETPrefix(prefix string, h any, middleware ...any) Router {
+	return r.handle("GET", cleanPrefix(prefix), h, middleware)
+}
+
+// Group implements Router.
+func (r *routerImpl) Group(path string, fn func(r Router)) Router {
+	fn(r.AddGroup(path))
+	return r
+}
+
+// Name implements Router.
+func (r *routerImpl) Name() string {
+	return r.name
+}
+
+// PATCH implements Router.
+func (r *routerImpl) PATCH(path string, h any, middleware ...any) Router {
+	return r.handle("PATCH", cleanPath(path), h, middleware)
+}
+
+// PATCHPrefix implements Router.
+func (r *routerImpl) PATCHPrefix(prefix string, h any, middleware ...any) Router {
+	return r.handle("PATCH", cleanPrefix(prefix), h, middleware)
+}
+
+// POST implements Router.
+func (r *routerImpl) POST(path string, h any, middleware ...any) Router {
+	return r.handle("POST", cleanPath(path), h, middleware)
+}
+
+// POSTPrefix implements Router.
+func (r *routerImpl) POSTPrefix(prefix string, h any, middleware ...any) Router {
+	return r.handle("POST", cleanPrefix(prefix), h, middleware)
+}
+
+// PUT implements Router.
+func (r *routerImpl) PUT(path string, h any, middleware ...any) Router {
+	return r.handle("PUT", cleanPath(path), h, middleware)
+}
+
+// PUTPrefix implements Router.
+func (r *routerImpl) PUTPrefix(prefix string, h any, middleware ...any) Router {
+	return r.handle("PUT", cleanPrefix(prefix), h, middleware)
+}
+
+// PathPrefix implements Router.
+func (r *routerImpl) PathPrefix() string {
+	return r.pathPrefix
+}
+
+// SetPathPrefix implements Router.
+func (r *routerImpl) SetPathPrefix(prefix string) Router {
+	r.pathPrefix = cleanPath(prefix)
+	return r
+}
+
+// SetNextChain implements Router.
+func (r *routerImpl) SetNextChain(next Router) Router {
+	return r.SetNextChainWithPrefix(next, "")
+}
+
+// SetNextChain implements Router.
+func (r *routerImpl) SetNextChainWithPrefix(next Router, prefix string) Router {
+	curr := r
+	for curr.nextChain != nil {
+		curr = curr.nextChain
+	}
+	if nc, ok := next.(*routerImpl); ok {
+		nc.isChained = true
+		nc.pathPrefix = cleanPath(prefix) + nc.pathPrefix
+		curr.nextChain = nc
+	} else {
+		panic("router: SetNextChain expects a *routerImpl")
+	}
+	return r
 }
 
 // Use implements Router.
-func (r *RouterImpl) Use(mw any) Router {
-	r.meta.UseMiddleware(mw)
+func (r *routerImpl) Use(middleware ...any) Router {
+	r.middlewares = append(r.middlewares, adaptMiddlewares(middleware)...)
 	return r
 }
 
-// WithOverrideMiddleware implements Router.
-func (r *RouterImpl) WithOverrideMiddleware(enable bool) Router {
-	r.meta.OverrideMiddleware = enable
+// WithOverrideParentMiddleware implements Router.
+func (r *routerImpl) WithOverrideParentMiddleware(override bool) Router {
+	r.overrideParentMw = override
 	return r
 }
 
-// WithPrefix implements Router.
-func (r *RouterImpl) WithPrefix(prefix string) Router {
-	if prefix == "/" || prefix == "" {
-		return r
+func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []request.HandlerFunc, routerName string,
+	fn func(*route.Route, string, string, []request.HandlerFunc, string)) {
+	baseName := fullName
+	if r.isRoot {
+		baseName += r.name + "."
+	}
+	basePrefix := fullPrefix + r.pathPrefix
+
+	// Resolve lazy middlewares at this level
+	var baseMw []request.HandlerFunc
+	if r.overrideParentMw {
+		baseMw = resolveMiddlewares(r.middlewares)
+	} else {
+		baseMw = append(fullMw, resolveMiddlewares(r.middlewares)...)
 	}
 
-	if strings.HasPrefix(prefix, "/") {
-		r.meta.Prefix = "/" + strings.Trim(prefix, "/") // replace absolute prefix
-	} else {
-		r.meta.Prefix = r.cleanPrefix(prefix) // add relative prefix
+	// Use current router name for routes directly in this router
+	currentRouterName := r.name
+	if currentRouterName == "" {
+		currentRouterName = routerName
 	}
-	return r
+	for _, rt := range r.routes {
+		// Fix: Don't add trailing slash when path is "/"
+		fullPath := basePrefix + rt.Path
+		if rt.Path == "/" && basePrefix != "" {
+			fullPath = basePrefix
+		}
+		fn(rt, baseName+rt.Name, fullPath, baseMw, currentRouterName)
+	}
+	for _, child := range r.children {
+		child.walkBuildRecursive(baseName, basePrefix, baseMw, currentRouterName, fn)
+	}
+	if r.nextChain != nil {
+		r.nextChain.walkBuildRecursive(fullName, fullPrefix, fullMw, routerName, fn)
+	}
+	r.isBuilt = true
 }
 
-var _ Router = (*RouterImpl)(nil)
-
-func (r *RouterImpl) cleanPrefix(prefix string) string {
-	if prefix == "/" || prefix == "" {
-		return r.meta.Prefix
+// Walk implements Router.
+func (r *routerImpl) Walk(fn func(rt *route.Route)) {
+	r.Build()
+	for _, rt := range r.routes {
+		fn(rt)
 	}
-
-	cleaned := strings.Trim(prefix, "/")
-
-	var result string
-	if strings.HasSuffix(r.meta.Prefix, "/") {
-		result = r.meta.Prefix + cleaned
-	} else {
-		result = r.meta.Prefix + "/" + cleaned
+	for _, child := range r.children {
+		child.Walk(fn)
 	}
-
-	if strings.HasSuffix(prefix, "/") {
-		result += "/"
+	if r.nextChain != nil {
+		r.nextChain.Walk(fn)
 	}
-
-	return result
 }
 
-func (r *RouterImpl) handleRouteMeta(route *RouteMeta, mwParent []*midware.Execution) {
-	var mwh []*midware.Execution
-
-	if route.OverrideMiddleware {
-		mwh = make([]*midware.Execution, len(route.Middleware))
-		copy(mwh, route.Middleware)
-	} else {
-		mwh = utils.SlicesConcat(mwParent, route.Middleware)
-	}
-
-	handler_with_mw := composeMiddleware(mwh, route.Handler.HandlerFunc)
-	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ctx, ok := request.ContextFromRequest(req)
-
-		var cancel func()
-		if !ok {
-			ctx, cancel = request.NewContext(w, req)
-			defer cancel()
-		}
-		if err := handler_with_mw(ctx); err != nil {
-			_ = ctx.ErrorInternal(err.Error())
-		}
-		if err := ctx.Err(); err != nil {
-			_ = ctx.ErrorInternal("Request aborted")
-		}
-		_ = ctx.Response.WriteHttp(ctx.Writer)
-	})
-
-	r.r_engine.HandleMethod(string(route.Method), route.Path, finalHandler)
-}
-
-func (r *RouterImpl) buildRouter(router *RouterMeta, mwParent []*midware.Execution) {
-	var mwh []*midware.Execution
-
-	if router.OverrideMiddleware {
-		mwh = make([]*midware.Execution, len(router.Middleware))
-		copy(mwh, router.Middleware)
-	} else {
-		mwh = utils.SlicesConcat(mwParent, router.Middleware)
-	}
-
-	for _, route := range router.Routes {
-		r.handleRouteMeta(route, mwh)
-	}
-
-	for _, gr := range router.Groups {
-		r.buildRouter(gr, mwh)
-	}
-
-	for _, rh := range router.RawHandles {
-		if rh.Strip {
-			r.r_engine.RawHandle(rh.Prefix, http.StripPrefix(rh.Prefix, rh.Handler))
-		} else {
-			r.r_engine.RawHandle(rh.Prefix, rh.Handler)
-		}
-	}
-
-	for _, rpc := range router.RPCHandles {
-		cleanPath := r.cleanPrefix(rpc.Path)
-		if strings.HasSuffix(cleanPath, "/") {
-			cleanPath += ":method"
-		} else {
-			cleanPath += "/:method"
-		}
-
-		rpcMeta := &service.RpcServiceMeta{
-			MethodParam: "method",
-		}
-		switch s := rpc.Service.(type) {
-		case string:
-			rpcMeta.ServiceName = s
-		case *service.RpcServiceMeta:
-			rpcMeta = s
-		case service.Service:
-			rpcMeta.ServiceInst = s
+func (r *routerImpl) PrintRoutes() {
+	r.Build()
+	r.Walk(func(rt *route.Route) {
+		var mwDescr string
+		switch mwLen := len(rt.FullMiddleware); mwLen {
+		case 0:
+			mwDescr = ""
+		case 1:
+			mwDescr = " [with 1 mw]"
 		default:
-			fmt.Printf("Service type: %T\n", rpc.Service)
-			panic("Invalid service type, must be a string, *RpcServiceMeta, or iface.Service")
+			mwDescr = fmt.Sprintf(" [with %d mw(s)]", mwLen)
 		}
-
-		handlerMeta := &request.HandlerMeta{
-			HandlerFunc: func(ctx *request.Context) error {
-				return ctx.ErrorInternal("RpcService not yet resolved")
-			},
-			Extension: rpcMeta,
+		routerNameDisplay := rt.RouterName
+		if routerNameDisplay == "" {
+			routerNameDisplay = r.name
 		}
-
-		if rpc.OverrideMiddleware {
-			r.meta.Handle("POST", cleanPath, handlerMeta, true, rpc.Middleware...)
-		} else {
-			r.Handle("POST", cleanPath, handlerMeta, rpc.Middleware...)
-		}
-	}
-
-	for _, rp := range router.ReverseProxies {
-		handler := composeReverseProxyMw(rp, mwh)
-		r.r_engine.ServeReverseProxy(rp.Prefix, handler)
-	}
-
-	for _, sdf := range router.StaticMounts {
-		r.r_engine.ServeStatic(sdf.Prefix, sdf.Spa, sdf.Sources...)
-	}
-
-	for _, htmx := range router.HTMXPages {
-		r.r_engine.ServeHtmxPage(r.r_engine, htmx.Prefix, htmx.Script, htmx.Sources...)
-	}
-}
-
-func (r *RouterImpl) BuildRouter() {
-	r.buildRouter(r.meta, nil)
-}
-
-func (r *RouterImpl) GetEngine() serviceapi.RouterEngine {
-	return r.r_engine
-}
-
-func (r *RouterImpl) SetEngine(engine serviceapi.RouterEngine) {
-	r.r_engine = engine
-}
-
-func composeMiddleware(mw []*midware.Execution,
-	finalHandler request.HandlerFunc) request.HandlerFunc {
-	// Update execution order based on order of addition
-	execOrder := 0
-	for _, m := range mw {
-		m.ExecutionOrder = execOrder
-		execOrder++
-	}
-
-	// Sort middleware by priority and execution order
-	slices.SortStableFunc(mw, func(a, b *midware.Execution) int {
-		aOrder := a.Priority + a.ExecutionOrder
-		bOrder := b.Priority + b.ExecutionOrder
-
-		if aOrder < bOrder {
-			return -1
-		} else if aOrder > bOrder {
-			return 1
-		}
-
-		return 0
+		fmt.Printf("[%s] %s %s -> %s%s\n", routerNameDisplay, rt.Method, rt.FullPath, rt.FullName, mwDescr)
 	})
-
-	// Compose middleware functions in reverse order
-	handler := finalHandler
-	for i := len(mw) - 1; i >= 0; i-- {
-		handler = mw[i].MiddlewareFn(handler)
-	}
-	return handler
 }
 
-// ComposeMiddlewareForTest exposes composeMiddleware for testing
-func ComposeMiddlewareForTest(mw []*midware.Execution, finalHandler request.HandlerFunc) request.HandlerFunc {
-	return composeMiddleware(mw, finalHandler)
-}
-
-func NormalizeListenerType(listenerType string) string {
-	if listenerType == "" {
-		listenerType = "default"
-	}
-
-	if !strings.HasPrefix(listenerType, serviceapi.HTTP_LISTENER_PREFIX) {
-		listenerType = serviceapi.HTTP_LISTENER_PREFIX + listenerType
-	}
-
-	return listenerType
-}
-
-func NormalizeRouterType(routerType string) string {
-	if routerType == "" {
-		routerType = "default"
-	}
-
-	if !strings.HasPrefix(routerType, serviceapi.HTTP_ROUTER_PREFIX) {
-		routerType = serviceapi.HTTP_ROUTER_PREFIX + routerType
-	}
-
-	return routerType
-}
-
-func init() {
-	_ = mime.AddExtensionType(".wasm", "application/wasm")
-	_ = mime.AddExtensionType(".woff2", "font/woff2")
-	_ = mime.AddExtensionType(".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-	_ = mime.AddExtensionType(".gz", "application/gzip")
-	_ = mime.AddExtensionType(".map", "application/json")
-}
+var _ Router = (*routerImpl)(nil)

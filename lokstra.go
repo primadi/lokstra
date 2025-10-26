@@ -1,206 +1,44 @@
 package lokstra
 
 import (
+	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/app"
-	"github.com/primadi/lokstra/core/config"
-	"github.com/primadi/lokstra/core/flow"
-
-	"github.com/primadi/lokstra/core/midware"
-	"github.com/primadi/lokstra/core/registration"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
-	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/defaults"
-	"github.com/primadi/lokstra/modules/coreservice/listener"
-	"github.com/primadi/lokstra/serviceapi"
 )
-
-type Context = request.Context
-type RegistrationContext = registration.Context
-
-type HandlerFunc = request.HandlerFunc
-
-type MiddlewareFunc = midware.Func
-type MiddlewareFactory = midware.Factory
-
-type Module = registration.Module
 
 type Server = server.Server
 type App = app.App
+type Router = router.Router
+type RequestContext = request.Context
+type HandlerFunc = request.HandlerFunc
+type Handler = request.Handler
 
-type LogFields = serviceapi.LogFields
+// Create a new Router instance
+func NewRouter(name string) Router { return router.New(name) }
 
-type Service = service.Service
-type ServiceFactory = service.ServiceFactory
-
-var Logger serviceapi.Logger
-
-// NewGlobalRegistrationContext creates a new global registration context,
-// registers all default modules, and retrieves the default logger service.
-// this function must be called only once at the beginning of the application.
-func NewGlobalRegistrationContext() RegistrationContext {
-	ctx := registration.NewGlobalContext()
-
-	defaults.RegisterAll(ctx)
-
-	// get default logger service
-	Logger, _ = serviceapi.GetService[serviceapi.Logger](ctx, "logger")
-
-	return ctx
+// Create a new Router instance with specific engine type (e.g., "default", "servemux")
+func NewRouterWithEngine(name string, engineType string) Router {
+	return router.NewWithEngine(name, engineType)
 }
 
-// NewServer creates a new Server instance with the given context and name.
-func NewServer(regCtx RegistrationContext, name string) *Server {
-	return server.NewServer(regCtx, name)
+// Create a new App instance with given routers
+func NewApp(name string, addr string, routers ...Router) *app.App {
+	return app.New(name, addr, routers...)
 }
 
-// NewServerFromConfig start all modules, start all services, new all apps, and
-// creates a new server instance from the provided configuration.
-func NewServerFromConfig(regCtx RegistrationContext, cfg *config.LokstraConfig) (*Server, error) {
-	svr, err := cfg.NewServerFromConfig(regCtx)
-	if err != nil {
-		return nil, err
-	}
-	loadSettingFromConfig(regCtx, svr, cfg)
-	return svr, nil
+// Create a new App instance with given routers and custom listener configuration
+func NewAppWithConfig(name string, addr string, listenerType string,
+	config map[string]any, routers ...Router) *app.App {
+	return app.NewWithConfig(name, addr, listenerType, config, routers...)
 }
 
-// LoadConfigToServer loads the configuration into the provided server instance.
-func LoadConfigToServer(regCtx RegistrationContext, cfg *config.LokstraConfig, svr *server.Server) (*Server, error) {
-	svr, err := cfg.LoadConfigToServer(regCtx, svr)
-	if err != nil {
-		return nil, err
-	}
-	loadSettingFromConfig(regCtx, svr, cfg)
-	return svr, nil
+func NewServer(name string, apps ...*app.App) *server.Server {
+	return server.New(name, apps...)
 }
 
-func loadSettingFromConfig(regCtx RegistrationContext, svr *server.Server, cfg *config.LokstraConfig) (*Server, error) {
-	// change log_level if exists on server settings
-	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogLevel]; exists {
-		if LvlStr, ok := l.(string); ok {
-			if logLvl, ok := serviceapi.ParseLogLevelSafe(LvlStr); ok {
-				Logger.SetLogLevel(logLvl)
-			}
-		}
-	}
-
-	// change log_format if exists on server settings
-	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogFormat]; exists {
-		if formatStr, ok := l.(string); ok {
-			Logger.SetFormat(formatStr)
-		}
-	}
-
-	// change log_output if exists on server settings
-	if l, exists := cfg.Server.Settings[serviceapi.ConfigKeyLogOutput]; exists {
-		if output, ok := l.(string); ok {
-			Logger.SetOutput(output)
-		}
-	}
-
-	// change Logger if exists on server settings
-	svc, err := serviceapi.GetService[serviceapi.Logger](regCtx, "logger")
-	if err == nil {
-		Logger = svc
-	}
-
-	// Initialize default flow services from global settings
-	if dbPoolName, exists := cfg.Server.Settings["flow_dbPool"]; exists {
-		if dbPoolStr, ok := dbPoolName.(string); ok {
-			flow.SetDefaultDbPool(regCtx, dbPoolStr)
-		}
-	}
-
-	// Initialize default flow services from global settings
-	if loggerName, exists := cfg.Server.Settings["flow_logger"]; exists {
-		if loggerStr, ok := loggerName.(string); ok {
-			flow.SetDefaultLogger(regCtx, loggerStr)
-		}
-	}
-
-	// Initialize default flow dbschema from global settings
-	if dbSchemaName, exists := cfg.Server.Settings["flow_dbschema"]; exists {
-		if dbSchemaStr, ok := dbSchemaName.(string); ok {
-			flow.SetDefaultDbSchemaName(dbSchemaStr)
-		}
-	}
-
-	return svr, nil
-}
-
-const CERT_FILE_KEY = listener.CERT_FILE_KEY
-const KEY_FILE_KEY = listener.KEY_FILE_KEY
-const CA_FILE_KEY = listener.CA_FILE_KEY
-
-func NewApp(regCtx RegistrationContext, name string, addr string) *App {
-	return app.NewApp(regCtx, name, addr)
-}
-
-func NewAppCustom(regCtx RegistrationContext, name string, addr string,
-	listenerType string, routerEngine string, settings map[string]any) *App {
-	return app.NewAppCustom(regCtx, name, addr, listenerType, routerEngine, settings)
-}
-
-func NewAppSecure(regCtx RegistrationContext, name string, addr string,
-	certFile string, keyFile string, caFile string) *App {
-	settings := map[string]any{
-		CERT_FILE_KEY: certFile,
-		KEY_FILE_KEY:  keyFile,
-		CA_FILE_KEY:   caFile,
-	}
-	return app.NewAppCustom(regCtx, name, addr, defaults.HTTP_LISTENER_SECURE_NETHTTP, "", settings)
-}
-
-func NewAppHttp3(regCtx RegistrationContext, name string, addr string,
-	certFile string, keyFile string, caFile string) *App {
-	settings := map[string]any{
-		CERT_FILE_KEY: certFile,
-		KEY_FILE_KEY:  keyFile,
-		CA_FILE_KEY:   caFile,
-	}
-	return app.NewAppCustom(regCtx, name, addr, defaults.HTTP_LISTENER_HTTP3, "", settings)
-}
-
-func NewAppFastHTTP(regCtx RegistrationContext, name string, addr string) *App {
-	return app.NewAppCustom(regCtx, name, addr, defaults.HTTP_LISTENER_FASTHTTP, "", nil)
-}
-
-func NamedMiddleware(middlewareType string, config ...any) *midware.Execution {
-	return midware.Named(middlewareType, config...)
-}
-
-// LoadConfigDir loads the configuration from the specified directory.
-// It returns a pointer to the LokstraConfig and an error if any.
-func LoadConfigDir(dir string) (*config.LokstraConfig, error) {
-	return config.LoadConfigDir(dir)
-}
-
-// Loads the configuration from the specified file.
-// It returns a pointer to the LokstraConfig and an error if any.
-func LoadConfigFile(filePath string) (*config.LokstraConfig, error) {
-	return config.LoadConfigFile(filePath)
-}
-
-// Retrieves a service by name from service registry.
-//
-// Returns error:
-//   - nil on success
-//   - ErrServiceNotAllowed if accessing the service is not allowed.
-//   - ErrServiceNotFound if the service does not exist.
-//   - ErrServiceTypeInvalid if the service is not of the expected type.
-func GetService[T service.Service](regCtx RegistrationContext, serviceName string) (T, error) {
-	return registration.GetService[T](regCtx, serviceName)
-}
-
-// Retrieves a service by name if it exists, otherwise creates it using the specified factory
-// and configuration, and insert into service registry.
-//
-// Returns error:
-//   - nil on success
-//   - ErrServiceNotAllowed if accessing the service is not allowed.
-//   - ErrServiceFactoryNotFound if the specified factory does not exist
-func GetOrCreateService[T any](regCtx RegistrationContext,
-	serviceName string, factoryName string, config ...any) (T, error) {
-	return registration.GetOrCreateService[T](regCtx, serviceName, factoryName, config...)
+func FetchAndCast[T any](client *api_client.ClientRouter, path string,
+	opts ...api_client.FetchOption) (T, error) {
+	return api_client.FetchAndCast[T](client, path, opts...)
 }

@@ -4,35 +4,43 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/primadi/lokstra/core/midware"
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-const NAME = "body_limit"
+const BODY_LIMIT_TYPE = "body_limit"
+const PARAMS_MAX_SIZE = "max_size"
+const PARAMS_SKIP_LARGE_PAYLOADS = "skip_large_payloads"
+const PARAMS_MESSAGE = "message"
+const PARAMS_STATUS_CODE = "status_code"
+const PARAMS_SKIP_ON_PATH = "skip_on_path"
 
-// Config holds configuration for body limit middleware
 type Config struct {
 	// MaxSize is the maximum allowed body size in bytes
-	MaxSize int64 `json:"max_size" yaml:"max_size"`
+	MaxSize int64
 
 	// SkipLargePayloads if true, skips reading body when it exceeds limit
 	// If false, returns error immediately
-	SkipLargePayloads bool `json:"skip_large_payloads" yaml:"skip_large_payloads"`
+	SkipLargePayloads bool
 
 	// Message is the custom error message for oversized bodies
-	Message string `json:"message" yaml:"message"`
+	Message string
 
 	// StatusCode is the HTTP status code to return for oversized bodies
-	StatusCode int `json:"status_code" yaml:"status_code"`
+	StatusCode int
 
 	// SkipOnPath is a list of path patterns to skip body limit check
-	SkipOnPath []string `json:"skip_on_path" yaml:"skip_on_path"`
+	// Supports wildcards like /api/* or /public/** to skip multiple paths
+	// Example: ["/api/*", "/public/**"]
+	// will skip all paths under /api/ and /public/ (including subpaths)
+	SkipOnPath []string
 }
 
-// DefaultConfig returns default configuration
 func DefaultConfig() *Config {
 	return &Config{
 		MaxSize:           10 * 1024 * 1024, // 10MB default
@@ -43,210 +51,99 @@ func DefaultConfig() *Config {
 	}
 }
 
-// BodyLimitMiddleware creates a new body limit middleware with the given config
-func BodyLimitMiddleware(config *Config) midware.Func {
+// BodyLimit middleware to enforce maximum request body size
+func Middleware(cfg *Config) request.HandlerFunc {
 	defConfig := DefaultConfig()
-	if config.MaxSize <= 0 {
-		config.MaxSize = defConfig.MaxSize
+	if cfg.MaxSize <= 0 {
+		cfg.MaxSize = defConfig.MaxSize
 	}
-	if config.Message == "" {
-		config.Message = defConfig.Message
+	if cfg.Message == "" {
+		cfg.Message = defConfig.Message
 	}
-	if config.StatusCode == 0 {
-		config.StatusCode = defConfig.StatusCode
+	if cfg.StatusCode == 0 {
+		cfg.StatusCode = defConfig.StatusCode
 	}
 
-	return func(next request.HandlerFunc) request.HandlerFunc {
-		return func(ctx *request.Context) error {
-			// Check if current path should be skipped
-			currentPath := ctx.Request.URL.Path
-			for _, skipPath := range config.SkipOnPath {
-				if matchPath(currentPath, skipPath) {
-					return next(ctx)
-				}
+	return request.HandlerFunc(func(c *request.Context) error {
+		// Check if current path should skip body limit
+		requestPath := path.Clean(c.R.URL.Path)
+		for _, pattern := range cfg.SkipOnPath {
+			if matched := matchPath(requestPath, pattern); matched {
+				return c.Next()
 			}
-
-			// Check Content-Length header first if available
-			if ctx.Request.ContentLength > config.MaxSize {
-				if config.SkipLargePayloads {
-					// Don't read body, but continue processing
-					return next(ctx)
-				}
-
-				// Set error response and return error
-				ctx.SetStatusCode(config.StatusCode)
-				ctx.WithMessage(config.Message).WithData(map[string]any{
-					"maxSize": config.MaxSize,
-					"actual":  ctx.Request.ContentLength,
-				})
-				// Return an actual error to stop the chain
-				return fmt.Errorf("%s (maxSize: %d, actual: %d)",
-					config.Message, config.MaxSize, ctx.Request.ContentLength)
-			}
-
-			// If no Content-Length or it's within limit, wrap the body reader
-			if ctx.Request.Body != nil {
-				ctx.Request.Body = &limitedReadCloser{
-					reader:    ctx.Request.Body,
-					remaining: config.MaxSize,
-					config:    config,
-					ctx:       ctx,
-				}
-			}
-
-			return next(ctx)
-		}
-	}
-}
-
-// limitedReadCloser wraps the request body to enforce size limits during reading
-type limitedReadCloser struct {
-	reader    io.ReadCloser
-	remaining int64
-	config    *Config
-	ctx       *request.Context
-}
-
-func (l *limitedReadCloser) Read(p []byte) (int, error) {
-	if l.remaining <= 0 {
-		if l.config.SkipLargePayloads {
-			// Return EOF to signal end of reading
-			return 0, io.EOF
 		}
 
-		// Set error response in context
-		l.ctx.SetStatusCode(l.config.StatusCode)
-		l.ctx.WithMessage(l.config.Message).WithData(map[string]any{
-			"maxSize": l.config.MaxSize,
-		})
-
-		return 0, fmt.Errorf("request body exceeds limit of %d bytes", l.config.MaxSize)
-	}
-
-	// Limit read to remaining bytes
-	if int64(len(p)) > l.remaining {
-		p = p[:l.remaining]
-	}
-
-	n, err := l.reader.Read(p)
-	l.remaining -= int64(n)
-
-	return n, err
-}
-
-func (l *limitedReadCloser) Close() error {
-	return l.reader.Close()
-}
-
-// Convenience functions for common size limits
-
-// BodyLimit creates middleware with specified size limit
-func BodyLimit(maxSize int64) midware.Func {
-	config := DefaultConfig()
-	config.MaxSize = maxSize
-	return BodyLimitMiddleware(config)
-}
-
-// BodyLimit1MB creates middleware with 1MB limit
-func BodyLimit1MB() midware.Func {
-	return BodyLimit(1024 * 1024)
-}
-
-// BodyLimit5MB creates middleware with 5MB limit
-func BodyLimit5MB() midware.Func {
-	return BodyLimit(5 * 1024 * 1024)
-}
-
-// BodyLimit10MB creates middleware with 10MB limit
-func BodyLimit10MB() midware.Func {
-	return BodyLimit(10 * 1024 * 1024)
-}
-
-// BodyLimit50MB creates middleware with 50MB limit (for file uploads)
-func BodyLimit50MB() midware.Func {
-	return BodyLimit(50 * 1024 * 1024)
-}
-
-// BodyLimitWithSkip creates middleware that skips large payloads instead of erroring
-func BodyLimitWithSkip(maxSize int64) midware.Func {
-	config := DefaultConfig()
-	config.MaxSize = maxSize
-	config.SkipLargePayloads = true
-	return BodyLimitMiddleware(config)
-}
-
-// factory creates body limit middleware from configuration
-func factory(config any) midware.Func {
-	cfg := DefaultConfig()
-
-	if config != nil {
-		switch c := config.(type) {
-		case map[string]any:
-			if maxSize, ok := c["max_size"]; ok {
-				if size, ok := maxSize.(int64); ok {
-					cfg.MaxSize = size
-				} else if size, ok := maxSize.(int); ok {
-					cfg.MaxSize = int64(size)
-				} else if size, ok := maxSize.(float64); ok {
-					cfg.MaxSize = int64(size)
-				}
+		// Optional: Early validation using ContentLength header if available
+		// Note: This only works if:
+		// - Client sets ContentLength in HTTP request
+		// - OR previous middleware sets ContentLength
+		// If ContentLength is -1 (unknown), this check is skipped
+		if c.R.ContentLength > 0 && c.R.ContentLength > cfg.MaxSize {
+			if !cfg.SkipLargePayloads {
+				// Reject immediately based on declared size
+				return c.Api.Error(cfg.StatusCode, "BODY_TOO_LARGE", cfg.Message)
 			}
-			if statusCode, ok := c["status_code"]; ok {
-				if code, ok := statusCode.(int); ok {
-					cfg.StatusCode = code
-				} else if code, ok := statusCode.(float64); ok {
-					cfg.StatusCode = int(code)
-				}
-			}
-			if message, ok := c["message"]; ok {
-				if msg, ok := message.(string); ok {
-					cfg.Message = msg
-				}
-			}
-			if skipOnPath, ok := c["skip_on_path"]; ok {
-				if paths, ok := skipOnPath.([]any); ok {
-					cfg.SkipOnPath = make([]string, 0, len(paths))
-					for _, path := range paths {
-						if pathStr, ok := path.(string); ok {
-							cfg.SkipOnPath = append(cfg.SkipOnPath, pathStr)
-						}
-					}
-				} else if paths, ok := skipOnPath.([]string); ok {
-					cfg.SkipOnPath = paths
-				}
-			}
-		case *Config:
-			cfg = c
-		case Config:
-			cfg = &c
+			// If SkipLargePayloads=true, continue but body will be limited by reader
 		}
+
+		// Primary enforcement: Wrap body reader with limitedReadCloser
+		// This provides reliable protection regardless of:
+		// - ContentLength header presence or accuracy
+		// - Middleware ordering
+		// - When body is actually read
+		// The limit is enforced during actual read operations
+		if c.R.Body != nil {
+			c.R.Body = &limitedReadCloser{
+				reader:    c.R.Body,
+				remaining: cfg.MaxSize,
+				config:    cfg,
+			}
+		}
+
+		// Continue to next handler
+		// Body will be limited by limitedReadCloser when handler reads it
+		return c.Next()
+	})
+}
+
+func MiddlewareFactory(params map[string]any) request.HandlerFunc {
+	defConfig := DefaultConfig()
+	if params == nil {
+		return Middleware(defConfig)
 	}
 
-	return BodyLimitMiddleware(cfg)
+	cfg := &Config{
+		MaxSize:           utils.GetValueFromMap(params, PARAMS_MAX_SIZE, defConfig.MaxSize),
+		SkipLargePayloads: utils.GetValueFromMap(params, PARAMS_SKIP_LARGE_PAYLOADS, defConfig.SkipLargePayloads),
+		Message:           utils.GetValueFromMap(params, PARAMS_MESSAGE, defConfig.Message),
+		StatusCode:        utils.GetValueFromMap(params, PARAMS_STATUS_CODE, defConfig.StatusCode),
+		SkipOnPath:        utils.GetValueFromMap(params, PARAMS_SKIP_ON_PATH, defConfig.SkipOnPath),
+	}
+	return Middleware(cfg)
+}
+
+func Register() {
+	lokstra_registry.RegisterMiddlewareFactory(BODY_LIMIT_TYPE, MiddlewareFactory,
+		lokstra_registry.AllowOverride(true))
 }
 
 // matchPath checks if a path matches a pattern
 // Supports basic wildcard patterns with * and **
-func matchPath(path, pattern string) bool {
+func matchPath(requestPath, pattern string) bool {
 	// Direct match
-	if path == pattern {
+	if requestPath == pattern {
 		return true
 	}
 
 	// Handle ** patterns (match any number of path segments)
 	if strings.Contains(pattern, "**") {
-		parts := strings.Split(pattern, "**")
+		parts := strings.SplitN(pattern, "**", 2)
 		if len(parts) == 2 {
 			prefix := parts[0]
 			suffix := parts[1]
 
-			// Remove trailing slash from prefix if present
-			prefix = strings.TrimSuffix(prefix, "/")
-			// Remove leading slash from suffix if present
-			suffix = strings.TrimPrefix(suffix, "/")
-
-			prefixMatch := prefix == "" || strings.HasPrefix(path, prefix)
-			suffixMatch := suffix == "" || strings.HasSuffix(path, suffix)
+			prefixMatch := prefix == "" || strings.HasPrefix(requestPath, prefix)
+			suffixMatch := suffix == "" || strings.HasSuffix(requestPath, suffix)
 
 			return prefixMatch && suffixMatch
 		}
@@ -254,9 +151,9 @@ func matchPath(path, pattern string) bool {
 
 	// Handle single * patterns (should not match path separators)
 	if strings.Contains(pattern, "*") && !strings.Contains(pattern, "**") {
-		// Split pattern by /* to handle segments properly
+		// Split pattern by / to handle segments properly
 		patternParts := strings.Split(pattern, "/")
-		pathParts := strings.Split(path, "/")
+		pathParts := strings.Split(requestPath, "/")
 
 		// Must have same number of segments for single * match
 		if len(patternParts) != len(pathParts) {
@@ -275,9 +172,42 @@ func matchPath(path, pattern string) bool {
 	}
 
 	// Fallback to filepath.Match for patterns without wildcards
-	if matched, err := filepath.Match(pattern, path); err == nil && matched {
+	if matched, err := filepath.Match(pattern, requestPath); err == nil && matched {
 		return true
 	}
 
 	return false
+}
+
+// limitedReadCloser wraps the request body to enforce size limits during reading
+type limitedReadCloser struct {
+	reader    io.ReadCloser
+	remaining int64
+	config    *Config
+}
+
+func (l *limitedReadCloser) Read(p []byte) (int, error) {
+	if l.remaining <= 0 {
+		if l.config.SkipLargePayloads {
+			// Return EOF to signal end of reading
+			return 0, io.EOF
+		}
+
+		// Body size exceeded during reading
+		return 0, fmt.Errorf("request body exceeds limit of %d bytes", l.config.MaxSize)
+	}
+
+	// Limit read to remaining bytes
+	if int64(len(p)) > l.remaining {
+		p = p[:l.remaining]
+	}
+
+	n, err := l.reader.Read(p)
+	l.remaining -= int64(n)
+
+	return n, err
+}
+
+func (l *limitedReadCloser) Close() error {
+	return l.reader.Close()
 }

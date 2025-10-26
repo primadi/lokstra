@@ -3,232 +3,229 @@ package config
 import (
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-// ==============================================
-// ENV RESOLVER TESTS
-// ==============================================
-
-func TestEnvResolver_Resolve_ExistingVariable(t *testing.T) {
-	resolver := EnvResolver{}
-	os.Setenv("TEST_VAR", "test_value")
-	defer os.Unsetenv("TEST_VAR")
-
-	result, found := resolver.Resolve("ENV", "TEST_VAR", "")
-	assert.True(t, found)
-	assert.Equal(t, "test_value", result)
-}
-
-func TestEnvResolver_Resolve_NonExistentVariable(t *testing.T) {
-	resolver := EnvResolver{}
-
-	result, found := resolver.Resolve("ENV", "NON_EXISTENT", "")
-	assert.False(t, found)
-	assert.Equal(t, "", result)
-}
-
-func TestEnvResolver_Resolve_EmptyVariable(t *testing.T) {
-	resolver := EnvResolver{}
-	os.Setenv("EMPTY_VAR", "")
-	defer os.Unsetenv("EMPTY_VAR")
-
-	result, found := resolver.Resolve("ENV", "EMPTY_VAR", "default")
-	assert.False(t, found)             // Empty env var returns false
-	assert.Equal(t, "default", result) // Returns default value
-}
-
-func TestEnvResolver_Resolve_WrongSource(t *testing.T) {
-	resolver := EnvResolver{}
-	os.Setenv("TEST_VAR", "test_value")
-	defer os.Unsetenv("TEST_VAR")
-
-	result, found := resolver.Resolve("file", "TEST_VAR", "")
-	assert.False(t, found)
-	assert.Equal(t, "", result)
-}
-
-// ==============================================
-// VARIABLE EXPANSION TESTS
-// ==============================================
-
-func TestExpandVariables_SimpleEnvVar(t *testing.T) {
-	os.Setenv("TEST_VAR", "hello")
-	defer os.Unsetenv("TEST_VAR")
-
-	result := expandVariables("${TEST_VAR}")
-	assert.Equal(t, "hello", result)
-}
-
-func TestExpandVariables_WithDefault(t *testing.T) {
-	result := expandVariables("${NON_EXISTENT:default_value}")
-	assert.Equal(t, "default_value", result)
-}
-
-func TestExpandVariables_ExplicitEnvSource(t *testing.T) {
-	os.Setenv("TEST_VAR", "env_value")
-	defer os.Unsetenv("TEST_VAR")
-
-	result := expandVariables("${ENV:TEST_VAR}")
-	assert.Equal(t, "env_value", result)
-}
-
-func TestExpandVariables_ExplicitEnvSourceWithDefault(t *testing.T) {
-	result := expandVariables("${ENV:NON_EXISTENT:default_value}")
-	assert.Equal(t, "default_value", result)
-}
-
-func TestExpandVariables_MultipleVariables(t *testing.T) {
-	os.Setenv("VAR1", "hello")
-	os.Setenv("VAR2", "world")
-	defer func() {
-		os.Unsetenv("VAR1")
-		os.Unsetenv("VAR2")
-	}()
-
-	result := expandVariables("${VAR1} ${VAR2}!")
-	assert.Equal(t, "hello world!", result)
-}
-
-func TestExpandVariables_NoVariables(t *testing.T) {
-	result := expandVariables("no variables here")
-	assert.Equal(t, "no variables here", result)
-}
-
-func TestExpandVariables_EmptyString(t *testing.T) {
-	result := expandVariables("")
-	assert.Equal(t, "", result)
-}
-
-func TestExpandVariables_OnlyDefault(t *testing.T) {
-	result := expandVariables("${NON_EXISTENT:}")
-	assert.Equal(t, "", result)
-}
-
-func TestExpandVariables_ColonInValue(t *testing.T) {
-	os.Setenv("TEST_VAR", "value:with:colons")
-	defer os.Unsetenv("TEST_VAR")
-
-	result := expandVariables("${TEST_VAR}")
-	assert.Equal(t, "value:with:colons", result)
-}
-
-// ==============================================
-// CUSTOM RESOLVER TESTS
-// ==============================================
-
-func TestAddVariableResolver_Success(t *testing.T) {
-	// Create custom resolver for testing
-	customResolver := &customTestResolver{
-		values: map[string]string{
-			"test_key": "test_value",
-		},
-	}
-
-	// Add resolver
-	AddVariableResolver("TEST", customResolver)
-
-	// Test resolution
-	result := expandVariables("${TEST:test_key}")
-	assert.Equal(t, "test_value", result)
-
-	// Clean up by removing the resolver
-	delete(variableResolvers, "TEST")
-}
-
-func TestAddVariableResolver_Panic(t *testing.T) {
-	assert.Panics(t, func() {
-		AddVariableResolver("ENV", &customTestResolver{})
-	})
-}
-
-func TestExpandVariables_WithCustomResolver(t *testing.T) {
-	customResolver := &customTestResolver{
-		values: map[string]string{
-			"config_key": "config_value",
-		},
-	}
-
-	AddVariableResolver("CONFIG", customResolver)
-	defer delete(variableResolvers, "CONFIG")
-
-	result := expandVariables("${CONFIG:config_key:default}")
-	assert.Equal(t, "config_value", result)
-}
-
-// ==============================================
-// EDGE CASES
-// ==============================================
-
-func TestExpandVariables_EdgeCases(t *testing.T) {
+func TestExpandVariables(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
+		envVars  map[string]string
 		expected string
-		setup    func()
-		cleanup  func()
 	}{
 		{
-			name:     "Variable with no colon",
-			input:    "${NO_COLON}",
+			name:     "Simple variable without default",
+			input:    "${PORT}",
+			envVars:  map[string]string{"PORT": "8080"},
+			expected: "8080",
+		},
+		{
+			name:     "Variable with default, env not set",
+			input:    "${PORT:3000}",
+			envVars:  map[string]string{},
+			expected: "3000",
+		},
+		{
+			name:     "Variable with default, env set",
+			input:    "${PORT:3000}",
+			envVars:  map[string]string{"PORT": "8080"},
+			expected: "8080",
+		},
+		{
+			name:     "Default value with colon (URL)",
+			input:    "${BASE_URL:http://localhost}",
+			envVars:  map[string]string{},
+			expected: "http://localhost",
+		},
+		{
+			name:     "Default value with multiple colons (URL with port)",
+			input:    "${BASE_URL:http://localhost:8080}",
+			envVars:  map[string]string{},
+			expected: "http://localhost:8080",
+		},
+		{
+			name:     "Complex default with colon (DSN)",
+			input:    "${DSN:postgresql://user:pass@localhost:5432/db}",
+			envVars:  map[string]string{},
+			expected: "postgresql://user:pass@localhost:5432/db",
+		},
+		{
+			name:     "Explicit ENV resolver",
+			input:    "${@ENV:API_KEY}",
+			envVars:  map[string]string{"API_KEY": "secret123"},
+			expected: "secret123",
+		},
+		{
+			name:     "Explicit ENV resolver with default",
+			input:    "${@ENV:API_KEY:default-key}",
+			envVars:  map[string]string{},
+			expected: "default-key",
+		},
+		{
+			name:     "Explicit ENV resolver with colon in default",
+			input:    "${@ENV:SERVICE_URL:http://localhost:9090}",
+			envVars:  map[string]string{},
+			expected: "http://localhost:9090",
+		},
+		{
+			name:     "Multiple variables in string",
+			input:    "Host: ${HOST:localhost}, Port: ${PORT:8080}",
+			envVars:  map[string]string{"HOST": "0.0.0.0"},
+			expected: "Host: 0.0.0.0, Port: 8080",
+		},
+		{
+			name:     "Variable in middle of string",
+			input:    "Server running on http://${HOST:localhost}:${PORT:8080}",
+			envVars:  map[string]string{"PORT": "3000"},
+			expected: "Server running on http://localhost:3000",
+		},
+		{
+			name:     "Unknown resolver falls back to default",
+			input:    "${@UNKNOWN:KEY:fallback}",
+			envVars:  map[string]string{},
+			expected: "fallback",
+		},
+		{
+			name:     "Empty default value",
+			input:    "${VAR:}",
+			envVars:  map[string]string{},
 			expected: "",
-			setup:    func() {},
-			cleanup:  func() {},
 		},
 		{
-			name:     "Variable name with underscores and numbers",
-			input:    "${VAR_123}",
-			expected: "test_value",
-			setup: func() {
-				os.Setenv("VAR_123", "test_value")
-			},
-			cleanup: func() {
-				os.Unsetenv("VAR_123")
-			},
-		},
-		{
-			name:     "Default value with colons - split only on first colon",
-			input:    "${NON_EXISTENT:a:b:c}",
-			expected: "b:c", // SplitN(key, ":", 3) splits into [NON_EXISTENT, a, b:c], so default = "b:c"
-			setup:    func() {},
-			cleanup:  func() {},
-		},
-		{
-			name:     "Nested variable syntax - Go's os.Expand limitation",
-			input:    "${OUTER_${INNER:inner_value}}",
-			expected: "inner_value}", // os.Expand finds ${INNER:inner_value} first, replaces with "inner_value"
-			setup:    func() {},
-			cleanup:  func() {},
+			name:     "No default, env not set",
+			input:    "${MISSING_VAR}",
+			envVars:  map[string]string{},
+			expected: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			defer tt.cleanup()
+			// Clear and set environment variables
+			os.Clearenv()
+			for k, v := range tt.envVars {
+				os.Setenv(k, v)
+			}
 
 			result := expandVariables(tt.input)
-			assert.Equal(t, tt.expected, result)
+			if result != tt.expected {
+				t.Errorf("expandVariables(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
 		})
 	}
 }
 
-// ==============================================
-// HELPER STRUCTS FOR TESTING
-// ==============================================
+func TestExpandVariables_RealWorldExamples(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		envVars  map[string]string
+		expected string
+	}{
+		{
+			name:  "Database DSN with credentials",
+			input: "${DATABASE_URL:postgresql://user:password@localhost:5432/mydb?sslmode=disable}",
+			envVars: map[string]string{
+				"DATABASE_URL": "postgresql://prod_user:prod_pass@db.example.com:5432/production",
+			},
+			expected: "postgresql://prod_user:prod_pass@db.example.com:5432/production",
+		},
+		{
+			name:     "Redis URL",
+			input:    "${REDIS_URL:redis://localhost:6379/0}",
+			envVars:  map[string]string{},
+			expected: "redis://localhost:6379/0",
+		},
+		{
+			name:     "API endpoint with path",
+			input:    "${API_ENDPOINT:https://api.example.com/v1/endpoint}",
+			envVars:  map[string]string{},
+			expected: "https://api.example.com/v1/endpoint",
+		},
+		{
+			name:  "Complete server config",
+			input: "Server: ${SERVER_NAME:my-server} running on ${BASE_URL:http://localhost:8080}",
+			envVars: map[string]string{
+				"SERVER_NAME": "production-server",
+			},
+			expected: "Server: production-server running on http://localhost:8080",
+		},
+		{
+			name:     "Unix socket path",
+			input:    "${SOCKET_PATH:unix:///var/run/app.sock}",
+			envVars:  map[string]string{},
+			expected: "unix:///var/run/app.sock",
+		},
+	}
 
-type customTestResolver struct {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Clearenv()
+			for k, v := range tt.envVars {
+				os.Setenv(k, v)
+			}
+
+			result := expandVariables(tt.input)
+			if result != tt.expected {
+				t.Errorf("expandVariables(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestExpandVariables_CustomResolvers(t *testing.T) {
+	// Register a test resolver
+	AddVariableResolver("TEST", &testResolver{
+		values: map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+		},
+	})
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Custom resolver without default",
+			input:    "${@TEST:key1}",
+			expected: "value1",
+		},
+		{
+			name:     "Custom resolver with default, key exists",
+			input:    "${@TEST:key2:default}",
+			expected: "value2",
+		},
+		{
+			name:     "Custom resolver with default, key missing",
+			input:    "${@TEST:missing:fallback-value}",
+			expected: "fallback-value",
+		},
+		{
+			name:     "Custom resolver with colon in default",
+			input:    "${@TEST:missing:http://localhost:8080}",
+			expected: "http://localhost:8080",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := expandVariables(tt.input)
+			if result != tt.expected {
+				t.Errorf("expandVariables(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+// testResolver is a mock resolver for testing
+type testResolver struct {
 	values map[string]string
 }
 
-func (r *customTestResolver) Resolve(source, name, defaultValue string) (string, bool) {
-	if source != "TEST" && source != "CONFIG" {
-		return "", false
+func (r *testResolver) Resolve(source string, key string, defaultValue string) (string, bool) {
+	if val, ok := r.values[key]; ok {
+		return val, true
 	}
-	value, exists := r.values[name]
-	if !exists || value == "" {
-		return defaultValue, false
-	}
-	return value, true
+	return defaultValue, false
 }

@@ -1,0 +1,28 @@
+# Deployment Configuration (will be merged with base.yaml and services.yaml)
+deployments:
+  production:
+    config-overrides:
+      LOG_LEVEL: warn
+      DB_HOST: prod-db.example.com
+      API_TIMEOUT: 60
+
+    servers:
+      api-server:
+        base-url: https://api.example.com
+        published-services:
+          - user-service
+          - order-service
+        apps:
+          - addr: ":8080"
+
+  development:
+    config-overrides:
+      LOG_LEVEL: debug
+      
+    servers:
+      dev-server:
+        base-url: http://localhost
+        published-services:
+          - user-service
+        apps:
+          - addr: ":3000"
