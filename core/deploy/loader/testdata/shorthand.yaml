@@ -1,4 +1,4 @@
-# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
 # Test shorthand syntax (1 server = 1 app)
 configs:

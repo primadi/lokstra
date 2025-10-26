@@ -1,61 +1,59 @@
-# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
 # Configuration with CFG references - DRY principle
 
 # Define shared config values
 configs:
-  database:
-    host: localhost
-    port: 5432
-    username: admin
-    password: secret123
+  database.host: localhost
+  database.port: 5432
+  database.username: admin
+  database.password: secret123
   
-  api:
-    version: v1
-    base_path: /api
-    timeout: 30s
+  api.version: v1
+  api.base_path: /api
+  api.timeout: 30s
   
-  features:
-    enable_auth: true
-    enable_logging: true
-    enable_metrics: false
+  features.enable_auth: true
+  features.enable_logging: true
+  features.enable_metrics: false
 
-# Use CFG references throughout configuration
-services:
-  - name: postgres-service
-    type: database
+# Use CFG references in service definitions
+service-definitions:
+  postgres-service:
+    type: postgres-factory
     config:
-      host: ${@CFG:database.host}
-      port: ${@CFG:database.port}
-      user: ${@CFG:database.username}
-      password: ${@CFG:database.password}
+      host: "${@cfg:database.host}"
+      port: "${@cfg:database.port}"
+      user: "${@cfg:database.username}"
+      password: "${@cfg:database.password}"
       database: myapp
 
-  - name: cache-service
-    type: redis
+  cache-service:
+    type: redis-factory
     config:
-      host: ${@CFG:database.host}  # Reuse database host
+      host: "${@cfg:database.host}"  # Reuse database host
       port: 6379
 
-routers:
-  - name: api
-    routes:
-      - path: ${@CFG:api.base_path}/health
-        handler: HealthCheckHandler
-        method: GET
-      
-      - path: ${@CFG:api.base_path}/${@CFG:api.version}/users
-        handler: GetUsersHandler
-        method: GET
-      
-      - path: ${@CFG:api.base_path}/${@CFG:api.version}/config
-        handler: GetConfigHandler
-        method: GET
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - postgres-service
 
-servers:
-  - name: web-server
-    address: :8080
-    apps:
-      - name: api-app
-        routers:
-          - api
+# Define routers with path-prefix using CFG references
+router-definitions:
+  user-service-router:
+    convention: rest
+    resource: user
+    resource-plural: users
+    path-prefix: "${@cfg:api.base_path}/${@cfg:api.version}"
+
+# Define deployment
+deployments:
+  local:
+    servers:
+      web-server:
+        base-url: http://localhost:8080
+        apps:
+          - addr: ":8080"
+            routers:
+              - user-service-router

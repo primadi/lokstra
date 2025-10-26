@@ -3,6 +3,7 @@ package router
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -29,6 +30,14 @@ type routerImpl struct {
 	isBuilt      bool
 	routerEngine engine.RouterEngine
 	startServe   sync.Once
+
+	// Path rewrite rules (pattern, replacement)
+	pathRewrites []pathRewrite
+}
+
+type pathRewrite struct {
+	pattern     string
+	replacement string
 }
 
 func New(name string) Router {
@@ -112,7 +121,23 @@ func (r *routerImpl) Build() {
 				fullMw = append(fullMiddlewares, resolvedRouteMw...)
 			}
 			rt.FullMiddleware = fullMw
-			r.routerEngine.Handle(rt.Method+" "+fullPath, request.NewHandler(
+
+			// Apply path rewrites (regex-based)
+			rewrittenPath := fullPath
+			for _, rw := range r.pathRewrites {
+				re := regexp.MustCompile(rw.pattern)
+				if re.MatchString(rewrittenPath) {
+					rewrittenPath = re.ReplaceAllString(rewrittenPath, rw.replacement)
+					break // Apply only first matching rule
+				}
+			}
+
+			// Update route with rewritten path
+			if rewrittenPath != fullPath {
+				rt.FullPath = rewrittenPath
+			}
+
+			r.routerEngine.Handle(rt.Method+" "+rewrittenPath, request.NewHandler(
 				rt.Handler, fullMw...))
 		})
 }
@@ -178,6 +203,7 @@ func (r *routerImpl) Clone() Router {
 		name:             r.name,
 		engineType:       r.engineType,
 		pathPrefix:       r.pathPrefix,
+		pathRewrites:     r.pathRewrites,
 		routes:           r.routes,
 		middlewares:      r.middlewares,
 		overrideParentMw: r.overrideParentMw,
@@ -260,6 +286,18 @@ func (r *routerImpl) PathPrefix() string {
 // SetPathPrefix implements Router.
 func (r *routerImpl) SetPathPrefix(prefix string) Router {
 	r.pathPrefix = cleanPath(prefix)
+	return r
+}
+
+// SetPathRewrites sets regex-based path rewrite rules
+func (r *routerImpl) SetPathRewrites(rewrites map[string]string) Router {
+	r.pathRewrites = make([]pathRewrite, 0, len(rewrites))
+	for pattern, replacement := range rewrites {
+		r.pathRewrites = append(r.pathRewrites, pathRewrite{
+			pattern:     pattern,
+			replacement: replacement,
+		})
+	}
 	return r
 }
 
@@ -358,9 +396,7 @@ func (r *routerImpl) walkBuildRecursive(fullName, fullPrefix string, fullMw []re
 		baseMw = resolveMiddlewares(r.middlewares)
 	} else {
 		baseMw = append(fullMw, resolveMiddlewares(r.middlewares)...)
-	}
-
-	// Use current router name for routes directly in this router
+	} // Use current router name for routes directly in this router
 	currentRouterName := r.name
 	if currentRouterName == "" {
 		currentRouterName = routerName

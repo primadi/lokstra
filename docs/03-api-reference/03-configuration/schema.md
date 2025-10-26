@@ -111,6 +111,7 @@ type RemoteServiceSimple struct {
     Convention     string         // Convention type (rest, rpc, graphql)
     // Inline overrides (no more references)
     PathPrefix     string
+    PathRewrites   []PathRewriteDef // Regex-based path rewrite rules
     Middlewares    []string
     Hidden         []string
     Custom         []RouteDef
@@ -128,6 +129,9 @@ external-service-definitions:
     resource-plural: payments
     convention: rest
     path-prefix: /api/v1
+    path-rewrites:
+      - pattern: "^/api/v1/(.*)$"
+        replacement: "/v2/$1"
     middlewares:
       - auth
       - rate-limiter
@@ -164,15 +168,21 @@ type RouterDef struct {
     // Service name is derived from router name pattern: "{service-name}-router"
     // Example: "user-service-router" → service is "user-service"
     
-    Convention     string // Convention type (rest, rpc, graphql) - for auto-generated only
-    Resource       string // Singular form (e.g., "user") - for auto-generated only
-    ResourcePlural string // Plural form (e.g., "users") - for auto-generated only
+    Convention     string           // Convention type (rest, rpc, graphql) - for auto-generated only
+    Resource       string           // Singular form (e.g., "user") - for auto-generated only
+    ResourcePlural string           // Plural form (e.g., "users") - for auto-generated only
     
     // Inline overrides (works for both auto-generated AND manual routers)
-    PathPrefix  string     // Path prefix override
-    Middlewares []string   // Router-level middleware names
-    Hidden      []string   // Methods to hide (auto-generated only)
-    Custom      []RouteDef // Custom route definitions
+    PathPrefix   string           // Path prefix override
+    PathRewrites []PathRewriteDef // Regex-based path rewrite rules
+    Middlewares  []string         // Router-level middleware names
+    Hidden       []string         // Methods to hide (auto-generated only)
+    Custom       []RouteDef       // Custom route definitions
+}
+
+type PathRewriteDef struct {
+    Pattern     string // Regex pattern to match (e.g., "^/api/v1/(.*)$")
+    Replacement string // Replacement string (e.g., "/api/v2/$1")
 }
 ```
 
@@ -243,9 +253,79 @@ router-definitions:
 - Add monitoring/logging per deployment
 - Inject rate limiting from YAML configuration
 - **Change path prefix per environment (API versioning)**
+- **Rewrite paths using regex patterns (flexible transformations)**
 - **Update specific route methods or paths per environment**
 - **Add route-specific middlewares without changing code**
 - Keep router logic in code, configuration in YAML
+
+---
+
+### Path Rewrites
+
+**Path rewrites** allow regex-based transformation of route paths at build time. This is more flexible than `path-prefix` for complex URL transformations.
+
+**When to use:**
+- **`path-prefix`**: Simple prefix addition (e.g., add `/api/v1` to all routes)
+- **`path-rewrites`**: Complex transformations (e.g., change `/api/v1/` to `/api/v2/`, add tenant IDs, etc.)
+
+**Example: API Versioning**
+```yaml
+router-definitions:
+  user-router:
+    path-rewrites:
+      - pattern: "^/api/v1/(.*)$"
+        replacement: "/api/v2/$1"
+```
+
+**Result:**
+```
+Code:         r.GET("/api/v1/users", ...)
+After rewrite: GET /api/v2/users
+Internal name: GET_/api/v1/users (unchanged)
+```
+
+**Example: Multi-Tenant Paths**
+```yaml
+router-definitions:
+  tenant-router:
+    path-rewrites:
+      - pattern: "^/(.*)$"
+        replacement: "/tenant/${TENANT_ID}/$1"
+```
+
+**Result:**
+```
+Code:         r.GET("/users", ...)
+After rewrite: GET /tenant/acme-corp/users
+```
+
+**Example: Multiple Rules**
+```yaml
+router-definitions:
+  api-router:
+    path-rewrites:
+      - pattern: "^/v1/(.*)$"
+        replacement: "/api/v2/$1"
+      - pattern: "^/legacy/(.*)$"
+        replacement: "/api/v2/compat/$1"
+```
+
+**Rules:**
+- Applied in order (first match wins)
+- Uses Go's `regexp` package
+- Supports capture groups: `$1`, `$2`, etc.
+- Applied at router build time (zero runtime overhead)
+- Route names unchanged (only HTTP paths affected)
+
+**Combining with path-prefix:**
+```yaml
+router-definitions:
+  api-router:
+    path-prefix: /v2       # Applied first
+    path-rewrites:         # Applied after prefix
+      - pattern: "^/v2/old/(.*)$"
+        replacement: "/v2/new/$1"
+```
 
 ---
 

@@ -21,11 +21,17 @@ service-definitions:
     type: user-service-factory
     depends-on: [database]  # Auto lazy-loaded!
 
+router-definitions:
+  api:
+    path-rewrites:
+      - pattern: "^/api/v1/(.*)$"
+        replacement: "/api/v2/$1"
+
 # Deployment configuration
 deployments:
   development:
     servers:
       api:
-        base-url: http://localhost
+        base-url: http://localhost:3002
         addr: ":3002"
-        routers: [api]
+        routers: [api]  # Manual router registered in code

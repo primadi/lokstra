@@ -1,4 +1,4 @@
-# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
 # Deployment Configuration (will be merged with base.yaml and services.yaml)
 deployments:

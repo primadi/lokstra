@@ -17,6 +17,8 @@ type Router interface {
 	PathPrefix() string
 	// sets the path prefix of this router
 	SetPathPrefix(prefix string) Router
+	// sets regex-based path rewrite rules (pattern -> replacement)
+	SetPathRewrites(rewrites map[string]string) Router
 	// Create a shallow copy of this router (without routes and children)
 	Clone() Router
 

@@ -49,6 +49,7 @@ go run main.go --mode=config
 - Factory pattern with lazy loading
 - Declarative configuration
 - Production-ready with validation
+- **Path rewrite**: Routes use `/api/v2/*` instead of `/api/v1/*` (configured in YAML)
 
 ---
 
@@ -88,22 +89,38 @@ Server will start on `http://localhost:3002`
 
 Use the `test.http` file in VS Code with REST Client extension.
 
+**Note**: In config mode, paths are rewritten from `/api/v1/*` to `/api/v2/*` via YAML configuration.
+
 ### List all users
 
 ```bash
+# Code mode:
 curl http://localhost:3002/api/v1/users
+
+# Config mode (path rewrite enabled):
+curl http://localhost:3002/api/v2/users
 ```
 
 ### Get user by ID
 
 ```bash
+# Code mode:
 curl http://localhost:3002/api/v1/users/1
+
+# Config mode:
+curl http://localhost:3002/api/v2/users/1
 ```
 
 ### Create user
 
 ```bash
+# Code mode:
 curl -X POST http://localhost:3002/api/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Charlie","email":"charlie@example.com"}'
+
+# Config mode:
+curl -X POST http://localhost:3002/api/v2/users \
   -H "Content-Type: application/json" \
   -d '{"name":"Charlie","email":"charlie@example.com"}'
 ```
@@ -111,7 +128,13 @@ curl -X POST http://localhost:3002/api/v1/users \
 ### Update user
 
 ```bash
+# Code mode:
 curl -X PUT http://localhost:3002/api/v1/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice Updated","email":"alice.updated@example.com"}'
+
+# Config mode:
+curl -X PUT http://localhost:3002/api/v2/users/1 \
   -H "Content-Type: application/json" \
   -d '{"name":"Alice Updated","email":"alice.updated@example.com"}'
 ```
@@ -119,7 +142,11 @@ curl -X PUT http://localhost:3002/api/v1/users/1 \
 ### Delete user
 
 ```bash
+# Code mode:
 curl -X DELETE http://localhost:3002/api/v1/users/2
+
+# Config mode:
+curl -X DELETE http://localhost:3002/api/v2/users/2
 ```
 
 ---
@@ -460,6 +487,41 @@ func (db *Database) Create(...) (*User, error) {
     // Safe to write
 }
 ```
+
+### 6. Path Rewrite (Config Mode Only)
+
+**In config mode**, the YAML configuration includes path rewrite rules that transform routes:
+
+```yaml
+router-definitions:
+  api:
+    path-rewrites:
+      - pattern: "^/api/v1/(.*)$"
+        replacement: "/api/v2/$1"
+```
+
+**What this does:**
+- All routes originally defined as `/api/v1/*` are rewritten to `/api/v2/*`
+- Uses regex pattern matching for flexible transformations
+- Applied at router build time (zero runtime overhead)
+- Route names remain unchanged (only HTTP paths change)
+
+**Example transformation:**
+```
+Original code:    r.GET("/api/v1/users", ...)
+After rewrite:    GET /api/v2/users  (accessible via this path)
+Internal name:    GET_/api/v1/users  (unchanged, for tracking)
+```
+
+**Use cases:**
+- API versioning without code changes
+- Migrating from old to new URL structure
+- A/B testing different path conventions
+- Multi-tenant path prefixing
+
+**Note**: This is an alternative to `path-prefix`. Choose based on your needs:
+- `path-prefix`: Adds prefix to all routes (simpler)
+- `path-rewrites`: Regex-based transformation (more flexible)
 
 ---
 

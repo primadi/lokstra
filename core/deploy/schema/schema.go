@@ -31,10 +31,17 @@ type RouterDef struct {
 	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Plural form, e.g., "users" - optional if set in RegisterServiceType
 
 	// Override configuration (inline - no more references)
-	PathPrefix  string     `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"` // e.g., "/api/v1"
-	Middlewares []string   `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Router-level middleware names
-	Hidden      []string   `yaml:"hidden,omitempty" json:"hidden,omitempty"`           // Methods to hide
-	Custom      []RouteDef `yaml:"custom,omitempty" json:"custom,omitempty"`           // Custom route definitions (array in YAML)
+	PathPrefix   string           `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"`     // e.g., "/api/v1"
+	PathRewrites []PathRewriteDef `yaml:"path-rewrites,omitempty" json:"path-rewrites,omitempty"` // Regex-based path rewrites
+	Middlewares  []string         `yaml:"middlewares,omitempty" json:"middlewares,omitempty"`     // Router-level middleware names
+	Hidden       []string         `yaml:"hidden,omitempty" json:"hidden,omitempty"`               // Methods to hide
+	Custom       []RouteDef       `yaml:"custom,omitempty" json:"custom,omitempty"`               // Custom route definitions (array in YAML)
+}
+
+// PathRewriteDef defines a regex-based path rewrite rule
+type PathRewriteDef struct {
+	Pattern     string `yaml:"pattern" json:"pattern"`         // Regex pattern to match (e.g., "^/api/v1/(.*)$")
+	Replacement string `yaml:"replacement" json:"replacement"` // Replacement string (e.g., "/api/v2/$1")
 }
 
 // RouteDef defines a single route override

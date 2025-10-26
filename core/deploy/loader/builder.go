@@ -266,6 +266,16 @@ func LoadAndBuild(configPaths []string) error {
 		})
 	}
 
+	// Register standalone router definitions (for manual routers)
+	// These are router-definitions in YAML that don't have corresponding published-services
+	for routerName, routerDef := range config.RouterDefinitions {
+		// Skip if already defined (from published-services above)
+		if registry.GetRouterDef(routerName) != nil {
+			continue
+		}
+		registry.DefineRouter(routerName, routerDef)
+	}
+
 	// Build ALL deployments (2-Layer Architecture: YAML -> Topology only)
 	for deploymentName, depDef := range config.Deployments {
 		// Build service location registry (service-name → base-url)
