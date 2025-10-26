@@ -37,10 +37,10 @@ func (s *UserService) GetAll() ([]User, error) {
     return db.Query("SELECT * FROM users")
 }
 
-// Register service
-lokstra_registry.RegisterServiceFactory("users", func() any {
+// Register service type (factory creates instances)
+lokstra_registry.RegisterServiceType("user-service", func() any {
     return &UserService{}
-})
+}, nil)
 ```
 
 **Key Feature**: Service methods can become HTTP endpoints automatically!
@@ -237,12 +237,12 @@ type UserService struct {
 }
 
 // Register factories
-lokstra_registry.RegisterServiceFactory("db", createDB)
-lokstra_registry.RegisterServiceFactory("users", func() any {
+lokstra_registry.RegisterServiceType("db", createDB, nil)
+lokstra_registry.RegisterServiceType("users", func() any {
     return &UserService{
         DB: service.LazyLoad[*Database]("db"),
     }
-})
+}, nil)
 
 // Use anywhere
 users := lokstra_registry.GetService[*UserService]("users")
@@ -381,9 +381,9 @@ Before moving on, remember:
 
 ---
 
-## � Learning with Examples
+## 📚 Learning with Examples
 
-We provide **4 progressive examples** that build on each other:
+We provide **7 progressive examples** that build on each other:
 
 ### [Example 01: Hello World](examples/01-hello-world/)
 ⏱️ 15 minutes • Learn router basics and simple handlers
@@ -397,7 +397,16 @@ We provide **4 progressive examples** that build on each other:
 ### [Example 04: Multi-Deployment](examples/04-multi-deployment/) ⭐
 ⏱️ 2-3 hours • Production architecture with Clean Architecture, auto-router, and microservices
 
-**Total**: 4-6 hours from zero to production-ready patterns!
+### [Example 05: Middleware](examples/05-middleware/)
+⏱️ 45 minutes • Global, router-level, and route-level middleware
+
+### [Example 06: External Services](examples/06-external-services/)
+⏱️ 1 hour • Integrate external APIs with proxy.Service
+
+### [Example 07: Remote Router](examples/07-remote-router/)
+⏱️ 30 minutes • Quick API access with proxy.Router
+
+**Total**: 6-8 hours from zero to production-ready patterns!
 
 👉 [Start with examples](examples/README.md)
 

@@ -180,7 +180,7 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
 }
 
 // 2. Register service
-lokstra_registry.RegisterServiceFactory("users", func() any {
+lokstra_registry.RegisterServiceType("users", func() any {
     return &UserService{
         DB: service.LazyLoad[*Database]("db"),
     }
@@ -392,16 +392,16 @@ type OrderService struct {
 }
 
 // 2. Register factories (order doesn't matter!)
-lokstra_registry.RegisterServiceFactory("db", createDatabase)
-lokstra_registry.RegisterServiceFactory("cache", createCache)
+lokstra_registry.RegisterServiceType("db", createDatabase)
+lokstra_registry.RegisterServiceType("cache", createCache)
 
-lokstra_registry.RegisterServiceFactory("users", func() any {
+lokstra_registry.RegisterServiceType("users", func() any {
     return &UserService{
         DB: service.LazyLoad[*Database]("db"),
     }
 })
 
-lokstra_registry.RegisterServiceFactory("orders", func() any {
+lokstra_registry.RegisterServiceType("orders", func() any {
     return &OrderService{
         DB:    service.LazyLoad[*Database]("db"),
         Users: service.LazyLoad[*UserService]("users"),
@@ -458,7 +458,7 @@ users := lokstra_registry.GetService[*WrongType]("users")
 **Simple API**:
 ```go
 // Register
-RegisterServiceFactory(name, factory)
+RegisterServiceType(name, factory)
 
 // Use
 GetService[T](name)
@@ -498,8 +498,8 @@ app.Run(30 * time.Second)
 ```go
 // code: setup.go
 func setupServices() {
-    lokstra_registry.RegisterServiceFactory("db", createDB)
-    lokstra_registry.RegisterServiceFactory("users", createUserService)
+    lokstra_registry.RegisterServiceType("db", createDB)
+    lokstra_registry.RegisterServiceType("users", createUserService)
 }
 
 func setupRouters() {

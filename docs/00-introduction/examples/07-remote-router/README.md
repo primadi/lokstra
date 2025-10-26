@@ -410,7 +410,6 @@ func main() {
 
 1. ✅ **Example 06** - External Services (`proxy.Service` with wrappers)
 2. ✅ **Example 07** - Remote Router (You are here)
-3. 📖 **Example 08** - Testing with Mock Services
 
 ## 📚 Related Documentation
 

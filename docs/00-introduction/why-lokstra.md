@@ -124,28 +124,28 @@ type UserService struct {
 }
 
 // Business logic in service
-func (s *UserService) GetUsers() ([]User, error) {
-    return s.DB.MustGet().Query("SELECT * FROM users")
+func (s *UserService) GetAll() ([]*User, error) {
+    return s.DB.MustGet().FindAll()
 }
 
 // ❌ Not optimal - looks up service in map on EVERY request
-r.GET("/users", func() ([]User, error) {
+r.GET("/users", func() ([]*User, error) {
     users := lokstra_registry.GetService[*UserService]("users")
-    return users.GetUsers()
+    return users.GetAll()
 })
 
 // ✅ Optimal - cached service resolution (recommended)
 var userService = service.LazyLoad[*UserService]("users")
 
-r.GET("/users", func() ([]User, error) {
-    return userService.MustGet().GetUsers()
+r.GET("/users", func() ([]*User, error) {
+    return userService.MustGet().GetAll()
 })
 // First call: Creates & caches service instance
 // Subsequent calls: Returns cached instance (fast!)
 
-// OR: Service becomes router automatically!
-userRouter := router.NewFromService(userService, "/users")
-// Creates GET /users, POST /users, etc automatically
+// OR: Auto-generate router from service!
+router := lokstra_registry.NewRouterFromServiceType("user-service")
+// Creates routes automatically using conventions + metadata
 ```
 
 ---
@@ -156,49 +156,61 @@ userRouter := router.NewFromService(userService, "/users")
 
 **Lokstra**: Simple, built-in DI with lazy loading
 
+#### Simple Registration (No Dependencies)
 ```go
-// Register factories
-lokstra_registry.RegisterServiceFactory("db", createDB)
-lokstra_registry.RegisterServiceFactory("users", func() any {
-    return &UserService{
-        DB: service.LazyLoad[*Database]("db"),
-    }
-})
+// Register simple service
+lokstra_registry.RegisterServiceType("db-factory", 
+    NewDatabase, nil)
 
-// Use anywhere - services auto-resolved
-users := lokstra_registry.GetService[*UserService]("users")
+lokstra_registry.RegisterLazyService("db", 
+    "db-factory", nil)
 ```
 
-**Benefits**:
-- No external framework needed
-- Type-safe with generics
-- Lazy loading (efficient)
-- Testable (easy mocking)
-
-**Performance Tip**: Use `service.LazyLoad` for handler-level caching:
-
+#### With Dependencies (Factory Pattern)
 ```go
-// ❌ Slow: Registry lookup on every request
+// Register service with dependencies
+lokstra_registry.RegisterServiceFactory("users-factory", 
+    func() any {
+        return &UserService{
+            DB: service.LazyLoad[*Database]("db"),
+        }
+    })
+
+lokstra_registry.RegisterLazyService("users",
+    "users-factory", 
+    map[string]any{
+        "depends-on": []string{"db"},
+    })
+```
+
+#### Use in Handlers with Lazy Loading
+```go
+// ❌ Not optimal: Registry lookup on every request
 r.GET("/users", func() ([]User, error) {
     users := lokstra_registry.GetService[*UserService]("users")
-    return users.GetUsers()  // Map lookup happens on EVERY request
+    return users.GetAll()  // Map lookup happens on EVERY request
 })
 
-// ✅ Fast: Cached service resolution (recommended)
+// ✅ Optimal: Cached service resolution (recommended)
 var userService = service.LazyLoad[*UserService]("users")
 
 r.GET("/users", func() ([]User, error) {
-    return userService.MustGet().GetUsers()  // Cached after first access
+    return userService.MustGet().GetAll()  // Cached after first access
 })
 ```
 
-**Why faster?**
-1. **First call**: Looks up service in registry, creates instance, caches it
-2. **Subsequent calls**: Returns cached instance (no map lookup)
+**Why `service.LazyLoad` is faster:**
+1. **First call**: Looks up service, caches reference
+2. **Subsequent calls**: Returns cached instance (zero map lookup)
 3. **Thread-safe**: Safe for concurrent requests
-4. **Zero allocation**: No repeated map lookups or service creation
+4. **Zero allocation**: No repeated registry lookups
 
-This pattern is used throughout Lokstra's examples and is the **recommended approach** for production code.
+**Benefits**:
+- ✅ No external framework needed
+- ✅ Type-safe with generics
+- ✅ Lazy loading (efficient)
+- ✅ Testable (easy mocking)
+- ✅ Auto-wiring with YAML config
 
 ---
 
@@ -211,35 +223,36 @@ This pattern is used throughout Lokstra's examples and is the **recommended appr
 ```yaml
 # Same code, different deployment!
 
-# Monolith
-servers:
-  - name: monolith
-    deployment-id: monolith
-    apps:
-      - addr: ":8080"
-        services: [users, orders, payments]
+deployments:
+  # Monolith: All services in one server
+  monolith:
+    servers:
+      api-server:
+        addr: ":8080"
+        published-services:
+          - users
+          - orders
+          - payments
 
-# Microservices
-servers:
-  - name: user-service
-    deployment-id: microservices
-    base-url: http://user-service
-    apps:
-      - addr: ":8001"
-        services: [users]
-  
-  - name: order-service
-    deployment-id: microservices
-    base-url: http://order-service
-    apps:
-      - addr: ":8002"
-        services: [orders, payments]
+  # Microservices: Separate servers per service
+  microservices:
+    servers:
+      user-server:
+        base-url: "http://localhost"
+        addr: ":8001"
+        published-services: [users]
+      
+      order-server:
+        base-url: "http://localhost"
+        addr: ":8002"
+        published-services: [orders, payments]
 ```
 
 **Change deployment with just a flag**:
 ```bash
-./app --server=monolith        # Run as monolith
-./app --server=user-service    # Run as microservice
+./app -server "monolith.api-server"           # Run as monolith
+./app -server "microservices.user-server"     # User microservice
+./app -server "microservices.order-server"    # Order microservice
 ```
 
 **One binary, infinite architectures!**
@@ -297,20 +310,31 @@ servers:
 #### 3. **Monolith with Migration Plan**
 ```yaml
 # Start as monolith
-servers:
-  - name: monolith
-    apps:
-      - services: [users, orders, payments]
+deployments:
+  monolith:
+    servers:
+      api-server:
+        addr: ":8080"
+        published-services: [users, orders, payments]
 
 # Later: Split to microservices (no code change!)
+deployments:
+  microservices:
+    servers:
+      user-server:
+        addr: ":8001"
+        published-services: [users]
+      order-server:
+        addr: ":8002"
+        published-services: [orders, payments]
 ```
 
 #### 4. **Service-Heavy Applications**
 ```go
 // Rich business logic in services
 type OrderService struct {
-    Users    *service.Cached[*UserService]
-    Payments *service.Cached[*PaymentService]
+    Users     *service.Cached[*UserService]
+    Payments  *service.Cached[*PaymentService]
     Inventory *service.Cached[*InventoryService]
 }
 ```
@@ -318,16 +342,20 @@ type OrderService struct {
 #### 5. **Multi-Environment Deployments**
 ```yaml
 # dev.yaml
-servers:
-  - name: dev-server
-    apps:
-      - addr: ":3000"
+deployments:
+  dev:
+    servers:
+      api-server:
+        addr: ":3000"
+        published-services: [users, orders]
 
 # prod.yaml
-servers:
-  - name: prod-server
-    apps:
-      - addr: ":80"
+deployments:
+  prod:
+    servers:
+      api-server:
+        addr: ":80"
+        published-services: [users, orders]
 ```
 
 ---
@@ -429,11 +457,11 @@ Convinced? Here's what to do next:
 ### 2. **Deep Understanding (20 minutes)**
 👉 [Architecture](architecture.md) - How Lokstra works internally
 
-### 3. **Learn by Doing (2-3 hours)**
-👉 [Essentials Tutorial](../01-essentials/README.md) - Hands-on learning
+### 3. **Learn by Doing (6-8 hours)**
+👉 [Examples](examples/README.md) - 7 progressive examples from basics to production
 
-### 4. **See It in Action**
-👉 [Complete Examples](../05-examples/README.md) - Real applications
+### 4. **Deep Dive (as needed)**
+👉 [Essentials Guide](../01-essentials/README.md) - Comprehensive reference
 
 ---
 

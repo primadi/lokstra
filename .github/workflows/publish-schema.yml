@@ -1,0 +1,30 @@
+name: Publish Schema to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'core/deploy/schema/lokstra.schema.json'
+      - 'docs/schema/**'
+      - '.github/workflows/publish-schema.yml'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy schema to docs
+        run: |
+          mkdir -p docs/schema
+          cp core/deploy/schema/lokstra.schema.json docs/schema/lokstra.schema.json
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          keep_files: true

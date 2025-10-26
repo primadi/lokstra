@@ -19,11 +19,13 @@ Learn Lokstra step by step, from basic routing to production-ready middleware an
     ↓ Learn: Clean Architecture, auto-router, microservices
 05-middleware
     ↓ Learn: Global/route middleware, auth, recovery, rate limiting
-06-external-services ⭐ NEW!
-    ↓ Learn: External API integration, ServiceMeta, route overrides
+06-external-services
+    ↓ Learn: External API integration, proxy.Service, route overrides
+07-remote-router ⭐ NEW!
+    ↓ Learn: Quick API access with proxy.Router
 ```
 
-**Time investment**: ~8-10 hours to complete all examples  
+**Time investment**: ~9-12 hours to complete all examples  
 **Outcome**: Ready to build production REST APIs with Lokstra
 
 ---
@@ -216,6 +218,68 @@ lokstra_registry.RegisterServiceType(
 
 ---
 
+### [07-remote-router](./07-remote-router/) ⭐ NEW!
+
+**Quick API access without service wrappers**
+
+Learn when to use `proxy.Router` for simple, direct HTTP calls vs `proxy.Service`.
+
+- ✅ **Simple URL config** (no router-definitions!)
+- ✅ **No service wrapper needed**
+- ✅ **Direct HTTP calls** with `DoJSON()`
+- ✅ **Quick integration** for one-off API calls
+- ✅ **Comparison**: proxy.Router vs proxy.Service
+
+```bash
+# Terminal 1: Start mock weather API
+cd mock-weather-api
+go run main.go
+
+# Terminal 2: Start main app
+cd ..
+go run main.go
+
+# Test
+curl -X POST "http://localhost:3001/weather-reports?city=jakarta&forecast=true&days=5"
+```
+
+**What you'll learn:**
+- ✅ **When to use proxy.Router**: One-off calls, prototyping, simple APIs
+- ✅ **Simple config**: Just URL, no special definitions
+- ✅ **Direct HTTP**: `router.DoJSON(method, path, ...)`
+- ✅ **vs proxy.Service**: When to upgrade to service wrapper
+
+**Key Pattern:**
+```go
+type WeatherService struct {
+    weatherAPI *proxy.Router
+}
+
+func (s *WeatherService) Create(p *GetWeatherReportParams) (*WeatherReport, error) {
+    // Direct HTTP call - no wrapper!
+    var current WeatherData
+    err := s.weatherAPI.DoJSON("GET", fmt.Sprintf("/weather/%s", p.City), 
+        nil, nil, &current)
+    
+    return &WeatherReport{Current: &current}, nil
+}
+
+// Factory creates router from URL
+func WeatherServiceFactory(deps map[string]any, config map[string]any) any {
+    url := config["weather-api-url"].(string)
+    return &WeatherService{
+        weatherAPI: proxy.NewRemoteRouter(url),
+    }
+}
+```
+
+**Code size**: ~200 lines  
+**Endpoints**: 1 weather report route + 2 mock API routes
+
+**Perfect for**: Weather APIs, currency converters, quick integrations!
+
+---
+
 ## 🎯 What You'll Learn
 
 ### 📊 Feature Coverage
@@ -227,7 +291,8 @@ lokstra_registry.RegisterServiceType(
 | **03** | ✅ Manual Router, ✅ Services, ✅ Dependency Injection |
 | **04** | ✅ Auto-Router, ✅ Clean Architecture, ✅ Microservices |
 | **05** | ✅ Global Middleware, ✅ Auth, ✅ Production Patterns |
-| **06** | ✅ External APIs, ✅ Clean Metadata, ✅ Route Overrides |
+| **06** | ✅ External APIs, ✅ proxy.Service, ✅ Route Overrides |
+| **07** | ✅ proxy.Router, ✅ Quick Integration, ✅ Direct HTTP Calls |
 
 ### 🎓 Skills Progression
 
@@ -244,8 +309,8 @@ Example 04:     Advanced Deployment
 Example 05:     Production Ready
     → Middleware chains, auth, recovery, CORS
 
-Example 06:     External Integration
-    → Third-party APIs, ServiceMeta, custom routes
+Example 06-07:  External Integration
+    → proxy.Service (structured), proxy.Router (simple)
 ```
 
 ---

@@ -525,7 +525,6 @@ Always handle external failures gracefully and update your domain state accordin
 
 1. ✅ **Example 06** - External Services (You are here)
 2. 📖 **Example 07** - Remote Router (`proxy.Router` for quick API access)
-3. 📖 **Example 08** - Testing with Mock Services
 
 ## 🎯 Real-World Examples
 

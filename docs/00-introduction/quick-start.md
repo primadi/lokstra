@@ -299,6 +299,250 @@ Lokstra converts:
 
 ---
 
+## 🏗️ Step 6: Add Services & Dependency Injection
+
+Let's organize code with **service layer** and **lazy loading**:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/primadi/lokstra"
+    "github.com/primadi/lokstra/core/service"
+    "github.com/primadi/lokstra/lokstra_registry"
+    "time"
+)
+
+// Models
+type User struct {
+    ID    int    `json:"id"`
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+
+// Repository (data layer)
+type UserRepository struct {
+    users map[int]*User
+}
+
+func NewUserRepository() *UserRepository {
+    return &UserRepository{
+        users: map[int]*User{
+            1: {ID: 1, Name: "Alice", Email: "alice@example.com"},
+            2: {ID: 2, Name: "Bob", Email: "bob@example.com"},
+        },
+    }
+}
+
+func (r *UserRepository) FindAll() ([]*User, error) {
+    var result []*User
+    for _, u := range r.users {
+        result = append(result, u)
+    }
+    return result, nil
+}
+
+// Service (business logic layer)
+type UserService struct {
+    Repo *service.Cached[*UserRepository]
+}
+
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+    return &UserService{
+        Repo: service.Cast[*UserRepository](deps["user-repo"]),
+    }
+}
+
+func (s *UserService) GetAll() ([]*User, error) {
+    return s.Repo.MustGet().FindAll()
+}
+
+func main() {
+    // 1. Register repository
+    lokstra_registry.RegisterServiceType("user-repo-factory",
+        NewUserRepository, nil)
+    
+    lokstra_registry.RegisterLazyService("user-repo", 
+        "user-repo-factory", nil)
+    
+    // 2. Register service with dependency
+    lokstra_registry.RegisterServiceFactory("user-service-factory", 
+        UserServiceFactory)
+    
+    lokstra_registry.RegisterLazyService("user-service",
+        "user-service-factory",
+        map[string]any{
+            "depends-on": []string{"user-repo"},
+        })
+    
+    // 3. Use service in handler with lazy loading
+    var userService = service.LazyLoad[*UserService]("user-service")
+    
+    r := lokstra.NewRouter("api")
+    r.GET("/users", func() ([]*User, error) {
+        return userService.MustGet().GetAll()
+    })
+    
+    app := lokstra.NewApp("user-api", ":3000", r)
+    fmt.Println("🚀 User API with Services running on http://localhost:3000")
+    app.Run(30 * time.Second)
+}
+```
+
+**What's happening:**
+1. **Repository** - Data access layer
+2. **Service** - Business logic layer with lazy dependencies
+3. **Registry** - Service registration with factory pattern
+4. **Lazy Loading** - `service.LazyLoad[T]` creates cached reference
+5. **MustGet()** - Resolves service once, panics if not found
+
+**Test it:**
+```bash
+curl http://localhost:3000/users
+```
+
+**Benefits:**
+- ✅ Separation of concerns
+- ✅ Lazy initialization (no startup order issues)
+- ✅ Thread-safe caching
+- ✅ Type-safe with generics
+
+---
+
+## ⚙️ Step 7: Add YAML Configuration
+
+Scale up with **configuration file**:
+
+**config.yaml:**
+```yaml
+service-definitions:
+  user-repo:
+    type: user-repo-factory
+  
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repo]
+
+deployments:
+  app:
+    servers:
+      api-server:
+        base-url: "http://localhost"
+        addr: ":3000"
+        published-services:
+          - user-service
+```
+
+**main.go:**
+```go
+package main
+
+import (
+    "flag"
+    "time"
+    "github.com/primadi/lokstra/lokstra_registry"
+)
+
+var server = flag.String("server", "app.api-server", "Server to run")
+
+func main() {
+    flag.Parse()
+    
+    // Register factories (same as before)
+    lokstra_registry.RegisterServiceType("user-repo-factory",
+        NewUserRepository, nil)
+    
+    lokstra_registry.RegisterServiceFactory("user-service-factory",
+        UserServiceFactory)
+    
+    // Load config and auto-build services + routers
+    lokstra_registry.LoadAndBuild([]string{"config.yaml"})
+    
+    // Run server
+    lokstra_registry.RunServer(*server, 30*time.Second)
+}
+```
+
+**Run it:**
+```bash
+go run main.go -server "app.api-server"
+```
+
+**What changed:**
+- ❌ No manual service registration
+- ❌ No manual router creation
+- ✅ Everything defined in YAML
+- ✅ Services auto-wired from `depends-on`
+- ✅ Routers auto-generated from `published-services`
+
+---
+
+## 🚀 Step 8: Multi-Deployment (Monolith → Microservices)
+
+**Same code, different deployments!**
+
+**config.yaml:**
+```yaml
+service-definitions:
+  user-repo:
+    type: user-repo-factory
+  
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repo]
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [user-service]  # Can be local OR remote!
+
+deployments:
+  # Deployment 1: Monolith (all in one server)
+  monolith:
+    servers:
+      api-server:
+        addr: ":3000"
+        published-services:
+          - user-service
+          - order-service
+  
+  # Deployment 2: Microservices (separate servers)
+  microservices:
+    servers:
+      user-server:
+        addr: ":3001"
+        published-services: [user-service]
+      
+      order-server:
+        addr: ":3002"
+        published-services: [order-service]
+        # user-service auto-detected as remote!
+```
+
+**Run monolith:**
+```bash
+go run main.go -server "monolith.api-server"
+# All services on :3000
+```
+
+**Run microservices:**
+```bash
+# Terminal 1
+go run main.go -server "microservices.user-server"
+
+# Terminal 2
+go run main.go -server "microservices.order-server"
+# Automatically makes HTTP calls to user-server!
+```
+
+**Benefits:**
+- ✅ Single binary
+- ✅ Zero code changes between deployments
+- ✅ Automatic remote service detection
+- ✅ Easy testing (monolith) → production (microservices)
+
+---
+
 ## 🎨 Step 5: Add Middleware
 
 Let's add logging:
@@ -334,7 +578,7 @@ func main() {
 
 ---
 
-## 🔧 Step 6: Add CORS (Optional)
+## 🔧 Optional: Add CORS
 
 For frontend access:
 
@@ -497,17 +741,29 @@ func deleteUser(req *DeleteUserRequest) error {
 
 ## 🎯 What You've Learned
 
-In just 5 minutes, you've learned:
+In this guide, you've mastered:
 
+**Basic Concepts (Steps 1-4):**
 - ✅ Creating routers and routes
 - ✅ Flexible handler signatures
 - ✅ Automatic request binding
 - ✅ Automatic JSON responses
 - ✅ Error handling
-- ✅ Adding middleware
 - ✅ Building REST APIs
 
-**And you have a working CRUD API!** 🎉
+**Middleware (Step 5):**
+- ✅ Adding request logging
+- ✅ CORS configuration
+
+**Advanced Features (Steps 6-8):**
+- ✅ Service layer pattern
+- ✅ Dependency injection
+- ✅ Lazy loading with caching
+- ✅ YAML configuration
+- ✅ Multi-deployment (monolith ↔ microservices)
+- ✅ Auto-wiring dependencies
+
+**You now have a production-ready foundation!** 🎉
 
 ---
 
@@ -516,16 +772,17 @@ In just 5 minutes, you've learned:
 ### Want to Learn More?
 
 **Systematic Learning (Recommended)**:
-👉 [Essentials Tutorial](../01-essentials/README.md) - Complete step-by-step guide
+👉 [Examples](./examples/README.md) - 7 progressive examples (6-8 hours)
 
 **Specific Topics**:
-- [Router Deep Dive](../01-essentials/01-router/README.md) - All routing features
-- [Services](../01-essentials/02-service/README.md) - Organize business logic
-- [Middleware](../01-essentials/03-middleware/README.md) - Request processing
-- [Configuration](../01-essentials/04-configuration/README.md) - YAML configs
+- **[Example 03 - CRUD API](./examples/03-crud-api/)** - Service layer with lazy DI
+- **[Example 04 - Multi-Deployment](./examples/04-multi-deployment/)** - Monolith ↔ Microservices
+- **[Example 05 - Middleware](./examples/05-middleware/)** - Custom middleware patterns
+- **[Example 06 - External Services](./examples/06-external-services/)** - Integrate third-party APIs
 
-**Real Examples**:
-👉 [Complete Examples](./examples/README.md) - Production-ready apps
+**Architecture Deep Dive**:
+👉 [Architecture Guide](./architecture.md) - How Lokstra works under the hood
+👉 [Why Lokstra](./why-lokstra.md) - Philosophy and design decisions
 
 ---
 
@@ -554,14 +811,14 @@ type Request struct {
 }
 ```
 
-### 3. **Let Lokstra Handle Errors**
+### 3. **Lazy Loading for Services**
 ```go
-// Simple - Lokstra converts to JSON error
-func handler() (User, error) {
-    if err := validate(); err != nil {
-        return User{}, err  // Auto 500 error
-    }
-    return user, nil
+// Package-level (cached, recommended)
+var userService = service.LazyLoad[*UserService]("users")
+
+func handler() {
+    users, err := userService.MustGet().GetAll()
+    // MustGet() panics with clear error if service not found
 }
 ```
 
