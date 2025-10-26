@@ -1,6 +1,36 @@
 package deploy
 
-// RegisterServiceTypeOption configures service type registration
+import "strings"
+
+// ServiceTypeConfig is a structured configuration for service type registration
+// This provides a cleaner, more maintainable alternative to functional options
+type ServiceTypeConfig struct {
+	// Basic metadata
+	Resource       string // Singular resource name (e.g., "user")
+	ResourcePlural string // Plural resource name (e.g., "users")
+	Convention     string // Convention type (e.g., "rest", "rpc", "graphql")
+
+	// Router-level configuration
+	PathPrefix  string   // Path prefix for all routes (e.g., "/api/v1")
+	Middlewares []string // Middleware names to apply to all routes
+
+	// Route filtering
+	Hidden []string // Method names to hide from auto-generated router
+
+	// Custom route overrides with full metadata support
+	RouteOverrides map[string]RouteConfig
+}
+
+// RouteConfig defines custom configuration for a specific route
+// Supports both path override and route-level middlewares
+type RouteConfig struct {
+	Method      string   // HTTP method (e.g., "POST", "GET") - auto-detected if empty
+	Path        string   // Custom path (e.g., "/auth/login", "/users/{id}/orders")
+	Middlewares []string // Route-specific middleware names (in addition to router-level)
+}
+
+// RegisterServiceTypeOption configures service type registration (legacy functional options)
+// Deprecated: Use ServiceTypeConfig struct for better readability
 type RegisterServiceTypeOption func(*ServiceMetadata)
 
 // WithResource sets the resource name (singular and plural)
@@ -19,12 +49,31 @@ func WithConvention(convention string) RegisterServiceTypeOption {
 }
 
 // WithRouteOverride adds a custom route path for a method
-func WithRouteOverride(methodName, path string) RegisterServiceTypeOption {
+// Deprecated: Use ServiceTypeConfig.RouteOverrides for better control including route-level middlewares
+func WithRouteOverride(methodName, pathSpec string) RegisterServiceTypeOption {
 	return func(m *ServiceMetadata) {
 		if m.RouteOverrides == nil {
-			m.RouteOverrides = make(map[string]string)
+			m.RouteOverrides = make(map[string]RouteMetadata)
 		}
-		m.RouteOverrides[methodName] = path
+
+		// Parse pathSpec: "POST /path" or "/path"
+		parts := strings.SplitN(strings.TrimSpace(pathSpec), " ", 2)
+		method := ""
+		path := pathSpec
+
+		if len(parts) == 2 {
+			possibleMethod := strings.ToUpper(parts[0])
+			switch possibleMethod {
+			case "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS":
+				method = possibleMethod
+				path = strings.TrimSpace(parts[1])
+			}
+		}
+
+		m.RouteOverrides[methodName] = RouteMetadata{
+			Method: method,
+			Path:   path,
+		}
 	}
 }
 

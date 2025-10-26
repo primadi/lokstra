@@ -165,8 +165,17 @@ func LoadAndBuild(configPaths []string) error {
 			if extSvc.Convention != "" {
 				autoServiceDef.Config["convention"] = extSvc.Convention
 			}
-			if extSvc.Overrides != "" {
-				autoServiceDef.Config["overrides"] = extSvc.Overrides
+			if extSvc.PathPrefix != "" {
+				autoServiceDef.Config["path_prefix"] = extSvc.PathPrefix
+			}
+			if len(extSvc.Middlewares) > 0 {
+				autoServiceDef.Config["middlewares"] = extSvc.Middlewares
+			}
+			if len(extSvc.Hidden) > 0 {
+				autoServiceDef.Config["hidden"] = extSvc.Hidden
+			}
+			if len(extSvc.Custom) > 0 {
+				autoServiceDef.Config["custom"] = extSvc.Custom
 			}
 
 			// Add to service definitions (will be registered below)
@@ -181,7 +190,8 @@ func LoadAndBuild(configPaths []string) error {
 	}
 
 	// Auto-generate router definitions for published services
-	// This scans ALL deployments to collect ALL published services
+	// Router name format: {service-name}-router
+	// Service name is derived from router name by removing "-router" suffix
 	publishedServicesMap := make(map[string]bool)
 	for _, depDef := range config.Deployments {
 		for _, serverDef := range depDef.Servers {
@@ -207,21 +217,27 @@ func LoadAndBuild(configPaths []string) error {
 		metadata := registry.GetServiceMetadata(serviceDef.Type)
 
 		// Metadata Resolution Priority (3 levels):
-		//   1. YAML routers: section (highest - deployment-specific override)
-		//   2. RegisterServiceType options (medium - framework default)
+		//   1. YAML router-definitions: section (highest - deployment-specific override)
+		//   2. RegisterServiceType metadata (medium - framework default)
 		//   3. Auto-generate from service name (lowest - fallback)
-		//
-		// Note: XXXRemote struct metadata (RemoteServiceMeta) is checked at runtime
-		// by BuildRouterFromDefinition, not here during config loading.
-		var resourceName, resourcePlural, convention, overrides string
+		var resourceName, resourcePlural, convention string
+		var pathPrefix string
+		var middlewares []string
+		var hidden []string
+		var custom []schema.RouteDef
 
 		// Priority 1: Check if router manually defined in YAML (for overrides)
-		if yamlRouter, exists := config.Routers[routerName]; exists {
-			// Use YAML definition (allows override)
+		if yamlRouter, exists := config.RouterDefinitions[routerName]; exists {
+			// Use YAML definition (allows inline overrides)
 			resourceName = yamlRouter.Resource
 			resourcePlural = yamlRouter.ResourcePlural
 			convention = yamlRouter.Convention
-			overrides = yamlRouter.Overrides
+
+			// Inline overrides from YAML
+			pathPrefix = yamlRouter.PathPrefix
+			middlewares = yamlRouter.Middlewares
+			hidden = yamlRouter.Hidden
+			custom = yamlRouter.Custom
 		}
 
 		// Priority 2: Fallback to metadata from RegisterServiceType
@@ -240,17 +256,14 @@ func LoadAndBuild(configPaths []string) error {
 
 		// Define router (will override if exists in YAML)
 		registry.DefineRouter(routerName, &schema.RouterDef{
-			Service:        serviceName,
 			Convention:     convention,
 			Resource:       resourceName,
 			ResourcePlural: resourcePlural,
-			Overrides:      overrides,
+			PathPrefix:     pathPrefix,
+			Middlewares:    middlewares,
+			Hidden:         hidden,
+			Custom:         custom,
 		})
-	}
-
-	// Register router overrides from YAML
-	for name, overrideDef := range config.RouterOverrides {
-		registry.DefineRouterOverride(name, overrideDef)
 	}
 
 	// Build ALL deployments (2-Layer Architecture: YAML -> Topology only)
@@ -314,10 +327,6 @@ func LoadAndBuild(configPaths []string) error {
 					serverTopo.RemoteServices[extSvcName] = extSvc.URL
 				}
 			}
-
-			// TODO: Auto-detect remote services from published-services across servers
-			// For now, remote service resolution happens during service registration
-			// based on published-services across servers in deployment
 
 			// Build app topologies (only addr + routers, NO services)
 			for _, appDef := range serverDef.Apps {
@@ -419,8 +428,17 @@ func LoadAndBuildFromDir(dirPath string) error {
 			if extSvc.Convention != "" {
 				autoServiceDef.Config["convention"] = extSvc.Convention
 			}
-			if extSvc.Overrides != "" {
-				autoServiceDef.Config["overrides"] = extSvc.Overrides
+			if extSvc.PathPrefix != "" {
+				autoServiceDef.Config["path_prefix"] = extSvc.PathPrefix
+			}
+			if len(extSvc.Middlewares) > 0 {
+				autoServiceDef.Config["middlewares"] = extSvc.Middlewares
+			}
+			if len(extSvc.Hidden) > 0 {
+				autoServiceDef.Config["hidden"] = extSvc.Hidden
+			}
+			if len(extSvc.Custom) > 0 {
+				autoServiceDef.Config["custom"] = extSvc.Custom
 			}
 
 			// Add to service definitions (will be registered below)
@@ -457,21 +475,31 @@ func LoadAndBuildFromDir(dirPath string) error {
 
 		metadata := registry.GetServiceMetadata(serviceDef.Type)
 
-		var resourceName, resourcePlural, convention, overrides string
+		var resourceName, resourcePlural, convention string
+		var pathPrefix string
+		var middlewares []string
+		var hidden []string
+		var custom []schema.RouteDef
 
-		if yamlRouter, exists := config.Routers[routerName]; exists {
+		// Priority 1: YAML router-definitions
+		if yamlRouter, exists := config.RouterDefinitions[routerName]; exists {
 			resourceName = yamlRouter.Resource
 			resourcePlural = yamlRouter.ResourcePlural
 			convention = yamlRouter.Convention
-			overrides = yamlRouter.Overrides
+			pathPrefix = yamlRouter.PathPrefix
+			middlewares = yamlRouter.Middlewares
+			hidden = yamlRouter.Hidden
+			custom = yamlRouter.Custom
 		}
 
+		// Priority 2: RegisterServiceType metadata
 		if resourceName == "" && metadata != nil && metadata.Resource != "" {
 			resourceName = metadata.Resource
 			resourcePlural = metadata.ResourcePlural
 			convention = metadata.Convention
 		}
 
+		// Priority 3: Auto-generate
 		if resourceName == "" {
 			resourceName = strings.TrimSuffix(serviceName, "-service")
 			resourcePlural = resourceName + "s"
@@ -479,17 +507,14 @@ func LoadAndBuildFromDir(dirPath string) error {
 		}
 
 		registry.DefineRouter(routerName, &schema.RouterDef{
-			Service:        serviceName,
 			Convention:     convention,
 			Resource:       resourceName,
 			ResourcePlural: resourcePlural,
-			Overrides:      overrides,
+			PathPrefix:     pathPrefix,
+			Middlewares:    middlewares,
+			Hidden:         hidden,
+			Custom:         custom,
 		})
-	}
-
-	// Register router overrides from YAML
-	for name, overrideDef := range config.RouterOverrides {
-		registry.DefineRouterOverride(name, overrideDef)
 	}
 
 	// Build ALL deployments (create topology only)
@@ -545,9 +570,6 @@ func LoadAndBuildFromDir(dirPath string) error {
 					serverTopo.RemoteServices[extSvcName] = extSvc.URL
 				}
 			}
-
-			// TODO: Auto-detect remote services from published-services across servers
-			// For now, remote service resolution happens during service registration
 
 			// Build app topologies
 			for _, appDef := range serverDef.Apps {

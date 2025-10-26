@@ -25,10 +25,10 @@ type DeployConfig struct {
     Configs                    map[string]any
     MiddlewareDefinitions      map[string]*MiddlewareDef
     ServiceDefinitions         map[string]*ServiceDef
-    Routers                    map[string]*RouterDef
-    RouterOverrides            map[string]*RouterOverrideDef
+    RouterDefinitions          map[string]*RouterDef           // Renamed from "Routers"
     ExternalServiceDefinitions map[string]*RemoteServiceSimple
     Deployments                map[string]*DeploymentDefMap
+    // RouterOverrides removed - overrides are now inline in RouterDef
 }
 ```
 
@@ -42,9 +42,10 @@ service-definitions:
   user-service:
     type: user-service-factory
 
-routers:
+router-definitions:
   user-router:
-    service: user-service
+    convention: rest
+    resource: user
 
 deployments:
   production:
@@ -108,7 +109,11 @@ type RemoteServiceSimple struct {
     Resource       string         // Resource name (singular)
     ResourcePlural string         // Resource name (plural)
     Convention     string         // Convention type (rest, rpc, graphql)
-    Overrides      string         // Reference to RouterOverrideDef
+    // Inline overrides (no more references)
+    PathPrefix     string
+    Middlewares    []string
+    Hidden         []string
+    Custom         []RouteDef
     Config         map[string]any // Additional factory config
 }
 ```
@@ -122,6 +127,10 @@ external-service-definitions:
     resource: payment
     resource-plural: payments
     convention: rest
+    path-prefix: /api/v1
+    middlewares:
+      - auth
+      - rate-limiter
     config:
       api_key: "${PAYMENT_API_KEY}"
       timeout: 10s
@@ -138,70 +147,105 @@ external-service-definitions:
 ## Router Definitions
 
 ### RouterDef
-Defines a router auto-generated from a service.
+Defines a router auto-generated from a service, or middleware overrides for manual routers.
+
+**Router Naming Convention:**
+- Router name determines the service name using pattern `{service-name}-router`
+- Example: `user-service-router` → service is `user-service`
+
+**Manual routers** (registered via `RegisterRouter()`) can also use `router-definitions` for:
+- Path prefix overrides
+- Middleware injection
+- Route-level customization
 
 **Definition:**
 ```go
 type RouterDef struct {
-    Service        string // Service name to generate router from
-    Convention     string // Convention type (rest, rpc, graphql)
-    Resource       string // Singular form (e.g., "user")
-    ResourcePlural string // Plural form (e.g., "users")
-    Overrides      string // Reference to RouterOverrideDef name
-}
-```
-
-**YAML Example:**
-```yaml
-routers:
-  user-router:
-    service: user-service
-    convention: rest
-    resource: user
-    resource-plural: users
-    overrides: user-router-overrides
-```
-
----
-
-### RouterOverrideDef
-Defines route overrides for a service router.
-
-**Definition:**
-```go
-type RouterOverrideDef struct {
-    PathPrefix  string
+    // Service name is derived from router name pattern: "{service-name}-router"
+    // Example: "user-service-router" → service is "user-service"
+    
+    Convention     string // Convention type (rest, rpc, graphql) - for auto-generated only
+    Resource       string // Singular form (e.g., "user") - for auto-generated only
+    ResourcePlural string // Plural form (e.g., "users") - for auto-generated only
+    
+    // Inline overrides (works for both auto-generated AND manual routers)
+    PathPrefix  string     // Path prefix override
     Middlewares []string   // Router-level middleware names
-    Hidden      []string   // Methods to hide
+    Hidden      []string   // Methods to hide (auto-generated only)
     Custom      []RouteDef // Custom route definitions
 }
 ```
 
-**YAML Example:**
+**YAML Example (Auto-Generated Router):**
 ```yaml
-router-overrides:
-  user-router-overrides:
+router-definitions:
+  user-service-router:  # Service derived: "user-service"
+    convention: rest
+    resource: user
+    resource-plural: users
+    # Inline overrides
     path-prefix: /api/v1
     middlewares:
       - auth
       - logger
-      - rate-limiter
     hidden:
       - InternalHelper
-      - ValidateUser
     custom:
       - name: Login
         method: POST
         path: /auth/login
         middlewares:
-          - rate-limiter-strict
-      - name: Logout
-        method: POST
-        path: /auth/logout
-      - name: ChangePassword
-        method: PUT
-        path: /users/{id}/password
+          - rate-limiter
 ```
+
+**YAML Example (Manual Router Overrides):**
+```yaml
+# Code: Manual router registration
+# r := router.New("")
+# r.GET("/dashboard", handler.ShowDashboard, route.WithNameOption("showDashboard"))
+# r.GET("/users", handler.ListUsers)  # Auto-name: "GET_/users"
+# lokstra_registry.RegisterRouter("admin-router", r)
+
+router-definitions:
+  admin-router:  # Manual router (already registered in code)
+    # Supported overrides for manual routers
+    path-prefix: /api/v1/admin  # Change path prefix
+    middlewares:
+      - admin-auth
+      - audit-log
+    
+    # Route-level overrides (by route name)
+    custom:
+      - name: showDashboard  # Update named route
+        method: POST  # Change method from GET to POST
+        path: /admin/main  # Change path
+        middlewares:
+          - extra-logging
+      
+      - name: GET_/users  # Update auto-named route
+        middlewares:
+          - rate-limiter  # Just add middlewares
+    
+    # Note: convention, resource, hidden are ignored for manual routers
+```
+
+**Router Naming Convention:**
+- Format: `{service-name}-router`
+- Service name: Remove `-router` suffix
+- Examples:
+  - `user-service-router` → `user-service`
+  - `order-service-router` → `order-service`
+  - `payment-router` → `payment`
+  - `admin-router` → manual router (no auto-generation)
+
+**Use Cases for Manual Router Overrides:**
+- Apply environment-specific middlewares (auth only in prod)
+- Add monitoring/logging per deployment
+- Inject rate limiting from YAML configuration
+- **Change path prefix per environment (API versioning)**
+- **Update specific route methods or paths per environment**
+- **Add route-specific middlewares without changing code**
+- Keep router logic in code, configuration in YAML
 
 ---
 
@@ -211,11 +255,30 @@ Defines a single route override.
 **Definition:**
 ```go
 type RouteDef struct {
-    Name        string   // Method name
+    Name        string   // Route name (manual or auto-generated)
     Method      string   // HTTP method override
     Path        string   // Path override
     Middlewares []string // Route-level middleware names
 }
+```
+
+**YAML Example:**
+```yaml
+custom:
+  - name: Login
+    method: POST
+    path: /auth/login
+    middlewares:  # Route-level middlewares
+      - rate-limiter-strict
+  - name: Logout
+    method: POST
+    path: /auth/logout
+  - name: AdminReset
+    method: POST
+    path: /admin/reset
+    middlewares:
+      - admin-auth
+      - audit-log
 ```
 
 ---
@@ -413,9 +476,9 @@ service-definitions:
   user-service:
     type: user-service-factory
 
-routers:
-  user-router:
-    service: user-service
+router-definitions:
+  user-service-router:  # Service derived: "user-service"
+    convention: rest
 
 deployments:
   production:
@@ -424,7 +487,7 @@ deployments:
         base-url: https://api.example.com
         addr: ":443"
         routers:
-          - user-router
+          - user-service-router
 ```
 
 ---
@@ -487,34 +550,32 @@ service-definitions:
       max_orders: 50000
 
 # Router definitions
-routers:
-  user-router:
-    service: user-service
+router-definitions:
+  user-service-router:  # Service derived: "user-service"
     convention: rest
     resource: user
     resource-plural: users
-    overrides: user-router-overrides
-    
-  order-router:
-    service: order-service
-    convention: rest
-    resource: order
-    resource-plural: orders
-
-# Router overrides
-router-overrides:
-  user-router-overrides:
+    # Inline overrides
     path-prefix: /api/v1
     middlewares:
       - auth
       - logger
+    hidden:
+      - InternalHelper
     custom:
       - name: Login
         method: POST
         path: /auth/login
+        middlewares:
+          - rate-limiter-strict
       - name: Logout
         method: POST
         path: /auth/logout
+    
+  order-service-router:  # Service derived: "order-service"
+    convention: rest
+    resource: order
+    resource-plural: orders
 
 # External services
 external-service-definitions:
@@ -538,16 +599,16 @@ deployments:
         apps:
           - addr: ":443"
             routers:
-              - user-router
-              - order-router
+              - user-service-router
+              - order-service-router
       
       api-server-2:
         base-url: https://api-2.example.com
         apps:
           - addr: ":443"
             routers:
-              - user-router
-              - order-router
+              - user-service-router
+              - order-service-router
 ```
 
 ---
@@ -559,9 +620,9 @@ service-definitions:
   user-service:
     type: user-service-factory
 
-routers:
-  user-router:
-    service: user-service
+router-definitions:
+  user-service-router:
+    convention: rest
 
 # Development deployment
 deployments:
@@ -574,7 +635,7 @@ deployments:
         base-url: http://localhost:8080
         addr: ":8080"
         routers:
-          - user-router
+          - user-service-router
 
 # Staging deployment
 deployments:
@@ -587,7 +648,7 @@ deployments:
         base-url: https://staging.example.com
         addr: ":443"
         routers:
-          - user-router
+          - user-service-router
 
 # Production deployment
 deployments:
@@ -600,12 +661,12 @@ deployments:
         base-url: https://api-1.example.com
         addr: ":443"
         routers:
-          - user-router
+          - user-service-router
       api-server-2:
         base-url: https://api-2.example.com
         addr: ":443"
         routers:
-          - user-router
+          - user-service-router
 ```
 
 ---
@@ -661,7 +722,7 @@ deployments:
 - ❌ `depends-on` - Optional
 
 **RouterDef:**
-- ✅ `service` - Service name must be specified
+- ❌ `service` - REMOVED (derived from router name pattern)
 - ❌ `convention` - Optional (defaults to "rest")
 - ❌ `resource` - Optional (auto-detected from service name)
 
@@ -747,15 +808,15 @@ configs:
   api.version: "v1"
   api.prefix: "/api/${@cfg:api.version}"
 
-router-overrides:
-  user-router-overrides:
+router-definitions:
+  user-service-router:
     path-prefix: "${@cfg:api.prefix}"
 
 # 🚫 Avoid: Duplication
-router-overrides:
-  user-router-overrides:
+router-definitions:
+  user-service-router:
     path-prefix: "/api/v1"
-  order-router-overrides:
+  order-service-router:
     path-prefix: "/api/v1"
 ```
 
@@ -782,11 +843,11 @@ service-definitions:
 
 ---
 
-### 5. Use Explicit Router Overrides When Needed
+### 5. Use Inline Router Overrides When Needed
 ```yaml
 # ✅ Good: Custom routes documented
-router-overrides:
-  user-router-overrides:
+router-definitions:
+  user-service-router:
     custom:
       - name: Login
         method: POST
@@ -799,8 +860,8 @@ router-overrides:
         path: /auth/refresh
 
 # 🚫 Avoid: Overriding standard CRUD
-router-overrides:
-  user-router-overrides:
+router-definitions:
+  user-service-router:
     custom:
       - name: List
         method: GET

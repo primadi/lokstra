@@ -42,11 +42,11 @@ type GlobalRegistry struct {
 	lazyServiceOnce      sync.Map // map[string]*sync.Once
 
 	// Definitions (YAML or code-defined)
-	configs         map[string]*schema.ConfigDef
-	middlewares     map[string]*schema.MiddlewareDef
-	services        map[string]*schema.ServiceDef
-	routers         map[string]*schema.RouterDef
-	routerOverrides map[string]*schema.RouterOverrideDef
+	configs     map[string]*schema.ConfigDef
+	middlewares map[string]*schema.MiddlewareDef
+	services    map[string]*schema.ServiceDef
+	routers     map[string]*schema.RouterDef
+	// Note: routerOverrides removed - overrides are now inline in RouterDef
 
 	// Resolved config values (after resolver processing)
 	resolvedConfigs map[string]any
@@ -75,14 +75,24 @@ type LazyServiceEntry struct {
 }
 
 // ServiceMetadata holds metadata for service auto-generation
+// ServiceMetadata holds metadata for a service type registration
+// Can be populated from ServiceTypeConfig or legacy functional options
 type ServiceMetadata struct {
-	Resource        string            // Singular resource name (e.g., "user")
-	ResourcePlural  string            // Plural resource name (e.g., "users")
-	Convention      string            // Convention type (e.g., "rest", "rpc")
-	RouteOverrides  map[string]string // Method name -> custom path
-	HiddenMethods   []string          // Methods to hide from router
-	PathPrefix      string            // Path prefix for all routes
-	MiddlewareNames []string          // Middleware names to apply
+	Resource        string                   // Singular resource name (e.g., "user")
+	ResourcePlural  string                   // Plural resource name (e.g., "users")
+	Convention      string                   // Convention type (e.g., "rest", "rpc")
+	PathPrefix      string                   // Path prefix for all routes
+	MiddlewareNames []string                 // Router-level middleware names
+	HiddenMethods   []string                 // Methods to hide from router
+	RouteOverrides  map[string]RouteMetadata // Method name -> full route metadata (NEW: supports route-level middlewares)
+}
+
+// RouteMetadata holds full metadata for a custom route
+// This supports both path override AND route-level middlewares
+type RouteMetadata struct {
+	Method      string   // HTTP method (e.g., "POST", "GET") - empty means auto-detect
+	Path        string   // Custom path (e.g., "/auth/login")
+	Middlewares []string // Route-specific middleware names
 }
 
 // MiddlewareEntry holds middleware type and config for factory pattern
@@ -156,7 +166,6 @@ func NewGlobalRegistry() *GlobalRegistry {
 		middlewares:         make(map[string]*schema.MiddlewareDef),
 		services:            make(map[string]*schema.ServiceDef),
 		routers:             make(map[string]*schema.RouterDef),
-		routerOverrides:     make(map[string]*schema.RouterOverrideDef),
 		resolvedConfigs:     make(map[string]any),
 		// Topology maps (deploymentTopologies, serverTopologies) use sync.Map, no initialization needed
 	}
@@ -164,14 +173,22 @@ func NewGlobalRegistry() *GlobalRegistry {
 
 // ===== FACTORY REGISTRATION (CODE) =====
 
-// RegisterServiceType registers a service factory with optional metadata
-// Supports three factory signatures (auto-wrapped by framework):
+// RegisterServiceType registers a service factory with configuration
+// Supports two patterns:
+//
+//  1. Struct-based (recommended):
+//     RegisterServiceType(type, local, remote, &ServiceTypeConfig{...})
+//
+//  2. Functional options (legacy):
+//     RegisterServiceType(type, local, remote, WithResource(...), WithConvention(...))
+//
+// Factory signatures (auto-wrapped by framework):
 //   - func(deps, cfg map[string]any) any - full control (canonical)
 //   - func(cfg map[string]any) any       - only config
 //   - func() any                          - no params
 //
 // Both local and remote factories support all three signatures.
-func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any, options ...RegisterServiceTypeOption) {
+func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any, configOrOptions ...any) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -179,12 +196,43 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 		panic(fmt.Sprintf("service type %s already registered", serviceType))
 	}
 
-	// Build metadata from options
+	// Build metadata from config or options
 	metadata := &ServiceMetadata{
 		Convention: "rest", // Default convention
 	}
-	for _, opt := range options {
-		opt(metadata)
+
+	// Check if first argument is ServiceTypeConfig
+	if len(configOrOptions) > 0 {
+		if config, ok := configOrOptions[0].(*ServiceTypeConfig); ok {
+			// Struct-based configuration (new pattern)
+			if config != nil {
+				metadata.Resource = config.Resource
+				metadata.ResourcePlural = config.ResourcePlural
+				metadata.Convention = config.Convention
+				metadata.PathPrefix = config.PathPrefix
+				metadata.MiddlewareNames = config.Middlewares
+				metadata.HiddenMethods = config.Hidden
+
+				// Convert RouteConfig to RouteMetadata
+				if len(config.RouteOverrides) > 0 {
+					metadata.RouteOverrides = make(map[string]RouteMetadata)
+					for methodName, routeConfig := range config.RouteOverrides {
+						metadata.RouteOverrides[methodName] = RouteMetadata{
+							Method:      routeConfig.Method,
+							Path:        routeConfig.Path,
+							Middlewares: routeConfig.Middlewares,
+						}
+					}
+				}
+			}
+		} else {
+			// Functional options (legacy pattern)
+			for _, opt := range configOrOptions {
+				if optFunc, ok := opt.(RegisterServiceTypeOption); ok {
+					optFunc(metadata)
+				}
+			}
+		}
 	}
 
 	// Only store metadata if resource name is provided
@@ -379,18 +427,6 @@ func (g *GlobalRegistry) DefineRouter(name string, def *schema.RouterDef) {
 	g.routers[name] = def
 }
 
-// DefineRouterOverride defines router overrides
-func (g *GlobalRegistry) DefineRouterOverride(name string, def *schema.RouterOverrideDef) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if _, exists := g.routerOverrides[name]; exists {
-		panic(fmt.Sprintf("router override %s already defined", name))
-	}
-
-	g.routerOverrides[name] = def
-}
-
 // ===== GETTERS =====
 
 // GetServiceFactory returns the service factory for a service type
@@ -461,14 +497,6 @@ func (g *GlobalRegistry) GetRouterDef(name string) *schema.RouterDef {
 	defer g.mu.RUnlock()
 
 	return g.routers[name]
-}
-
-// GetRouterOverride returns a router override definition
-func (g *GlobalRegistry) GetRouterOverride(name string) *schema.RouterOverrideDef {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.routerOverrides[name]
 }
 
 // ===== CONFIG RESOLUTION =====
@@ -894,14 +922,19 @@ func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.Serv
 		// Convert RouteOverrides map to Custom routes
 		if len(metadata.RouteOverrides) > 0 {
 			override.Custom = make(map[string]autogen.Route)
-			for methodName, pathSpec := range metadata.RouteOverrides {
-				// Parse path spec: "POST /path" or just "/path"
-				method, path := parsePathSpec(pathSpec)
+			for methodName, routeMeta := range metadata.RouteOverrides {
+				// RouteMetadata now has Method and Path directly
 				override.Custom[methodName] = autogen.Route{
-					Method: method,
-					Path:   path,
+					Method:      routeMeta.Method,
+					Path:        routeMeta.Path,
+					Middlewares: convertMiddlewareNames(g, routeMeta.Middlewares), // Convert middleware names to instances
 				}
 			}
+		}
+
+		// Convert router-level middlewares
+		if len(metadata.MiddlewareNames) > 0 {
+			override.Middlewares = convertMiddlewareNames(g, metadata.MiddlewareNames)
 		}
 
 		proxyService = proxy.NewService(
@@ -1104,25 +1137,24 @@ func (g *GlobalRegistry) ShutdownServices() {
 	fmt.Println("[ShutdownServices] Gracefully shutdown all services.")
 }
 
-// parsePathSpec parses a path specification that may include an HTTP method prefix
-// Examples:
-//   - "POST /users/{user_id}/orders"  → ("POST", "/users/{user_id}/orders")
-//   - "/users/{user_id}/orders"       → ("", "/users/{user_id}/orders")
-//   - "GET /orders"                   → ("GET", "/orders")
-//
-// Empty method means auto-detect from method name (Get* → GET, Create* → POST, etc.)
-func parsePathSpec(pathSpec string) (method string, path string) {
-	// Check if path starts with HTTP method
-	parts := strings.SplitN(strings.TrimSpace(pathSpec), " ", 2)
-	if len(parts) == 2 {
-		// Check if first part is a valid HTTP method
-		possibleMethod := strings.ToUpper(parts[0])
-		switch possibleMethod {
-		case "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS":
-			return possibleMethod, strings.TrimSpace(parts[1])
-		}
+// ===== HELPER FUNCTIONS =====
+
+// convertMiddlewareNames converts middleware names to middleware instances
+// Returns []any containing middleware functions resolved from registry
+func convertMiddlewareNames(g *GlobalRegistry, names []string) []any {
+	if len(names) == 0 {
+		return nil
 	}
 
-	// No method prefix, or invalid method - return empty method for auto-detect
-	return "", strings.TrimSpace(pathSpec)
+	middlewares := make([]any, 0, len(names))
+	for _, name := range names {
+		// Get middleware instance from registry
+		if mw, ok := g.GetMiddleware(name); ok {
+			middlewares = append(middlewares, mw)
+		} else {
+			// If middleware not found, add name as string (will be resolved at runtime)
+			middlewares = append(middlewares, name)
+		}
+	}
+	return middlewares
 }

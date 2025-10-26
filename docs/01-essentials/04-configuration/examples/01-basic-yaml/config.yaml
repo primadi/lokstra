@@ -1,0 +1,25 @@
+# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Basic YAML Configuration Example
+
+# Define routers
+routers:
+  - name: api
+    routes:
+      - name: health
+        path: /health
+        handler: HealthCheckHandler
+      
+      - name: version
+        path: /version
+        handler: VersionHandler
+
+# Define server
+servers:
+  - name: web-server
+    baseUrl: http://localhost:8080
+    apps:
+      - name: api-app
+        addr: :8080
+        routers:
+          - api

@@ -73,8 +73,7 @@ func mergeConfigs(target, source *schema.DeployConfig) *schema.DeployConfig {
 		Configs:                    mergeMap(target.Configs, source.Configs),
 		MiddlewareDefinitions:      mergeMaps(target.MiddlewareDefinitions, source.MiddlewareDefinitions),
 		ServiceDefinitions:         mergeMaps(target.ServiceDefinitions, source.ServiceDefinitions),
-		Routers:                    mergeMaps(target.Routers, source.Routers),
-		RouterOverrides:            mergeMaps(target.RouterOverrides, source.RouterOverrides),
+		RouterDefinitions:          mergeMaps(target.RouterDefinitions, source.RouterDefinitions), // Renamed from Routers
 		ExternalServiceDefinitions: mergeMaps(target.ExternalServiceDefinitions, source.ExternalServiceDefinitions),
 		Deployments:                mergeMaps(target.Deployments, source.Deployments),
 	}
@@ -169,18 +168,39 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 		result["service-definitions"] = services
 	}
 
-	if len(config.Routers) > 0 {
+	if len(config.RouterDefinitions) > 0 {
 		routers := make(map[string]any)
-		for name, rtr := range config.Routers {
-			rtrMap := map[string]any{
-				"service": rtr.Service,
+		for name, rtr := range config.RouterDefinitions {
+			rtrMap := make(map[string]any)
+
+			// Basic fields
+			if rtr.Convention != "" {
+				rtrMap["convention"] = rtr.Convention
 			}
-			if len(rtr.Overrides) > 0 {
-				rtrMap["overrides"] = rtr.Overrides
+			if rtr.Resource != "" {
+				rtrMap["resource"] = rtr.Resource
 			}
+			if rtr.ResourcePlural != "" {
+				rtrMap["resource-plural"] = rtr.ResourcePlural
+			}
+
+			// Inline override fields
+			if rtr.PathPrefix != "" {
+				rtrMap["path-prefix"] = rtr.PathPrefix
+			}
+			if len(rtr.Middlewares) > 0 {
+				rtrMap["middlewares"] = rtr.Middlewares
+			}
+			if len(rtr.Hidden) > 0 {
+				rtrMap["hidden"] = rtr.Hidden
+			}
+			if len(rtr.Custom) > 0 {
+				rtrMap["custom"] = rtr.Custom
+			}
+
 			routers[name] = rtrMap
 		}
-		result["routers"] = routers
+		result["router-definitions"] = routers // Renamed from "routers"
 	}
 
 	if len(config.ExternalServiceDefinitions) > 0 {
@@ -198,8 +218,18 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 			if es.Convention != "" {
 				esMap["convention"] = es.Convention
 			}
-			if es.Overrides != "" {
-				esMap["overrides"] = es.Overrides
+			// Inline override fields
+			if es.PathPrefix != "" {
+				esMap["path-prefix"] = es.PathPrefix
+			}
+			if len(es.Middlewares) > 0 {
+				esMap["middlewares"] = es.Middlewares
+			}
+			if len(es.Hidden) > 0 {
+				esMap["hidden"] = es.Hidden
+			}
+			if len(es.Custom) > 0 {
+				esMap["custom"] = es.Custom
 			}
 			externals[name] = esMap
 		}

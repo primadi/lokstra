@@ -61,9 +61,10 @@ func NewRouterFromServiceType(serviceType string) lokstra.Router {
 	}
 
 	// Convert route overrides from metadata
-	for methodName, path := range metadata.RouteOverrides {
+	for methodName, routeMetadata := range metadata.RouteOverrides {
 		override.Custom[methodName] = autogen.Route{
-			Path: path,
+			Method: routeMetadata.Method,
+			Path:   routeMetadata.Path,
 		}
 	}
 

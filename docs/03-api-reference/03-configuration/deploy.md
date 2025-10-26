@@ -420,10 +420,11 @@ service-definitions:
     config:
       dsn: "postgresql://localhost/myapp"
 
-routers:
-  user-router:
-    service: user-service
+router-definitions:
+  user-service-router:  # Service derived from name
     convention: rest
+    resource: user
+    resource-plural: users
 
 deployments:
   production:
@@ -433,7 +434,7 @@ deployments:
         apps:
           - addr: ":8080"
             routers:
-              - user-router
+              - user-service-router
 ```
 
 **Load and Use:**
@@ -457,7 +458,7 @@ func main() {
         deploy.Global().DefineService(def)
     }
     
-    for name, def := range config.Routers {
+    for name, def := range config.RouterDefinitions {
         deploy.Global().DefineRouter(name, def)
     }
     
@@ -526,10 +527,11 @@ service-definitions:
   user-service:
     type: user-service-factory
 
-routers:
-  user-router:
-    service: user-service
+router-definitions:
+  user-service-router:
     convention: rest
+    resource: user
+    resource-plural: users
 
 # config/development.yaml
 deployments:
@@ -542,7 +544,7 @@ deployments:
         apps:
           - addr: ":8080"
             routers:
-              - user-router
+              - user-service-router
 
 # config/production.yaml
 deployments:
@@ -555,14 +557,14 @@ deployments:
         apps:
           - addr: ":443"
             routers:
-              - user-router
+              - user-service-router
       
       api-server-2:
         base-url: https://api-2.example.com
         apps:
           - addr: ":443"
             routers:
-              - user-router
+              - user-service-router
 ```
 
 ---
@@ -573,9 +575,11 @@ service-definitions:
   user-service:
     type: user-service-factory
 
-routers:
-  user-router:
-    service: user-service
+router-definitions:
+  user-service-router:
+    convention: rest
+    resource: user
+    resource-plural: users
 
 external-service-definitions:
   payment-service:
@@ -593,26 +597,21 @@ deployments:
         apps:
           - addr: ":443"
             routers:
-              - user-router
-              - payment-router  # Auto-generated from external service
+              - user-service-router
+              - payment-service-router  # Auto-generated from external service
 ```
 
 ---
 
-### Router Overrides
+### Router Inline Overrides
 ```yaml
 service-definitions:
   user-service:
     type: user-service-factory
 
-routers:
-  user-router:
-    service: user-service
+router-definitions:
+  user-service-router:  # Service derived from name
     convention: rest
-    overrides: user-router-overrides
-
-router-overrides:
-  user-router-overrides:
     path-prefix: /api/v1
     middlewares:
       - auth
@@ -635,7 +634,7 @@ deployments:
         apps:
           - addr: ":443"
             routers:
-              - user-router
+              - user-service-router
 ```
 
 ---
@@ -662,11 +661,11 @@ deployments:
 
 **Equivalent to:**
 ```yaml
-routers:
+router-definitions:
   user-service-router:
-    service: user-service
+    # Auto-generated from service metadata
   order-service-router:
-    service: order-service
+    # Auto-generated from service metadata
 
 deployments:
   production:

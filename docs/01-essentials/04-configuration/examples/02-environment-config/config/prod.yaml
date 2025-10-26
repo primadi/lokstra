@@ -1,0 +1,9 @@
+# language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Production environment overrides
+servers:
+  - name: prod-server
+    address: 0.0.0.0:8080
+    apps:
+      - name: main-app
+        debug: false

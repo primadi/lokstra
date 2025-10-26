@@ -1,10 +1,18 @@
 # Router Registration
 
-> Router registration patterns, auto-router generation, and router factories
+> Router registration patterns, auto-router generation, and YAML-based router configuration
 
 ## Overview
 
-Lokstra provides flexible router registration through factory functions and auto-router generation from service definitions. This guide covers router registration patterns, auto-router generation from services, and router factory patterns.
+Lokstra provides flexible router registration through factory functions and auto-router generation from service definitions. Both manually registered routers and auto-generated routers can be configured and overridden via YAML deployment configuration.
+
+**Key Features:**
+- ✅ Manual router registration via `RegisterRouter()`
+- ✅ Auto-router generation from service definitions
+- ✅ YAML-based configuration for both router types
+- ✅ Router-level and route-level overrides
+- ✅ Environment-specific middleware injection
+- ✅ Path prefix and route customization
 
 ## Import Path
 
@@ -14,6 +22,7 @@ import (
     "github.com/primadi/lokstra/core/router"
     "github.com/primadi/lokstra/core/router/autogen"
     "github.com/primadi/lokstra/core/router/convention"
+    "github.com/primadi/lokstra/core/route"
 )
 ```
 
@@ -24,6 +33,8 @@ import (
 ### RegisterRouter
 Registers a router instance in the runtime registry.
 
+> **NEW:** Manual routers can now be configured via YAML `router-definitions` for middleware, path-prefix, and route-level overrides.
+
 **Signature:**
 ```go
 func RegisterRouter(name string, r router.Router)
@@ -31,18 +42,31 @@ func RegisterRouter(name string, r router.Router)
 
 **Example:**
 ```go
-userRouter := lokstra.NewRouter()
-userRouter.GET("/users", handlers.GetUsers)
-userRouter.POST("/users", handlers.CreateUser)
-userRouter.GET("/users/:id", handlers.GetUser)
+// Register manual router with named routes
+adminRouter := router.New("")
+adminRouter.GET("/dashboard", handlers.ShowDashboard, 
+    route.WithNameOption("showDashboard"))
+adminRouter.GET("/users", handlers.ListUsers)  // Auto-named: "GET_/users"
+adminRouter.POST("/users", handlers.CreateUser)
 
-lokstra_registry.RegisterRouter("user-router", userRouter)
+lokstra_registry.RegisterRouter("admin-router", adminRouter)
+
+// YAML can now override this router:
+// router-definitions:
+//   admin-router:
+//     path-prefix: /api/v1/admin
+//     middlewares: [admin-auth, audit-log]
+//     custom:
+//       - name: showDashboard
+//         method: POST
+//         path: /admin/main
 ```
 
 **Use Cases:**
-- Manual router registration
-- Custom routing logic
-- Pre-built router instances
+- Manual router registration with custom logic
+- Admin panels and specialized endpoints
+- Non-REST routing patterns
+- Can be overridden from YAML per deployment
 
 ---
 
@@ -184,14 +208,14 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error)
 ```
 
 **Metadata Resolution Priority:**
-1. **YAML config (router-overrides)** - Highest priority (runtime override)
+1. **YAML config (router-definitions)** - Highest priority (runtime override)
 2. **RegisterServiceType options** - Medium priority (framework defaults)
 3. **Auto-generate from service name** - Lowest priority (fallback)
 
 **Example:**
 ```go
 // Framework creates auto-router from service definition
-router, err := lokstra_registry.BuildRouterFromDefinition("user-router")
+router, err := lokstra_registry.BuildRouterFromDefinition("user-service-router")
 if err != nil {
     log.Fatal(err)
 }
@@ -376,23 +400,27 @@ lokstra_registry.RegisterServiceType("user-service",
 ## YAML-Based Router Configuration
 
 ### Router Definitions
-Define routers in YAML configuration.
+Define routers in YAML configuration with inline overrides.
 
-**Example:**
+**Router Naming Convention:**
+- Format: `{service-name}-router`
+- Service name is derived by removing the `-router` suffix
+- Examples:
+  - `user-service-router` → service: `user-service`
+  - `order-service-router` → service: `order-service`
+
+**Auto-Generated Router Example:**
 ```yaml
-# Auto-router from service
 router-definitions:
-  user-router:
-    service: user-service
+  user-service-router:  # Service name derived: "user-service"
     convention: rest
     resource: user
     resource-plural: users
-    overrides: user-router-overrides
-
-# Router overrides
-router-overrides:
-  user-router-overrides:
+    # Inline overrides
     path-prefix: /api/v1
+    middlewares:
+      - auth
+      - logger
     hidden:
       - Delete
       - InternalHelper
@@ -400,9 +428,226 @@ router-overrides:
       - name: Login
         method: POST
         path: /auth/login
+        middlewares:
+          - rate-limiter
       - name: Logout
         method: POST
         path: /auth/logout
+```
+
+**Manual Router Override Example:**
+```yaml
+# Code: Manual router already registered
+# r := router.New("")
+# r.GET("/dashboard", handler.ShowDashboard, route.WithNameOption("showDashboard"))
+# lokstra_registry.RegisterRouter("admin-router", r)
+
+router-definitions:
+  admin-router:  # Manual router (not auto-generated)
+    # Override configuration from YAML
+    path-prefix: /api/v1/admin
+    middlewares:
+      - admin-auth
+      - audit-log
+    # Route-level overrides
+    custom:
+      - name: showDashboard
+        method: POST  # Change from GET to POST
+        path: /admin/main  # Change path
+        middlewares:
+          - extra-logging
+```
+
+**Use Cases:**
+- **Auto-generated routers:** Configure convention, resource, and customize routes
+- **Manual routers:** Apply environment-specific middlewares and path prefixes
+- **Both types:** Support route-level method/path/middleware overrides
+
+---
+
+## Manual Router Overrides
+
+### Overview
+Manual routers registered via `RegisterRouter()` can now be configured from YAML deployment files. This enables environment-specific configuration without code changes.
+
+**Supported Overrides:**
+- ✅ `path-prefix` - Change router base path
+- ✅ `middlewares` - Add router-level middlewares
+- ✅ `custom` routes - Update individual route method, path, or middlewares
+
+**Not Supported:**
+- ❌ `convention` - Manual routers don't use conventions
+- ❌ `resource`/`resource-plural` - Manual routers don't use resource names
+- ❌ `hidden` - Manual routers control visibility in code
+
+---
+
+### Route Naming for Overrides
+
+To override specific routes, they must have names. Routes are named either:
+
+**1. Manual Names (Recommended):**
+```go
+r.GET("/dashboard", handler, route.WithNameOption("showDashboard"))
+r.POST("/export", handler, route.WithNameOption("exportData"))
+```
+
+**2. Auto-Generated Names:**
+```go
+r.GET("/users", handler)     // Name: "GET_/users"
+r.POST("/orders", handler)   // Name: "POST_/orders"
+r.PUT("/items/:id", handler) // Name: "PUT_/items/:id"
+```
+
+**Best Practice:** Use manual names for routes you plan to override from YAML.
+
+---
+
+### Router-Level Overrides
+
+Apply configuration to the entire router.
+
+**Code:**
+```go
+adminRouter := router.New("")
+adminRouter.GET("/dashboard", handlers.Dashboard)
+adminRouter.GET("/users", handlers.Users)
+adminRouter.POST("/settings", handlers.Settings)
+
+lokstra_registry.RegisterRouter("admin-router", adminRouter)
+```
+
+**YAML (Development):**
+```yaml
+router-definitions:
+  admin-router:
+    path-prefix: /admin
+    middlewares:
+      - logger
+```
+
+**YAML (Production):**
+```yaml
+router-definitions:
+  admin-router:
+    path-prefix: /api/v1/admin
+    middlewares:
+      - admin-auth
+      - audit-log
+      - logger
+```
+
+**Result:**
+- Dev: Routes at `/admin/*` with logger only
+- Prod: Routes at `/api/v1/admin/*` with auth, audit, logger
+
+---
+
+### Route-Level Overrides
+
+Override specific routes within a manual router.
+
+**Code:**
+```go
+apiRouter := router.New("")
+apiRouter.GET("/status", handlers.Status, route.WithNameOption("status"))
+apiRouter.POST("/webhook", handlers.Webhook, route.WithNameOption("webhook"))
+apiRouter.GET("/metrics", handlers.Metrics, route.WithNameOption("metrics"))
+
+lokstra_registry.RegisterRouter("api-router", apiRouter)
+```
+
+**YAML:**
+```yaml
+router-definitions:
+  api-router:
+    path-prefix: /api/v1
+    middlewares: [logger]
+    
+    custom:
+      # Disable webhook in staging (change to invalid path)
+      - name: webhook
+        path: /disabled
+      
+      # Add rate limiting to metrics
+      - name: metrics
+        middlewares:
+          - rate-limiter
+      
+      # Change status to POST and add auth
+      - name: status
+        method: POST
+        path: /health-check
+        middlewares:
+          - admin-auth
+```
+
+**Result:**
+```
+GET    /api/v1/status → POST /api/v1/health-check (with admin-auth + logger)
+POST   /api/v1/webhook → POST /api/v1/disabled (effectively disabled)
+GET    /api/v1/metrics (with rate-limiter + logger)
+```
+
+---
+
+### Use Cases
+
+**1. Environment-Specific Middleware:**
+```yaml
+# Production: Full security
+router-definitions:
+  admin-router:
+    middlewares: [admin-auth, audit-log, rate-limiter]
+
+# Development: No auth for easier testing
+router-definitions:
+  admin-router:
+    middlewares: [logger]
+```
+
+**2. API Versioning:**
+```yaml
+# v1 deployment
+router-definitions:
+  api-router:
+    path-prefix: /api/v1
+
+# v2 deployment (same code, different path)
+router-definitions:
+  api-router:
+    path-prefix: /api/v2
+```
+
+**3. Feature Flags via Path:**
+```yaml
+# Enable feature
+router-definitions:
+  feature-router:
+    custom:
+      - name: newFeature
+        path: /features/new
+
+# Disable feature (point to 404)
+router-definitions:
+  feature-router:
+    custom:
+      - name: newFeature
+        path: /disabled/new
+```
+
+**4. Route-Specific Security:**
+```yaml
+router-definitions:
+  api-router:
+    custom:
+      # Public route - no auth
+      - name: publicEndpoint
+        middlewares: [rate-limiter]
+      
+      # Protected route - full auth
+      - name: adminEndpoint
+        middlewares: [admin-auth, audit-log]
 ```
 
 ---

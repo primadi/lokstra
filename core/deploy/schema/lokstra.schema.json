@@ -76,58 +76,35 @@
         }
       }
     },
-    "routers": {
+    "router-definitions": {
       "type": "object",
-      "description": "Router definitions (auto-generated from services)",
+      "description": "Router definitions with inline overrides. Service name is derived from router name using pattern '{service-name}-router'. Example: 'user-service-router' → service is 'user-service'.",
       "patternProperties": {
         "^[a-z][a-z0-9-]*$": {
           "type": "object",
-          "required": ["service"],
           "properties": {
-            "service": {
-              "type": "string",
-              "description": "Service name to create router from",
-              "pattern": "^[a-z][a-z0-9-]*$"
-            },
             "convention": {
               "type": "string",
-              "description": "Convention type (rest, rpc, graphql)",
+              "description": "Convention type (rest, rpc, graphql) - for auto-generated routers only",
               "pattern": "^[a-z][a-z0-9-]*$"
             },
             "resource": {
               "type": "string",
-              "description": "Singular form of resource name (e.g., 'user')",
+              "description": "Singular form of resource name (e.g., 'user') - for auto-generated routers only",
               "pattern": "^[a-z][a-z-]*$"
             },
             "resource-plural": {
               "type": "string",
-              "description": "Plural form of resource name (e.g., 'users')",
+              "description": "Plural form of resource name (e.g., 'users') - for auto-generated routers only",
               "pattern": "^[a-z][a-z-]*$"
             },
-            "overrides": {
-              "type": "string",
-              "description": "Reference to router-overrides definition name",
-              "pattern": "^[a-z][a-z0-9-]*$"
-            }
-          },
-          "additionalProperties": false
-        }
-      }
-    },
-    "router-overrides": {
-      "type": "object",
-      "description": "Router override definitions",
-      "patternProperties": {
-        "^[a-z][a-z0-9-]*$": {
-          "type": "object",
-          "properties": {
             "path-prefix": {
               "type": "string",
-              "description": "Path prefix for all routes (e.g., '/api/v1')"
+              "description": "Path prefix for all routes (e.g., '/api/v1') - works for both auto-generated and manual routers"
             },
             "middlewares": {
               "type": "array",
-              "description": "Router-level middleware names",
+              "description": "Router-level middleware names - works for both auto-generated and manual routers",
               "items": {
                 "type": "string",
                 "pattern": "^[a-z][a-z0-9-]*$"
@@ -135,7 +112,7 @@
             },
             "hidden": {
               "type": "array",
-              "description": "Method names to hide from router",
+              "description": "Method names to hide from router - for auto-generated routers only",
               "items": {
                 "type": "string",
                 "pattern": "^[A-Z][a-zA-Z0-9]*$"
@@ -143,15 +120,14 @@
             },
             "custom": {
               "type": "array",
-              "description": "Custom route definitions",
+              "description": "Custom route definitions - works for both auto-generated and manual routers",
               "items": {
                 "type": "object",
                 "required": ["name"],
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Method name",
-                    "pattern": "^[A-Z][a-zA-Z0-9]*$"
+                    "description": "Route name (manual or auto-generated like 'GET_/users')"
                   },
                   "method": {
                     "type": "string",
@@ -217,10 +193,57 @@
               "description": "Convention type (rest, rpc, graphql) - Override of RegisterServiceType metadata",
               "pattern": "^[a-z][a-z-]*$"
             },
-            "overrides": {
+            "path-prefix": {
               "type": "string",
-              "description": "Reference to router-overrides definition for full path customization",
-              "pattern": "^[a-z][a-z0-9-]*$"
+              "description": "Path prefix for routes (e.g., '/api/v1')"
+            },
+            "middlewares": {
+              "type": "array",
+              "description": "Router-level middleware names",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              }
+            },
+            "hidden": {
+              "type": "array",
+              "description": "Method names to hide from router",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][a-zA-Z0-9]*$"
+              }
+            },
+            "custom": {
+              "type": "array",
+              "description": "Custom route definitions",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Route name"
+                  },
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method override",
+                    "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path override"
+                  },
+                  "middlewares": {
+                    "type": "array",
+                    "description": "Route-specific middleware names",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9-]*$"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
             }
           },
           "additionalProperties": false

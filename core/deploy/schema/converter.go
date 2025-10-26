@@ -13,21 +13,15 @@ type MiddlewareRegistry interface {
 
 // ToConversionRule converts RouterDef to autogen.ConversionRule
 func (r *RouterDef) ToConversionRule() autogen.ConversionRule {
-	// Default resource to service name if not specified
-	resource := r.Resource
-	if resource == "" {
-		resource = r.Service
-	}
-
 	return autogen.ConversionRule{
 		Convention:     convention.ConventionType(r.Convention),
-		Resource:       resource,
+		Resource:       r.Resource,
 		ResourcePlural: r.ResourcePlural,
 	}
 }
 
-// ToRouteOverride converts RouterOverrideDef to autogen.RouteOverride
-func (r *RouterOverrideDef) ToRouteOverride(registry MiddlewareRegistry) autogen.RouteOverride {
+// ToRouteOverride converts RouterDef inline overrides to autogen.RouteOverride
+func (r *RouterDef) ToRouteOverride(registry MiddlewareRegistry) autogen.RouteOverride {
 	override := autogen.RouteOverride{
 		PathPrefix:  r.PathPrefix,
 		Hidden:      r.Hidden,
