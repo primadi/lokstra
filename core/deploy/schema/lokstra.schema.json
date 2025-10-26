@@ -192,6 +192,16 @@
               "description": "Base URL of external service",
               "pattern": "^https?://"
             },
+            "type": {
+              "type": "string",
+              "description": "Factory type (optional) - Auto-creates service wrapper. Required if external service will be used in published-services for auto-router generation. Not needed if only accessed via GetRemoteService.",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "config": {
+              "type": "object",
+              "description": "Additional configuration for the factory (optional)",
+              "additionalProperties": true
+            },
             "resource": {
               "type": "string",
               "description": "Resource name (singular) - Override of RegisterServiceType metadata",

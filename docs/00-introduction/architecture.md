@@ -412,7 +412,7 @@ service-definitions:
 external-service-definitions:
   payment-gateway:
     url: "https://payment-api.example.com"
-    type: payment-service-remote-factory
+    type: payment-service-remote-factory  # Optional, required for published-services
 
 deployments:
   app:
@@ -425,9 +425,14 @@ deployments:
 
 **How it works:**
 - Define external service in `external-service-definitions` with URL
+- Add `type` field if you want to use in `published-services` (auto-router generation)
 - Add to `depends-on` in `service-definitions`
 - Framework automatically creates remote proxy
 - Auto-resolves based on URL presence!
+
+**When to use `type` field:**
+- ✅ **Required**: If external service used in `published-services` (auto-generate router)
+- ❌ **Not needed**: If only accessed via `GetRemoteService()` for client calls
 
 **Implementation with proxy.Service:**
 ```go
@@ -1355,16 +1360,25 @@ server, err := registry.BuildServer("microservice", "order-server")
 
 ### External Service Definitions
 
-For services outside your config (external APIs):
+For services outside your deployment (external APIs):
 
 ```yaml
 external-service-definitions:
   payment-gateway-remote:
     url: "https://payment-api.example.com"
+    type: payment-service-remote-factory  # Optional: only if used in published-services
   
   email-service-remote:
     url: "https://email.example.com"
+    # No type field - only accessed via GetRemoteService()
 ```
+
+**Field descriptions:**
+- `url` (required): Base URL of external service
+- `type` (optional): Factory type for auto-creating service wrapper
+  - ✅ Required if used in `published-services` (auto-router generation)
+  - ❌ Not needed if only accessed via `GetRemoteService()`
+- `resource`, `resource-plural`, `convention`, `overrides`: Override metadata
 
 **Use case:** Third-party services not in your topology
 
