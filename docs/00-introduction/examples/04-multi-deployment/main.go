@@ -14,7 +14,7 @@ import (
 
 func main() {
 	// Parse command line flags
-	server := flag.String("server", "microservice.order-server", "Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
+	server := flag.String("server", "monolith.api-server", "Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
 	flag.Parse()
 
 	fmt.Println("")
@@ -48,6 +48,20 @@ func main() {
 		deploy.WithResource("order", "orders"),
 		deploy.WithConvention("rest"),
 		deploy.WithRouteOverride("GetByUserID", "/users/{user_id}/orders"),
+	)
+
+	// Replace YAML service-definitions with code
+	// Equivalent to:
+	//   user-service:
+	//     type: user-service-factory
+	//     depends-on:
+	//       - user-repository
+	lokstra_registry.RegisterLazyService(
+		"user-service",         // service name
+		"user-service-factory", // service type
+		map[string]any{
+			"depends-on": []string{"user-repository"}, // dep key -> service name
+		},
 	)
 
 	// 2. Load config (loads ALL deployments into Global registry)

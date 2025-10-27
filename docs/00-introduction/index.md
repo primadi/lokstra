@@ -63,11 +63,13 @@ r.Use(logging.Middleware(), auth.Middleware())
 
 ### 4. **Configuration** - YAML or Code
 ```yaml
-servers:
-  - name: web-server
-    apps:
-      - addr: ":8080"
-        routers: [api]
+deployments:
+  production:
+    servers:
+      web-server:
+        base-url: http://localhost
+        addr: ":8080"
+        published-services: [user-service]
 ```
 
 **Key Feature**: One config file for multiple deployments
@@ -197,26 +199,24 @@ func (s *UserService) Create(p *CreateUserParams) error { ... }
 Configure once, deploy anywhere:
 
 ```yaml
-servers:
-  - name: monolith
-    deployment-id: monolith
-    apps:
-      - addr: ":8080"
-        services: [users, orders, payments]
+deployments:
+  monolith:
+    servers:
+      web-server:
+        addr: ":8080"
+        published-services: [users, orders, payments]
   
-  - name: user-service
-    deployment-id: multi-server
-    base-url: http://user-service
-    apps:
-      - addr: ":8001"
-        services: [users]
-  
-  - name: order-service
-    deployment-id: multi-server
-    base-url: http://order-payment-service
-    apps:
-      - addr: ":8002"
-        services: [orders, payments]
+  multi-server:
+    servers:
+      user-service:
+        base-url: http://user-service
+        addr: ":8001"
+        published-services: [users]
+      
+      order-payment-service:
+        base-url: http://order-payment-service
+        addr: ":8002"
+        published-services: [orders, payments]
 ```
 
 **Same code, different architectures** - just change config!
@@ -243,18 +243,23 @@ type UserService struct {
 
 // Register factories
 lokstra_registry.RegisterServiceType("db", createDB, nil)
-lokstra_registry.RegisterServiceType("users", func() any {
-    return &UserService{
-        DB: service.LazyLoad[*Database]("db"),
-    }
-}, nil)
+
+lokstra_registry.RegisterServiceFactory("users-factory", 
+    func(deps map[string]any, config map[string]any) any {
+        return &UserService{
+            DB: service.Cast[*Database](deps["db"]),
+        }
+    })
+
+lokstra_registry.RegisterLazyService("users", "users-factory", 
+    map[string]any{"depends-on": []string{"db"}})
 
 // Use anywhere
 users := lokstra_registry.GetService[*UserService]("users")
 
-// Inside service method - lazy load DB
+// Inside service method - DB injected, accessed lazily
 func (u *UserService) GetUsers() ([]User, error) {
-    db := u.DB.Get()  // Lazy loaded on first access
+    db := u.DB.MustGet()  // Injected dependency, accessed on first call
     return db.Query("SELECT * FROM users")
 }
 ```

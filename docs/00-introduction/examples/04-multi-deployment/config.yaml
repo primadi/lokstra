@@ -28,10 +28,10 @@ service-definitions:
     type: order-repository-factory
 
   # Application layer - Services
-  user-service:
-    type: user-service-factory
-    depends-on:
-      - user-repository
+  # user-service:
+  #   type: user-service-factory
+  #   depends-on:
+  #     - user-repository
 
   order-service:
     type: order-service-factory

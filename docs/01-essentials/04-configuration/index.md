@@ -195,16 +195,16 @@ err := config.ValidateConfig(cfg)
 
 ```yaml
 # Define services
-services:
-  - name: logger
+service-definitions:
+  logger:
     type: logger
     config:
       level: info
       format: json
 
 # Define routers
-routers:
-  - name: api
+router-definitions:
+  api:
     routes:
       - name: health
         path: /health
@@ -214,15 +214,15 @@ routers:
         path: /version
         handler: VersionHandler
 
-# Define server
-servers:
-  - name: web-server
-    baseUrl: http://localhost:8080
-    apps:
-      - name: api-app
-        addr: /api
-        routers:
-          - api
+# Define deployment
+deployments:
+  production:
+    servers:
+      web-server:
+        base-url: http://localhost:8080
+        addr: ":8080"
+        published-services:
+          - logger
 ```
 
 **File: `main.go`**
@@ -318,8 +318,8 @@ services:
 
 ```yaml
 # Development overrides
-services:
-  - name: database
+service-definitions:
+  database:
     config:
       host: localhost
       port: 5432
@@ -328,21 +328,22 @@ services:
       password: devpass
       max_connections: 5
 
-servers:
-  - name: api-server
-    baseUrl: http://localhost:3000
-    apps:
-      - name: api
-        addr: /api/v1
-        routers: [api]
+deployments:
+  development:
+    servers:
+      api-server:
+        base-url: http://localhost:3000
+        addr: ":3000"
+        published-services:
+          - database
 ```
 
 **File: `config/prod.yaml`**
 
 ```yaml
 # Production overrides
-services:
-  - name: database
+service-definitions:
+  database:
     config:
       host: ${DB_HOST}
       port: ${DB_PORT:5432}
@@ -352,12 +353,14 @@ services:
       max_connections: 25
       ssl_mode: require
 
-servers:
-  - name: api-server
-    baseUrl: ${API_BASE_URL}
-    apps:
-      - name: api
-        addr: /api/v1
+deployments:
+  production:
+    servers:
+      api-server:
+        base-url: ${API_BASE_URL}
+        addr: ":8080"
+        published-services:
+          - database
         routers: [api]
 ```
 
@@ -453,25 +456,28 @@ configs:
     value: MyApp
 
 # Use config references
-services:
-  - name: logger
+service-definitions:
+  logger:
     type: logger
     config:
       debug: ${@CFG:features.debug}
       app_name: ${@CFG:app.name}
   
-  - name: database
+  database:
     type: postgres
     config:
       max_connections: ${@CFG:database.max_connections}
       connect_timeout: ${@CFG:features.timeout}
 
-servers:
-  - name: api-server
-    baseUrl: http://localhost:8080
-    apps:
-      - name: api
-        addr: /
+deployments:
+  production:
+    servers:
+      api-server:
+        base-url: http://localhost:8080
+        addr: ":8080"
+        published-services:
+          - logger
+          - database
 ```
 
 **Benefits:**
@@ -720,25 +726,25 @@ middlewares:
     config: map            # Middleware-specific configuration
 
 # Router definitions
-routers:
-  - name: string           # Router name
+router-definitions:
+  router-name:
     engine_type: string    # Optional: default, gin, etc
-    middleware: [string]   # Router-level middleware
+    middlewares: [string]  # Router-level middleware
     routes:
       - name: string       # Route name
         path: string       # URL path
         method: string     # HTTP method (GET, POST, etc)
         handler: string    # Handler name
-        middleware: [string]  # Route-level middleware
+        middlewares: [string]  # Route-level middleware
 
-# Server definitions
-servers:
-  - name: string           # Server name
-    baseUrl: string        # Base URL
-    apps:
-      - name: string       # App name
-        addr: string       # Mount path
-        routers: [string]  # Router names
+# Deployment structure
+deployments:
+  deployment-name:
+    servers:
+      server-name:
+        base-url: string   # Base URL
+        addr: string       # Listen address (e.g., ":8080")
+        published-services: [string]  # Service names
 ```
 
 ---
