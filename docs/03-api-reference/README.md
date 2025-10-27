@@ -341,5 +341,5 @@ Every section links to working examples in the main documentation.
 
 ---
 
-**Last Updated**: {{ date }}  
-**Lokstra Version**: {{ version }}
+**Last Updated**: {% raw %}{{ date }}{% endraw %}  
+**Lokstra Version**: {% raw %}{{ version }}{% endraw %}
