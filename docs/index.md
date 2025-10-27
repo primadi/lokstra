@@ -56,11 +56,18 @@ package main
 import "github.com/primadi/lokstra"
 
 func main() {
-    app := lokstra.New()
-    app.GET("/", func() string {
+    r := lokstra.NewRouter("api")
+    
+    r.GET("/", func() string {
         return "Hello, Lokstra!"
     })
-    app.Run(":8080")
+    
+    r.GET("/ping", func() string {
+        return "pong"
+    })
+    
+    app := lokstra.NewApp("hello", ":3000", r)
+    app.Run(30 * time.Second)
 }
 ```
 
@@ -220,7 +227,7 @@ router-definitions:
 ---
 
 ### 📝 Type-Safe Request Binding
-Automatic validation with struct tags.
+Automatic validation with struct tags. Lokstra automatically injects and validates parameters.
 
 ```go
 type CreateUserParams struct {
@@ -229,14 +236,18 @@ type CreateUserParams struct {
     Age   int    `json:"age" validate:"min=18,max=100"`
 }
 
-func createUser(ctx *request.Context) error {
-    var params CreateUserParams
-    if err := ctx.Req.BindBody(&params); err != nil {
-        return ctx.Api.BadRequest("INVALID_INPUT", err.Error())
-    }
-    // params are validated and ready to use
+// Parameters automatically injected and validated!
+func createUser(ctx *request.Context, params *CreateUserParams) error {
+    // params are already validated and ready to use
+    user := db.CreateUser(params.Name, params.Email, params.Age)
+    return ctx.Api.Success(user)
 }
 ```
+
+**No manual binding code needed!** Lokstra handles:
+- JSON/Form parsing
+- Validation via struct tags
+- Clear error messages on failure
 
 **[Learn More →](./01-essentials/03-routing/)**
 
