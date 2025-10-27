@@ -38,9 +38,6 @@ readme_index:
   enabled: true
   remove_originals: false
 
-# Permalink structure - pretty URLs without .html
-permalink: pretty
-
 # Extract titles from headings
 titles_from_headings:
   enabled: true
