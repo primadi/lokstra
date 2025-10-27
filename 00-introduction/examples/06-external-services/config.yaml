@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# ========================================
+# Example 06 - External Services
+# ========================================
+# 
+# Demonstrates:
+#   - External service integration (payment gateway)
+#   - proxy.Service for remote calls
+#   - Route override for non-standard endpoints
+#   - Auto-create service wrapper from external-service-definitions
+
+# ========================================
+# External Service Definitions
+# ========================================
+# Define external APIs and their factories
+# Framework will auto-create service wrappers!
+
+external-service-definitions:
+  payment-gateway:
+    url: "http://localhost:9000"
+    type: payment-service-remote-factory  # Auto-creates service wrapper!
+    # Optional metadata for proxy.Service:
+    # resource: "payment"
+    # resource-plural: "payments"
+    # convention: "rest"
+
+# ========================================
+# Service Definitions
+# ========================================
+
+service-definitions:
+  # Order service - Business logic
+  order-service:
+    type: order-service-factory
+    depends-on:
+      - payment-gateway  # Direct reference to external service!
+
+# ========================================
+# Deployments
+# ========================================
+
+deployments:
+  app:
+    servers:
+      api-server:
+        base-url: "http://localhost"  # No port here!
+        
+        # Shorthand: 1 server = 1 app
+        addr: ":3000"  # Port here!
+        published-services:
+          - order-service  # Auto-generates router with metadata from OrderService!

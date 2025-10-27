@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Basic YAML Configuration Example
+
+# Define services
+service-definitions:
+  health-service:
+    type: health-service-factory
+  
+  version-service:
+    type: version-service-factory
+
+# Define routers (auto-generated from services)
+router-definitions:
+  health-service-router:
+    convention: rest
+    resource: health
+    resource-plural: healths
+  
+  version-service-router:
+    convention: rest
+    resource: version
+    resource-plural: versions
+
+# Define deployment
+deployments:
+  local:
+    servers:
+      web-server:
+        base-url: http://localhost:8080
+        apps:
+          - addr: ":8080"
+            routers:
+              - health-service-router
+              - version-service-router

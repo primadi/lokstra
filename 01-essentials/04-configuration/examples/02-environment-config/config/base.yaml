@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Base configuration - shared across all environments
+
+# Define services
+service-definitions:
+  health-service:
+    type: health-service-factory
+  
+  info-service:
+    type: info-service-factory
+
+# Define routers
+router-definitions:
+  health-service-router:
+    convention: rest
+    resource: health
+    resource-plural: healths
+  
+  info-service-router:
+    convention: rest
+    resource: info
+    resource-plural: infos

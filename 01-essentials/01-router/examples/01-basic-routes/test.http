@@ -1,0 +1,34 @@
+### Example 01: Basic Routes
+### Server: http://localhost:3000
+
+### Ping - Simple string return
+GET http://localhost:3000/ping
+
+### List Users - Auto JSON response
+GET http://localhost:3000/users
+
+### Create User - Request binding with validation
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Charlie",
+  "email": "charlie@example.com"
+}
+
+### Create User - Validation error (missing email)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Dave"
+}
+
+### Create User - Validation error (invalid email)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Eve",
+  "email": "not-an-email"
+}

@@ -1,0 +1,50 @@
+### Get all users
+GET http://localhost:3003/users
+
+### Get user by ID
+GET http://localhost:3003/users/1
+
+### Get user by ID (not found)
+GET http://localhost:3003/users/999
+
+### Get all orders
+GET http://localhost:3003/orders
+
+### Create order (valid)
+POST http://localhost:3003/orders
+Content-Type: application/json
+
+{
+    "user_id": 1,
+    "items": ["Laptop", "Mouse", "Keyboard"]
+}
+
+### Create order (invalid - too many items, max=5)
+POST http://localhost:3003/orders
+Content-Type: application/json
+
+{
+    "user_id": 1,
+    "items": ["Item1", "Item2", "Item3", "Item4", "Item5", "Item6"]
+}
+
+### Create order (invalid - user not found)
+POST http://localhost:3003/orders
+Content-Type: application/json
+
+{
+    "user_id": 999,
+    "items": ["Laptop"]
+}
+
+### Create order (invalid - no items)
+POST http://localhost:3003/orders
+Content-Type: application/json
+
+{
+    "user_id": 1,
+    "items": []
+}
+
+### Get order by ID
+GET http://localhost:3003/orders/1

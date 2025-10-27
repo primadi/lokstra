@@ -1,0 +1,44 @@
+### Example 02: Route Parameters
+### Server: http://localhost:3000
+
+### Path Parameter - Get User by ID
+GET http://localhost:3000/users/1
+
+### Path Parameter - Get User by ID (not found)
+GET http://localhost:3000/users/999
+
+### Update User - Path + Body params
+PUT http://localhost:3000/users/1
+Content-Type: application/json
+
+{
+  "name": "Alice Smith",
+  "email": "alice.smith@example.com"
+}
+
+### Delete User
+DELETE http://localhost:3000/users/2
+
+### Query Parameters - All products
+GET http://localhost:3000/products
+
+### Query Parameters - Filter by category
+GET http://localhost:3000/products?category=electronics
+
+### Query Parameters - Filter by price range
+GET http://localhost:3000/products?min_price=100&max_price=500
+
+### Query Parameters - Combined filters
+GET http://localhost:3000/products?category=furniture&max_price=250
+
+### Query Parameters - With limit
+GET http://localhost:3000/products?category=electronics&limit=1
+
+### Combined - Path + Query
+GET http://localhost:3000/users/1/products
+
+### Combined - User's electronics
+GET http://localhost:3000/users/1/products?category=electronics
+
+### Combined - User's products over $100
+GET http://localhost:3000/users/1/products?min_price=100

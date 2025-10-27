@@ -1,0 +1,194 @@
+###############################################################################
+# Example 06 - External Services Integration
+# Demonstrates wrapping external APIs (payment gateway) as Lokstra services
+###############################################################################
+
+### Prerequisites
+# 1. Start mock payment gateway first:
+#    cd mock-payment-gateway && go run main.go
+#    (Runs on http://localhost:9000)
+#
+# 2. Start main app:
+#    go run main.go
+#    (Runs on http://localhost:3000)
+
+###############################################################################
+# CREATE ORDER (Processes Payment via External Gateway)
+###############################################################################
+
+POST http://localhost:3000/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "items": ["Laptop", "Mouse", "Keyboard"],
+  "total_amount": 1299.99,
+  "currency": "USD"
+}
+
+# Expected Response:
+# {
+#   "status": "success",
+#   "data": {
+#     "id": "order_1",
+#     "user_id": 1,
+#     "items": [
+#       "Laptop",
+#       "Mouse",
+#       "Keyboard"
+#     ],
+#     "total_amount": 1299.99,
+#     "currency": "USD",
+#     "payment_id": "pay_1",
+#     "status": "paid",
+#     "created_at": "2025-10-25T03:07:50.4448813+07:00"
+#   }
+# }
+
+###############################################################################
+# GET ORDER
+###############################################################################
+
+GET http://localhost:3000/orders/order_1 HTTP/1.1
+
+# Expected Response:
+# {
+#   "status": "success",
+#   "data": {
+#     "id": "order_1",
+#     "user_id": 1,
+#     "items": [
+#       "Laptop",
+#       "Mouse",
+#       "Keyboard"
+#     ],
+#     "total_amount": 1299.99,
+#     "currency": "USD",
+#     "payment_id": "pay_1",
+#     "status": "paid",
+#     "created_at": "2025-10-25T03:07:50.4448813+07:00"
+#   }
+# }
+
+###############################################################################
+# REFUND ORDER (Via External Gateway)
+###############################################################################
+
+POST http://localhost:3000/orders/order_1/refund HTTP/1.1
+
+# Expected Response:
+# {
+#   "status": "success",
+#   "data": {
+#     "id": "order_1",
+#     "user_id": 1,
+#     "items": [
+#       "Laptop",
+#       "Mouse",
+#       "Keyboard"
+#     ],
+#     "total_amount": 1299.99,
+#     "currency": "USD",
+#     "payment_id": "pay_1",
+#     "status": "refunded",
+#     "created_at": "2025-10-25T03:07:50.4448813+07:00"
+#   }
+# }
+
+###############################################################################
+# CREATE ANOTHER ORDER
+###############################################################################
+
+POST http://localhost:3000/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "user_id": 2,
+  "items": ["Book", "Pen"],
+  "total_amount": 25.50,
+  "currency": "USD"
+}
+
+###############################################################################
+# EDGE CASES
+###############################################################################
+
+# Try to create order without items
+POST http://localhost:3000/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "items": [],
+  "total_amount": 10.00,
+  "currency": "USD"
+}
+
+# Expected: Error - "order must have at least one item"
+
+###
+
+# Try to create order with invalid amount
+POST http://localhost:3000/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "items": ["Item"],
+  "total_amount": -10.00,
+  "currency": "USD"
+}
+
+# Expected: Error - "total amount must be greater than 0"
+
+###
+
+# Try to refund non-existent order
+POST http://localhost:3000/orders/order_999/refund HTTP/1.1
+
+# Expected: Error - "order not found: order_999"
+
+###
+
+# Try to refund already refunded order
+# (First create and refund an order, then try to refund again)
+POST http://localhost:3000/orders/order_1/refund HTTP/1.1
+
+# Expected: Error - "only paid orders can be refunded"
+
+###############################################################################
+# DIRECT PAYMENT GATEWAY TESTS (Optional)
+# These hit the mock gateway directly, bypassing the main app
+###############################################################################
+
+# Create payment directly
+POST http://localhost:9000/payments HTTP/1.1
+Content-Type: application/json
+
+{
+  "amount": 99.99,
+  "currency": "USD",
+  "description": "Direct payment test"
+}
+
+###
+
+# Get payment status directly
+GET http://localhost:9000/payments/pay_1 HTTP/1.1
+
+###
+
+# Refund directly
+POST http://localhost:9000/payments/pay_1/refund HTTP/1.1
+
+###############################################################################
+# WHAT YOU'LL LEARN
+###############################################################################
+
+# 1. How to wrap external APIs as Lokstra services
+# 2. Using proxy.Service for remote calls
+# 3. Custom route overrides for non-standard endpoints
+# 4. external-service-definitions in config.yaml
+# 5. Business services depending on external services
+# 6. Error handling when external service fails
+# 7. Difference between proxy.Service (this example) and proxy.Router (Example 07)

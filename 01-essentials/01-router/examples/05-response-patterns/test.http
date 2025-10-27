@@ -1,0 +1,147 @@
+###############################################
+# Example 05: Response Patterns Test File
+# Test all endpoints that exist in main.go
+###############################################
+
+###############################################
+# GROUP 1: Manual Response (http.ResponseWriter)
+# Full control using ctx.W
+###############################################
+
+### 1. Manual Response - JSON
+GET http://localhost:3000/manual/json
+
+### 2. Manual Response - Plain Text
+GET http://localhost:3000/manual/text
+
+###############################################
+# GROUP 2: Via Context - ctx.Resp (Generic Response)
+# Unopinionated - supports JSON, HTML, text, etc
+###############################################
+
+### 3. Context Resp - JSON
+GET http://localhost:3000/ctx-resp/json
+
+### 4. Context Resp - HTML
+GET http://localhost:3000/ctx-resp/html
+
+### 5. Context Resp - Plain Text
+GET http://localhost:3000/ctx-resp/text
+
+###############################################
+# GROUP 3: Via Context - ctx.Api (Opinionated API)
+# Standard JSON structure for APIs
+###############################################
+
+### 6. Context Api - Success
+GET http://localhost:3000/ctx-api/success
+
+### 7. Context Api - Success with Message
+GET http://localhost:3000/ctx-api/success-message
+
+### 8. Context Api - Created (201)
+POST http://localhost:3000/ctx-api/created
+
+### 9. Context Api - Not Found Error (404)
+GET http://localhost:3000/ctx-api/error-notfound
+
+### 10. Context Api - Validation Error (400)
+GET http://localhost:3000/ctx-api/error-validation
+
+###############################################
+# GROUP 4: Via Return - response.Response (Generic Response)
+# Unopinionated - supports JSON, HTML, text, etc
+###############################################
+
+### 11. Return Response - JSON
+GET http://localhost:3000/response/json
+
+### 12. Return Response - HTML
+GET http://localhost:3000/response/html
+
+### 13. Return Response - Plain Text
+GET http://localhost:3000/response/text
+
+### 14. Return Response - Custom Status (201)
+GET http://localhost:3000/response/custom-status
+
+###############################################
+# GROUP 5: Via Return - response.ApiHelper (Opinionated API)
+# Standard JSON structure for APIs
+###############################################
+
+### 15. Return Api - Success - Standard format
+GET http://localhost:3000/api/success
+
+### 16. Return Api - Success with Message
+GET http://localhost:3000/api/success-message
+
+### 17. Return Api - Created (201)
+POST http://localhost:3000/api/created
+
+### 18. Return Api - Not Found Error (404)
+GET http://localhost:3000/api/error-notfound
+
+### 19. Return Api - Validation Error (400)
+GET http://localhost:3000/api/error-validation
+
+### 20. Return Api - List with Pagination (default: page 1, size 20)
+GET http://localhost:3000/api/list
+
+### 21. Return Api - List with Pagination (page 2, size 2)
+GET http://localhost:3000/api/list?page=2&page_size=2
+
+### 22. Return Api - List with Filter (role=admin)
+GET http://localhost:3000/api/list?role=admin
+
+### 23. Return Api - List with Pagination + Filter
+GET http://localhost:3000/api/list?page=1&page_size=3&role=user
+
+###############################################
+# GROUP 6: Return Values - Plain Data
+# Different ways to return data
+###############################################
+
+### 24. Return Plain Data (auto JSON)
+GET http://localhost:3000/return/data
+
+### 25. Return Struct (auto JSON)
+GET http://localhost:3000/return/struct
+
+### 26. Return Data with Error Handling
+GET http://localhost:3000/return/data-error
+
+### 27. Return Data with Error (simulate error)
+GET http://localhost:3000/return/data-error-fail
+
+### 28. Return Response Object
+GET http://localhost:3000/return/response
+
+### 29. Return Response HTML
+GET http://localhost:3000/return/response-html
+
+### 30. Return ApiHelper Object
+GET http://localhost:3000/return/api
+
+### 31. Return ApiHelper Created
+POST http://localhost:3000/return/api-created
+
+### 32. Return ApiHelper Error
+GET http://localhost:3000/return/api-error
+
+###############################################
+# GROUP 7: Comparison
+# Same concept, different methods
+###############################################
+
+### 33. Compare - Manual (http.ResponseWriter)
+GET http://localhost:3000/compare/manual
+
+### 34. Compare - Generic (response.Response)
+GET http://localhost:3000/compare/response
+
+### 35. Compare - Opinionated (response.ApiHelper)
+GET http://localhost:3000/compare/api
+
+### 36. Compare - Return Data (simplest)
+GET http://localhost:3000/compare/return
