@@ -1,56 +1,56 @@
 name: Deploy Jekyll site to Pages
 
 on:
-    push:
-        branches: ["dev2"]
-    workflow_dispatch:
+  push:
+    branches: ["main"] # Changed from dev2 to main
+  workflow_dispatch:
 
 permissions:
-    contents: read
-    pages: write
-    id-token: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-    group: "pages"
-    cancel-in-progress: false
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Copy schema to docs (if needed)
-              run: |
-                  mkdir -p docs/schema
-                  cp core/deploy/schema/lokstra.schema.json docs/schema/lokstra.schema.json
+      - name: Copy schema to docs (if needed)
+        run: |
+          mkdir -p docs/schema
+          cp core/deploy/schema/lokstra.schema.json docs/schema/lokstra.schema.json
 
-            - name: Setup Ruby
-              uses: ruby/setup-ruby@v1
-              with:
-                  ruby-version: "3.1"
-                  bundler-cache: false
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1"
+          bundler-cache: false
 
-            - name: Setup Pages
-              uses: actions/configure-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-            - name: Build with Jekyll
-              uses: actions/jekyll-build-pages@v1
-              with:
-                  source: ./docs
-                  destination: ./_site
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
 
-            - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
 
-    deploy:
-        environment:
-            name: github-pages
-            url: ${{ steps.deployment.outputs.page_url }}
-        runs-on: ubuntu-latest
-        needs: build
-        steps:
-            - name: Deploy to GitHub Pages
-              id: deployment
-              uses: actions/deploy-pages@v4
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
