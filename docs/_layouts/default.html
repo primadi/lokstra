@@ -21,33 +21,8 @@
     body {
       background-color: var(--bg-dark);
       color: var(--text-primary);
-    }
-
-    /* Header gradient */
-    .page-header {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      padding: 3rem 1rem;
-    }
-
-    .project-name {
-      margin-bottom: 0.5rem;
-    }
-
-    .project-tagline {
-      margin-bottom: 2rem;
-      opacity: 0.9;
-    }
-
-    .btn {
-      background-color: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.3);
-      transition: all 0.3s;
-    }
-
-    .btn:hover {
-      background-color: rgba(255,255,255,0.2);
-      border-color: rgba(255,255,255,0.5);
-      transform: translateY(-2px);
+      font-size: 16px;
+      line-height: 1.7;
     }
 
     /* Main content */
@@ -55,6 +30,54 @@
       max-width: 1200px;
       margin: 0 auto;
       padding: 2rem 1rem;
+    }
+
+    /* Navigation bar - simple top bar instead of gradient header */
+    .nav-bar {
+      background-color: var(--bg-darker);
+      border-bottom: 2px solid var(--primary);
+      padding: 1rem 0;
+      margin-bottom: 2rem;
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background-color: rgba(102,126,234,0.1);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      transition: all 0.3s;
+      display: inline-block;
+    }
+
+    .btn:hover {
+      background-color: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+      text-decoration: none;
     }
 
     /* Logo styling */
@@ -85,11 +108,20 @@
     }
 
     h1 {
-      font-size: 2rem;
+      font-size: 2.5rem;
     }
 
     h2 {
+      font-size: 2rem;
+    }
+
+    h3 {
       font-size: 1.5rem;
+    }
+
+    p {
+      font-size: 1.05rem;
+      line-height: 1.7;
     }
 
     /* Code blocks */
@@ -206,30 +238,46 @@
 
     /* Responsive */
     @media screen and (max-width: 768px) {
-      .page-header {
-        padding: 2rem 1rem;
+      body {
+        font-size: 15px;
       }
 
-      .project-name {
-        font-size: 1.5rem;
+      .nav-container {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .nav-title {
+        font-size: 1.25rem;
       }
 
       .btn {
         display: block;
         margin: 0.5rem 0;
       }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
     }
   </style>
 </head>
 <body>
-  <section class="page-header">
-    <h1 class="project-name">{{ site.title }}</h1>
-    <h2 class="project-tagline">{{ site.description }}</h2>
-    <a href="{{ site.baseurl }}/" class="btn">Home</a>
-    <a href="{{ site.baseurl }}/01-essentials/" class="btn">Documentation</a>
-    <a href="{{ site.baseurl }}/00-introduction/examples/" class="btn">Examples</a>
-    <a href="https://github.com/{{ site.github.owner_name }}/{{ site.github.repository_name }}" class="btn">View on GitHub</a>
-  </section>
+  <nav class="nav-bar">
+    <div class="nav-container">
+      <div class="nav-title">{{ site.title }}</div>
+      <div class="nav-links">
+        <a href="{{ site.baseurl }}/" class="btn">Home</a>
+        <a href="{{ site.baseurl }}/01-essentials/" class="btn">Documentation</a>
+        <a href="{{ site.baseurl }}/00-introduction/examples/" class="btn">Examples</a>
+        <a href="https://github.com/{{ site.github.owner_name }}/{{ site.github.repository_name }}" class="btn">GitHub</a>
+      </div>
+    </div>
+  </nav>
 
   <section class="main-content">
     {{ content }}
