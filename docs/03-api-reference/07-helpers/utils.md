@@ -191,9 +191,11 @@ anySlice := utils.ToAnySlice(numbers)
 type User struct {
     Name string
 }
+{% raw %}
 users := []User{{Name: "Alice"}, {Name: "Bob"}}
 anySlice := utils.ToAnySlice(users)
 // []any{User{Name: "Alice"}, User{Name: "Bob"}}
+{% endraw %}
 ```
 
 ### SlicesConcat
