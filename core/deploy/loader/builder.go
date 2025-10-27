@@ -186,7 +186,22 @@ func LoadAndBuild(configPaths []string) error {
 	// Register services from YAML (includes auto-created external services)
 	for name, svc := range config.ServiceDefinitions {
 		svc.Name = name // Set name from map key
-		registry.DefineService(svc)
+
+		// Prepare config map including depends-on
+		configMap := make(map[string]any)
+		if svc.Config != nil {
+			for k, v := range svc.Config {
+				configMap[k] = v
+			}
+		}
+
+		// Add depends-on to config if specified
+		if len(svc.DependsOn) > 0 {
+			configMap["depends-on"] = svc.DependsOn
+		}
+
+		// Register using new unified API (string factory type)
+		registry.RegisterLazyService(name, svc.Type, configMap)
 	}
 
 	// Auto-generate router definitions for published services
@@ -207,10 +222,15 @@ func LoadAndBuild(configPaths []string) error {
 	for serviceName := range publishedServicesMap {
 		routerName := serviceName + "-router"
 
-		// Get service definition to find service type
-		serviceDef, ok := config.ServiceDefinitions[serviceName]
-		if !ok {
+		// Check if service is registered (via RegisterLazyService)
+		if !registry.HasLazyService(serviceName) {
 			return fmt.Errorf("published service '%s' not found in service-definitions", serviceName)
+		}
+
+		// Get service definition to find service type
+		serviceDef := registry.GetDeferredServiceDef(serviceName)
+		if serviceDef == nil {
+			return fmt.Errorf("published service '%s' definition not found", serviceName)
 		}
 
 		// Get service metadata from factory registration (RegisterServiceType options)
@@ -459,7 +479,22 @@ func LoadAndBuildFromDir(dirPath string) error {
 	// Register services from YAML (includes auto-created external services)
 	for name, svc := range config.ServiceDefinitions {
 		svc.Name = name // Set name from map key
-		registry.DefineService(svc)
+
+		// Prepare config map including depends-on
+		configMap := make(map[string]any)
+		if svc.Config != nil {
+			for k, v := range svc.Config {
+				configMap[k] = v
+			}
+		}
+
+		// Add depends-on to config if specified
+		if len(svc.DependsOn) > 0 {
+			configMap["depends-on"] = svc.DependsOn
+		}
+
+		// Register using new unified API (string factory type)
+		registry.RegisterLazyService(name, svc.Type, configMap)
 	}
 
 	// Auto-generate router definitions for published services
@@ -478,9 +513,14 @@ func LoadAndBuildFromDir(dirPath string) error {
 	for serviceName := range publishedServicesMap {
 		routerName := serviceName + "-router"
 
-		serviceDef, ok := config.ServiceDefinitions[serviceName]
-		if !ok {
+		// Check if service is registered (via RegisterLazyService)
+		if !registry.HasLazyService(serviceName) {
 			return fmt.Errorf("published service '%s' not found in service-definitions", serviceName)
+		}
+
+		serviceDef := registry.GetDeferredServiceDef(serviceName)
+		if serviceDef == nil {
+			return fmt.Errorf("published service '%s' definition not found", serviceName)
 		}
 
 		metadata := registry.GetServiceMetadata(serviceDef.Type)

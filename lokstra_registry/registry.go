@@ -180,11 +180,6 @@ func GetServiceFactory(serviceType string, isLocal bool) deploy.ServiceFactory {
 	return deploy.Global().GetServiceFactory(serviceType, isLocal)
 }
 
-// DefineService defines a service in the global registry (for code-based config)
-func DefineService(def *schema.ServiceDef) {
-	deploy.Global().DefineService(def)
-}
-
 // RegisterService registers a service instance in the runtime registry
 func RegisterService(name string, instance any) {
 	deploy.Global().RegisterService(name, instance)

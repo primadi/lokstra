@@ -46,7 +46,7 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 	var metadataFound bool
 
 	// Strategy 1: Check metadata from RegisterServiceType options
-	serviceDef := deploy.Global().GetServiceDef(serviceName)
+	serviceDef := deploy.Global().GetDeferredServiceDef(serviceName)
 	if serviceDef != nil {
 		metadata := deploy.Global().GetServiceMetadata(serviceDef.Type)
 		if metadata != nil && metadata.Resource != "" {

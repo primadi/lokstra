@@ -105,20 +105,21 @@ func TestGlobalRegistry_ConfigReference(t *testing.T) {
 func TestGlobalRegistry_ServiceDefinition(t *testing.T) {
 	reg := NewGlobalRegistry()
 
-	// Define a service
-	reg.DefineService(&schema.ServiceDef{
-		Name:      "user-service",
-		Type:      "user-factory",
-		DependsOn: []string{"db-user", "logger"},
-		Config: map[string]any{
-			"cache-ttl": 300,
-		},
+	// Register a service with string factory type (new unified API)
+	reg.RegisterLazyService("user-service", "user-factory", map[string]any{
+		"depends-on": []string{"db-user", "logger"},
+		"cache-ttl":  300,
 	})
 
-	// Retrieve service definition
-	svc := reg.GetServiceDef("user-service")
-	if svc == nil {
+	// Check if service is registered
+	if !reg.HasLazyService("user-service") {
 		t.Fatal("user-service not found")
+	}
+
+	// Retrieve service definition
+	svc := reg.GetDeferredServiceDef("user-service")
+	if svc == nil {
+		t.Fatal("user-service definition not found")
 	}
 
 	if svc.Name != "user-service" {

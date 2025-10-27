@@ -61,7 +61,7 @@ func registerLazyServicesForServer(compositeKey string) error {
 	// Iterate all services at server level and register them
 	for _, serviceName := range serverTopo.Services {
 		// Get service definition
-		serviceDef := registry.GetServiceDef(serviceName)
+		serviceDef := registry.GetDeferredServiceDef(serviceName)
 		if serviceDef == nil {
 			return fmt.Errorf("service %s not defined in global registry", serviceName)
 		}

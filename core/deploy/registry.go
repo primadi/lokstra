@@ -41,10 +41,12 @@ type GlobalRegistry struct {
 	lazyServiceFactories sync.Map // map[string]*LazyServiceEntry
 	lazyServiceOnce      sync.Map // map[string]*sync.Once
 
+	// Deferred service definitions (string factory type - instantiated on access)
+	serviceDefs sync.Map // map[string]*deferredServiceDef
+
 	// Definitions (YAML or code-defined)
 	configs     map[string]*schema.ConfigDef
 	middlewares map[string]*schema.MiddlewareDef
-	services    map[string]*schema.ServiceDef
 	routers     map[string]*schema.RouterDef
 	// Note: routerOverrides removed - overrides are now inline in RouterDef
 
@@ -58,6 +60,16 @@ type GlobalRegistry struct {
 
 	// Current server context (for runtime service resolution)
 	currentCompositeKey string // "deployment.server" - set by SetCurrentServer
+}
+
+// deferredServiceDef holds service definition for deferred instantiation
+// Used when RegisterLazyService is called with string factory type
+// Instantiation is deferred until first access, allowing auto-detect LOCAL/REMOTE
+type deferredServiceDef struct {
+	Name        string
+	FactoryType string
+	DependsOn   []string
+	Config      map[string]any
 }
 
 // ServiceFactoryEntry holds local and remote factory functions plus metadata
@@ -164,10 +176,9 @@ func NewGlobalRegistry() *GlobalRegistry {
 		middlewareFactories: make(map[string]MiddlewareFactory),
 		configs:             make(map[string]*schema.ConfigDef),
 		middlewares:         make(map[string]*schema.MiddlewareDef),
-		services:            make(map[string]*schema.ServiceDef),
 		routers:             make(map[string]*schema.RouterDef),
 		resolvedConfigs:     make(map[string]any),
-		// Topology maps (deploymentTopologies, serverTopologies) use sync.Map, no initialization needed
+		// Topology maps and serviceDefs use sync.Map, no initialization needed
 	}
 }
 
@@ -188,7 +199,8 @@ func NewGlobalRegistry() *GlobalRegistry {
 //   - func() any                          - no params
 //
 // Both local and remote factories support all three signatures.
-func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any, configOrOptions ...any) {
+func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any,
+	configOrOptions ...any) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -217,11 +229,7 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 				if len(config.RouteOverrides) > 0 {
 					metadata.RouteOverrides = make(map[string]RouteMetadata)
 					for methodName, routeConfig := range config.RouteOverrides {
-						metadata.RouteOverrides[methodName] = RouteMetadata{
-							Method:      routeConfig.Method,
-							Path:        routeConfig.Path,
-							Middlewares: routeConfig.Middlewares,
-						}
+						metadata.RouteOverrides[methodName] = RouteMetadata(routeConfig)
 					}
 				}
 			}
@@ -403,18 +411,6 @@ func (g *GlobalRegistry) DefineMiddleware(def *schema.MiddlewareDef) {
 	g.middlewares[def.Name] = def
 }
 
-// DefineService defines a service instance
-func (g *GlobalRegistry) DefineService(def *schema.ServiceDef) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if _, exists := g.services[def.Name]; exists {
-		panic(fmt.Sprintf("service %s already defined", def.Name))
-	}
-
-	g.services[def.Name] = def
-}
-
 // DefineRouter defines a router
 func (g *GlobalRegistry) DefineRouter(name string, def *schema.RouterDef) {
 	g.mu.Lock()
@@ -481,14 +477,6 @@ func (g *GlobalRegistry) GetMiddlewareDef(name string) *schema.MiddlewareDef {
 	defer g.mu.RUnlock()
 
 	return g.middlewares[name]
-}
-
-// GetServiceDef returns a service definition
-func (g *GlobalRegistry) GetServiceDef(name string) *schema.ServiceDef {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.services[name]
 }
 
 // GetRouterDef returns a router definition
@@ -626,25 +614,84 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 //
 // Supports three factory signatures (auto-wrapped by framework):
 //   - func(cfg map[string]any) any - with config
-//   - func() any                    - no params (simplest!)
 //
-// Dependencies are resolved manually via lokstra_registry.MustGetService() inside factory.
+// RegisterLazyService registers a lazy service with optional dependencies.
 //
-// Example with config:
+// The factory parameter can be:
+//   - A string: References a pre-registered factory type (via RegisterServiceType)
+//   - A function: Inline factory function
 //
-//	lokstra_registry.RegisterLazyService("db-main", func(cfg map[string]any) any {
-//	    return db.NewConnection(cfg["dsn"].(string))
-//	}, map[string]any{"dsn": "postgresql://localhost/main"})
+// When using string factory type:
+//   - Framework auto-wraps dependencies as service.Cached
+//   - Supports auto-router generation (if factory has metadata)
+//   - Equivalent to YAML service-definitions
+//   - Instantiation is deferred until first access
+//   - Auto-detects LOCAL vs REMOTE based on server topology
 //
-// Example without params:
+// When using inline function:
+//   - No metadata, no auto-router
+//   - Manual dependency handling required
+//   - Suitable for simple services or prototyping
+//   - Instantiated immediately (no auto-detect)
 //
-//	lokstra_registry.RegisterLazyService("user-repo", func() any {
-//	    return repository.NewUserRepository()
-//	}, nil)
+// Example with string factory type (YAML equivalent):
 //
-// For explicit dependency injection, use RegisterLazyServiceWithDeps instead.
+//	lokstra_registry.RegisterLazyService("user-service",
+//	    "user-service-factory",  // String factory type
+//	    map[string]any{
+//	        "depends-on": []string{"user-repository"},
+//	        "max-users": 1000,  // Additional config
+//	    })
+//
+// Example with inline function:
+//
+//	lokstra_registry.RegisterLazyService("cache",
+//	    func(deps, cfg map[string]any) any {
+//	        return redis.NewClient(&redis.Options{
+//	            Addr: cfg["addr"].(string),
+//	        })
+//	    },
+//	    map[string]any{"addr": "localhost:6379"})
 func (g *GlobalRegistry) RegisterLazyService(name string, factory any, config map[string]any) {
+	// Type detection: string factory type name vs inline function
+	if factoryTypeName, ok := factory.(string); ok {
+		// String factory type - store definition for deferred instantiation
+		g.registerDeferredService(name, factoryTypeName, config)
+		return
+	}
+
+	// Inline function - immediate registration (no auto-detect)
 	g.RegisterLazyServiceWithDeps(name, factory, nil, config)
+}
+
+// registerDeferredService stores a service definition using a factory type name.
+// The service will be instantiated on first access with auto-detect LOCAL/REMOTE
+// based on deployment topology.
+func (g *GlobalRegistry) registerDeferredService(name, factoryType string, config map[string]any) {
+	// Extract depends-on from config
+	var dependsOn []string
+	if depsRaw, ok := config["depends-on"]; ok {
+		switch deps := depsRaw.(type) {
+		case []string:
+			dependsOn = deps
+		case []interface{}:
+			// Handle YAML unmarshaling []interface{}
+			dependsOn = make([]string, len(deps))
+			for i, d := range deps {
+				dependsOn[i] = d.(string)
+			}
+		}
+	}
+
+	// Store deferred definition
+	def := &deferredServiceDef{
+		Name:        name,
+		FactoryType: factoryType,
+		DependsOn:   dependsOn,
+		Config:      config,
+	}
+
+	g.serviceDefs.Store(name, def)
 }
 
 // LazyServiceRegistrationMode defines how to handle duplicate registrations
@@ -770,12 +817,18 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 	// Check lazy registry and create if needed
 	onceAny, hasOnce := g.lazyServiceOnce.Load(name)
 	if !hasOnce {
-		// Not in lazy registry - check if in service-definitions
-		g.mu.RLock()
-		serviceDef, defExists := g.services[name]
-		g.mu.RUnlock()
+		// Not in lazy registry - check if in deferred service definitions
+		if defAny, exists := g.serviceDefs.Load(name); exists {
+			deferredDef := defAny.(*deferredServiceDef)
 
-		if defExists {
+			// Convert deferred definition to schema.ServiceDef for auto-registration
+			serviceDef := &schema.ServiceDef{
+				Name:      deferredDef.Name,
+				Type:      deferredDef.FactoryType,
+				DependsOn: deferredDef.DependsOn,
+				Config:    deferredDef.Config,
+			}
+
 			// Auto-create lazy service from definition
 			g.autoRegisterLazyService(name, serviceDef)
 
@@ -824,6 +877,38 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 	// Return cached instance
 	svc, ok := g.serviceInstances.Load(name)
 	return svc, ok
+}
+
+// HasLazyService checks if a service is registered in the lazy service registry
+// or defined in the deferred service definitions (from YAML or code).
+func (g *GlobalRegistry) HasLazyService(name string) bool {
+	// Check if already instantiated in lazy registry
+	if _, ok := g.lazyServiceFactories.Load(name); ok {
+		return true
+	}
+
+	// Check if defined but not yet instantiated
+	if _, ok := g.serviceDefs.Load(name); ok {
+		return true
+	}
+
+	return false
+}
+
+// GetDeferredServiceDef retrieves a deferred service definition by name.
+// Returns the definition if found in serviceDefs, or nil if not found.
+// This is primarily used by wrapper functions that need access to service metadata.
+func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
+	if defAny, ok := g.serviceDefs.Load(name); ok {
+		deferredDef := defAny.(*deferredServiceDef)
+		return &schema.ServiceDef{
+			Name:      deferredDef.Name,
+			Type:      deferredDef.FactoryType,
+			DependsOn: deferredDef.DependsOn,
+			Config:    deferredDef.Config,
+		}
+	}
+	return nil
 }
 
 // autoRegisterLazyService auto-registers a service from service-definitions as a lazy service

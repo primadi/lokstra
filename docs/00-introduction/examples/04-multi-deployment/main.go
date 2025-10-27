@@ -56,13 +56,13 @@ func main() {
 	//     type: user-service-factory
 	//     depends-on:
 	//       - user-repository
-	lokstra_registry.RegisterLazyService(
-		"user-service",         // service name
-		"user-service-factory", // service type
-		map[string]any{
-			"depends-on": []string{"user-repository"}, // dep key -> service name
-		},
-	)
+	// lokstra_registry.RegisterLazyService(
+	// 	"user-service",         // service name
+	// 	"user-service-factory", // service type
+	// 	map[string]any{
+	// 		"depends-on": []string{"user-repository"}, // dep key -> service name
+	// 	},
+	// )
 
 	// 2. Load config (loads ALL deployments into Global registry)
 	if err := lokstra_registry.LoadAndBuild([]string{"config.yaml"}); err != nil {
