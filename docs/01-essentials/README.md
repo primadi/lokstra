@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Essentials - Getting Started
+---
+
 # Essentials - Build Your First Lokstra API
 
 > **Learn the fundamentals and build production-ready APIs**  

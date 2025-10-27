@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Architecture
+---
+
 # Architecture
 
 > **Understanding Lokstra's design - how all the pieces fit together**

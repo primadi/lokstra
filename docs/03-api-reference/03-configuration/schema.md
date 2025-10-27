@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Schema
+---
+
 # Schema
 
 > YAML schema definitions and validation for deployment configurations

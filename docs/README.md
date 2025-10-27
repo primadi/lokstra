@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Documentation
+---
+
 # Lokstra Framework Documentation
 
 > **Build Go REST APIs with less boilerplate, more flexibility**

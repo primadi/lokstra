@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Service - Essential Guide
+---
+
 # Service - Essential Guide
 
 > **Service layer patterns and dependency injection**  

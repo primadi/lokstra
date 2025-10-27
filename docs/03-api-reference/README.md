@@ -1,3 +1,8 @@
+---
+layout: docs
+title: API Reference
+---
+
 # API Reference
 
 > Complete API documentation for all Lokstra packages

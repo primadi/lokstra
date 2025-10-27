@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Configuration - YAML & Environment Setup
+---
+
 # Configuration - YAML & Environment Setup
 
 > **Learn configuration management and environment strategies**  

@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Examples
+---
+
 # Lokstra Examples
 
 > 🎯 **Progressive learning path: Manual basics → Production patterns**

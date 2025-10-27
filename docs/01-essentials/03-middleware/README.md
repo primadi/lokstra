@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Middleware - Essential Guide
+---
+
 # Middleware - Essential Guide
 
 > **Request/response processing made easy**  

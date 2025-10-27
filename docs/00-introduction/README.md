@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Introduction
+---
+
 # What is Lokstra?
 
 > **A Go framework for building REST APIs with convention over configuration, powerful dependency injection, and flexible deployment options.**

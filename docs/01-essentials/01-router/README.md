@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Router - Essential Guide
+---
+
 # Router - Essential Guide
 
 > **HTTP routing made flexible and intuitive**  

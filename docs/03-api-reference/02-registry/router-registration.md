@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Router Registration
+---
+
 # Router Registration
 
 > Router registration patterns, auto-router generation, and YAML-based router configuration

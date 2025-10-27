@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Deploy
+---
+
 # Deploy
 
 > Deployment topology management and YAML-based deployment configuration

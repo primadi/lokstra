@@ -3,6 +3,10 @@ name: Deploy Jekyll site to Pages
 on:
   push:
     branches: ["dev2"]
+    paths:
+      - "docs/**"
+      - "core/deploy/schema/lokstra.schema.json"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:

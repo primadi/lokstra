@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Service Registration
+---
+
 # Service Registration
 
 > Detailed guide to service registration patterns and factory functions

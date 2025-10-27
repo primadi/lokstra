@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Utils Package
+---
+
 # Utils Package
 
 The `utils` package provides general-purpose utility functions for common programming tasks including map operations, slice manipulations, string processing, and more.
