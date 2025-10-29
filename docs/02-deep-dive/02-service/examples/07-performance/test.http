@@ -1,0 +1,16 @@
+### Performance Example
+
+### Home
+GET http://localhost:3000/
+
+### Test LazyLoad pattern (1000 iterations)
+GET http://localhost:3000/lazy
+
+### Test Direct access (1000 iterations)
+GET http://localhost:3000/direct
+
+### Compare both (run multiple times)
+GET http://localhost:3000/lazy
+
+###
+GET http://localhost:3000/direct

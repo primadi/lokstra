@@ -1,0 +1,10 @@
+### Basic YAML Configuration Example
+### Run: go run main.go
+
+@baseUrl = http://localhost:8080
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Version Info
+GET {{baseUrl}}/version

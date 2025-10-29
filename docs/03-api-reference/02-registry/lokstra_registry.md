@@ -659,7 +659,9 @@ func main() {
     }()
     
     // Start server
-    server.Run()
+    if err := server.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 

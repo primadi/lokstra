@@ -1,0 +1,93 @@
+### Service Factories Example
+### http://localhost:3000
+
+### Home Page
+GET http://localhost:3000/
+
+### ============================================
+### 1. Simple Factory
+### ============================================
+
+### Get simple service info
+GET http://localhost:3000/simple
+
+### ============================================
+### 2. Configurable Factory
+### ============================================
+
+### Get configurable service info (shows configuration)
+GET http://localhost:3000/configurable
+
+### ============================================
+### 3. Factory with Dependencies
+### ============================================
+
+### Process data (uses cache and logger services)
+POST http://localhost:3000/process
+Content-Type: application/json
+
+{
+  "key": "user-123",
+  "value": "John Doe"
+}
+
+###
+
+### Process another item
+POST http://localhost:3000/process
+Content-Type: application/json
+
+{
+  "key": "product-456",
+  "value": "Laptop"
+}
+
+###
+
+### Retrieve cached data
+POST http://localhost:3000/process
+Content-Type: application/json
+
+{
+  "key": "user-123",
+  "value": "Updated Name"
+}
+
+###
+
+### ============================================
+### 4. Lifecycle Management
+### ============================================
+
+### Get lifecycle service status
+GET http://localhost:3000/lifecycle
+
+###
+
+### Check status again (uptime increases)
+GET http://localhost:3000/lifecycle
+
+###
+
+### ============================================
+### Error Cases
+### ============================================
+
+### Missing required field
+POST http://localhost:3000/process
+Content-Type: application/json
+
+{
+  "key": "test"
+}
+
+###
+
+### Invalid JSON
+POST http://localhost:3000/process
+Content-Type: application/json
+
+{
+  "key": "test",
+  "value": 
+}

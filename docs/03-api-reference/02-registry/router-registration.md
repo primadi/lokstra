@@ -822,7 +822,9 @@ func main() {
     app.AddRouter(lokstra_registry.GetRouter("order-router"))
     app.AddRouter(lokstra_registry.GetRouter("product-router"))
     
-    app.Run()
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 
 // Generated API:
@@ -861,7 +863,9 @@ func main() {
     app.AddRouter(lokstra_registry.GetRouter("user-router-v1"))
     app.AddRouter(lokstra_registry.GetRouter("user-router-v2"))
     
-    app.Run()
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 
 // Generated API:

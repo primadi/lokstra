@@ -13,6 +13,7 @@ Demonstrates using CFG references for DRY (Don't Repeat Yourself) configuration.
 
 - `config.yaml` - Configuration with CFG references
 - `main.go` - Application code
+- `test.http` - HTTP requests for testing (use with VS Code REST Client)
 
 ## Key Concepts
 

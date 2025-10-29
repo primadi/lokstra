@@ -231,5 +231,7 @@ func main() {
 	fmt.Println("  DELETE /users/{id}  - Delete user")
 	fmt.Println("========================================")
 
-	app.Run(30 * time.Second)
+	if err := app.Run(30 * time.Second); err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }

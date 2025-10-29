@@ -47,7 +47,9 @@ func main() {
 	fmt.Println("   curl http://localhost:3000/users")
 	fmt.Println("   curl -X POST http://localhost:3000/users -H 'Content-Type: application/json' -d '{\"name\":\"Charlie\",\"email\":\"charlie@example.com\"}'")
 
-	app.Run(30 * time.Second)
+	if err := app.Run(30 * time.Second); err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }
 
 // Request type with validation

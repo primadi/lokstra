@@ -1,0 +1,195 @@
+### Route Priorities Example
+### Test route matching order and priorities
+
+### ============================================
+### 1. User Routes - Exact vs Parameter
+### ============================================
+
+### Exact match: /users/me
+GET http://localhost:3000/users/me
+
+###
+
+### Exact match: /users/active
+GET http://localhost:3000/users/active
+
+###
+
+### Exact match: /users/inactive
+GET http://localhost:3000/users/inactive
+
+###
+
+### Parameter route: /users/:id
+GET http://localhost:3000/users/123
+
+###
+
+### Parameter route with different ID
+GET http://localhost:3000/users/456
+
+###
+
+### ============================================
+### 2. Post Routes - Nested Parameters
+### ============================================
+
+### Exact match: /posts/latest
+GET http://localhost:3000/posts/latest
+
+###
+
+### Exact match: /posts/popular
+GET http://localhost:3000/posts/popular
+
+###
+
+### Parameter route: /posts/:id
+GET http://localhost:3000/posts/789
+
+###
+
+### Nested parameter: /posts/:id/comments
+GET http://localhost:3000/posts/123/comments
+
+###
+
+### Exact segment wins: /posts/:id/comments/latest
+GET http://localhost:3000/posts/123/comments/latest
+
+###
+
+### Two parameters: /posts/:id/comments/:commentId
+GET http://localhost:3000/posts/123/comments/456
+
+###
+
+### ============================================
+### 3. File Routes - Parameter vs Wildcard
+### ============================================
+
+### Exact match: /files/upload
+GET http://localhost:3000/files/upload
+
+###
+
+### Exact match: /files/info
+GET http://localhost:3000/files/info
+
+###
+
+### Parameter route: /files/:id
+GET http://localhost:3000/files/12345
+
+###
+
+### Wildcard: /files/*path (single segment)
+GET http://localhost:3000/files/document.pdf
+
+###
+
+### Wildcard: /files/*path (multiple segments)
+GET http://localhost:3000/files/docs/readme.txt
+
+###
+
+### Wildcard: /files/*path (deep path)
+GET http://localhost:3000/files/projects/2024/reports/q1/summary.pdf
+
+###
+
+### ============================================
+### 4. API Versioning with Wildcard
+### ============================================
+
+### API v1 - Exact match: /api/v1/status
+GET http://localhost:3000/api/v1/status
+
+###
+
+### API v1 - Wildcard: /api/v1/*path
+GET http://localhost:3000/api/v1/users/list
+
+###
+
+### API v1 - Wildcard with deeper path
+GET http://localhost:3000/api/v1/posts/123/comments
+
+###
+
+### API v2 - Exact match: /api/v2/status
+GET http://localhost:3000/api/v2/status
+
+###
+
+### API v2 - Wildcard: /api/v2/*path
+GET http://localhost:3000/api/v2/users/active
+
+###
+
+### ============================================
+### 5. Product Routes - Multiple Exact Routes
+### ============================================
+
+### Exact: /products/search
+GET http://localhost:3000/products/search
+
+###
+
+### Exact: /products/categories
+GET http://localhost:3000/products/categories
+
+###
+
+### Exact: /products/featured
+GET http://localhost:3000/products/featured
+
+###
+
+### Parameter: /products/:id
+GET http://localhost:3000/products/12345
+
+###
+
+### Parameter nested: /products/:id/reviews
+GET http://localhost:3000/products/12345/reviews
+
+###
+
+### Parameter nested: /products/:id/related
+GET http://localhost:3000/products/12345/related
+
+###
+
+### ============================================
+### Test Priority
+### ============================================
+
+### Test priority rules
+GET http://localhost:3000/test-priority
+
+###
+
+### Home page (HTML)
+GET http://localhost:3000/
+
+###
+
+### ============================================
+### Edge Cases
+### ============================================
+
+### Should 404 - no matching route
+GET http://localhost:3000/nonexistent
+
+###
+
+### Should 404 - incomplete path
+GET http://localhost:3000/posts
+
+###
+
+### Should match wildcard
+GET http://localhost:3000/files/very/deep/nested/path/to/file.txt
+
+###

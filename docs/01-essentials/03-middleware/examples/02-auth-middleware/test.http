@@ -1,0 +1,90 @@
+### Authentication Middleware Example
+
+### ========================================
+### Public Route - No Auth Required
+### ========================================
+
+GET http://localhost:3000/public
+
+###
+
+### ========================================
+### Protected Routes - API Key Required
+### Should return 401 Unauthorized
+### ========================================
+
+GET http://localhost:3000/protected
+
+###
+
+GET http://localhost:3000/api/users
+
+###
+
+### ========================================
+### Protected Routes - With Valid API Key
+### Should return 200 OK
+### ========================================
+
+GET http://localhost:3000/protected
+X-API-Key: secret-key-123
+
+###
+
+GET http://localhost:3000/api/users
+X-API-Key: secret-key-123
+
+###
+
+GET http://localhost:3000/api/orders
+X-API-Key: secret-key-123
+
+###
+
+### ========================================
+### Protected Routes - With Invalid API Key
+### Should return 403 Forbidden
+### ========================================
+
+GET http://localhost:3000/protected
+X-API-Key: wrong-key
+
+###
+
+### ========================================
+### Admin Routes - Requires API Key + Admin Role
+### Should return 403 Forbidden (no admin role)
+### ========================================
+
+GET http://localhost:3000/admin
+X-API-Key: secret-key-123
+
+###
+
+GET http://localhost:3000/api/admin/stats
+X-API-Key: secret-key-123
+
+###
+
+### ========================================
+### Admin Routes - With API Key + Admin Role
+### Should return 200 OK
+### ========================================
+
+GET http://localhost:3000/admin
+X-API-Key: secret-key-123
+X-User-Role: admin
+
+###
+
+GET http://localhost:3000/api/admin/stats
+X-API-Key: secret-key-123
+X-User-Role: admin
+
+###
+
+GET http://localhost:3000/api/admin/logs
+X-API-Key: secret-key-123
+X-User-Role: admin
+
+###

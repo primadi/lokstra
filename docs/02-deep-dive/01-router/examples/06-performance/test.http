@@ -1,0 +1,110 @@
+### Performance Example
+### Benchmark different handler patterns
+
+### ============================================
+### Handler Form Benchmarks
+### ============================================
+
+### No Input (Fastest ~1050ns)
+GET http://localhost:3000/bench/no-input
+
+###
+
+### Context Only (Fast ~1100ns)
+GET http://localhost:3000/bench/context-only
+
+###
+
+### With Parameters (Good ~1850ns)
+GET http://localhost:3000/bench/with-params/123
+
+###
+
+### With Body Binding (Slower ~9500ns)
+POST http://localhost:3000/bench/with-body
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+
+###
+
+### ============================================
+### Optimization Examples
+### ============================================
+
+### Cached Response (Pre-allocated)
+GET http://localhost:3000/optimize/cached
+
+###
+
+### Helper Constructor (Optimized)
+GET http://localhost:3000/optimize/helper
+
+###
+
+### User Cache (First call - miss)
+GET http://localhost:3000/optimize/user/user1
+
+###
+
+### User Cache (Second call - hit)
+GET http://localhost:3000/optimize/user/user1
+
+###
+
+### User Cache (Different user - miss)
+GET http://localhost:3000/optimize/user/user2
+
+###
+
+### ============================================
+### Comparison Routes
+### ============================================
+
+### Slow Version (Multiple allocations)
+GET http://localhost:3000/compare/slow
+
+###
+
+### Fast Version (Optimized)
+GET http://localhost:3000/compare/fast
+
+###
+
+### ============================================
+### Middleware Performance
+### ============================================
+
+### No Middleware (Baseline)
+GET http://localhost:3000/middleware/none
+
+###
+
+### With 3 Middleware (~200-600ns overhead)
+GET http://localhost:3000/middleware/multi/test
+
+###
+
+### ============================================
+### Load Testing (Run separately)
+### ============================================
+
+### Use Apache Bench:
+### ab -n 1000 -c 10 http://localhost:3000/bench/no-input
+### ab -n 1000 -c 10 http://localhost:3000/bench/context-only
+### ab -n 1000 -c 10 http://localhost:3000/bench/with-params/123
+
+### Use wrk:
+### wrk -t4 -c100 -d10s http://localhost:3000/bench/no-input
+
+### ============================================
+### Home Page
+### ============================================
+
+### Home page (HTML)
+GET http://localhost:3000/
+
+###

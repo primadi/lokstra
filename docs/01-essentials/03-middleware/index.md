@@ -66,7 +66,9 @@ func main() {
     })
     
     app := lokstra.NewApp("demo", ":3000", r)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -369,7 +371,7 @@ r.GET("/private", privateHandler, "jwt_std")
 
 All examples are runnable!
 
-### [01 - Logging Middleware](examples/01-logging/)
+### [01 - Logging Middleware](examples/01-logging-middleware/)
 **Learn**: Request logging setup  
 **Time**: 5 minutes
 
@@ -379,35 +381,26 @@ r.Use(request_logger.Middleware(nil))
 
 ---
 
-### [02 - Authentication](examples/02-authentication/)
-**Learn**: JWT authentication, protected routes  
+### [02 - Authentication](examples/02-auth-middleware/)
+**Learn**: Custom authentication and authorization with Group API  
 **Time**: 10 minutes
 
 ```go
-r.GET("/public", handler)
-r.GET("/private", handler, "jwt_auth")
+apiGroup := r.AddGroup("/api")
+apiGroup.Use(authMiddleware)
+
+adminGroup := r.AddGroup("/api/admin")
+adminGroup.Use(authMiddleware, adminMiddleware)
 ```
 
 ---
 
-### [03 - CORS Configuration](examples/03-cors/)
+### [03 - CORS Configuration](examples/03-cors-middleware/)
 **Learn**: Cross-origin setup for APIs  
 **Time**: 7 minutes
 
 ```go
-r.Use(cors.Middleware(corsConfig))
-```
-
----
-
-### [04 - Multiple Middleware](examples/04-multiple/)
-**Learn**: Combining middleware, execution order  
-**Time**: 8 minutes
-
-```go
-r.Use("logger", "cors")
-admin := r.AddGroup("/admin")
-admin.Use("auth", "admin_check")
+r.Use(cors.Middleware(allowedOrigins))
 ```
 
 ---
@@ -569,10 +562,17 @@ You now understand:
 - ✅ Middleware factory pattern
 - ✅ Built-in middleware (logging, CORS, auth)
 
+### 💡 Practice with Examples:
+
+📂 **[examples/](examples/)** - Three working examples:
+1. **[01-logging-middleware](examples/01-logging-middleware/)** - Auto-log all requests
+2. **[02-auth-middleware](examples/02-auth-middleware/)** - Custom auth & authorization
+3. **[03-cors-middleware](examples/03-cors-middleware/)** - CORS configuration
+
 ### Next Steps:
 
 **Immediate**: 
-👉 [04 - Configuration](../04-configuration/README.md) - Learn config patterns
+👉 [04 - Configuration](../04-configuration/) - Learn config patterns
 
 **Related**:
 - [Deep Dive: Custom Middleware](../../02-deep-dive/middleware/custom-middleware.md)

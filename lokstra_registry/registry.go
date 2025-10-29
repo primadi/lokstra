@@ -23,6 +23,14 @@ import (
 	"github.com/primadi/lokstra/core/service"
 )
 
+// ===== TYPE ALIASES FOR CLEANER API =====
+
+// ServiceTypeConfig is a structured configuration for service type registration
+type ServiceTypeConfig = deploy.ServiceTypeConfig
+
+// RouteConfig defines custom configuration for a specific route
+type RouteConfig = deploy.RouteConfig
+
 // ===== MIDDLEWARE FACTORY (compatible with old_registry) =====
 
 // MiddlewareFactory is a function that creates a middleware handler from config
@@ -165,13 +173,8 @@ func GetAllRouters() map[string]router.Router {
 //	    },
 //	    nil,
 //	)
-func RegisterServiceType(serviceType string, local, remote any, options ...deploy.RegisterServiceTypeOption) {
-	// Convert options to []any for variadic parameter
-	anyOptions := make([]any, len(options))
-	for i, opt := range options {
-		anyOptions[i] = opt
-	}
-	deploy.Global().RegisterServiceType(serviceType, local, remote, anyOptions...)
+func RegisterServiceType(serviceType string, local, remote any, configOrOptions ...any) {
+	deploy.Global().RegisterServiceType(serviceType, local, remote, configOrOptions...)
 }
 
 // GetServiceFactory returns the service factory for a service type
@@ -425,4 +428,29 @@ type Shutdownable interface {
 //	}()
 func ShutdownServices() {
 	deploy.Global().ShutdownServices()
+}
+
+// ===== DEPLOYMENT TOPOLOGY REGISTRATION =====
+
+// RegisterDeployment registers a deployment topology from code
+// This is the code-equivalent of YAML deployment definition
+//
+// Example:
+//
+//	lokstra_registry.RegisterDeployment("microservice", &lokstra_registry.DeploymentConfig{
+//	    Servers: map[string]*lokstra_registry.ServerConfig{
+//	        "user-server": {
+//	            BaseURL: "http://localhost:3001",
+//	            Addr: ":3001",
+//	            PublishedServices: []string{"user-service"},
+//	        },
+//	        "order-server": {
+//	            BaseURL: "http://localhost:3002",
+//	            Addr: ":3002",
+//	            PublishedServices: []string{"order-service"},
+//	        },
+//	    },
+//	})
+func RegisterDeployment(name string, config *DeploymentConfig) error {
+	return deploy.Global().RegisterDeployment(name, config)
 }

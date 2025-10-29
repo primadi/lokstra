@@ -13,6 +13,7 @@ Demonstrates loading configuration from a single YAML file.
 
 - `config.yaml` - YAML configuration with routers and server
 - `main.go` - Application code
+- `test.http` - HTTP requests for testing (use with VS Code REST Client)
 
 ## Run
 

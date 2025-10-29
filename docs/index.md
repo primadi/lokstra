@@ -330,7 +330,7 @@ Each guide includes:
 
 ## Community & Support
 
-- 📖 **[Full Documentation](./README.md)** - Complete guide
+- 📖 **[Full Documentation](./index.md)** - Complete guide
 - 💡 **[Examples](./00-introduction/examples/)** - Working code samples
 - 🐛 **[GitHub Issues](https://github.com/primadi/lokstra/issues)** - Bug reports & features
 - 🗺️ **[Roadmap](./ROADMAP.md)** - Upcoming features

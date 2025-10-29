@@ -20,17 +20,19 @@ Learn Lokstra step by step, from basic routing to production-ready middleware an
     ↓ Learn: 29 handler variations, request/response patterns
 03-crud-api
     ↓ Learn: Services, dependency injection, manual routing
-04-multi-deployment
-    ↓ Learn: Clean Architecture, auto-router, microservices
-05-middleware
-    ↓ Learn: Global/route middleware, auth, recovery, rate limiting
+04-multi-deployment-yaml
+    ↓ Learn: YAML config, auto-router, microservices
+05-multi-deployment-pure-code ⭐ NEW!
+    ↓ Learn: Pure code config, no YAML, type safety
 06-external-services
     ↓ Learn: External API integration, proxy.Service, route overrides
 07-remote-router ⭐ NEW!
     ↓ Learn: Quick API access with proxy.Router
+08-middleware
+    ↓ Learn: Global/route middleware, auth, recovery, rate limiting
 ```
 
-**Time investment**: ~9-12 hours to complete all examples  
+**Time investment**: ~10-14 hours to complete all examples  
 **Outcome**: Ready to build production REST APIs with Lokstra
 
 ---
@@ -91,33 +93,85 @@ curl http://localhost:3000/users
 
 ---
 
-### [04-multi-deployment](./04-multi-deployment/)
+### [04-multi-deployment-yaml](./04-multi-deployment-yaml/)
 
-**One binary, multiple deployments**
+**One binary, multiple deployments (YAML config)**
 
+- YAML-based configuration
 - Monolith vs Microservices
 - Service interface pattern (local vs remote)
 - Cross-service communication
 
 ```bash
 # Run as monolith
-go run . -server=monolith
+go run . -server=monolith.api-server
 
 # Run as microservices
-go run . -server=user-service    # Terminal 1
-go run . -server=order-service   # Terminal 2
+go run . -server=microservice.user-server    # Terminal 1
+go run . -server=microservice.order-server   # Terminal 2
 ```
 
 **Key Learning:**
 - Auto-router generation from service metadata
 - Interface abstraction (UserService local vs remote)
 - Proxy pattern for remote calls
+- YAML deployment configuration
 
 ---
 
-### [05-middleware](./05-middleware/) ⭐
+### [05-multi-deployment-pure-code](./05-multi-deployment-pure-code/) ⭐ NEW!
 
-**Global and route-specific middleware**
+**Pure code deployment (no YAML)**
+
+Same as example 04, but 100% code-based configuration!
+
+- ✅ `RegisterLazyService` for service definitions
+- ✅ `RegisterDeployment` for deployment topology
+- ✅ Type safety with IDE autocomplete
+- ✅ Refactoring-friendly
+
+```bash
+# Run as monolith
+go run . -server=monolith.api-server
+
+# Run as microservices
+go run . -server=microservice.user-server    # Terminal 1
+go run . -server=microservice.order-server   # Terminal 2
+```
+
+**Key Difference:**
+```go
+// Instead of config.yaml
+lokstra_registry.RegisterLazyService("user-service", "user-service-factory", 
+    map[string]any{"depends-on": []string{"user-repository"}})
+
+lokstra_registry.RegisterDeployment("monolith", &lokstra_registry.DeploymentConfig{
+    Servers: map[string]*lokstra_registry.ServerConfig{
+        "api-server": {
+            BaseURL: "http://localhost",
+            Addr: ":3003",
+            PublishedServices: []string{"user-service", "order-service"},
+        },
+    },
+})
+```
+
+**Benefits:**
+- ✅ Type safety (compile-time errors)
+- ✅ IDE autocomplete
+- ✅ Safe refactoring
+- ✅ Dynamic configuration (conditionals, loops)
+- ✅ Single language (no YAML context switching)
+
+**When to use:**
+- YAML (04): Ops teams, runtime config, non-coders
+- Pure Code (05): Dev teams, version control, compile-time safety
+
+---
+
+### [06-external-services](./06-external-services/) ⭐
+
+**External API integration with best DX**
 
 This is where you learn production-ready request handling!
 
@@ -285,6 +339,51 @@ func WeatherServiceFactory(deps map[string]any, config map[string]any) any {
 
 ---
 
+### [08-middleware](./08-middleware/) ⭐
+
+**Global and route-specific middleware**
+
+This is where you learn production-ready request handling!
+
+- ✅ Global middleware (applied to all routes)
+- ✅ Route-specific middleware (per-endpoint auth)
+- ✅ Custom middleware creation
+- ✅ Built-in middleware (CORS, Recovery, Logger)
+- ✅ Middleware chaining and execution order
+
+```bash
+cd 08-middleware
+go run main.go
+
+# Test with different scenarios
+curl http://localhost:3000/                           # Public
+curl http://localhost:3000/protected -H "X-API-Key: secret-key-123"  # Auth required
+curl http://localhost:3000/api/admin/dashboard -H "X-API-Key: admin-key-456"  # Admin only
+curl http://localhost:3000/panic                      # Recovery middleware
+```
+
+**What you'll learn:**
+- ✅ **Global middleware**: Recovery, CORS, Logger, Rate Limiting
+- ✅ **Auth middleware**: API key validation
+- ✅ **Role-based access**: Admin-only endpoints
+- ✅ **Custom middleware**: LoggingMiddleware, RateLimitMiddleware
+- ✅ **Middleware chain**: Multiple middleware per route
+- ✅ **Override parent**: Route with `WithOverrideParentMwOption(true)`
+
+**Production patterns covered:**
+- Panic recovery (graceful error handling)
+- Request logging with timing
+- Rate limiting per IP
+- Authentication & Authorization
+- CORS for API access
+
+**Code size**: ~180 lines  
+**Endpoints**: 11 routes with various middleware combinations
+
+**This is essential for production!** 🚀
+
+---
+
 ## 🎯 What You'll Learn
 
 ### 📊 Feature Coverage
@@ -294,10 +393,11 @@ func WeatherServiceFactory(deps map[string]any, config map[string]any) any {
 | **01** | ✅ Basic Router, ✅ Simple Handlers |
 | **02** | ✅ Routes, ✅ 29 Handler Forms |
 | **03** | ✅ Manual Router, ✅ Services, ✅ Dependency Injection |
-| **04** | ✅ Auto-Router, ✅ Clean Architecture, ✅ Microservices |
-| **05** | ✅ Global Middleware, ✅ Auth, ✅ Production Patterns |
+| **04** | ✅ YAML Config, ✅ Auto-Router, ✅ Microservices |
+| **05** | ✅ Pure Code Config, ✅ Type Safety, ✅ No YAML |
 | **06** | ✅ External APIs, ✅ proxy.Service, ✅ Route Overrides |
 | **07** | ✅ proxy.Router, ✅ Quick Integration, ✅ Direct HTTP Calls |
+| **08** | ✅ Global Middleware, ✅ Auth, ✅ Production Patterns |
 
 ### 🎓 Skills Progression
 
@@ -308,34 +408,36 @@ Example 01-02:  Basic Foundations
 Example 03:     Service Architecture  
     → DI, service layer, manual routing
 
-Example 04:     Advanced Deployment
-    → Auto-router, microservices, interface abstraction
-
-Example 05:     Production Ready
-    → Middleware chains, auth, recovery, CORS
+Example 04-05:  Advanced Deployment
+    → Auto-router, microservices, YAML vs Pure Code
 
 Example 06-07:  External Integration
     → proxy.Service (structured), proxy.Router (simple)
+
+Example 08:     Production Ready
+    → Middleware chains, auth, recovery, CORS
 ```
 
 ---
 
 ## 🔄 Recommended Learning Strategy
 
-### Week 1: Foundations (4-5 hours)
+### Week 1: Foundations (5-6 hours)
 - **Day 1**: Example 01 (15min) + Example 02 (30min)
 - **Day 2**: Example 03 (1 hour)
-- **Day 3**: Example 05 - Middleware (1-2 hours)
-- **Day 4**: Review and build small API with middleware
+- **Day 3**: Example 04 - YAML Config (1-2 hours)
+- **Day 4**: Example 05 - Pure Code (30min, compare with 04)
+- **Day 5**: Review and build small API
 
-**Goal**: Understand basics, middleware patterns, write first protected API
+**Goal**: Understand basics, service patterns, deployment configurations
 
-### Week 2: Production Patterns (4-5 hours)
-- **Day 1-2**: Example 04 (read, understand, run all modes)
-- **Day 3**: Example 06 - External Services (understand integration pattern)
+### Week 2: Production Patterns (5-6 hours)
+- **Day 1**: Example 08 - Middleware (1-2 hours)
+- **Day 2**: Example 06 - External Services (1 hour)
+- **Day 3**: Example 07 - Remote Router (30min)
 - **Day 4-5**: Build your project using examples as template
 
-**Goal**: Master production-ready architecture with external integrations
+**Goal**: Master production-ready architecture with middleware and external integrations
 
 ---
 
@@ -365,15 +467,41 @@ r.GET("/users", func() ([]*User, error) {
 })
 ```
 
-### Example 04 → Auto-Router + Clean Architecture
+### Example 04 → Auto-Router + YAML Config
 ```go
-// Just define the service interface and implementation
-// Routes auto-generated from metadata!
-// GetByID() → GET /users/{id}
-// List()    → GET /users
+# config.yaml
+deployments:
+  monolith:
+    servers:
+      api-server:
+        addr: ":3003"
+        published-services:
+          - user-service
+          - order-service
+
+# Just define the service interface and implementation
+# Routes auto-generated from metadata!
+# GetByID() → GET /users/{id}
+# List()    → GET /users
 ```
 
-### Example 05 → Production Middleware
+### Example 05 → Auto-Router + Pure Code Config
+```go
+// No YAML! 100% type-safe Go code
+lokstra_registry.RegisterLazyService("user-service", "user-service-factory",
+    map[string]any{"depends-on": []string{"user-repository"}})
+
+lokstra_registry.RegisterDeployment("monolith", &lokstra_registry.DeploymentConfig{
+    Servers: map[string]*lokstra_registry.ServerConfig{
+        "api-server": {
+            Addr: ":3003",
+            PublishedServices: []string{"user-service", "order-service"},
+        },
+    },
+})
+```
+
+### Example 06 → External Services Integration
 ```go
 // Global middleware
 r.Use(RecoveryMiddleware)
@@ -401,6 +529,18 @@ lokstra_registry.RegisterServiceType(
 )
 ```
 
+### Example 08 → Production Middleware
+```go
+// Global middleware
+r.Use(RecoveryMiddleware)
+r.Use(CORSMiddleware)
+r.Use(LoggerMiddleware)
+
+// Route-specific auth
+r.GET("/protected", ProtectedHandler, AuthMiddleware)
+r.GET("/admin", AdminHandler, AuthMiddleware, AdminOnlyMiddleware)
+```
+
 ---
 
 ## 🚀 Running Examples
@@ -418,16 +558,16 @@ curl http://localhost:3000/
 
 **For multi-server examples:**
 
-Example 04:
+Example 04-05 (same commands for both):
 ```bash
-cd 04-multi-deployment
+cd 04-multi-deployment-yaml  # or 05-multi-deployment-pure-code
 
 # Option 1: Monolith
-go run . -server=monolith
+go run . -server=monolith.api-server
 
 # Option 2: Microservices (2 terminals)
-go run . -server=user-service     # Terminal 1
-go run . -server=order-service    # Terminal 2
+go run . -server=microservice.user-server     # Terminal 1
+go run . -server=microservice.order-server    # Terminal 2
 ```
 
 Example 06:

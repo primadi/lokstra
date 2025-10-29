@@ -155,7 +155,9 @@ func setupGateway() {
     ))
     
     app := lokstra.NewApp("gateway", ":8080", r)
-    app.Run(5 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 

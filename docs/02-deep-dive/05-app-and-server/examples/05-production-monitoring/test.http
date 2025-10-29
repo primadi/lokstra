@@ -1,0 +1,30 @@
+### Home page
+GET http://localhost:3110/
+
+### Metrics (Prometheus format)
+GET http://localhost:3110/metrics
+
+### Stats (JSON format)
+GET http://localhost:3110/stats
+
+### Health check
+GET http://localhost:3110/health
+
+---
+
+### Generate some traffic
+
+# Normal API requests
+GET http://localhost:3110/api
+GET http://localhost:3110/api
+GET http://localhost:3110/api
+
+# Error requests
+GET http://localhost:3110/error
+GET http://localhost:3110/error
+
+# Check metrics after traffic
+GET http://localhost:3110/metrics
+
+# Check stats after traffic
+GET http://localhost:3110/stats

@@ -1,0 +1,29 @@
+### Service Testing Example
+
+### Home
+GET http://localhost:3000/
+
+### Send notification
+POST http://localhost:3000/notify
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "message": "Hello World"
+}
+
+###
+
+### Send another notification
+POST http://localhost:3000/notify
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "message": "Test Message"
+}
+
+###
+
+### Get mock calls
+GET http://localhost:3000/mock-calls

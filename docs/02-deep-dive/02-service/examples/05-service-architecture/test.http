@@ -1,0 +1,10 @@
+### Service Architecture Example
+
+### Home
+GET http://localhost:3000/
+
+### Get user (exists)
+GET http://localhost:3000/users/1
+
+### Get user (not found)
+GET http://localhost:3000/users/999

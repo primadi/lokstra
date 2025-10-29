@@ -76,7 +76,9 @@ func main() {
     })
     
     app := lokstra.NewApp("demo", ":3000", r)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -144,7 +146,9 @@ func main() {
     lokstra_registry.RegisterServiceFactory("users", NewUserService)
     
     app := lokstra.NewApp("myapp", ":8080", routers...)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -194,7 +198,9 @@ func main() {
     })
     
     app := lokstra.NewApp("myapp", ":8080", routers...)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -435,7 +441,9 @@ func main() {
     lokstra_registry.RegisterServiceFactory("orders", NewOrderService)
     
     app := lokstra.NewApp("myapp", ":8080", routers...)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 

@@ -110,5 +110,7 @@ func main() {
 	fmt.Println("       { \"user_id\": 1, \"items\": [\"Laptop\", \"Mouse\"] }")
 	fmt.Println()
 
-	app.Run(30 * time.Second)
+	if err := app.Run(30 * time.Second); err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }

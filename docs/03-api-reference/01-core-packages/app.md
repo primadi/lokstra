@@ -359,7 +359,7 @@ app := lokstra.NewApp("api", ":8080", router)
 
 // Run with 30s graceful shutdown
 if err := app.Run(30 * time.Second); err != nil {
-    log.Fatal(err)
+    fmt.Println("Error starting server:", err)
 }
 ```
 
@@ -531,7 +531,9 @@ func main() {
     app.AddRouter(apiRouter)
     app.AddRouterWithPrefix(adminRouter, "/admin")
     
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -548,7 +550,9 @@ func main() {
     }
     
     app := lokstra.NewAppWithConfig("api", ":443", "tls", tlsConfig, router)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -575,7 +579,9 @@ func main() {
     }
     
     app.AddReverseProxies(proxies)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 

@@ -1,0 +1,114 @@
+### Parameter Binding Examples
+### Run: go run main.go
+
+@baseUrl = http://localhost:3000
+
+### ===== Path Parameters =====
+
+### 1. Extract multiple path parameters
+GET {{baseUrl}}/path/123/books/golang-guide
+
+### ===== Query Parameters =====
+
+### 2. Query params with defaults
+GET {{baseUrl}}/query
+
+### 3. Query params - custom values
+GET {{baseUrl}}/query?page=2&limit=20&sort=name&filter=active&search=golang
+
+### ===== Header Parameters =====
+
+### 4. Extract headers
+GET {{baseUrl}}/headers
+X-API-Key: secret-key-123
+User-Agent: MyApp/1.0
+Content-Type: application/json
+
+### ===== Combined Parameters =====
+
+### 5. Path + Query + Headers
+GET {{baseUrl}}/combined/456?include=profile,posts&fields=id,name,email
+X-API-Key: combined-test-key
+
+### ===== Body Binding =====
+
+### 6. POST with JSON body
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "age": 30,
+  "tags": ["developer", "golang", "backend"],
+  "active": true
+}
+
+### 7. POST with invalid data (validation error)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Invalid User",
+  "email": "not-an-email",
+  "age": 200
+}
+
+### ===== Partial Updates with Pointers =====
+
+### 8. PATCH - Update only name
+PATCH {{baseUrl}}/users/789
+Content-Type: application/json
+
+{
+  "name": "Updated Name"
+}
+
+### 9. PATCH - Update only email and active
+PATCH {{baseUrl}}/users/789
+Content-Type: application/json
+
+{
+  "email": "newemail@example.com",
+  "active": false
+}
+
+### 10. PATCH - Update multiple fields
+PATCH {{baseUrl}}/users/789
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "age": 25,
+  "active": true
+}
+
+### ===== Date Range Parameters =====
+
+### 11. Date range with defaults
+GET {{baseUrl}}/reports
+
+### 12. Date range custom
+GET {{baseUrl}}/reports?start_date=2025-01-01&end_date=2025-01-31&timezone=America/New_York
+
+### ===== Array Parameters =====
+
+### 13. Filter with arrays
+GET {{baseUrl}}/filter?ids=1,2,3,4,5&tags=golang,rust,python&statuses=active,pending
+
+### 14. Empty arrays
+GET {{baseUrl}}/filter
+
+### ===== Validation =====
+
+### 15. Valid parameters
+GET {{baseUrl}}/validate/100?email=test@example.com&age=25
+
+### 16. Invalid ID (validation fails)
+GET {{baseUrl}}/validate/0?email=test@example.com&age=25
+
+### 17. Invalid email (validation fails)
+GET {{baseUrl}}/validate/100?email=not-an-email&age=25
+
+### 18. Invalid age (validation fails)
+GET {{baseUrl}}/validate/100?email=test@example.com&age=999

@@ -1,0 +1,11 @@
+### Baseline (no middleware)
+GET http://localhost:3004/baseline
+
+### Light middleware
+GET http://localhost:3004/light
+
+### 5 light middleware
+GET http://localhost:3004/light-5
+
+### Heavy middleware
+GET http://localhost:3004/heavy

@@ -1,0 +1,87 @@
+### Custom Middleware Example
+### http://localhost:3000
+
+### Home Page
+GET http://localhost:3000/
+
+### ============================================
+### 1. Public Endpoint (CORS + Response Time)
+### ============================================
+
+### Get public data
+GET http://localhost:3000/public
+
+###
+
+### CORS preflight
+OPTIONS http://localhost:3000/public
+
+###
+
+### ============================================
+### 2. Protected Endpoint (Auth Required)
+### ============================================
+
+### Access without token (should fail)
+GET http://localhost:3000/protected
+
+###
+
+### Access with invalid token (should fail)
+GET http://localhost:3000/protected
+Authorization: Bearer invalid-token
+
+###
+
+### Access with valid token (should succeed)
+GET http://localhost:3000/protected
+Authorization: Bearer secret-token
+
+###
+
+### ============================================
+### 3. Rate Limited Endpoint (5 req/min)
+### ============================================
+
+### Request 1
+GET http://localhost:3000/rate-limited
+
+###
+
+### Request 2
+GET http://localhost:3000/rate-limited
+
+###
+
+### Request 3
+GET http://localhost:3000/rate-limited
+
+###
+
+### Request 4
+GET http://localhost:3000/rate-limited
+
+###
+
+### Request 5
+GET http://localhost:3000/rate-limited
+
+###
+
+### Request 6 (should be rate limited)
+GET http://localhost:3000/rate-limited
+
+###
+
+### ============================================
+### Observe Middleware Effects
+### ============================================
+
+### Check response time header
+GET http://localhost:3000/public
+
+###
+
+### Check request ID in context
+GET http://localhost:3000/protected
+Authorization: Bearer secret-token

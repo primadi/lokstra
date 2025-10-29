@@ -1,0 +1,114 @@
+### Testing Example
+### Test endpoints before running tests
+
+### ============================================
+### Get User
+### ============================================
+
+### Get user (success)
+GET http://localhost:3000/users/123
+
+###
+
+### Get user (not found)
+GET http://localhost:3000/users/999
+
+###
+
+### Get user (invalid ID)
+GET http://localhost:3000/users/
+
+###
+
+### ============================================
+### Create User
+### ============================================
+
+### Create user (success)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "name": "John Doe",
+  "age": 25
+}
+
+###
+
+### Create user (duplicate email)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "duplicate@example.com",
+  "name": "John Doe",
+  "age": 25
+}
+
+###
+
+### Create user (invalid email)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "name": "John Doe",
+  "age": 25
+}
+
+###
+
+### Create user (age too young)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "minor@example.com",
+  "name": "Minor User",
+  "age": 15
+}
+
+###
+
+### Create user (missing name)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "age": 25
+}
+
+###
+
+### Create user (name too short)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "name": "AB",
+  "age": 25
+}
+
+###
+
+### ============================================
+### Health Check
+### ============================================
+
+### Health check
+GET http://localhost:3000/health
+
+###
+
+### ============================================
+### Home Page
+### ============================================
+
+### Home page
+GET http://localhost:3000/
+
+###

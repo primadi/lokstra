@@ -311,7 +311,9 @@ adminApp := lokstra.NewApp("admin", ":9000", adminRouter)
 server := lokstra.NewServer("my-server", apiApp, adminApp)
 
 // Run server
-server.Run(30 * time.Second) // 30s graceful shutdown timeout
+if err := server.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 ```
 
 **See Also:**
@@ -424,7 +426,9 @@ func main() {
     server := lokstra.NewServer("my-server", app)
     
     // Run with 30s graceful shutdown
-    server.Run(30 * time.Second)
+    if err := server.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }    
 }
 
 func healthCheck(c *lokstra.RequestContext) error {

@@ -60,7 +60,9 @@ func main() {
 	fmt.Println("   curl http://localhost:3000/products?category=furniture&max_price=250")
 	fmt.Println("   curl -X PUT http://localhost:3000/users/1 -H 'Content-Type: application/json' -d '{\"name\":\"Alice Smith\"}'")
 
-	app.Run(30 * time.Second)
+	if err := app.Run(30 * time.Second); err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }
 
 // ============================================================================

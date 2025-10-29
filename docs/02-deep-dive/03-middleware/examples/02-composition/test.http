@@ -1,0 +1,27 @@
+### Test public endpoint
+GET http://localhost:3001/public
+
+### Test user endpoint (no auth - should fail)
+GET http://localhost:3001/user
+
+### Test user endpoint (with auth - should succeed)
+GET http://localhost:3001/user
+Authorization: Bearer user-token
+
+### Test admin endpoint (user token - should fail)
+GET http://localhost:3001/admin
+Authorization: Bearer user-token
+
+### Test admin endpoint (admin token - should succeed)
+GET http://localhost:3001/admin
+Authorization: Bearer admin-token
+
+### Test API data (conditional CORS)
+GET http://localhost:3001/api/data
+
+### Test health (skips logging)
+GET http://localhost:3001/health
+
+### Test protected API (composed middleware)
+GET http://localhost:3001/api/protected
+Authorization: Bearer user-token

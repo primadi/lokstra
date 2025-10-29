@@ -337,7 +337,7 @@ func RunCurrentServer(timeout time.Duration) error {
 	coreServer := server.New(serverName, coreApps...)
 	coreServer.PrintStartInfo()
 
-	// Delegate to core Server.Run() - no code duplication!
+	// Delegate to coreServer.Run() - no code duplication!
 	return coreServer.Run(timeout)
 }
 

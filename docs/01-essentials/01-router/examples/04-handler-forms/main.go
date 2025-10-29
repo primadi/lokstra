@@ -186,5 +186,7 @@ func main() {
 	fmt.Println("   curl http://localhost:3000/compare/form1")
 	fmt.Println("   curl http://localhost:3000/compare/form3?text=hello")
 
-	app.Run(30 * time.Second)
+	if err := app.Run(30 * time.Second); err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }

@@ -1,0 +1,6 @@
+# Invalid Configuration
+# Missing required fields (app_name, app_version, db_host)
+
+configs:
+  - name: log_level
+    value: "DEBUG"

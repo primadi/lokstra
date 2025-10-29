@@ -40,5 +40,7 @@ func main() {
 	fmt.Println("   curl http://localhost:8080/version")
 
 	// Start server with graceful shutdown
-	app.Run(30 * time.Second)
+	if err := app.Run(30 * time.Second); err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }

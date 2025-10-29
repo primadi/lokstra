@@ -65,7 +65,9 @@ func main() {
     
     // 3. Create app and run
     app := lokstra.NewApp("demo", ":3000", r)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 

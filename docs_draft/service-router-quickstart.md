@@ -58,7 +58,9 @@ router := router.NewFromService(
 
 ```go
 app := app.New("my-app", ":8080", router)
-app.Run(0)
+if err := app.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 ```
 
 ## Convention Rules

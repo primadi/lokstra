@@ -1,0 +1,8 @@
+### Home page
+GET http://localhost:3060/
+
+### Health check (for load balancers)
+GET http://localhost:3060/health
+
+### Metrics (for monitoring)
+GET http://localhost:3060/metrics

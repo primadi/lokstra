@@ -15,6 +15,7 @@ Demonstrates loading multiple configuration files based on environment.
 - `config/dev.yaml` - Development environment overrides
 - `config/prod.yaml` - Production environment overrides
 - `main.go` - Application code with environment detection
+- `test.http` - HTTP requests for testing (use with VS Code REST Client)
 
 ## Run
 

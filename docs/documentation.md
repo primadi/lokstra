@@ -13,11 +13,11 @@ Welcome to Lokstra! This documentation will guide you from your first "Hello Wor
 
 ## 🚀 Quick Links
 
-- **New to Lokstra?** → Start with [Introduction](00-introduction/README.md)
+- **New to Lokstra?** → Start with [Introduction](00-introduction)
 - **Want to code now?** → Jump to [Quick Start](00-introduction/quick-start.md)
-- **Building your first API?** → Follow [Essentials](01-essentials/README.md)
-- **Need advanced features?** → Explore [Deep Dive](02-deep-dive/README.md)
-- **API Reference?** → Check [API Reference](03-api-reference/README.md)
+- **Building your first API?** → Follow [Essentials](01-essentials)
+- **Need advanced features?** → Explore [Deep Dive](02-deep-dive/)
+- **API Reference?** → Check [API Reference](03-api-reference)
 - **What's coming?** → See [Roadmap](ROADMAP.md) 🗺️
 
 ---
@@ -29,12 +29,12 @@ Welcome to Lokstra! This documentation will guide you from your first "Hello Wor
 
 Understand what Lokstra is, why it exists, and what problems it solves.
 
-- [What is Lokstra?](00-introduction/README.md) - Overview and philosophy
+- [What is Lokstra?](00-introduction) - Overview and philosophy
 - [Why Lokstra?](00-introduction/why-lokstra.md) - Problems & solutions
 - [Architecture](00-introduction/architecture.md) - High-level design
 - [Key Features](00-introduction/key-features.md) - What makes Lokstra special
 - [Quick Start](00-introduction/quick-start.md) - Your first Lokstra app in 5 minutes
-- **[Examples](00-introduction/examples/README.md)** - 4 progressive examples (4-6 hours)
+- **[Examples](00-introduction/examples)** - 4 progressive examples (4-6 hours)
 
 ---
 
@@ -103,7 +103,7 @@ Practical guides for specific use cases and patterns.
 
 Full working applications demonstrating real-world patterns.
 
-> **Note**: For learning examples, start with [00-introduction/examples](00-introduction/examples/README.md)  
+> **Note**: For learning examples, start with [00-introduction/examples](00-introduction/examples)  
 > This section (05-examples) will contain complete production applications (coming soon)
 
 Planned:
@@ -221,7 +221,7 @@ func BadExample() { }
 ## 🗺️ What's Next?
 
 ### If you're brand new:
-👉 Start with [What is Lokstra?](00-introduction/README.md)
+👉 Start with [What is Lokstra?](00-introduction)
 
 ### If you want to code immediately:
 👉 Jump to [Quick Start](00-introduction/quick-start.md)

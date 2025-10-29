@@ -1,0 +1,79 @@
+### CORS Middleware Example
+
+### ========================================
+### Simple GET request
+### ========================================
+
+GET http://localhost:3000/users
+Origin: http://localhost:3001
+
+###
+
+### ========================================
+### POST request with CORS
+### ========================================
+
+POST http://localhost:3000/users
+Origin: http://localhost:3001
+Content-Type: application/json
+
+{
+  "name": "David",
+  "email": "david@example.com"
+}
+
+###
+
+### ========================================
+### OPTIONS preflight request (automatic)
+### ========================================
+
+OPTIONS http://localhost:3000/users
+Origin: http://localhost:3001
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Content-Type
+
+###
+
+### ========================================
+### Request from allowed origin
+### Should include CORS headers in response
+### ========================================
+
+GET http://localhost:3000/users
+Origin: http://localhost:8080
+
+###
+
+### ========================================
+### Request from disallowed origin
+### Should NOT include CORS headers
+### ========================================
+
+GET http://localhost:3000/users
+Origin: http://evil.com
+
+###
+
+### ========================================
+### PUT request with CORS
+### ========================================
+
+PUT http://localhost:3000/users/1
+Origin: http://localhost:3001
+Content-Type: application/json
+
+{
+  "name": "Alice Updated"
+}
+
+###
+
+### ========================================
+### DELETE request with CORS
+### ========================================
+
+DELETE http://localhost:3000/users/1
+Origin: http://localhost:3001
+
+###

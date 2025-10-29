@@ -74,5 +74,7 @@ func main() {
 	fmt.Println("   APP_ENV=prod go run main.go")
 
 	// Start server with graceful shutdown
-	app.Run(30 * time.Second)
+	if err := app.Run(30 * time.Second); err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }

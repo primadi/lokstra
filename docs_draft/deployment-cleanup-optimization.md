@@ -200,7 +200,9 @@ func RunServer(timeout time.Duration) {
     // Build running registry before run
     buildRunningClientRouterRegistry()
     
-    srv.Run(timeout)
+    if err := srv.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 

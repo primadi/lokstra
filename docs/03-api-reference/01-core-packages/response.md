@@ -8,18 +8,29 @@ Lokstra provides two response helpers:
 1. **`Response`** - Low-level response builder (flexible)
 2. **`ApiHelper`** - High-level API response formatter (opinionated, recommended)
 
-Both are available through the request context (`c.Resp` and `c.Api`).
+Both are available through the request context (`c.Resp` and `c.Api`) or via helper constructors.
 
 ## Import Path
 
 ```go
 import "github.com/primadi/lokstra/core/response"
 
-// Access via context (recommended)
+// Method 1: Helper constructors (quick one-liner)
+func handler(params *Params) *response.Response {
+    return response.NewJsonResponse(data)
+}
+
+func apiHandler(params *Params) *response.ApiHelper {
+    return response.NewApiOk(data)
+}
+
+// Method 2: Context access (chainable methods)
 func handler(c *lokstra.RequestContext) error {
-    return c.Api.Success(data)  // High-level
-    // or
     return c.Resp.WithStatus(200).Json(data)  // Low-level
+}
+
+func apiHandler(c *lokstra.RequestContext) error {
+    return c.Api.Ok(data)  // High-level
 }
 ```
 
@@ -29,28 +40,67 @@ func handler(c *lokstra.RequestContext) error {
 
 High-level helper that formats responses according to a standard API structure.
 
+### Usage Methods
+
+**Method 1: Helper Constructors (Quick One-Liner)**
+```go
+func getUser(params *getUserParams) *response.ApiHelper {
+    user := getUserFromDB(params.id)
+    return response.NewApiOk(user)  // Returns *ApiHelper directly
+}
+```
+
+**Method 2: Context Methods (Chainable)**
+```go
+func getUser(c *lokstra.RequestContext) error {
+    user := getUserFromDB(c.Req.Param("id"))
+    return c.Api.Ok(user)  // Returns error
+}
+```
+
+**Method 3: Manual Creation**
+```go
+func getUser() *response.ApiHelper {
+    user := getUserFromDB(id)
+    api := response.NewApiHelper()
+    api.Ok(user)
+    return api
+}
+```
+
+> **Recommendation**: Use **Method 1** (helper constructors) for clean one-liner returns, or **Method 2** (context methods) when you need request context.
+
+---
+
 ### Success Responses
 
-#### Success / Ok
+#### Ok
 Sends successful response with data.
 
-**Signature:**
+**Signatures:**
 ```go
-func (a *ApiHelper) Success(data any) error
-func (a *ApiHelper) Ok(data any) error  // Alias
+// Constructor (returns *ApiHelper)
+func NewApiOk(data any) *ApiHelper
+
+// Context method (returns error)
+func (a *ApiHelper) Ok(data any) error
 ```
 
 **Parameters:**
 - `data` - Response data (any JSON-serializable type)
 
-**Returns:**
-- `error` - Always returns `nil` (framework requirement)
-
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func getUser(params *getUserParams) *response.ApiHelper {
+    user := getUserFromDB(params.id)
+    return response.NewApiOk(user)
+}
+
+// Using context
 func getUser(c *lokstra.RequestContext) error {
-    user := getUserFromDB(id)
-    return c.Api.Success(user)
+    user := getUserFromDB(c.Req.Param("id"))
+    return c.Api.Ok(user)
 }
 
 // Response (HTTP 200):
@@ -65,13 +115,24 @@ func getUser(c *lokstra.RequestContext) error {
 #### OkWithMessage
 Sends successful response with message and data.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiOkWithMessage(data any, message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) OkWithMessage(data any, message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func updateUser(params *updateUserParams) *response.ApiHelper {
+    user := updateUserInDB(params.id, params.input)
+    return response.NewApiOkWithMessage(user, "User updated successfully")
+}
+
+// Using context
 func updateUser(c *lokstra.RequestContext) error {
     user := updateUserInDB(id, input)
     return c.Api.OkWithMessage(user, "User updated successfully")
@@ -90,13 +151,24 @@ func updateUser(c *lokstra.RequestContext) error {
 #### Created
 Sends 201 Created response.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiCreated(data any, message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) Created(data any, message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func createUser(input *CreateUserInput) *response.ApiHelper {
+    user := createUserInDB(input)
+    return response.NewApiCreated(user, "User created successfully")
+}
+
+// Using context
 func createUser(c *lokstra.RequestContext, input *CreateUserInput) error {
     user := createUserInDB(input)
     return c.Api.Created(user, "User created successfully")
@@ -112,25 +184,6 @@ func createUser(c *lokstra.RequestContext, input *CreateUserInput) error {
 
 ---
 
-#### NoContent
-Sends 204 No Content response.
-
-**Signature:**
-```go
-func (a *ApiHelper) NoContent() error
-```
-
-**Example:**
-```go
-func deleteUser(c *lokstra.RequestContext) error {
-    deleteUserFromDB(id)
-    return c.Api.NoContent()
-}
-
-// Response (HTTP 204):
-// (empty body)
-```
-
 ---
 
 ### List Responses
@@ -138,8 +191,12 @@ func deleteUser(c *lokstra.RequestContext) error {
 #### OkList
 Sends paginated list response.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiOkList(data any, meta *api_formatter.ListMeta) *ApiHelper
+
+// Context method
 func (a *ApiHelper) OkList(data any, meta *api_formatter.ListMeta) error
 ```
 
@@ -147,8 +204,24 @@ func (a *ApiHelper) OkList(data any, meta *api_formatter.ListMeta) error
 - `data` - List data (slice)
 - `meta` - Pagination metadata
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func listUsers(params *listUsersParams) *response.ApiHelper {
+    users := getUsersFromDB(params.page, params.limit)
+    total := countUsers()
+    
+    meta := &api_formatter.ListMeta{
+        Page:       params.page,
+        Limit:      params.limit,
+        Total:      total,
+        TotalPages: (total + params.limit - 1) / params.limit,
+    }
+    
+    return response.NewApiOkList(users, meta)
+}
+
+// Using context
 func listUsers(c *lokstra.RequestContext) error {
     users := getUsersFromDB(page, limit)
     total := countUsers()
@@ -186,13 +259,26 @@ func listUsers(c *lokstra.RequestContext) error {
 #### BadRequest
 Sends 400 Bad Request error.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiBadRequest(code, message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) BadRequest(code, message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func validateInput(input *Input) *response.ApiHelper {
+    if input.Amount <= 0 {
+        return response.NewApiBadRequest("INVALID_AMOUNT", "Amount must be positive")
+    }
+    // ...
+}
+
+// Using context
 func handler(c *lokstra.RequestContext) error {
     if input.Amount <= 0 {
         return c.Api.BadRequest("INVALID_AMOUNT", "Amount must be positive")
@@ -215,13 +301,26 @@ func handler(c *lokstra.RequestContext) error {
 #### Unauthorized
 Sends 401 Unauthorized error.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiUnauthorized(message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) Unauthorized(message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func checkAuth(token string) *response.ApiHelper {
+    if token == "" {
+        return response.NewApiUnauthorized("Missing authorization token")
+    }
+    // ...
+}
+
+// Using context
 func authMiddleware(c *lokstra.RequestContext) error {
     token := c.Req.Header("Authorization")
     if token == "" {
@@ -245,13 +344,26 @@ func authMiddleware(c *lokstra.RequestContext) error {
 #### Forbidden
 Sends 403 Forbidden error.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiForbidden(message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) Forbidden(message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func checkPermission(user *User) *response.ApiHelper {
+    if !user.IsAdmin {
+        return response.NewApiForbidden("Admin access required")
+    }
+    // ...
+}
+
+// Using context
 func deleteUser(c *lokstra.RequestContext) error {
     user := c.Get("user").(*User)
     if !user.IsAdmin {
@@ -275,20 +387,34 @@ func deleteUser(c *lokstra.RequestContext) error {
 #### NotFound
 Sends 404 Not Found error.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiNotFound(message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) NotFound(message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func getUser(params *getUserParams) *response.ApiHelper {
+    user, err := getUserFromDB(params.id)
+    if err != nil {
+        return response.NewApiNotFound("User not found")
+    }
+    return response.NewApiOk(user)
+}
+
+// Using context
 func getUser(c *lokstra.RequestContext) error {
     id := c.Req.Param("id")
     user, err := getUserFromDB(id)
     if err != nil {
         return c.Api.NotFound("User not found")
     }
-    return c.Api.Success(user)
+    return c.Api.Ok(user)
 }
 
 // Response (HTTP 404):
@@ -306,20 +432,34 @@ func getUser(c *lokstra.RequestContext) error {
 #### InternalError
 Sends 500 Internal Server Error.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiInternalError(message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) InternalError(message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func processData(data *Data) *response.ApiHelper {
+    if err := processingLogic(data); err != nil {
+        log.Printf("Processing error: %v", err)
+        return response.NewApiInternalError("Failed to process data")
+    }
+    return response.NewApiOk(result)
+}
+
+// Using context
 func handler(c *lokstra.RequestContext) error {
     user, err := getUserFromDB(id)
     if err != nil {
         log.Printf("Database error: %v", err)
         return c.Api.InternalError("Failed to fetch user")
     }
-    return c.Api.Success(user)
+    return c.Api.Ok(user)
 }
 
 // Response (HTTP 500):
@@ -337,13 +477,36 @@ func handler(c *lokstra.RequestContext) error {
 #### ValidationError
 Sends 400 validation error with field details.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiValidationError(message string, fields []api_formatter.FieldError) *ApiHelper
+
+// Context method
 func (a *ApiHelper) ValidationError(message string, fields []api_formatter.FieldError) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func validateUser(input *CreateUserInput) *response.ApiHelper {
+    var fieldErrors []api_formatter.FieldError
+    
+    if !isValidEmail(input.Email) {
+        fieldErrors = append(fieldErrors, api_formatter.FieldError{
+            Field:   "email",
+            Code:    "INVALID_FORMAT",
+            Message: "Email format is invalid",
+        })
+    }
+    
+    if len(fieldErrors) > 0 {
+        return response.NewApiValidationError("Validation failed", fieldErrors)
+    }
+    // ...
+}
+
+// Using context (automatic via BindJSON)
 func createUser(c *lokstra.RequestContext) error {
     var input CreateUserInput
     if err := c.Req.BindJSON(&input); err != nil {
@@ -380,13 +543,26 @@ func createUser(c *lokstra.RequestContext) error {
 #### Error (Generic)
 Sends error response with custom status code and error code.
 
-**Signature:**
+**Signatures:**
 ```go
+// Constructor
+func NewApiError(statusCode int, code, message string) *ApiHelper
+
+// Context method
 func (a *ApiHelper) Error(statusCode int, code, message string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using constructor
+func checkQuota() *response.ApiHelper {
+    if quota.Exceeded() {
+        return response.NewApiError(429, "QUOTA_EXCEEDED", "API quota exceeded")
+    }
+    // ...
+}
+
+// Using context
 func handler(c *lokstra.RequestContext) error {
     if quota.Exceeded() {
         return c.Api.Error(429, "QUOTA_EXCEEDED", "API quota exceeded")
@@ -410,7 +586,65 @@ func handler(c *lokstra.RequestContext) error {
 
 Low-level response builder for custom response formats.
 
-### WithStatus
+### Helper Constructors
+
+Quick one-liner constructors for common response types:
+
+```go
+// JSON response
+func NewJsonResponse(data any) *Response
+
+// HTML response
+func NewHtmlResponse(html string) *Response
+
+// Plain text response
+func NewTextResponse(text string) *Response
+
+// Custom content-type (CSV, XML, PDF, etc.)
+func NewRawResponse(contentType string, b []byte) *Response
+
+// Streaming response (SSE, chunked transfer)
+func NewStreamResponse(contentType string, fn func(w http.ResponseWriter) error) *Response
+```
+
+**Examples:**
+```go
+// JSON
+func getUsers() *response.Response {
+    users := getUsersFromDB()
+    return response.NewJsonResponse(users)
+}
+
+// HTML
+func homepage() *response.Response {
+    html := "<html><body><h1>Welcome</h1></body></html>"
+    return response.NewHtmlResponse(html)
+}
+
+// Text
+func healthCheck() *response.Response {
+    return response.NewTextResponse("OK")
+}
+
+// CSV
+func exportData() *response.Response {
+    csvData := generateCSV()
+    return response.NewRawResponse("text/csv", csvData)
+}
+
+// Stream
+func streamFile() *response.Response {
+    return response.NewStreamResponse("application/octet-stream", func(w http.ResponseWriter) error {
+        return streamFileContent(w)
+    })
+}
+```
+
+---
+
+### Chainable Methods
+
+#### WithStatus
 Sets HTTP status code.
 
 **Signature:**
@@ -420,8 +654,15 @@ func (r *Response) WithStatus(code int) *Response
 
 **Example:**
 ```go
+// Chainable method
 func handler(c *lokstra.RequestContext) error {
     return c.Resp.WithStatus(200).Json(data)
+}
+
+// Or manual creation
+func handler() *response.Response {
+    r := response.NewResponse()
+    return r.WithStatus(201).Json(data)
 }
 ```
 
@@ -441,7 +682,7 @@ http.StatusInternalServerError // 500
 
 ---
 
-### Json
+#### Json
 Sends JSON response.
 
 **Signature:**
@@ -449,20 +690,26 @@ Sends JSON response.
 func (r *Response) Json(data any) error
 ```
 
-**Example:**
+**Examples:**
 ```go
-func handler(c *lokstra.RequestContext) error {
+// Using helper constructor (recommended)
+func handler(params *Params) *response.Response {
     data := map[string]any{
         "message": "Hello",
         "users":   users,
     }
+    return response.NewJsonResponse(data)
+}
+
+// Using context (chainable)
+func handler(c *lokstra.RequestContext) error {
     return c.Resp.WithStatus(200).Json(data)
 }
 ```
 
 ---
 
-### Html
+#### Html
 Sends HTML response.
 
 **Signature:**
@@ -470,8 +717,15 @@ Sends HTML response.
 func (r *Response) Html(html string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using helper constructor (recommended)
+func homepage() *response.Response {
+    html := `<html><body><h1>Welcome</h1></body></html>`
+    return response.NewHtmlResponse(html)
+}
+
+// Using context (chainable)
 func homepage(c *lokstra.RequestContext) error {
     html := `<html><body><h1>Welcome</h1></body></html>`
     return c.Resp.WithStatus(200).Html(html)
@@ -480,7 +734,7 @@ func homepage(c *lokstra.RequestContext) error {
 
 ---
 
-### Text
+#### Text
 Sends plain text response.
 
 **Signature:**
@@ -488,8 +742,14 @@ Sends plain text response.
 func (r *Response) Text(text string) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using helper constructor (recommended)
+func healthCheck() *response.Response {
+    return response.NewTextResponse("OK")
+}
+
+// Using context (chainable)
 func healthCheck(c *lokstra.RequestContext) error {
     return c.Resp.WithStatus(200).Text("OK")
 }
@@ -497,7 +757,7 @@ func healthCheck(c *lokstra.RequestContext) error {
 
 ---
 
-### Raw
+#### Raw
 Sends raw bytes with custom content type.
 
 **Signature:**
@@ -505,8 +765,15 @@ Sends raw bytes with custom content type.
 func (r *Response) Raw(contentType string, b []byte) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using helper constructor (recommended)
+func downloadFile(filename string) *response.Response {
+    data := readFileBytes(filename)
+    return response.NewRawResponse("application/pdf", data)
+}
+
+// Using context (chainable)
 func downloadFile(c *lokstra.RequestContext) error {
     data := readFileBytes(filename)
     return c.Resp.WithStatus(200).Raw("application/pdf", data)
@@ -515,7 +782,7 @@ func downloadFile(c *lokstra.RequestContext) error {
 
 ---
 
-### Stream
+#### Stream
 Streams response using custom writer function.
 
 **Signature:**
@@ -523,8 +790,23 @@ Streams response using custom writer function.
 func (r *Response) Stream(contentType string, fn func(w http.ResponseWriter) error) error
 ```
 
-**Example:**
+**Examples:**
 ```go
+// Using helper constructor (recommended)
+func streamLargeFile(filename string) *response.Response {
+    return response.NewStreamResponse("application/octet-stream", func(w http.ResponseWriter) error {
+        file, err := os.Open(filename)
+        if err != nil {
+            return err
+        }
+        defer file.Close()
+        
+        _, err = io.Copy(w, file)
+        return err
+    })
+}
+
+// Using context (chainable)
 func streamLargeFile(c *lokstra.RequestContext) error {
     return c.Resp.WithStatus(200).Stream("application/octet-stream", func(w http.ResponseWriter) error {
         file, err := os.Open(filename)
@@ -544,6 +826,59 @@ func streamLargeFile(c *lokstra.RequestContext) error {
 ## Complete Examples
 
 ### CRUD API with ApiHelper
+
+#### Using Helper Constructors (Recommended for handlers without context)
+```go
+func listUsers(params *listUsersParams) *response.ApiHelper {
+    users := getUsersFromDB(params.page, params.limit)
+    total := countUsers()
+    
+    meta := &api_formatter.ListMeta{
+        Page:       params.page,
+        Limit:      params.limit,
+        Total:      total,
+        TotalPages: (total + params.limit - 1) / params.limit,
+    }
+    
+    return response.NewApiOkList(users, meta)
+}
+
+func getUser(params *getUserParams) *response.ApiHelper {
+    user, err := getUserFromDB(params.id)
+    if err != nil {
+        return response.NewApiNotFound("User not found")
+    }
+    return response.NewApiOk(user)
+}
+
+func createUser(input *CreateUserInput) *response.ApiHelper {
+    user, err := createUserInDB(input)
+    if err != nil {
+        return response.NewApiInternalError("Failed to create user")
+    }
+    return response.NewApiCreated(user, "User created successfully")
+}
+
+func updateUser(params *updateUserParams, input *UpdateUserInput) *response.ApiHelper {
+    user, err := updateUserInDB(params.id, input)
+    if err != nil {
+        return response.NewApiInternalError("Failed to update user")
+    }
+    return response.NewApiOkWithMessage(user, "User updated successfully")
+}
+
+func deleteUser(params *deleteUserParams) *response.ApiHelper {
+    if err := deleteUserFromDB(params.id); err != nil {
+        return response.NewApiInternalError("Failed to delete user")
+    }
+    // Note: NoContent doesn't have a constructor, use context method or manual
+    api := response.NewApiHelper()
+    api.resp.WithStatus(http.StatusNoContent)
+    return api
+}
+```
+
+#### Using Context Methods (When you need request context)
 ```go
 func listUsers(c *lokstra.RequestContext) error {
     page := getIntParam(c.Req.Query("page", "1"))
@@ -568,7 +903,7 @@ func getUser(c *lokstra.RequestContext) error {
     if err != nil {
         return c.Api.NotFound("User not found")
     }
-    return c.Api.Success(user)
+    return c.Api.Ok(user)
 }
 
 func createUser(c *lokstra.RequestContext, input *CreateUserInput) error {
@@ -587,22 +922,16 @@ func updateUser(c *lokstra.RequestContext, input *UpdateUserInput) error {
     }
     return c.Api.OkWithMessage(user, "User updated successfully")
 }
-
-func deleteUser(c *lokstra.RequestContext) error {
-    id := c.Req.Param("id")
-    if err := deleteUserFromDB(id); err != nil {
-        return c.Api.InternalError("Failed to delete user")
-    }
-    return c.Api.NoContent()
-}
 ```
 
 ### Custom Response Format (Low-Level)
+
+#### Using Helper Constructors (Recommended)
 ```go
-func customResponse(c *lokstra.RequestContext) error {
+func customResponse() *response.Response {
     // Custom JSON structure
-    response := map[string]any{
-        "version": "1.0",
+    data := map[string]any{
+        "version":   "1.0",
         "timestamp": time.Now().Unix(),
         "data": map[string]any{
             "users": users,
@@ -610,7 +939,38 @@ func customResponse(c *lokstra.RequestContext) error {
         },
     }
     
-    return c.Resp.WithStatus(200).Json(response)
+    return response.NewJsonResponse(data)
+}
+
+func xmlResponse() *response.Response {
+    xml := `<?xml version="1.0"?>
+    <users>
+        <user id="1">John</user>
+        <user id="2">Jane</user>
+    </users>`
+    
+    return response.NewRawResponse("application/xml", []byte(xml))
+}
+
+func csvExport() *response.Response {
+    csv := generateCSVBytes()
+    return response.NewRawResponse("text/csv", csv)
+}
+```
+
+#### Using Context Methods
+```go
+func customResponse(c *lokstra.RequestContext) error {
+    data := map[string]any{
+        "version":   "1.0",
+        "timestamp": time.Now().Unix(),
+        "data": map[string]any{
+            "users": users,
+            "count": len(users),
+        },
+    }
+    
+    return c.Resp.WithStatus(200).Json(data)
 }
 
 func xmlResponse(c *lokstra.RequestContext) error {
@@ -625,6 +985,26 @@ func xmlResponse(c *lokstra.RequestContext) error {
 ```
 
 ### File Download
+
+#### Using Helper Constructor
+```go
+func downloadReport(reportID string) *response.Response {
+    // Generate or fetch report
+    data := generateReport(reportID)
+    
+    // Create response with helper
+    r := response.NewRawResponse("application/pdf", data)
+    
+    // Set headers for download
+    r.RespHeaders = map[string][]string{
+        "Content-Disposition": {fmt.Sprintf("attachment; filename=report-%s.pdf", reportID)},
+    }
+    
+    return r
+}
+```
+
+#### Using Context Method
 ```go
 func downloadReport(c *lokstra.RequestContext) error {
     reportID := c.Req.Param("id")
@@ -642,6 +1022,28 @@ func downloadReport(c *lokstra.RequestContext) error {
 ```
 
 ### Streaming Response
+
+#### Using Helper Constructor
+```go
+func streamEvents() *response.Response {
+    return response.NewStreamResponse("text/event-stream", func(w http.ResponseWriter) error {
+        flusher, ok := w.(http.Flusher)
+        if !ok {
+            return fmt.Errorf("streaming not supported")
+        }
+        
+        for i := 0; i < 10; i++ {
+            fmt.Fprintf(w, "data: Event %d\n\n", i)
+            flusher.Flush()
+            time.Sleep(1 * time.Second)
+        }
+        
+        return nil
+    })
+}
+```
+
+#### Using Context Method
 ```go
 func streamEvents(c *lokstra.RequestContext) error {
     return c.Resp.WithStatus(200).Stream("text/event-stream", func(w http.ResponseWriter) error {
@@ -683,16 +1085,58 @@ response.SetApiResponseFormatterByName("custom-name")
 
 ## Best Practices
 
-### 1. Use ApiHelper for REST APIs
+### 1. Use Helper Constructors for Clean Code
 ```go
-// ✅ Recommended
-return c.Api.Success(user)
+// ✅ Recommended: Helper constructors (one-liner)
+func getUser(params *getUserParams) *response.ApiHelper {
+    return response.NewApiOk(user)
+}
 
-// 🚫 Avoid (unless custom format needed)
-return c.Resp.WithStatus(200).Json(map[string]any{"data": user})
+func homepage() *response.Response {
+    return response.NewHtmlResponse(html)
+}
+
+// ✅ Good: Context methods when you need request context
+func getUser(c *lokstra.RequestContext) error {
+    return c.Api.Ok(user)
+}
+
+// 🚫 Avoid: Manual creation when helpers exist
+func getUser() *response.ApiHelper {
+    api := response.NewApiHelper()
+    api.Ok(user)
+    return api
+}
 ```
 
-### 2. Consistent Error Codes
+### 2. Use ApiHelper for REST APIs
+```go
+// ✅ Recommended: ApiHelper for structured API responses
+return response.NewApiOk(user)
+return c.Api.Ok(user)
+
+// 🚫 Avoid: Manual JSON structure for standard APIs
+return response.NewJsonResponse(map[string]any{"data": user})
+```
+
+### 3. Choose the Right Response Type
+```go
+// ✅ Good: Use Response for custom formats
+func homepage() *response.Response {
+    return response.NewHtmlResponse(html)
+}
+
+func exportCSV() *response.Response {
+    return response.NewRawResponse("text/csv", csvData)
+}
+
+// ✅ Good: Use ApiHelper for REST APIs
+func getUser(params *getUserParams) *response.ApiHelper {
+    return response.NewApiOk(user)
+}
+```
+
+### 4. Consistent Error Codes
 ```go
 // ✅ Good: Use consistent error codes
 const (
@@ -701,20 +1145,20 @@ const (
     ErrUnauthorized   = "UNAUTHORIZED"
 )
 
-return c.Api.Error(400, ErrInvalidInput, "Invalid user data")
+return response.NewApiError(400, ErrInvalidInput, "Invalid user data")
 
 // 🚫 Avoid: Random error messages
-return c.Api.BadRequest("error123", "something went wrong")
+return response.NewApiBadRequest("error123", "something went wrong")
 ```
 
-### 3. Don't Log Sensitive Data in Responses
+### 5. Don't Log Sensitive Data in Responses
 ```go
 // ✅ Good
 log.Printf("Failed to authenticate user: %v", err)
-return c.Api.Unauthorized("Authentication failed")
+return response.NewApiUnauthorized("Authentication failed")
 
 // 🚫 Avoid
-return c.Api.Unauthorized(fmt.Sprintf("Auth failed: %v", err))
+return response.NewApiUnauthorized(fmt.Sprintf("Auth failed: %v", err))
 ```
 
 ---

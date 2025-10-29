@@ -1,0 +1,45 @@
+# Microservices Configuration
+# Each service runs on its own server
+
+services:
+  - name: user-service
+    type: user-service
+    config:
+      deployment_name: "microservice-user"
+
+  - name: order-service
+    type: order-service
+    config:
+      deployment_name: "microservice-order"
+
+routers:
+  - name: user-router
+    routes:
+      - name: Home
+        path: /
+        handler: HomeHandler
+      - name: GetUsers
+        path: /users
+        handler: user-service.GetUsers
+
+  - name: order-router
+    routes:
+      - name: Home
+        path: /
+        handler: HomeHandler
+      - name: GetOrders
+        path: /orders
+        handler: order-service.GetOrders
+
+servers:
+  - name: user-server
+    apps:
+      - addr: ":3011"
+        routers:
+          - user-router
+
+  - name: order-server
+    apps:
+      - addr: ":3012"
+        routers:
+          - order-router

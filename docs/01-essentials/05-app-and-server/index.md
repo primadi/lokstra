@@ -82,7 +82,9 @@ app.Start()         // Blocks until server stops
 app.Shutdown(30 * time.Second)
 
 // Automatic signal handling (recommended!)
-app.Run(30 * time.Second)  // Handles SIGINT/SIGTERM automatically
+if err := app.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}  // Handles SIGINT/SIGTERM automatically
 ```
 
 **Signals Handled:**
@@ -325,7 +327,9 @@ func main() {
     )
     
     log.Println("Server starting on :8080")
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 
 func V1GetUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -409,7 +413,9 @@ server := lokstra.NewServer("main",
 
 ```go
 // Good: Automatic signal handling
-server.Run(30 * time.Second)
+if err := app.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 ```
 
 **✗ DON'T: Use Start() in production**
@@ -446,7 +452,9 @@ if err := server.Run(30 * time.Second); err != nil {
 
 ```go
 // Bad: Requests may be killed mid-processing
-app.Run(1 * time.Second)  // Too short!
+if err := app.Run(1 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }  // Too short!
 ```
 
 ### 4. Port Selection
@@ -503,7 +511,9 @@ func main() {
     
     // Run all services in one process
     server := lokstra.NewServer("microservices", userApp, productApp, orderApp)
-    server.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -521,7 +531,9 @@ func main() {
     productApp := lokstra.NewApp("products", ":8002", productRouter)
     
     server := lokstra.NewServer("main", gatewayApp, userApp, productApp)
-    server.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -541,7 +553,9 @@ func main() {
     adminApp := lokstra.NewApp("admin", ":9000", adminRouter)
     
     server := lokstra.NewServer("main", apiApp, adminApp)
-    server.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -564,7 +578,9 @@ func main() {
     metricsApp := lokstra.NewApp("metrics", ":9090", metricsRouter)
     
     server := lokstra.NewServer("main", apiApp, healthApp, metricsApp)
-    server.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -612,7 +628,9 @@ server.Shutdown(30 * time.Second)
 
 ```go
 // Everything handled automatically
-server.Run(30 * time.Second)
+if err := app.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 ```
 
 ---
@@ -633,10 +651,15 @@ After completing this section, you should be able to:
 
 **Ready for the grand finale?** Continue to:
 
-👉 [Putting It Together](../06-putting-it-together/README.md) - Build a complete REST API!
+👉 [Putting It Together](../06-putting-it-together/) - Build a complete REST API!
 
 **Or review:**
-- [Router](../01-router/README.md) - Router fundamentals
-- [Service](../02-service/README.md) - Service patterns
-- [Middleware](../03-middleware/README.md) - Request/response processing
-- [Configuration](../04-configuration/README.md) - YAML configuration
+- [Router](../01-router/) - Router fundamentals
+- [Service](../02-service/) - Service patterns
+- [Middleware](../03-middleware/) - Request/response processing
+- [Configuration](../04-configuration/) - YAML configuration
+
+**Or jump to examples:**
+- [Examples Overview](../../00-introduction/examples/) - Progressive learning path
+- [Hello World](../../00-introduction/examples/01-hello-world/) - Start simple
+- [Multi-Deployment](../../00-introduction/examples/04-multi-deployment-yaml/) - Production patterns

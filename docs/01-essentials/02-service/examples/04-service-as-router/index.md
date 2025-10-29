@@ -247,7 +247,9 @@ app := lokstra.NewApp("service-as-router-demo", ":3000",
     autoProductRouter,
 )
 
-app.Run(30 * time.Second)
+if err := app.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 ```
 
 That's it! Your API is ready with auto-generated endpoints.

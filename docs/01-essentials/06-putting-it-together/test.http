@@ -1,0 +1,182 @@
+### Todo API - Complete REST CRUD Example
+### Server should be running on port 3000
+
+### ========================================
+### CREATE - Add new todo
+### ========================================
+
+POST http://localhost:3000/todos
+Content-Type: application/json
+
+{
+  "title": "Learn Lokstra",
+  "description": "Complete all essentials tutorials"
+}
+
+###
+
+### CREATE - Another todo
+POST http://localhost:3000/todos
+Content-Type: application/json
+
+{
+  "title": "Build REST API",
+  "description": "Create production-ready API with Lokstra"
+}
+
+###
+
+### CREATE - Third todo
+POST http://localhost:3000/todos
+Content-Type: application/json
+
+{
+  "title": "Deploy to Production",
+  "description": "Deploy Lokstra app to cloud"
+}
+
+###
+
+### ========================================
+### READ - Get all todos
+### ========================================
+
+GET http://localhost:3000/todos
+
+###
+
+### ========================================
+### READ - Get single todo by ID
+### ========================================
+
+GET http://localhost:3000/todos/1
+
+###
+
+GET http://localhost:3000/todos/2
+
+###
+
+GET http://localhost:3000/todos/3
+
+###
+
+### ========================================
+### UPDATE - Partial update (only completed)
+### ========================================
+
+PUT http://localhost:3000/todos/1
+Content-Type: application/json
+
+{
+  "completed": true
+}
+
+###
+
+### UPDATE - Partial update (only title)
+PUT http://localhost:3000/todos/2
+Content-Type: application/json
+
+{
+  "title": "Build Amazing REST API"
+}
+
+###
+
+### UPDATE - Partial update (title and description)
+PUT http://localhost:3000/todos/3
+Content-Type: application/json
+
+{
+  "title": "Deploy to AWS",
+  "description": "Deploy using Docker and Kubernetes"
+}
+
+###
+
+### UPDATE - Full update (all fields)
+PUT http://localhost:3000/todos/1
+Content-Type: application/json
+
+{
+  "title": "Master Lokstra Framework",
+  "description": "Complete all tutorials and build real projects",
+  "completed": true
+}
+
+###
+
+### ========================================
+### DELETE - Remove todo
+### ========================================
+
+DELETE http://localhost:3000/todos/2
+
+###
+
+### Verify deletion - should return 404 or not found
+GET http://localhost:3000/todos/2
+
+###
+
+### ========================================
+### VALIDATION TESTS - Should return errors
+### ========================================
+
+### Empty title - should fail
+POST http://localhost:3000/todos
+Content-Type: application/json
+
+{
+  "title": "",
+  "description": "This should fail"
+}
+
+###
+
+### Title too short - should fail
+POST http://localhost:3000/todos
+Content-Type: application/json
+
+{
+  "title": "ab",
+  "description": "Title must be at least 3 characters"
+}
+
+###
+
+### Invalid JSON - should fail
+POST http://localhost:3000/todos
+Content-Type: application/json
+
+{
+  "title": "Test
+  "description": "Invalid JSON"
+}
+
+###
+
+### ========================================
+### EDGE CASES
+### ========================================
+
+### Get non-existent todo
+GET http://localhost:3000/todos/9999
+
+###
+
+### Delete non-existent todo
+DELETE http://localhost:3000/todos/9999
+
+###
+
+### Update non-existent todo
+PUT http://localhost:3000/todos/9999
+Content-Type: application/json
+
+{
+  "title": "This todo doesn't exist"
+}
+
+###

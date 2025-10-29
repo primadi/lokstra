@@ -400,7 +400,9 @@ func main() {
     r.GET("/forecast/{city}", getForecast)
     
     app := lokstra.NewApp("weather-api", ":9001", r)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 

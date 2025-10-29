@@ -127,7 +127,9 @@ func main() {
 
 	app := lokstra.NewApp(":8080")
 	app.AddRouter(r)
-	app.Run(0)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -151,10 +153,14 @@ app := lokstra.NewApp(":8080")
 app.AddRouter(r)
 
 // Blocking start
-app.Start()
+if err := app.Start(); err != nil {
+	fmt.Println("Error starting server:", err)
+}
 
 // Or blocking with graceful shutdown
-app.Run(5 * time.Second)
+if err := app.Run(30 * time.Second); err != nil {
+	fmt.Println("Error starting server:", err)
+}
 ```
 
 Multiple apps can be managed by a single server:
@@ -162,7 +168,9 @@ Multiple apps can be managed by a single server:
 ```go
 server := lokstra.NewServer("main")
 server.AddApp(app)
-server.Run(10 * time.Second)
+if err := server.Run(30 * time.Second); err != nil {
+	fmt.Println("Error starting server:", err)
+}
 ```
 
 > Lokstra automatically handles signal listening and graceful shutdown.  

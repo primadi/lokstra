@@ -1,0 +1,10 @@
+### Home page
+GET http://localhost:3070/
+
+### Status
+GET http://localhost:3070/status
+
+### Multiple requests to see counter
+GET http://localhost:3070/status
+GET http://localhost:3070/status
+GET http://localhost:3070/status

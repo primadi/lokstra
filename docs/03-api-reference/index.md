@@ -156,7 +156,9 @@ router.POST("/users", createUserHandler)
 
 app := lokstra.NewApp("api", ":8080", router)
 server := lokstra.NewServer("my-server", app)
-server.Run(30 * time.Second)
+if err := server.Run(30 * time.Second); err != nil {
+  fmt.Println("Error starting server:", err)
+}
 ```
 
 📖 See: [lokstra](01-core-packages/lokstra.md), [Router](01-core-packages/router.md)

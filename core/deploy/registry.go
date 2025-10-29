@@ -45,10 +45,11 @@ type GlobalRegistry struct {
 	serviceDefs sync.Map // map[string]*deferredServiceDef
 
 	// Definitions (YAML or code-defined)
-	configs     map[string]*schema.ConfigDef
-	middlewares map[string]*schema.MiddlewareDef
-	routers     map[string]*schema.RouterDef
+	configs map[string]*schema.ConfigDef
+	routers map[string]*schema.RouterDef
 	// Note: routerOverrides removed - overrides are now inline in RouterDef
+	// Note: middlewares map removed - use middlewareEntries sync.Map (unified API)
+	// Note: services map removed - use serviceDefs sync.Map (unified API - Opsi 2)
 
 	// Resolved config values (after resolver processing)
 	resolvedConfigs map[string]any
@@ -175,10 +176,9 @@ func NewGlobalRegistry() *GlobalRegistry {
 		serviceFactories:    make(map[string]*ServiceFactoryEntry),
 		middlewareFactories: make(map[string]MiddlewareFactory),
 		configs:             make(map[string]*schema.ConfigDef),
-		middlewares:         make(map[string]*schema.MiddlewareDef),
 		routers:             make(map[string]*schema.RouterDef),
 		resolvedConfigs:     make(map[string]any),
-		// Topology maps and serviceDefs use sync.Map, no initialization needed
+		// Topology maps, serviceDefs, and middlewareEntries use sync.Map, no initialization needed
 	}
 }
 
@@ -399,18 +399,6 @@ func (g *GlobalRegistry) DefineConfig(def *schema.ConfigDef) {
 	g.configs[def.Name] = def
 }
 
-// DefineMiddleware defines a middleware instance
-func (g *GlobalRegistry) DefineMiddleware(def *schema.MiddlewareDef) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if _, exists := g.middlewares[def.Name]; exists {
-		panic(fmt.Sprintf("middleware %s already defined", def.Name))
-	}
-
-	g.middlewares[def.Name] = def
-}
-
 // DefineRouter defines a router
 func (g *GlobalRegistry) DefineRouter(name string, def *schema.RouterDef) {
 	g.mu.Lock()
@@ -469,14 +457,6 @@ func (g *GlobalRegistry) GetConfig(name string) *schema.ConfigDef {
 	defer g.mu.RUnlock()
 
 	return g.configs[name]
-}
-
-// GetMiddlewareDef returns a middleware definition
-func (g *GlobalRegistry) GetMiddlewareDef(name string) *schema.MiddlewareDef {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.middlewares[name]
 }
 
 // GetRouterDef returns a router definition
@@ -1099,33 +1079,293 @@ func (g *GlobalRegistry) CreateMiddleware(name string) request.HandlerFunc {
 		return nil
 	}
 
-	// Try to create from middleware definition (YAML config)
-	g.mu.RLock()
-	mwDef, defExists := g.middlewares[name]
-	g.mu.RUnlock()
+	// Try to create from middleware entry (RegisterMiddlewareName)
+	if entryAny, exists := g.middlewareEntries.Load(name); exists {
+		entry := entryAny.(*MiddlewareEntry)
 
-	if !defExists {
-		return nil
-	}
+		// Get factory
+		factory := g.GetMiddlewareFactory(entry.Type)
+		if factory == nil {
+			return nil
+		}
 
-	// Get factory
-	factory := g.GetMiddlewareFactory(mwDef.Type)
-	if factory == nil {
-		return nil
-	}
-
-	// Create instance
-	mw := factory(mwDef.Config)
-	if handlerFunc, ok := mw.(request.HandlerFunc); ok {
-		// Cache it
-		g.RegisterMiddleware(name, handlerFunc)
-		return handlerFunc
+		// Create instance
+		mw := factory(entry.Config)
+		if handlerFunc, ok := mw.(request.HandlerFunc); ok {
+			// Cache it
+			g.RegisterMiddleware(name, handlerFunc)
+			return handlerFunc
+		}
 	}
 
 	return nil
 }
 
 // ===== TOPOLOGY MANAGEMENT (2-Layer Architecture) =====
+
+// DeploymentConfig is used by RegisterDeployment for code-based topology registration
+// This is defined in lokstra_registry package to avoid import cycles
+type DeploymentConfig interface {
+	GetConfigOverrides() map[string]any
+	GetServers() map[string]ServerConfig
+}
+
+// ServerConfig interface for deployment registration
+type ServerConfig interface {
+	GetBaseURL() string
+	GetApps() []AppConfig
+	GetAddr() string
+	GetRouters() []string
+	GetPublishedServices() []string
+}
+
+// AppConfig interface for deployment registration
+type AppConfig interface {
+	GetAddr() string
+	GetRouters() []string
+	GetPublishedServices() []string
+}
+
+// RegisterDeployment registers a deployment topology from code
+// This is the code-equivalent of YAML deployment definition
+// It builds the topology and stores it for runtime use
+func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config DeploymentConfig) error {
+	// Auto-generate router definitions for published services
+	// Collect all published services from all servers
+	publishedServicesMap := make(map[string]bool)
+	for _, serverConfig := range config.GetServers() {
+		// Collect apps (from Apps slice + shorthand fields)
+		apps := serverConfig.GetApps()
+
+		// If shorthand fields are set, create an app from them
+		if serverConfig.GetAddr() != "" {
+			shorthandApp := &shorthandAppConfig{
+				addr:              serverConfig.GetAddr(),
+				routers:           serverConfig.GetRouters(),
+				publishedServices: serverConfig.GetPublishedServices(),
+			}
+			// Prepend shorthand app
+			apps = append([]AppConfig{shorthandApp}, apps...)
+		}
+
+		for _, appConfig := range apps {
+			for _, serviceName := range appConfig.GetPublishedServices() {
+				publishedServicesMap[serviceName] = true
+			}
+		}
+	}
+
+	// Define routers for each published service
+	for serviceName := range publishedServicesMap {
+		routerName := serviceName + "-router"
+
+		// Check if router already defined manually
+		if g.GetRouterDef(routerName) != nil {
+			continue // Skip, use existing definition
+		}
+
+		// Check if service is registered
+		if !g.HasLazyService(serviceName) {
+			return fmt.Errorf("published service '%s' not found in service registry", serviceName)
+		}
+
+		// Get service definition to find service type
+		serviceDef := g.GetDeferredServiceDef(serviceName)
+		if serviceDef == nil {
+			return fmt.Errorf("published service '%s' definition not found", serviceName)
+		}
+
+		// Get service metadata from factory registration
+		metadata := g.GetServiceMetadata(serviceDef.Type)
+
+		// Build router definition
+		var resourceName, resourcePlural, convention string
+
+		// Use metadata from RegisterServiceType if available
+		if metadata != nil && metadata.Resource != "" {
+			resourceName = metadata.Resource
+			resourcePlural = metadata.ResourcePlural
+			convention = metadata.Convention
+		} else {
+			// Fallback: auto-generate from service name
+			resourceName = strings.TrimSuffix(serviceName, "-service")
+			resourcePlural = resourceName + "s" // Simple pluralization
+			convention = "rest"
+		}
+
+		// Define router with metadata
+		routerDef := &schema.RouterDef{
+			Convention:     convention,
+			Resource:       resourceName,
+			ResourcePlural: resourcePlural,
+		}
+
+		// Add metadata overrides if available
+		if metadata != nil {
+			routerDef.PathPrefix = metadata.PathPrefix
+			routerDef.Middlewares = metadata.MiddlewareNames
+			routerDef.Hidden = metadata.HiddenMethods
+
+			// Convert RouteOverrides to Custom routes
+			if len(metadata.RouteOverrides) > 0 {
+				routerDef.Custom = make([]schema.RouteDef, 0, len(metadata.RouteOverrides))
+				for methodName, routeMeta := range metadata.RouteOverrides {
+					routerDef.Custom = append(routerDef.Custom, schema.RouteDef{
+						Name:        methodName,
+						Method:      routeMeta.Method,
+						Path:        routeMeta.Path,
+						Middlewares: routeMeta.Middlewares,
+					})
+				}
+			}
+		}
+
+		g.DefineRouter(routerName, routerDef)
+	}
+
+	// Build service location registry (service-name → base-url)
+	// This maps published services to their server URLs for remote service resolution
+	serviceLocations := make(map[string]string)
+
+	for _, serverConfig := range config.GetServers() {
+		// Collect apps (from Apps slice + shorthand fields)
+		apps := serverConfig.GetApps()
+
+		// If shorthand fields are set, create an app from them
+		if serverConfig.GetAddr() != "" {
+			shorthandApp := &shorthandAppConfig{
+				addr:              serverConfig.GetAddr(),
+				routers:           serverConfig.GetRouters(),
+				publishedServices: serverConfig.GetPublishedServices(),
+			}
+			// Prepend shorthand app
+			apps = append([]AppConfig{shorthandApp}, apps...)
+		}
+
+		for _, appConfig := range apps {
+			for _, serviceName := range appConfig.GetPublishedServices() {
+				// Build full URL: base-url + addr
+				fullURL := serverConfig.GetBaseURL() + appConfig.GetAddr()
+				serviceLocations[serviceName] = fullURL
+			}
+		}
+	}
+
+	// Create deployment topology
+	deployTopo := &DeploymentTopology{
+		Name:            deploymentName,
+		ConfigOverrides: make(map[string]any),
+		Servers:         make(map[string]*ServerTopology),
+	}
+
+	// Copy config overrides
+	for key, value := range config.GetConfigOverrides() {
+		deployTopo.ConfigOverrides[key] = value
+	}
+
+	// Build server topologies
+	for serverName, serverConfig := range config.GetServers() {
+		serverTopo := &ServerTopology{
+			Name:           serverName,
+			DeploymentName: deploymentName,
+			BaseURL:        serverConfig.GetBaseURL(),
+			Services:       make([]string, 0),
+			RemoteServices: make(map[string]string),
+			Apps:           make([]*AppTopology, 0),
+		}
+
+		// Collect apps (from Apps slice + shorthand fields)
+		apps := serverConfig.GetApps()
+
+		// If shorthand fields are set, create an app from them
+		if serverConfig.GetAddr() != "" {
+			shorthandApp := &shorthandAppConfig{
+				addr:              serverConfig.GetAddr(),
+				routers:           serverConfig.GetRouters(),
+				publishedServices: serverConfig.GetPublishedServices(),
+			}
+			// Prepend shorthand app
+			apps = append([]AppConfig{shorthandApp}, apps...)
+		}
+
+		// Collect SERVER-LEVEL services (published services only)
+		serviceMap := make(map[string]bool)
+		for _, appConfig := range apps {
+			for _, svcName := range appConfig.GetPublishedServices() {
+				serviceMap[svcName] = true
+			}
+		}
+
+		// Convert to slice
+		for svcName := range serviceMap {
+			serverTopo.Services = append(serverTopo.Services, svcName)
+		}
+
+		// Build RemoteServices map (services published on OTHER servers)
+		for otherServerName, otherServerConfig := range config.GetServers() {
+			if otherServerName == serverName {
+				continue // Skip own server
+			}
+
+			// Collect apps from other server
+			otherApps := otherServerConfig.GetApps()
+			if otherServerConfig.GetAddr() != "" {
+				shorthandApp := &shorthandAppConfig{
+					addr:              otherServerConfig.GetAddr(),
+					routers:           otherServerConfig.GetRouters(),
+					publishedServices: otherServerConfig.GetPublishedServices(),
+				}
+				otherApps = append([]AppConfig{shorthandApp}, otherApps...)
+			}
+
+			// Add remote services
+			for _, appConfig := range otherApps {
+				for _, svcName := range appConfig.GetPublishedServices() {
+					// Build full URL: base-url + addr
+					remoteURL := otherServerConfig.GetBaseURL() + appConfig.GetAddr()
+					serverTopo.RemoteServices[svcName] = remoteURL
+				}
+			}
+		}
+
+		// Build app topologies
+		for _, appConfig := range apps {
+			appTopo := &AppTopology{
+				Addr:    appConfig.GetAddr(),
+				Routers: make([]string, 0),
+			}
+
+			// Collect routers
+			appTopo.Routers = append(appTopo.Routers, appConfig.GetRouters()...)
+
+			// Auto-generated routers from published services
+			for _, serviceName := range appConfig.GetPublishedServices() {
+				routerName := serviceName + "-router"
+				appTopo.Routers = append(appTopo.Routers, routerName)
+			}
+
+			serverTopo.Apps = append(serverTopo.Apps, appTopo)
+		}
+
+		deployTopo.Servers[serverName] = serverTopo
+	}
+
+	// Store topology in global registry
+	g.StoreDeploymentTopology(deployTopo)
+
+	return nil
+}
+
+// shorthandAppConfig is a helper struct for shorthand app creation
+type shorthandAppConfig struct {
+	addr              string
+	routers           []string
+	publishedServices []string
+}
+
+func (a *shorthandAppConfig) GetAddr() string                { return a.addr }
+func (a *shorthandAppConfig) GetRouters() []string           { return a.routers }
+func (a *shorthandAppConfig) GetPublishedServices() []string { return a.publishedServices }
 
 // StoreDeploymentTopology stores deployment topology in global registry
 func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
