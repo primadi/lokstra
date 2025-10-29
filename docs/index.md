@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Home
+description: Lokstra - Modern Go web framework for building microservices with elegant configuration-driven architecture, declarative service management, and lazy dependency injection
 ---
 
 <div align="center">
