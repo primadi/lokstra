@@ -14,11 +14,11 @@ Welcome to Lokstra! This documentation will guide you from your first "Hello Wor
 ## 🚀 Quick Links
 
 - **New to Lokstra?** → Start with [Introduction](00-introduction)
-- **Want to code now?** → Jump to [Quick Start](00-introduction/quick-start.md)
+- **Want to code now?** → Jump to [Quick Start](00-introduction/quick-start)
 - **Building your first API?** → Follow [Essentials](01-essentials)
 - **Need advanced features?** → Explore [Deep Dive](02-deep-dive/)
 - **API Reference?** → Check [API Reference](03-api-reference)
-- **What's coming?** → See [Roadmap](ROADMAP.md) 🗺️
+- **What's coming?** → See [Roadmap](ROADMAP) 🗺️
 
 ---
 
@@ -30,10 +30,10 @@ Welcome to Lokstra! This documentation will guide you from your first "Hello Wor
 Understand what Lokstra is, why it exists, and what problems it solves.
 
 - [What is Lokstra?](00-introduction) - Overview and philosophy
-- [Why Lokstra?](00-introduction/why-lokstra.md) - Problems & solutions
-- [Architecture](00-introduction/architecture.md) - High-level design
-- [Key Features](00-introduction/key-features.md) - What makes Lokstra special
-- [Quick Start](00-introduction/quick-start.md) - Your first Lokstra app in 5 minutes
+- [Why Lokstra?](00-introduction/why-lokstra) - Problems & solutions
+- [Architecture](00-introduction/architecture) - High-level design
+- [Key Features](00-introduction/key-features) - What makes Lokstra special
+- [Quick Start](00-introduction/quick-start) - Your first Lokstra app in 5 minutes
 - **[Examples](00-introduction/examples)** - 4 progressive examples (4-6 hours)
 
 ---
@@ -120,7 +120,7 @@ Planned:
 ### Path 1: "I Want to Build APIs Fast"
 **Recommended for**: New Lokstra users, pragmatic developers
 
-1. [Quick Start](00-introduction/quick-start.md) - 5 min
+1. [Quick Start](00-introduction/quick-start) - 5 min
 2. [Router Essentials](01-essentials/01-router/) - 30 min
 3. [Service Essentials](01-essentials/02-service/) - 30 min
 4. [Complete Example](01-essentials/06-putting-it-together/) - 30 min
@@ -146,7 +146,7 @@ Planned:
 ### Path 3: "I Have Specific Questions"
 **Recommended for**: Experienced developers, specific use cases
 
-1. Read [Architecture](00-introduction/architecture.md) - understand the big picture
+1. Read [Architecture](00-introduction/architecture) - understand the big picture
 2. Use Search or jump directly to relevant sections
 3. Check [API Reference](03-api-reference/) for specific APIs
 4. Browse [Guides](04-guides/) for patterns
@@ -169,7 +169,7 @@ Planned:
 
 All examples are runnable! Each example folder contains:
 - `main.go` - Working code
-- `README.md` - What it demonstrates
+- `index.md` - What it demonstrates
 - Test files or `test.http` - How to test it
 
 ```bash
@@ -224,10 +224,10 @@ func BadExample() { }
 👉 Start with [What is Lokstra?](00-introduction)
 
 ### If you want to code immediately:
-👉 Jump to [Quick Start](00-introduction/quick-start.md)
+👉 Jump to [Quick Start](00-introduction/quick-start)
 
 ### If you're migrating from another framework:
-👉 Read [Why Lokstra?](00-introduction/why-lokstra.md) first
+👉 Read [Why Lokstra?](00-introduction/why-lokstra) first
 
 ---
 

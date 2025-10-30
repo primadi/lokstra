@@ -84,7 +84,7 @@ curl -X POST "http://localhost:3001/weather-reports?city=bandung&forecast=true&d
 ├── main.go                           # Main application entry point
 ├── config.yaml                       # Simple URL config
 ├── test.http                         # HTTP test scenarios
-├── README.md                         # This file
+├── index                         # This file
 │
 ├── mock-weather-api/
 │   └── main.go                       # Mock weather API
@@ -415,9 +415,9 @@ func main() {
 
 ## 📚 Related Documentation
 
-- [Architecture - Proxy Patterns](../../architecture.md#proxy-patterns)
-- [Example 06 - External Services](../06-external-services/README.md)
-- [Remote Services Guide](../../../01-essentials/02-service/README.md)
+- [Architecture - Proxy Patterns](../../architecture#proxy-patterns)
+- [Example 06 - External Services](../06-external-services)
+- [Remote Services Guide](../../../01-essentials/02-service)
 
 ---
 

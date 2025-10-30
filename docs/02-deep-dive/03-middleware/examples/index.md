@@ -54,7 +54,7 @@ Each example follows this structure:
 ```
 01-custom-middleware/
 ├── main.go              # Working code
-├── index.md             # Detailed explanation
+├── index             # Detailed explanation
 └── test.http            # HTTP test requests
 ```
 

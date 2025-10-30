@@ -83,22 +83,22 @@ authSvc.Shutdown()  // Clean up resources
 
 | Service | Type | Interface | Description |
 |---------|------|-----------|-------------|
-| **[Redis](redis.md)** | `redis` | (custom) | Redis client wrapper with connection pooling |
-| **[DbPool](dbpool-pg.md)** | `dbpool_pg` | `serviceapi.DbPool` | PostgreSQL connection pool with pgx driver |
-| **[KvStore](kvstore-redis.md)** | `kvstore_redis` | `serviceapi.KvStore` | Key-value store with Redis backend and prefix support |
-| **[Metrics](metrics-prometheus.md)** | `metrics_prometheus` | `serviceapi.Metrics` | Prometheus metrics (counters, histograms, gauges) |
+| **[Redis](redis)** | `redis` | (custom) | Redis client wrapper with connection pooling |
+| **[DbPool](dbpool-pg)** | `dbpool_pg` | `serviceapi.DbPool` | PostgreSQL connection pool with pgx driver |
+| **[KvStore](kvstore-redis)** | `kvstore_redis` | `serviceapi.KvStore` | Key-value store with Redis backend and prefix support |
+| **[Metrics](metrics-prometheus)** | `metrics_prometheus` | `serviceapi.Metrics` | Prometheus metrics (counters, histograms, gauges) |
 
 ### Authentication Services
 
 | Service | Type | Interface | Description |
 |---------|------|-----------|-------------|
-| **[Auth Service](auth-service.md)** | `auth_service` | `auth.Service` | Main authentication orchestrator (login, refresh, logout) |
-| **[Auth Validator](auth-validator.md)** | `auth_validator` | `auth.Validator` | Token validation for middleware (access/refresh tokens) |
-| **[Token Issuer](auth-token-jwt.md)** | `auth_token_jwt` | `auth.TokenIssuer` | JWT token generation and verification |
-| **[Password Flow](auth-flow-password.md)** | `auth_flow_password` | `auth.Flow` | Username/password authentication flow |
-| **[OTP Flow](auth-flow-otp.md)** | `auth_flow_otp` | `auth.Flow` | One-time password authentication flow |
-| **[Session Store](auth-session-redis.md)** | `auth_session_redis` | `auth.Session` | Redis-based session management |
-| **[User Repository](auth-user-repo-pg.md)** | `auth_user_repo_pg` | `auth.UserRepository` | PostgreSQL user CRUD operations |
+| **[Auth Service](auth-service)** | `auth_service` | `auth.Service` | Main authentication orchestrator (login, refresh, logout) |
+| **[Auth Validator](auth-validator)** | `auth_validator` | `auth.Validator` | Token validation for middleware (access/refresh tokens) |
+| **[Token Issuer](auth-token-jwt)** | `auth_token_jwt` | `auth.TokenIssuer` | JWT token generation and verification |
+| **[Password Flow](auth-flow-password)** | `auth_flow_password` | `auth.Flow` | Username/password authentication flow |
+| **[OTP Flow](auth-flow-otp)** | `auth_flow_otp` | `auth.Flow` | One-time password authentication flow |
+| **[Session Store](auth-session-redis)** | `auth_session_redis` | `auth.Session` | Redis-based session management |
+| **[User Repository](auth-user-repo-pg)** | `auth_user_repo_pg` | `auth.UserRepository` | PostgreSQL user CRUD operations |
 
 ## Quick Start
 
@@ -665,21 +665,21 @@ func TestServiceWithMock(t *testing.T) {
 ## Related Documentation
 
 **Core Concepts:**
-- [Service Registration](../../02-registry/service-registration.md) - How services are registered
-- [Dependency Injection](../../02-registry/service-registration.md#dependency-injection) - Managing service dependencies
-- [Configuration](../03-configuration/config.md) - YAML configuration system
+- [Service Registration](../../02-registry/service-registration) - How services are registered
+- [Dependency Injection](../../02-registry/service-registration#dependency-injection) - Managing service dependencies
+- [Configuration](../03-configuration/config) - YAML configuration system
 
 **Service Documentation:**
 - [Infrastructure Services](#infrastructure-services) - Redis, PostgreSQL, Metrics
 - [Authentication Services](#authentication-services) - Complete auth system
 
 **Advanced Topics:**
-- [Creating Services](../../08-advanced/custom-services.md) - Building custom services
-- [Service Testing](../../08-advanced/testing.md) - Testing strategies
+- [Creating Services](../../08-advanced/custom-services) - Building custom services
+- [Service Testing](../../08-advanced/testing) - Testing strategies
 
 ---
 
 **Next Steps:**
-- Learn about [DbPool Service](dbpool-pg.md) for PostgreSQL connectivity
-- Explore [Auth Service](auth-service.md) for complete authentication
-- Review [Service Patterns](../../08-advanced/service-patterns.md) for advanced usage
+- Learn about [DbPool Service](dbpool-pg) for PostgreSQL connectivity
+- Explore [Auth Service](auth-service) for complete authentication
+- Review [Service Patterns](../../08-advanced/service-patterns) for advanced usage

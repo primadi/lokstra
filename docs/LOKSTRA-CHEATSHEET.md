@@ -470,7 +470,7 @@ type User struct {
 
 **Documentation**:
 - Home: [primadi.github.io/lokstra](https://primadi.github.io/lokstra/)
-- Quick Start: [docs/00-introduction/quick-start.md](./00-introduction/quick-start.md)
+- Quick Start: [docs/00-introduction/quick-start](./00-introduction/quick-start)
 - Examples: [docs/00-introduction/examples/](./00-introduction/examples/)
 - API Reference: [docs/03-api-reference/](./03-api-reference/)
 

@@ -607,9 +607,9 @@ router.DELETE("/users/:id",
 
 ## See Also
 
-- **[JWT Auth](./jwt-auth.md)** - Authentication middleware
-- **[CORS](./cors.md)** - Cross-origin handling
-- **[Recovery](./recovery.md)** - Panic recovery
+- **[JWT Auth](./jwt-auth)** - Authentication middleware
+- **[CORS](./cors)** - Cross-origin handling
+- **[Recovery](./recovery)** - Panic recovery
 
 ---
 

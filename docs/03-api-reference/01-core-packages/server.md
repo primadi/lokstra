@@ -73,7 +73,7 @@ server := server.New("my-server", apiApp, adminApp)
 ```
 
 **See Also:**
-- [lokstra.NewServer](lokstra.md#newserver) - Convenience function
+- [lokstra.NewServer](lokstra#newserver) - Convenience function
 
 ---
 
@@ -505,9 +505,9 @@ if err := server.Run(30 * time.Second); err != nil {
 
 ## See Also
 
-- **[lokstra](lokstra.md)** - Convenience function (NewServer)
-- **[App](app.md)** - App lifecycle and configuration
-- **[Router](router.md)** - Router API
+- **[lokstra](lokstra)** - Convenience function (NewServer)
+- **[App](app)** - App lifecycle and configuration
+- **[Router](router)** - Router API
 
 ---
 

@@ -6,7 +6,7 @@
 - **Mode 1: By Code** - Manual instantiation (simple, explicit)
 - **Mode 2: By Config** - YAML + Lazy DI (scalable, production-ready)
 
-Related to: [Architecture - Service Component](../../architecture.md#component-4-service)
+Related to: [Architecture - Service Component](../../architecture#component-4-service)
 
 ---
 
@@ -576,15 +576,15 @@ go run main.go --mode=config
 # Test with: curl http://localhost:3002/api/v1/users
 ```
 
-**Read detailed comparison:** [MIGRATION.md](./MIGRATION.md)
+**Read detailed comparison:** [MIGRATION](./MIGRATION)
 
 ---
 
 ## 📚 Learn More
 
 ### Understanding the Patterns:
-- **[CODE-VS-CONFIG.md](../../CODE-VS-CONFIG.md)** - Parallel structure explanation (NEW!)
-- **[MIGRATION.md](./MIGRATION.md)** - Detailed comparison of both approaches
+- **[CODE-VS-CONFIG](../../CODE-VS-CONFIG)** - Parallel structure explanation (NEW!)
+- **[MIGRATION](./MIGRATION)** - Detailed comparison of both approaches
 - **[config.yaml](./config.yaml)** - Example YAML configuration
 - **Service Factories** - See `DatabaseFactory` and `UserServiceFactory` in main.go
 
@@ -617,4 +617,4 @@ See more examples:
 
 ---
 
-**Questions?** Check [MIGRATION.md](./MIGRATION.md) for detailed explanations!
+**Questions?** Check [MIGRATION](./MIGRATION) for detailed explanations!

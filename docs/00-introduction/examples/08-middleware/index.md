@@ -488,9 +488,9 @@ r.GET("/admin", AdminHandler, AuthMiddleware, AdminMW)   // Has auth + admin
 
 ## 📖 Additional Documentation
 
-- [NAMING-CONVENTIONS.md](./NAMING-CONVENTIONS.md) - Middleware naming best practices
-- [RECOVERY-ANALYSIS.md](./RECOVERY-ANALYSIS.md) - Why recovery middleware is critical
-- [RATE-LIMIT-PERFORMANCE.md](./RATE-LIMIT-PERFORMANCE.md) - Performance analysis
+- [NAMING-CONVENTIONS](./NAMING-CONVENTIONS) - Middleware naming best practices
+- [RECOVERY-ANALYSIS](./RECOVERY-ANALYSIS) - Why recovery middleware is critical
+- [RATE-LIMIT-PERFORMANCE](./RATE-LIMIT-PERFORMANCE) - Performance analysis
 
 ---
 
@@ -512,7 +512,7 @@ r.Use("recovery-dev")  // Shows stack traces
 r.Use("recovery-prod") // Hides stack traces from clients
 ```
 
-See [RECOVERY-ANALYSIS.md](./RECOVERY-ANALYSIS.md) for detailed explanation.
+See [RECOVERY-ANALYSIS](./RECOVERY-ANALYSIS) for detailed explanation.
 
 ### Naming Conventions
 
@@ -521,7 +521,7 @@ For consistency across the framework:
 - **Factory types**: Use `snake_case` (e.g., `request_logger`, `cors`)
 - **Instance names**: Use `kebab-case` (e.g., `request-logger-verbose`, `cors-api`)
 
-See [NAMING-CONVENTIONS.md](./NAMING-CONVENTIONS.md) for complete guide.
+See [NAMING-CONVENTIONS](./NAMING-CONVENTIONS) for complete guide.
 
 ### Performance Notes
 
@@ -548,7 +548,7 @@ Each middleware adds minimal overhead:
 
 Rate limiting does NOT slow down successful requests - it's just an in-memory map check.
 
-See [RATE-LIMIT-PERFORMANCE.md](./RATE-LIMIT-PERFORMANCE.md) for benchmark details.
+See [RATE-LIMIT-PERFORMANCE](./RATE-LIMIT-PERFORMANCE) for benchmark details.
 
 ### ctx.Next() is MANDATORY
 

@@ -1045,9 +1045,9 @@ ProcessPayment  → POST /process-payment
 
 ## See Also
 
-- **[API Client](./api-client.md)** - FetchAndCast and options
-- **[ClientRouter](./client-router.md)** - HTTP client routing
-- **[Service](../01-core-packages/service.md)** - Service patterns
+- **[API Client](./api-client)** - FetchAndCast and options
+- **[ClientRouter](./client-router)** - HTTP client routing
+- **[Service](../01-core-packages/service)** - Service patterns
 
 ---
 

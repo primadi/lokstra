@@ -552,9 +552,9 @@ api.InternalError(message)             // 500 Internal Server Error
 
 ## 🔗 Related
 
-- **ApiHelper Guide**: [Deep Dive](../../../02-deep-dive/response/api-helper.md) (coming soon)
-- **Response Formats**: [Deep Dive](../../../02-deep-dive/response/formats.md) (coming soon)
-- **Error Handling**: [Guide](../../../04-guides/error-handling.md) (coming soon)
+- **ApiHelper Guide**: [Deep Dive](../../../02-deep-dive/response/api-helper) (coming soon)
+- **Response Formats**: [Deep Dive](../../../02-deep-dive/response/formats) (coming soon)
+- **Error Handling**: [Guide](../../../04-guides/error-handling) (coming soon)
 
 ---
 

@@ -27,7 +27,7 @@ This example uses a **proper file structure** (not everything in one file):
 ├── service/
 │   ├── user_service.go    # User business logic
 │   └── product_service.go # Product business logic
-├── README.md
+├── index
 └── test.http
 ```
 

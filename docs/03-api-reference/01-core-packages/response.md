@@ -1165,9 +1165,9 @@ return response.NewApiUnauthorized(fmt.Sprintf("Auth failed: %v", err))
 
 ## See Also
 
-- **[Request Context](request.md)** - Request handling
-- **[Router](router.md)** - Handler registration
-- **[API Formatter](../08-advanced/api-formatter.md)** - Custom formatters
+- **[Request Context](request)** - Request handling
+- **[Router](router)** - Handler registration
+- **[API Formatter](../08-advanced/api-formatter)** - Custom formatters
 
 ---
 

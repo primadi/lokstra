@@ -9,7 +9,7 @@ import (
 )
 
 // This example demonstrates auto-router registration with custom conventions
-// See index.md for detailed explanation
+// See index for detailed explanation
 
 type UserService struct{}
 

@@ -638,9 +638,9 @@ func TestService(t *testing.T) {
 
 ## See Also
 
-- **[lokstra_registry](../02-registry/lokstra_registry.md)** - Service registration
-- **[Service Registration](../02-registry/service-registration.md)** - RegisterServiceType
-- **[Proxy](../08-advanced/proxy.md)** - Remote services
+- **[lokstra_registry](../02-registry/lokstra_registry)** - Service registration
+- **[Service Registration](../02-registry/service-registration)** - RegisterServiceType
+- **[Proxy](../08-advanced/proxy)** - Remote services
 
 ---
 

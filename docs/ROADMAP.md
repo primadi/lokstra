@@ -496,8 +496,8 @@ Legend:
 
 We want to hear from you!
 
-- 🐛 **Found a bug?** [Open an issue](https://github.com/primadi/lokstra/issues/new?template=bug_report.md)
-- 💡 **Have an idea?** [Open a feature request](https://github.com/primadi/lokstra/issues/new?template=feature_request.md)
+- 🐛 **Found a bug?** [Open an issue](https://github.com/primadi/lokstra/issues/new?template=bug_report)
+- 💡 **Have an idea?** [Open a feature request](https://github.com/primadi/lokstra/issues/new?template=feature_request)
 - 💬 **Want to discuss?** [Start a discussion](https://github.com/primadi/lokstra/discussions)
 - 📧 **Need help?** [Join our community](https://github.com/primadi/lokstra/discussions/categories/q-a)
 
@@ -506,4 +506,4 @@ We want to hear from you!
 **Last Updated**: October 2025  
 **Maintained by**: Lokstra Core Team
 
-👉 Back to [Documentation Home](README.md)
+👉 Back to [Documentation Home](index)

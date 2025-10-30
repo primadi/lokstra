@@ -607,9 +607,9 @@ router.Use(request_logger.Middleware(&request_logger.Config{
 
 ## See Also
 
-- **[Slow Request Logger](./slow-request-logger.md)** - Slow request detection
-- **[Recovery](./recovery.md)** - Panic recovery
-- **[Request](../01-core-packages/request.md)** - Request handling
+- **[Slow Request Logger](./slow-request-logger)** - Slow request detection
+- **[Recovery](./recovery)** - Panic recovery
+- **[Request](../01-core-packages/request)** - Request handling
 
 ---
 

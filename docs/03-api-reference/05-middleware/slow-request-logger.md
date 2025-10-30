@@ -567,9 +567,9 @@ func TestFastRequest(t *testing.T) {
 
 ## See Also
 
-- **[Request Logger](./request-logger.md)** - General request logging
-- **[Recovery](./recovery.md)** - Panic recovery
-- **[Request](../01-core-packages/request.md)** - Request handling
+- **[Request Logger](./request-logger)** - General request logging
+- **[Recovery](./recovery)** - Panic recovery
+- **[Request](../01-core-packages/request)** - Request handling
 
 ---
 

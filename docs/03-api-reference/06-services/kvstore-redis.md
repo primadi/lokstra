@@ -932,11 +932,11 @@ func (m *SessionManager) DeleteUserSessions(ctx context.Context, userID string) 
 
 ## Related Documentation
 
-- [Services Overview](README.md) - Service architecture and patterns
-- [DbPool Service](dbpool-pg.md) - PostgreSQL connection pooling
-- [Redis Service](redis.md) - Direct Redis client access
-- [Auth Session Service](auth-session-redis.md) - Session management
+- [Services Overview](index) - Service architecture and patterns
+- [DbPool Service](dbpool-pg) - PostgreSQL connection pooling
+- [Redis Service](redis) - Direct Redis client access
+- [Auth Session Service](auth-session-redis) - Session management
 
 ---
 
-**Next:** [Metrics Service](metrics-prometheus.md) - Prometheus metrics collection
+**Next:** [Metrics Service](metrics-prometheus) - Prometheus metrics collection

@@ -126,7 +126,7 @@ func Home() *response.Response {
     <div class="section">
         <h2>Test Files</h2>
         <p>See <code>main_test.go</code> for test examples</p>
-        <p>See <code>index.md</code> for testing patterns</p>
+        <p>See <code>index</code> for testing patterns</p>
     </div>
 </body>
 </html>`

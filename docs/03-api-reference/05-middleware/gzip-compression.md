@@ -622,9 +622,9 @@ router.GET("/static/*", func(c *request.Context) error {
 
 ## See Also
 
-- **[Body Limit](./body-limit.md)** - Request size protection
-- **[Request Logger](./request-logger.md)** - Request logging
-- **[Response](../01-core-packages/response.md)** - Response formatting
+- **[Body Limit](./body-limit)** - Request size protection
+- **[Request Logger](./request-logger)** - Request logging
+- **[Response](../01-core-packages/response)** - Response formatting
 
 ---
 

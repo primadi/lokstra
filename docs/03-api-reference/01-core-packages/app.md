@@ -57,7 +57,7 @@ app := app.New("my-app", ":8080", apiRouter)
 ```
 
 **See Also:**
-- [lokstra.NewApp](lokstra.md#newapp) - Convenience function
+- [lokstra.NewApp](lokstra#newapp) - Convenience function
 
 ---
 
@@ -112,7 +112,7 @@ app := app.NewWithConfig("api", ":8080", "h2c", h2cConfig, router)
 - `key-file` - TLS private key file path (for "tls")
 
 **See Also:**
-- [lokstra.NewAppWithConfig](lokstra.md#newappwithconfig) - Convenience function
+- [lokstra.NewAppWithConfig](lokstra#newappwithconfig) - Convenience function
 
 ---
 
@@ -621,10 +621,10 @@ func main() {
 
 ## See Also
 
-- **[lokstra](lokstra.md)** - Convenience functions (NewApp, NewAppWithConfig)
-- **[Server](server.md)** - Managing multiple apps
-- **[Router](router.md)** - Router API
-- **[Listener](../08-advanced/listener.md)** - Custom listeners
+- **[lokstra](lokstra)** - Convenience functions (NewApp, NewAppWithConfig)
+- **[Server](server)** - Managing multiple apps
+- **[Router](router)** - Router API
+- **[Listener](../08-advanced/listener)** - Custom listeners
 
 ---
 

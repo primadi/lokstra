@@ -1009,10 +1009,10 @@ type Order struct {
 
 ## Related Documentation
 
-- [Helpers Overview](README.md) - All helper packages
-- [Cast Package](cast.md) - Type conversion utilities
-- [Utils Package](utils.md) - General utilities
+- [Helpers Overview](index) - All helper packages
+- [Cast Package](cast) - Type conversion utilities
+- [Utils Package](utils) - General utilities
 
 ---
 
-**Next:** [Custom Type Package](customtype.md) - DateTime, Date, Decimal types
+**Next:** [Custom Type Package](customtype) - DateTime, Date, Decimal types

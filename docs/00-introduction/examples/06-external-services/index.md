@@ -97,7 +97,7 @@ curl -X POST http://localhost:3000/orders/order_1/refund
 ├── main.go                           # Main application entry point
 ├── config.yaml                       # Configuration with external service definitions
 ├── test.http                         # HTTP test scenarios
-├── README.md                         # This file
+├── index                         # This file
 │
 ├── mock-payment-gateway/
 │   └── main.go                       # Mock external payment API
@@ -546,10 +546,10 @@ All follow the same pattern: define external service → create wrapper → use 
 
 ## 📚 Related Documentation
 
-- [Architecture - Service Categories](../../architecture.md#service-categories)
-- [Architecture - Proxy Patterns](../../architecture.md#proxy-patterns)
-- [Remote Services Guide](../../../01-essentials/02-service/README.md)
-- [Configuration Guide](../../../01-essentials/03-configuration/README.md)
+- [Architecture - Service Categories](../../architecture#service-categories)
+- [Architecture - Proxy Patterns](../../architecture#proxy-patterns)
+- [Remote Services Guide](../../../01-essentials/02-service)
+- [Configuration Guide](../../../01-essentials/03-configuration)
 
 ---
 

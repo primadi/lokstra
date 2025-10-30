@@ -234,7 +234,7 @@ r.GET("/users/{id}", func(ctx *request.Context, req *UserRequest) (*User, error)
 - Need headers/cookies: **Form 4** (with context)
 - Ultra-simple: **Form 1** (no errors possible)
 
-**📖 Want all 29 forms?** See [Deep Dive: Handler Forms](../../02-deep-dive/router/handler-forms.md)
+**📖 Want all 29 forms?** See [Deep Dive: Handler Forms](../../02-deep-dive/router/handler-forms)
 
 ---
 
@@ -384,7 +384,7 @@ admin.DELETE("/users", deleteUser)    // Requires auth + admin
 r.GET("/public", publicEndpoint)      // No middleware
 ```
 
-**📖 More on middleware**: See [03 - Middleware](../03-middleware/README.md)
+**📖 More on middleware**: See [03 - Middleware](../03-middleware)
 
 ---
 
@@ -692,16 +692,16 @@ You now understand:
 ### Next Steps:
 
 **Continue Learning (Recommended order)**:  
-1. 👉 **[02 - Service](../02-service/README.md)** - Service patterns and dependency injection ⭐ CRITICAL
-2. 👉 **[03 - Middleware](../03-middleware/README.md)** - Deep dive into middleware patterns
-3. 👉 **[04 - Configuration](../04-configuration/README.md)** - Config-driven development
-4. 👉 **[05 - App and Server](../05-app-and-server/README.md)** - Application lifecycle
-5. 👉 **[06 - Complete API](../06-putting-it-together/README.md)** - Build a real TODO API
+1. 👉 **[02 - Service](../02-service)** - Service patterns and dependency injection ⭐ CRITICAL
+2. 👉 **[03 - Middleware](../03-middleware)** - Deep dive into middleware patterns
+3. 👉 **[04 - Configuration](../04-configuration)** - Config-driven development
+4. 👉 **[05 - App and Server](../05-app-and-server)** - Application lifecycle
+5. 👉 **[06 - Complete API](../06-putting-it-together)** - Build a real TODO API
 
 **Deep Dive Topics**:
-- [All 29 Handler Forms](../../02-deep-dive/router/handler-forms.md) (coming soon)
-- [Router Lifecycle](../../02-deep-dive/router/lifecycle.md) (coming soon)
-- [Advanced Routing](../../02-deep-dive/router/advanced.md) (coming soon)
+- [All 29 Handler Forms](../../02-deep-dive/router/handler-forms) (coming soon)
+- [Router Lifecycle](../../02-deep-dive/router/lifecycle) (coming soon)
+- [Advanced Routing](../../02-deep-dive/router/advanced) (coming soon)
 
 ---
 
@@ -733,4 +733,4 @@ r.PrintRoutes()  // Print all registered routes
 
 ---
 
-**Continue learning** → [02 - Service](../02-service/README.md)
+**Continue learning** → [02 - Service](../02-service)

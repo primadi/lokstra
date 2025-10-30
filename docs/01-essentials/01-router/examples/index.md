@@ -300,9 +300,9 @@ You now know:
 
 ## 🔗 Additional Resources
 
-- **Main Router Guide**: [../README.md](../README.md)
-- **All 29 Handler Forms**: [Deep Dive](../../../02-deep-dive/router/handler-forms.md) (coming soon)
-- **Router Lifecycle**: [Deep Dive](../../../02-deep-dive/router/lifecycle.md) (coming soon)
+- **Main Router Guide**: [../index](../index)
+- **All 29 Handler Forms**: [Deep Dive](../../../02-deep-dive/router/handler-forms) (coming soon)
+- **Router Lifecycle**: [Deep Dive](../../../02-deep-dive/router/lifecycle) (coming soon)
 
 ---
 

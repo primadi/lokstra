@@ -2,7 +2,7 @@
 
 > **Demonstrates handler forms and 3 response methods in Lokstra**
 
-Related to: [Key Features - Handler Forms](../../key-features.md#feature-1-29-handler-forms)
+Related to: [Key Features - Handler Forms](../../key-features#feature-1-29-handler-forms)
 
 ---
 
@@ -430,4 +430,4 @@ See more examples:
 
 ---
 
-**Questions?** Check the [Key Features Guide](../../key-features.md)
+**Questions?** Check the [Key Features Guide](../../key-features)

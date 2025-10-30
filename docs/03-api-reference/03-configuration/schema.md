@@ -957,10 +957,10 @@ router-definitions:
 
 ## See Also
 
-- **[Config](./config.md)** - Configuration management
-- **[Deploy](./deploy.md)** - Deployment topology
-- **[Service Registration](../02-registry/service-registration.md)** - Service patterns
-- **[Router Registration](../02-registry/router-registration.md)** - Router patterns
+- **[Config](./config)** - Configuration management
+- **[Deploy](./deploy)** - Deployment topology
+- **[Service Registration](../02-registry/service-registration)** - Service patterns
+- **[Router Registration](../02-registry/router-registration)** - Router patterns
 
 ---
 

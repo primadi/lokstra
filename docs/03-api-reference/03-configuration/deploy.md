@@ -778,10 +778,10 @@ service-definitions:
 
 ## See Also
 
-- **[Config](./config.md)** - Configuration management
-- **[Schema](./schema.md)** - YAML schema definitions
-- **[lokstra_registry](../02-registry/lokstra_registry.md)** - Registry API
-- **[Service Registration](../02-registry/service-registration.md)** - Service patterns
+- **[Config](./config)** - Configuration management
+- **[Schema](./schema)** - YAML schema definitions
+- **[lokstra_registry](../02-registry/lokstra_registry)** - Registry API
+- **[Service Registration](../02-registry/service-registration)** - Service patterns
 
 ---
 

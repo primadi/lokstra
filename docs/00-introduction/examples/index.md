@@ -587,9 +587,9 @@ cd .. && go run main.go
 
 After completing these examples:
 
-- **Deep Dive**: [01-essentials](../../01-essentials/README.md)
-- **API Reference**: [03-api-reference](../../03-api-reference/README.md) (coming soon)
-- **Advanced Topics**: [02-deep-dive](../../02-deep-dive/README.md) (coming soon)
+- **Deep Dive**: [01-essentials](../../01-essentials)
+- **API Reference**: [03-api-reference](../../03-api-reference) (coming soon)
+- **Advanced Topics**: [02-deep-dive](../../02-deep-dive) (coming soon)
 
 ---
 

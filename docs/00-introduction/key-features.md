@@ -122,7 +122,7 @@ r.GET("/api", func(ctx *request.Context, req *ComplexRequest) (*response.Respons
 
 **One size doesn't fit all** - Lokstra adapts to your needs.
 
-📖 **See all 29 forms**: [Deep Dive: Handler Forms](../02-deep-dive/router/handler-forms.md)
+📖 **See all 29 forms**: [Deep Dive: Handler Forms](../02-deep-dive/router/handler-forms)
 
 ---
 
@@ -257,7 +257,7 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
 }
 ```
 
-📖 **Learn more**: [Service as Router Guide](../01-essentials/02-service/README.md#service-as-router)
+📖 **Learn more**: [Service as Router Guide](../01-essentials/02-service/index#service-as-router)
 
 ---
 
@@ -476,7 +476,7 @@ GetService[T](name)
 // That's it!
 ```
 
-📖 **Learn more**: [Service Guide](../01-essentials/02-service/README.md)
+📖 **Learn more**: [Service Guide](../01-essentials/02-service)
 
 ---
 
@@ -593,7 +593,7 @@ config.LoadConfigFile("dev.yaml", &cfg)  // Merges with base
 - Multiple environments
 - Easy deployment
 
-📖 **Learn more**: [Configuration Guide](../01-essentials/04-configuration/README.md)
+📖 **Learn more**: [Configuration Guide](../01-essentials/04-configuration)
 
 ---
 
@@ -651,14 +651,14 @@ Most frameworks focus on **one thing**:
 ## 📚 Learn More
 
 **Deep Dives**:
-- [Architecture](architecture.md) - How it all works together
-- [Essentials](../01-essentials/README.md) - Hands-on tutorials
-- [Deep Dive](../02-deep-dive/README.md) - Advanced patterns
+- [Architecture](architecture) - How it all works together
+- [Essentials](../01-essentials) - Hands-on tutorials
+- [Deep Dive](../02-deep-dive) - Advanced patterns
 
 **Try It**:
-- [Quick Start](quick-start.md) - Build your first API in 5 minutes
-- [Examples](../05-examples/README.md) - Real applications
+- [Quick Start](quick-start) - Build your first API in 5 minutes
+- [Examples](../05-examples) - Real applications
 
 ---
 
-**Ready to experience these features?** 👉 [Get Started](quick-start.md)
+**Ready to experience these features?** 👉 [Get Started](quick-start)

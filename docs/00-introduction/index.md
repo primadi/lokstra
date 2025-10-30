@@ -133,8 +133,8 @@ curl http://localhost:8080/users   # → ["Alice","Bob","Charlie"]
 ```
 
 **💭 Note**: This is a simplified introduction example. For complete runnable examples with proper project structure, see:
-- [Quick Start](quick-start.md) - Your first working API in 5 minutes
-- [Examples](examples/README.md) - 4 progressive examples from basics to production
+- [Quick Start](quick-start) - Your first working API in 5 minutes
+- [Examples](examples) - 4 progressive examples from basics to production
 
 ---
 
@@ -364,18 +364,18 @@ After working through this documentation:
 ## 🚦 Where to Go Next?
 
 ### I want to understand the "why"
-👉 [Why Lokstra?](why-lokstra.md) - Compare with other frameworks
+👉 [Why Lokstra?](why-lokstra) - Compare with other frameworks
 
 ### I want to see the big picture
-👉 [Architecture](architecture.md) - Deep dive into design
+👉 [Architecture](architecture) - Deep dive into design
 
 ### I want to code NOW
-👉 [Quick Start](quick-start.md) - Build your first API in 5 minutes  
-👉 [Examples](examples/README.md) - 4 progressive examples (hello-world → production)
+👉 [Quick Start](quick-start) - Build your first API in 5 minutes  
+👉 [Examples](examples) - 4 progressive examples (hello-world → production)
 
 ### I want to learn systematically
-👉 [Examples](examples/README.md) - Hands-on progressive learning (4-6 hours)  
-👉 [Essentials](../01-essentials/README.md) - Step-by-step deep dive
+👉 [Examples](examples) - Hands-on progressive learning (4-6 hours)  
+👉 [Essentials](../01-essentials) - Step-by-step deep dive
 
 ---
 
@@ -418,7 +418,7 @@ We provide **7 progressive examples** that build on each other:
 
 **Total**: 6-8 hours from zero to production-ready patterns!
 
-👉 [Start with examples](examples/README.md)
+👉 [Start with examples](examples)
 
 ---
 
@@ -448,4 +448,4 @@ Want to contribute or suggest features? Visit our [GitHub repository](https://gi
 
 ---
 
-**Ready?** → Continue to [Why Lokstra?](why-lokstra.md) or jump straight to [Quick Start](quick-start.md)
+**Ready?** → Continue to [Why Lokstra?](why-lokstra) or jump straight to [Quick Start](quick-start)

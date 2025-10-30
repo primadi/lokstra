@@ -47,7 +47,7 @@ Each example follows this structure:
 ```
 01-all-handler-forms/
 ├── main.go              # Working code
-├── README.md            # Detailed explanation
+├── index            # Detailed explanation
 ├── test.http            # HTTP test requests
 └── benchmarks_test.go   # Performance tests (if applicable)
 ```

@@ -946,10 +946,10 @@ router.POST("/users", auth, logger, rateLimiter, handler)
 
 ## See Also
 
-- **[lokstra_registry](./lokstra_registry.md)** - Registry API
-- **[Service Registration](./service-registration.md)** - Service patterns
-- **[Router](../01-core-packages/router.md)** - Router interface
-- **[Auto-Router](../08-advanced/auto-router.md)** - Auto-router internals
+- **[lokstra_registry](./lokstra_registry)** - Registry API
+- **[Service Registration](./service-registration)** - Service patterns
+- **[Router](../01-core-packages/router)** - Router interface
+- **[Auto-Router](../08-advanced/auto-router)** - Auto-router internals
 
 ---
 

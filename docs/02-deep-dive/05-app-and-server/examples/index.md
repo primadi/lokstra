@@ -92,7 +92,7 @@ Each example is self-contained:
 ```
 01-lifecycle-hooks/
 ├── main.go              # Working code
-├── index.md             # Documentation
+├── index             # Documentation
 └── test.http            # HTTP tests
 ```
 

@@ -933,11 +933,11 @@ func (r *TenantUserRepository) GetUsers(ctx context.Context, tenantID string) ([
 
 ## Related Documentation
 
-- [Services Overview](README.md) - Service architecture and patterns
-- [KvStore Service](kvstore-redis.md) - Key-value caching
-- [Auth User Repository](auth-user-repo-pg.md) - Authentication user management
-- [Configuration](../03-configuration/config.md) - YAML configuration system
+- [Services Overview](index) - Service architecture and patterns
+- [KvStore Service](kvstore-redis) - Key-value caching
+- [Auth User Repository](auth-user-repo-pg) - Authentication user management
+- [Configuration](../03-configuration/config) - YAML configuration system
 
 ---
 
-**Next:** [KvStore Service](kvstore-redis.md) - Redis-based key-value store
+**Next:** [KvStore Service](kvstore-redis) - Redis-based key-value store

@@ -317,8 +317,7 @@ func getUserHandler(ctx *request.Context) error {
 
 ## 📚 Additional Resources
 
-- **Service Registration Guide**: [02-service/README.md](./02-service/README.md)
-- **Lazy Dependency Injection**: [02-service/LAZY-DI.md](./02-service/LAZY-DI.md)
+- **Service Registration Guide**: [02-service](./02-service)
 - **CRUD API Example**: [../00-introduction/examples/03-crud-api/](../00-introduction/examples/03-crud-api/)
 
 ---

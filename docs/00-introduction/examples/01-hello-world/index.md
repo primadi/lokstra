@@ -2,7 +2,7 @@
 
 > **Your first Lokstra application - the simplest possible API**
 
-Related to: [Quick Start Guide](../../quick-start.md)
+Related to: [Quick Start Guide](../../quick-start)
 
 ---
 
@@ -123,4 +123,4 @@ See more examples:
 
 ---
 
-**Questions?** Check the [Quick Start Guide](../../quick-start.md)
+**Questions?** Check the [Quick Start Guide](../../quick-start)

@@ -93,7 +93,7 @@ Both approaches produce identical runtime behavior!
 
 ## Architecture Details
 
-See `index.md` (copied from 04-multi-deployment) for complete architecture documentation, including:
+See `index` (copied from 04-multi-deployment) for complete architecture documentation, including:
 - Clean Architecture patterns
 - Auto-router generation
 - Metadata-driven routing

@@ -551,9 +551,9 @@ type CachedResponse struct {
 
 ## Related Documentation
 
-- [Helpers Overview](README.md) - All helper packages
-- [JSON Package](json.md) - JSON encoding/decoding
-- [Middleware Documentation](../05-middleware/README.md) - Middleware patterns
+- [Helpers Overview](index) - All helper packages
+- [JSON Package](json) - JSON encoding/decoding
+- [Middleware Documentation](../05-middleware) - Middleware patterns
 
 ---
 

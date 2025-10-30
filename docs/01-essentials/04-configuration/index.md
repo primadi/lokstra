@@ -766,8 +766,8 @@ After completing this section, you should be able to:
 
 **Ready for more?** Continue to:
 
-👉 [App & Server](../05-app-and-server/README.md) - Application lifecycle and server management
+👉 [App & Server](../05-app-and-server) - Application lifecycle and server management
 
 **Or explore:**
-- [Complete Example](../06-putting-it-together/README.md) - Full application
-- [API Reference - Configuration](../../03-api-reference/03-configuration/README.md) - Detailed docs
+- [Complete Example](../06-putting-it-together) - Full application
+- [API Reference - Configuration](../../03-api-reference/03-configuration) - Detailed docs

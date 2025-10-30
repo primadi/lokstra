@@ -515,9 +515,9 @@ func TestBodyLimitSkipPath(t *testing.T) {
 
 ## See Also
 
-- **[Recovery](./recovery.md)** - Panic recovery
-- **[Request Logger](./request-logger.md)** - Request logging
-- **[Gzip Compression](./gzip-compression.md)** - Response compression
+- **[Recovery](./recovery)** - Panic recovery
+- **[Request Logger](./request-logger)** - Request logging
+- **[Gzip Compression](./gzip-compression)** - Response compression
 
 ---
 

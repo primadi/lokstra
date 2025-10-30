@@ -54,7 +54,7 @@ Each example follows this structure:
 ```
 01-monolith-to-microservices/
 ├── main.go              # Application code
-├── index.md             # Documentation
+├── index             # Documentation
 ├── test.http            # HTTP test requests
 ├── config-*.yaml        # Configuration files
 ```

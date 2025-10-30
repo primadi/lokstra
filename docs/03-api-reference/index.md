@@ -16,76 +16,76 @@ This section provides comprehensive API documentation for every exported type, f
 ### Core Framework
 Start here for building Lokstra applications:
 
-- **[lokstra](01-core-packages/lokstra.md)** - Main package (NewRouter, NewApp, NewServer)
-- **[Router](01-core-packages/router.md)** - HTTP routing and handler registration
-- **[App](01-core-packages/app.md)** - Application listener and lifecycle
-- **[Server](01-core-packages/server.md)** - Server management and graceful shutdown
-- **[Request Context](01-core-packages/request.md)** - Request handling and context
-- **[Response](01-core-packages/response.md)** - Response helpers and formatting
-- **[Service](01-core-packages/service.md)** - Service utilities (LazyLoad, dependency injection)
+- **[lokstra](01-core-packages/lokstra)** - Main package (NewRouter, NewApp, NewServer)
+- **[Router](01-core-packages/router)** - HTTP routing and handler registration
+- **[App](01-core-packages/app)** - Application listener and lifecycle
+- **[Server](01-core-packages/server)** - Server management and graceful shutdown
+- **[Request Context](01-core-packages/request)** - Request handling and context
+- **[Response](01-core-packages/response)** - Response helpers and formatting
+- **[Service](01-core-packages/service)** - Service utilities (LazyLoad, dependency injection)
 
 ### Registry & Configuration
 Service registration, middleware, and configuration:
 
-- **[lokstra_registry](02-registry/lokstra_registry.md)** - Main registry API
-- **[Service Registration](02-registry/service-registration.md)** - RegisterServiceType, DefineService
-- **[Middleware Registration](02-registry/middleware-registration.md)** - RegisterMiddlewareType, DefineMiddleware
-- **[Router Registration](02-registry/router-registration.md)** - Router factories and auto-router
-- **[Configuration](03-configuration/config.md)** - Config package (core/config)
-- **[Deployment](03-configuration/deploy.md)** - Deployment loader (core/deploy)
-- **[Schema](03-configuration/schema.md)** - YAML schema and validation
+- **[lokstra_registry](02-registry/lokstra_registry)** - Main registry API
+- **[Service Registration](02-registry/service-registration)** - RegisterServiceType, DefineService
+- **[Middleware Registration](02-registry/middleware-registration)** - RegisterMiddlewareType, DefineMiddleware
+- **[Router Registration](02-registry/router-registration)** - Router factories and auto-router
+- **[Configuration](03-configuration/config)** - Config package (core/config)
+- **[Deployment](03-configuration/deploy)** - Deployment loader (core/deploy)
+- **[Schema](03-configuration/schema)** - YAML schema and validation
 
 ### HTTP Client
 Remote service communication:
 
-- **[API Client](04-client/api-client.md)** - HTTP client (api_client package)
-- **[Client Router](04-client/client-router.md)** - ClientRouter for convention-based calls
-- **[Remote Service](04-client/remote-service.md)** - Remote service patterns
+- **[API Client](04-client/api-client)** - HTTP client (api_client package)
+- **[Client Router](04-client/client-router)** - ClientRouter for convention-based calls
+- **[Remote Service](04-client/remote-service)** - Remote service patterns
 
 ### Built-in Middleware
 Ready-to-use middleware:
 
-- **[CORS](05-middleware/cors.md)** - Cross-Origin Resource Sharing
-- **[Request Logger](05-middleware/request-logger.md)** - HTTP request logging
-- **[JWT Auth](05-middleware/jwtauth.md)** - JWT authentication
-- **[Recovery](05-middleware/recovery.md)** - Panic recovery
-- **[Body Limit](05-middleware/body-limit.md)** - Request body size limiter
-- **[Gzip Compression](05-middleware/gzipcompression.md)** - Response compression
-- **[Access Control](05-middleware/accesscontrol.md)** - Permission-based access
-- **[Slow Request Logger](05-middleware/slow-request-logger.md)** - Slow request detection
+- **[CORS](05-middleware/cors)** - Cross-Origin Resource Sharing
+- **[Request Logger](05-middleware/request-logger)** - HTTP request logging
+- **[JWT Auth](05-middleware/jwtauth)** - JWT authentication
+- **[Recovery](05-middleware/recovery)** - Panic recovery
+- **[Body Limit](05-middleware/body-limit)** - Request body size limiter
+- **[Gzip Compression](05-middleware/gzipcompression)** - Response compression
+- **[Access Control](05-middleware/accesscontrol)** - Permission-based access
+- **[Slow Request Logger](05-middleware/slow-request-logger)** - Slow request detection
 
 ### Built-in Services
 Standard services and service APIs:
 
-- **[Database Pool (PostgreSQL)](06-services/dbpool-pg.md)** - PostgreSQL connection pool
-- **[Redis](06-services/redis.md)** - Redis client service
-- **[KV Store](06-services/kvstore.md)** - Key-value store interface
-- **[Metrics (Prometheus)](06-services/metrics.md)** - Prometheus metrics
-- **[Auth Service](06-services/auth-service.md)** - Authentication service
-- **[Auth Flow (Password)](06-services/auth-flow-password.md)** - Password authentication
-- **[Auth Flow (OTP)](06-services/auth-flow-otp.md)** - OTP authentication
-- **[Auth Session (Redis)](06-services/auth-session-redis.md)** - Redis-based sessions
-- **[Auth Token (JWT)](06-services/auth-token-jwt.md)** - JWT token management
-- **[Auth User Repository (PostgreSQL)](06-services/auth-user-repo-pg.md)** - PostgreSQL user storage
-- **[Auth Validator](06-services/auth-validator.md)** - Auth validation utilities
+- **[Database Pool (PostgreSQL)](06-services/dbpool-pg)** - PostgreSQL connection pool
+- **[Redis](06-services/redis)** - Redis client service
+- **[KV Store](06-services/kvstore)** - Key-value store interface
+- **[Metrics (Prometheus)](06-services/metrics)** - Prometheus metrics
+- **[Auth Service](06-services/auth-service)** - Authentication service
+- **[Auth Flow (Password)](06-services/auth-flow-password)** - Password authentication
+- **[Auth Flow (OTP)](06-services/auth-flow-otp)** - OTP authentication
+- **[Auth Session (Redis)](06-services/auth-session-redis)** - Redis-based sessions
+- **[Auth Token (JWT)](06-services/auth-token-jwt)** - JWT token management
+- **[Auth User Repository (PostgreSQL)](06-services/auth-user-repo-pg)** - PostgreSQL user storage
+- **[Auth Validator](06-services/auth-validator)** - Auth validation utilities
 
 ### Helper Packages
 Utility functions and helpers:
 
-- **[common/cast](07-helpers/common-cast.md)** - Type casting utilities
-- **[common/json](07-helpers/common-json.md)** - JSON parsing and error handling
-- **[common/validator](07-helpers/common-validator.md)** - Validation utilities
-- **[common/utils](07-helpers/common-utils.md)** - General utilities
-- **[common/customtype](07-helpers/common-customtype.md)** - Custom types (NullableTime, etc.)
-- **[common/response_writer](07-helpers/common-response-writer.md)** - Response writer helpers
+- **[common/cast](07-helpers/common-cast)** - Type casting utilities
+- **[common/json](07-helpers/common-json)** - JSON parsing and error handling
+- **[common/validator](07-helpers/common-validator)** - Validation utilities
+- **[common/utils](07-helpers/common-utils)** - General utilities
+- **[common/customtype](07-helpers/common-customtype)** - Custom types (NullableTime, etc.)
+- **[common/response_writer](07-helpers/common-response-writer)** - Response writer helpers
 
 ### Advanced Topics
 Internal mechanisms and advanced patterns:
 
-- **[Proxy](08-advanced/proxy.md)** - Remote service proxy (core/proxy)
-- **[Route](08-advanced/route.md)** - Route definition internals (core/route)
-- **[Auto-Router](08-advanced/auto-router.md)** - Auto-router generation
-- **[Handler Utils](08-advanced/lokstra-handler.md)** - Built-in handlers (SPA, static, reverse proxy)
+- **[Proxy](08-advanced/proxy)** - Remote service proxy (core/proxy)
+- **[Route](08-advanced/route)** - Route definition internals (core/route)
+- **[Auto-Router](08-advanced/auto-router)** - Auto-router generation
+- **[Handler Utils](08-advanced/lokstra-handler)** - Built-in handlers (SPA, static, reverse proxy)
 
 ---
 
@@ -161,7 +161,7 @@ if err := server.Run(30 * time.Second); err != nil {
 }
 ```
 
-📖 See: [lokstra](01-core-packages/lokstra.md), [Router](01-core-packages/router.md)
+📖 See: [lokstra](01-core-packages/lokstra), [Router](01-core-packages/router)
 
 ### Using Services with Dependency Injection
 ```go
@@ -191,7 +191,7 @@ func (s *OrderService) CreateOrder(userID int) {
 }
 ```
 
-📖 See: [Service](01-core-packages/service.md), [lokstra_registry](02-registry/lokstra_registry.md)
+📖 See: [Service](01-core-packages/service), [lokstra_registry](02-registry/lokstra_registry)
 
 ### Calling Remote Services
 ```go
@@ -209,7 +209,7 @@ users, err := api_client.FetchAndCast[[]User](client, "/users",
 )
 ```
 
-📖 See: [API Client](04-client/api-client.md), [Client Router](04-client/client-router.md)
+📖 See: [API Client](04-client/api-client), [Client Router](04-client/client-router)
 
 ### Using Middleware
 ```go
@@ -230,7 +230,7 @@ admin.Use("auth", "admin-only")
 admin.GET("/users", listUsers)
 ```
 
-📖 See: [Router](01-core-packages/router.md), [Middleware](05-middleware/)
+📖 See: [Router](01-core-packages/router), [Middleware](05-middleware/)
 
 ### Configuration-Driven Deployment
 ```yaml
@@ -263,7 +263,7 @@ server, err := deploy.LoadFromYamlFile("config.yaml", "production", "api")
 server.Run(30 * time.Second)
 ```
 
-📖 See: [Configuration](03-configuration/), [Schema](03-configuration/schema.md)
+📖 See: [Configuration](03-configuration/), [Schema](03-configuration/schema)
 
 ---
 
@@ -303,7 +303,7 @@ func NewThing(opts ...Option) *Thing
 
 ### By Category
 - **Routing & HTTP**: [01-core-packages](01-core-packages/)
-- **Dependency Injection**: [02-registry](02-registry/), [Service](01-core-packages/service.md)
+- **Dependency Injection**: [02-registry](02-registry/), [Service](01-core-packages/service)
 - **Configuration**: [03-configuration](03-configuration/)
 - **Remote Calls**: [04-client](04-client/)
 - **Pre-built Components**: [05-middleware](05-middleware/), [06-services](06-services/)
@@ -311,9 +311,9 @@ func NewThing(opts ...Option) *Thing
 - **Internals**: [08-advanced](08-advanced/)
 
 ### By Use Case
-- **Building APIs**: Start with [lokstra](01-core-packages/lokstra.md) and [Router](01-core-packages/router.md)
-- **Managing Services**: See [Service](01-core-packages/service.md) and [lokstra_registry](02-registry/lokstra_registry.md)
-- **Microservices**: Check [Remote Service](04-client/remote-service.md) and [Proxy](08-advanced/proxy.md)
+- **Building APIs**: Start with [lokstra](01-core-packages/lokstra) and [Router](01-core-packages/router)
+- **Managing Services**: See [Service](01-core-packages/service) and [lokstra_registry](02-registry/lokstra_registry)
+- **Microservices**: Check [Remote Service](04-client/remote-service) and [Proxy](08-advanced/proxy)
 - **Auth & Security**: Browse [05-middleware](05-middleware/) and [06-services](06-services/)
 - **Deployment**: Read [Configuration](03-configuration/)
 
@@ -344,7 +344,7 @@ Every section links to working examples in the main documentation.
 - **[Introduction](../00-introduction/)** - Getting started and overview
 - **[Essentials](../01-essentials/)** - Core concepts and tutorials
 - **[Examples](../00-introduction/examples/)** - Progressive learning examples
-- **[Architecture](../00-introduction/architecture.md)** - System design and patterns
+- **[Architecture](../00-introduction/architecture)** - System design and patterns
 
 ---
 

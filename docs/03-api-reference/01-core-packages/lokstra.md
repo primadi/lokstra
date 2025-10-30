@@ -23,7 +23,7 @@ import "github.com/primadi/lokstra"
 type Server = server.Server
 ```
 
-Server container that manages one or more Apps. See [Server documentation](server.md) for details.
+Server container that manages one or more Apps. See [Server documentation](server) for details.
 
 **Example:**
 ```go
@@ -37,7 +37,7 @@ server := lokstra.NewServer("my-server", app1, app2)
 type App = app.App
 ```
 
-HTTP listener that serves routers. See [App documentation](app.md) for details.
+HTTP listener that serves routers. See [App documentation](app) for details.
 
 **Example:**
 ```go
@@ -51,7 +51,7 @@ app := lokstra.NewApp("api", ":8080", router)
 type Router = router.Router
 ```
 
-HTTP router interface for registering routes and middleware. See [Router documentation](router.md) for details.
+HTTP router interface for registering routes and middleware. See [Router documentation](router) for details.
 
 **Example:**
 ```go
@@ -66,7 +66,7 @@ router.GET("/users", getUsersHandler)
 type RequestContext = request.Context
 ```
 
-Request context passed to handlers and middleware. See [Request Context documentation](request.md) for details.
+Request context passed to handlers and middleware. See [Request Context documentation](request) for details.
 
 **Example:**
 ```go
@@ -135,7 +135,7 @@ app := lokstra.NewApp("api", ":8080", api)
 ```
 
 **See Also:**
-- [Router documentation](router.md) for detailed router API
+- [Router documentation](router) for detailed router API
 - [NewRouterWithEngine](#newrouterwithengine) for custom engine
 
 ---
@@ -218,7 +218,7 @@ app := lokstra.NewApp("api", "127.0.0.1:8080", router)
 - `"unix:/tmp/api.sock"` - Unix domain socket
 
 **See Also:**
-- [App documentation](app.md) for detailed app API
+- [App documentation](app) for detailed app API
 - [NewAppWithConfig](#newappwithconfig) for custom configuration
 
 ---
@@ -317,7 +317,7 @@ if err := server.Run(30 * time.Second); err != nil {
 ```
 
 **See Also:**
-- [Server documentation](server.md) for lifecycle management
+- [Server documentation](server) for lifecycle management
 
 ---
 
@@ -390,8 +390,8 @@ user, err := lokstra.FetchAndCast[*User](client, "/users/123",
 - Any JSON-deserializable type
 
 **See Also:**
-- [API Client documentation](../04-client/api-client.md) for complete client API
-- [FetchOption documentation](../04-client/api-client.md#fetchoption) for all options
+- [API Client documentation](../04-client/api-client) for complete client API
+- [FetchOption documentation](../04-client/api-client#fetchoption) for all options
 
 ---
 
@@ -478,17 +478,17 @@ func authMiddleware(c *lokstra.RequestContext) error {
 
 ## See Also
 
-- **[Router](router.md)** - Complete router API
-- **[App](app.md)** - App lifecycle and configuration
-- **[Server](server.md)** - Server management
-- **[Request Context](request.md)** - Request handling
-- **[Response](response.md)** - Response formatting
-- **[API Client](../04-client/api-client.md)** - HTTP client
+- **[Router](router)** - Complete router API
+- **[App](app)** - App lifecycle and configuration
+- **[Server](server)** - Server management
+- **[Request Context](request)** - Request handling
+- **[Response](response)** - Response formatting
+- **[API Client](../04-client/api-client)** - HTTP client
 
 ---
 
 ## Related Guides
 
-- **[Quick Start](../../00-introduction/quick-start.md)** - Build your first app
+- **[Quick Start](../../00-introduction/quick-start)** - Build your first app
 - **[Router Essentials](../../01-essentials/01-router/)** - Learn routing basics
 - **[App & Server Guide](../../01-essentials/05-app-and-server/)** - Lifecycle management

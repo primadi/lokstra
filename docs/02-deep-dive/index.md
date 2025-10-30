@@ -200,7 +200,7 @@ Every example demonstrates **production-ready patterns**.
 ```
 01-all-handler-forms/
 ├── main.go              # Working code
-├── README.md            # Pattern explanation
+├── index            # Pattern explanation
 ├── test.http            # Test requests
 └── benchmarks_test.go   # Performance tests (some examples)
 ```

@@ -360,7 +360,7 @@ Lokstra supports **29 total handler forms**!
 - `func() error` - No params, just error
 - And 21 more variations!
 
-**See**: [Deep Dive: All 29 Handler Forms](../../../02-deep-dive/router/handler-forms.md)
+**See**: [Deep Dive: All 29 Handler Forms](../../../02-deep-dive/router/handler-forms)
 
 ---
 

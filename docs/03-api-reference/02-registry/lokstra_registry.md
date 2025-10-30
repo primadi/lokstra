@@ -791,11 +791,11 @@ func main() {
 
 ## See Also
 
-- **[Service](../01-core-packages/service.md)** - Lazy service loading
-- **[Service Registration](./service-registration.md)** - Detailed registration patterns
-- **[Middleware Registration](./middleware-registration.md)** - Middleware patterns
-- **[Router Registration](./router-registration.md)** - Router factories
-- **[Deploy](../03-configuration/deploy.md)** - Deployment configuration
+- **[Service](../01-core-packages/service)** - Lazy service loading
+- **[Service Registration](./service-registration)** - Detailed registration patterns
+- **[Middleware Registration](./middleware-registration)** - Middleware patterns
+- **[Router Registration](./router-registration)** - Router factories
+- **[Deploy](../03-configuration/deploy)** - Deployment configuration
 
 ---
 

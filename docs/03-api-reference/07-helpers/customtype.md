@@ -756,10 +756,10 @@ func GetOrderHandler(w http.ResponseWriter, r *http.Request) {
 
 ## Related Documentation
 
-- [Helpers Overview](README.md) - All helper packages
-- [Cast Package](cast.md) - Type conversion utilities
-- [Validator Package](validator.md) - Struct validation
+- [Helpers Overview](index) - All helper packages
+- [Cast Package](cast) - Type conversion utilities
+- [Validator Package](validator) - Struct validation
 
 ---
 
-**Next:** [JSON Package](json.md) - JSON utilities
+**Next:** [JSON Package](json) - JSON utilities

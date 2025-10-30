@@ -601,11 +601,11 @@ func ProcessForm(formData map[string][]string) (*FormData, error) {
 
 ## Related Documentation
 
-- [Helpers Overview](README.md) - All helper packages
-- [Utils Package](utils.md) - General utilities
-- [Validator Package](validator.md) - Struct validation
-- [Custom Types](customtype.md) - Custom type implementations
+- [Helpers Overview](index) - All helper packages
+- [Utils Package](utils) - General utilities
+- [Validator Package](validator) - Struct validation
+- [Custom Types](customtype) - Custom type implementations
 
 ---
 
-**Next:** [Utils Package](utils.md) - General utility functions
+**Next:** [Utils Package](utils) - General utility functions

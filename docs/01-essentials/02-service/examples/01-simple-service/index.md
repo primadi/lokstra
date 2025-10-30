@@ -310,10 +310,10 @@ users := userService.Get().GetAll()
 - [Example 04 - Service as Router](../04-service-as-router/) - Auto-generate endpoints
 
 **Related**:
-- [Main Service Guide](../../README.md)
-- [Router Guide](../../../01-router/README.md)
+- [Main Service Guide](../..)
+- [Router Guide](../../../01-router)
 
 ---
 
-**Back**: [Service Guide](../../README.md)  
+**Back**: [Service Guide](../..)  
 **Next**: [02 - Performance Comparison](../02-lazyload-vs-getservice/)

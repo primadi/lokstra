@@ -10,14 +10,14 @@ Lokstra provides a comprehensive collection of built-in middleware for common HT
 
 | Middleware | Purpose | Priority |
 |------------|---------|----------|
-| **[Recovery](./recovery.md)** | Panic recovery | First |
-| **[Request Logger](./request-logger.md)** | Request logging | Early |
-| **[Slow Request Logger](./slow-request-logger.md)** | Slow request detection | Early |
-| **[CORS](./cors.md)** | Cross-origin handling | Early |
-| **[Body Limit](./body-limit.md)** | Request size protection | Before parsing |
-| **[Gzip Compression](./gzip-compression.md)** | Response compression | Late |
-| **[JWT Auth](./jwt-auth.md)** | Authentication | Before handlers |
-| **[Access Control](./access-control.md)** | Authorization | After JWT Auth |
+| **[Recovery](./recovery)** | Panic recovery | First |
+| **[Request Logger](./request-logger)** | Request logging | Early |
+| **[Slow Request Logger](./slow-request-logger)** | Slow request detection | Early |
+| **[CORS](./cors)** | Cross-origin handling | Early |
+| **[Body Limit](./body-limit)** | Request size protection | Before parsing |
+| **[Gzip Compression](./gzip-compression)** | Response compression | Late |
+| **[JWT Auth](./jwt-auth)** | Authentication | Before handlers |
+| **[Access Control](./access-control)** | Authorization | After JWT Auth |
 
 ---
 
@@ -587,9 +587,9 @@ cors.Middleware([]string{"*"})
 
 ## See Also
 
-- **[Router](../01-core-packages/router.md)** - Router configuration
-- **[Request](../01-core-packages/request.md)** - Request handling
-- **[Response](../01-core-packages/response.md)** - Response formatting
+- **[Router](../01-core-packages/router)** - Router configuration
+- **[Request](../01-core-packages/request)** - Request handling
+- **[Response](../01-core-packages/response)** - Response formatting
 - **[Registry](../02-registry/)** - Middleware registration
 
 ---

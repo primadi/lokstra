@@ -810,10 +810,10 @@ lokstra_registry.RegisterServiceType("user-service",
 
 ## See Also
 
-- **[lokstra_registry](./lokstra_registry.md)** - Registry API
-- **[Service](../01-core-packages/service.md)** - Lazy service loading
-- **[Middleware Registration](./middleware-registration.md)** - Middleware patterns
-- **[Deploy](../03-configuration/deploy.md)** - Deployment configuration
+- **[lokstra_registry](./lokstra_registry)** - Registry API
+- **[Service](../01-core-packages/service)** - Lazy service loading
+- **[Middleware Registration](./middleware-registration)** - Middleware patterns
+- **[Deploy](../03-configuration/deploy)** - Deployment configuration
 
 ---
 

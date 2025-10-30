@@ -324,7 +324,7 @@ func Home() *response.Response {
 
     <div class="section">
         <h2>📖 Documentation</h2>
-        <p>See <code>index.md</code> for optimization techniques</p>
+        <p>See <code>index</code> for optimization techniques</p>
         <p>Use <code>test.http</code> for API testing</p>
         <p><strong>Benchmark:</strong> <code>go test -bench=. -benchmem</code></p>
     </div>

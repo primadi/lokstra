@@ -376,7 +376,7 @@ router-definitions:
 
 ## See Also
 
-- **[Router API](../03-api-reference/01-core-packages/router.md)**
+- **[Router API](../03-api-reference/01-core-packages/router)**
 - **[Middleware Configuration](../03-api-reference/05-middleware/)**
-- **[Schema Documentation](../03-api-reference/03-configuration/schema.md)**
-- **[Migration Guide](../MIGRATION-SCHEMA-V2.md)**
+- **[Schema Documentation](../03-api-reference/03-configuration/schema)**
+- **[Migration Guide](../MIGRATION-SCHEMA-V2)**

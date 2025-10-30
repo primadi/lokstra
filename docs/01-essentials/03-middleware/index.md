@@ -575,8 +575,8 @@ You now understand:
 👉 [04 - Configuration](../04-configuration/) - Learn config patterns
 
 **Related**:
-- [Deep Dive: Custom Middleware](../../02-deep-dive/middleware/custom-middleware.md)
-- [Guide: Authentication Strategies](../../04-guides/authentication.md)
+- [Deep Dive: Custom Middleware](../../02-deep-dive/middleware/custom-middleware)
+- [Guide: Authentication Strategies](../../04-guides/authentication)
 
 ---
 
@@ -607,4 +607,4 @@ r.GET("/path", handler, "name3")
 
 ---
 
-**Continue learning** → [04 - Configuration](../04-configuration/README.md)
+**Continue learning** → [04 - Configuration](../04-configuration)

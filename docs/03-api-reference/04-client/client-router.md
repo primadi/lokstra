@@ -747,9 +747,9 @@ if err != nil {
 
 ## See Also
 
-- **[API Client](./api-client.md)** - FetchAndCast and options
-- **[RemoteService](./remote-service.md)** - Remote service patterns
-- **[Router](../01-core-packages/router.md)** - Router configuration
+- **[API Client](./api-client)** - FetchAndCast and options
+- **[RemoteService](./remote-service)** - Remote service patterns
+- **[Router](../01-core-packages/router)** - Router configuration
 
 ---
 

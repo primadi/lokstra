@@ -24,7 +24,7 @@ The advanced section provides in-depth guidance on:
 
 ## Topics
 
-### 1. [Testing Strategies](testing.md)
+### 1. [Testing Strategies](testing)
 
 Learn how to test Lokstra applications effectively:
 - Unit testing services and handlers
@@ -34,7 +34,7 @@ Learn how to test Lokstra applications effectively:
 - Test fixtures and helpers
 - Benchmark testing
 
-### 2. [Deployment Patterns](deployment.md)
+### 2. [Deployment Patterns](deployment)
 
 Best practices for deploying Lokstra applications:
 - Environment configuration
@@ -44,7 +44,7 @@ Best practices for deploying Lokstra applications:
 - Blue-green and canary deployments
 - Health checks and readiness probes
 
-### 3. [Performance Optimization](performance.md)
+### 3. [Performance Optimization](performance)
 
 Optimize your Lokstra applications:
 - Database query optimization
@@ -54,7 +54,7 @@ Optimize your Lokstra applications:
 - Memory management
 - Profiling and benchmarking
 
-### 4. [Custom Services](custom-services.md)
+### 4. [Custom Services](custom-services)
 
 Build your own Lokstra services:
 - Service interface design
@@ -64,7 +64,7 @@ Build your own Lokstra services:
 - Testing custom services
 - Service registration
 
-### 5. [Security Best Practices](security.md)
+### 5. [Security Best Practices](security)
 
 Secure your Lokstra applications:
 - Authentication patterns
@@ -76,7 +76,7 @@ Secure your Lokstra applications:
 - Rate limiting
 - Secret management
 
-### 6. [Error Handling](error-handling.md)
+### 6. [Error Handling](error-handling)
 
 Comprehensive error management:
 - Error types and patterns
@@ -86,7 +86,7 @@ Comprehensive error management:
 - Error monitoring
 - User-friendly error messages
 
-### 7. [Monitoring & Observability](monitoring.md)
+### 7. [Monitoring & Observability](monitoring)
 
 Monitor and observe your applications:
 - Metrics collection (Prometheus)
@@ -101,26 +101,26 @@ Monitor and observe your applications:
 Choose a topic based on your needs:
 
 **For Production Deployment:**
-1. Start with [Deployment Patterns](deployment.md)
-2. Then review [Security Best Practices](security.md)
-3. Set up [Monitoring & Observability](monitoring.md)
+1. Start with [Deployment Patterns](deployment)
+2. Then review [Security Best Practices](security)
+3. Set up [Monitoring & Observability](monitoring)
 
 **For Performance:**
-1. Read [Performance Optimization](performance.md)
-2. Implement proper [Testing Strategies](testing.md)
+1. Read [Performance Optimization](performance)
+2. Implement proper [Testing Strategies](testing)
 3. Set up monitoring to track improvements
 
 **For Custom Development:**
-1. Learn [Custom Services](custom-services.md)
-2. Follow [Testing Strategies](testing.md)
-3. Apply [Error Handling](error-handling.md) patterns
+1. Learn [Custom Services](custom-services)
+2. Follow [Testing Strategies](testing)
+3. Apply [Error Handling](error-handling) patterns
 
 ## Related Documentation
 
-- [Core Packages](../01-core-packages/README.md) - Framework fundamentals
-- [Services](../06-services/README.md) - Built-in services
-- [Helpers](../07-helpers/README.md) - Utility functions
+- [Core Packages](../01-core-packages) - Framework fundamentals
+- [Services](../06-services) - Built-in services
+- [Helpers](../07-helpers) - Utility functions
 
 ---
 
-**Note:** This section assumes you're familiar with Lokstra basics. If you're new, start with the [Quick Start Guide](../../01-essentials/README.md).
+**Note:** This section assumes you're familiar with Lokstra basics. If you're new, start with the [Quick Start Guide](../../01-essentials).

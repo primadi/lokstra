@@ -96,7 +96,7 @@ func main() {
 3. Close all apps
 4. Exit
 
-📖 **Learn more**: [App & Server Guide](../01-essentials/05-app-and-server/README.md)
+📖 **Learn more**: [App & Server Guide](../01-essentials/05-app-and-server)
 
 ---
 
@@ -160,7 +160,7 @@ TCP Connection → App.ServeHTTP() → Router.ServeHTTP()
                                    Handler
 ```
 
-📖 **Learn more**: [App & Server Guide](../01-essentials/05-app-and-server/README.md)
+📖 **Learn more**: [App & Server Guide](../01-essentials/05-app-and-server)
 
 ---
 
@@ -287,7 +287,7 @@ Step 5: Execute middleware chain
   [logging] → [auth] → [handler]
 
 
-📖 **Learn more**: [Router Guide](../01-essentials/01-router/README.md)
+📖 **Learn more**: [Router Guide](../01-essentials/01-router)
 
 ---
 ## 🔧 Component 4: Service
@@ -997,7 +997,7 @@ func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
 
 **Key benefit**: Deploy as monolith OR microservices **without code changes!**
 
-📖 **Learn more**: [Service Guide](../01-essentials/02-service/README.md)
+📖 **Learn more**: [Service Guide](../01-essentials/02-service)
 
 ---
 
@@ -1105,7 +1105,7 @@ r.Use("auth", "logging")
 r.Use(corsMiddleware, "auth")
 ```
 
-📖 **Learn more**: [Middleware Guide](../01-essentials/03-middleware/README.md)
+📖 **Learn more**: [Middleware Guide](../01-essentials/03-middleware)
 
 ---
 
@@ -1387,7 +1387,7 @@ external-service-definitions:
 
 **Use case:** Third-party services not in your topology
 
-📖 **Learn more**: [Configuration Guide](../01-essentials/04-configuration/README.md)
+📖 **Learn more**: [Configuration Guide](../01-essentials/04-configuration)
 
 ---
 
@@ -1668,17 +1668,17 @@ Registry → Lazy Services → Handlers/Services → External Resources
 ## 📚 Learn More
 
 **Next Steps**:
-- [Essentials Guide](../01-essentials/README.md) - Hands-on tutorials
-- [Deep Dive](../02-deep-dive/README.md) - Advanced patterns
-- [API Reference](../03-api-reference/README.md) - Complete API docs
+- [Essentials Guide](../01-essentials) - Hands-on tutorials
+- [Deep Dive](../02-deep-dive) - Advanced patterns
+- [API Reference](../03-api-reference) - Complete API docs
 
 **Specific Components**:
-- [Router](../01-essentials/01-router/README.md)
-- [Service](../01-essentials/02-service/README.md)
-- [Middleware](../01-essentials/03-middleware/README.md)
-- [Configuration](../01-essentials/04-configuration/README.md)
-- [App & Server](../01-essentials/05-app-and-server/README.md)
+- [Router](../01-essentials/01-router)
+- [Service](../01-essentials/02-service)
+- [Middleware](../01-essentials/03-middleware)
+- [Configuration](../01-essentials/04-configuration)
+- [App & Server](../01-essentials/05-app-and-server)
 
 ---
 
-**Ready to start building?** 👉 [Quick Start](quick-start.md)
+**Ready to start building?** 👉 [Quick Start](quick-start)

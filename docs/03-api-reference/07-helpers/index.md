@@ -26,12 +26,12 @@ The `common` package contains utility functions and types that are used througho
 
 | Package | Purpose | Key Features |
 |---------|---------|--------------|
-| **[cast](cast.md)** | Type conversion utilities | ToInt, ToFloat64, ToTime, ToType[T], ToStruct |
-| **[utils](utils.md)** | General utilities | Map helpers, slice helpers, hash, parsing |
-| **[validator](validator.md)** | Struct validation | Tag-based validation, custom validators, caching |
-| **[customtype](customtype.md)** | Custom types | DateTime, Date, Decimal with JSON support |
-| **[json](json.md)** | JSON utilities | Parse with error recovery |
-| **[response_writer](response-writer.md)** | HTTP response helpers | JSON responses, error handling |
+| **[cast](cast)** | Type conversion utilities | ToInt, ToFloat64, ToTime, ToType[T], ToStruct |
+| **[utils](utils)** | General utilities | Map helpers, slice helpers, hash, parsing |
+| **[validator](validator)** | Struct validation | Tag-based validation, custom validators, caching |
+| **[customtype](customtype)** | Custom types | DateTime, Date, Decimal with JSON support |
+| **[json](json)** | JSON utilities | Parse with error recovery |
+| **[response_writer](response-writer)** | HTTP response helpers | JSON responses, error handling |
 
 ## Quick Start
 
@@ -134,7 +134,7 @@ IsEmpty(val any) bool
 - Unmarshaling configuration values
 - Converting database results to structs
 
-[Full documentation →](cast.md)
+[Full documentation →](cast)
 
 ### utils Package
 
@@ -163,7 +163,7 @@ HashPassword(string) (string, error)
 IsNil(any) bool
 ```
 
-[Full documentation →](utils.md)
+[Full documentation →](utils)
 
 ### validator Package
 
@@ -188,7 +188,7 @@ IsNil(any) bool
 `validate:"oneof=admin user"`     // Must be one of values
 ```
 
-[Full documentation →](validator.md)
+[Full documentation →](validator)
 
 ### customtype Package
 
@@ -207,7 +207,7 @@ customtype.Decimal     // High-precision decimal numbers
 - Null value handling
 - Validation support
 
-[Full documentation →](customtype.md)
+[Full documentation →](customtype)
 
 ### json Package
 
@@ -218,7 +218,7 @@ customtype.Decimal     // High-precision decimal numbers
 - Error recovery for malformed JSON
 - Pretty printing
 
-[Full documentation →](json.md)
+[Full documentation →](json)
 
 ### response_writer Package
 
@@ -230,7 +230,7 @@ customtype.Decimal     // High-precision decimal numbers
 - Content-Type handling
 - Status code management
 
-[Full documentation →](response-writer.md)
+[Full documentation →](response-writer)
 
 ## Best Practices
 
@@ -356,9 +356,9 @@ import (
 
 ## Related Documentation
 
-- [Core Packages](../01-core-packages/README.md) - Core framework components
-- [Services](../06-services/README.md) - Built-in services
-- [Configuration](../03-configuration/README.md) - Configuration system
+- [Core Packages](../01-core-packages) - Core framework components
+- [Services](../06-services) - Built-in services
+- [Configuration](../03-configuration) - Configuration system
 
 ---
 

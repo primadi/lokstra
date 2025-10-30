@@ -168,7 +168,7 @@ router-definitions:
     hidden: [InternalMethod]
 ```
 
-**[Learn More →](./03-api-reference/02-registry/router-registration.md)**
+**[Learn More →](./03-api-reference/02-registry/router-registration)**
 
 ---
 
@@ -223,7 +223,7 @@ router-definitions:
 - A/B testing
 - Legacy URL migration
 
-**[Learn More →](./03-api-reference/03-configuration/schema.md#path-rewrites)**
+**[Learn More →](./03-api-reference/03-configuration/schema#path-rewrites)**
 
 ---
 
@@ -265,8 +265,8 @@ func createUser(ctx *request.Context, params *CreateUserParams) error {
 - **[Multi-Deployment](./00-introduction/examples/04-multi-deployment/)** - Monolith vs microservices
 
 **Comparing Approaches:**
-- **[Code vs Config](./00-introduction/CODE-VS-CONFIG.md)** - When to use which approach
-- **[Architecture Overview](./00-introduction/architecture.md)** - Framework design principles
+- **[Code vs Config](./00-introduction/CODE-VS-CONFIG)** - When to use which approach
+- **[Architecture Overview](./00-introduction/architecture)** - Framework design principles
 
 ---
 
@@ -292,12 +292,12 @@ Each guide includes:
 **Complete technical documentation:**
 
 - **[Registry API](./03-api-reference/02-registry/)**
-  - [Service Registration](./03-api-reference/02-registry/service-registration.md)
-  - [Router Registration](./03-api-reference/02-registry/router-registration.md)
+  - [Service Registration](./03-api-reference/02-registry/service-registration)
+  - [Router Registration](./03-api-reference/02-registry/router-registration)
   
 - **[Configuration](./03-api-reference/03-configuration/)**
-  - [YAML Schema](./03-api-reference/03-configuration/schema.md) - Complete reference
-  - [Deployment Patterns](./03-api-reference/03-configuration/deploy.md) - Topology strategies
+  - [YAML Schema](./03-api-reference/03-configuration/schema) - Complete reference
+  - [Deployment Patterns](./03-api-reference/03-configuration/deploy) - Topology strategies
 
 **Advanced Topics:**
 - Auto-generated routers
@@ -331,10 +331,10 @@ Each guide includes:
 
 ## Community & Support
 
-- 📖 **[Full Documentation](./index.md)** - Complete guide
+- 📖 **[Full Documentation](./index)** - Complete guide
 - 💡 **[Examples](./00-introduction/examples/)** - Working code samples
 - 🐛 **[GitHub Issues](https://github.com/primadi/lokstra/issues)** - Bug reports & features
-- 🗺️ **[Roadmap](./ROADMAP.md)** - Upcoming features
+- 🗺️ **[Roadmap](./ROADMAP)** - Upcoming features
 
 ---
 
@@ -368,13 +368,13 @@ Each guide includes:
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
     <h3>🔧 Configuration</h3>
     <p>YAML schema & patterns</p>
-    <a href="./03-api-reference/03-configuration/schema.md">Schema Reference →</a>
+    <a href="./03-api-reference/03-configuration/schema">Schema Reference →</a>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
     <h3>🏗️ Architecture</h3>
     <p>Design principles</p>
-    <a href="./00-introduction/architecture.md">Framework Design →</a>
+    <a href="./00-introduction/architecture">Framework Design →</a>
   </div>
 </div>
 

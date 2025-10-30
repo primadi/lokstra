@@ -464,7 +464,7 @@ func Home() *response.Response {
 
     <div class="section">
         <h2>📖 Documentation</h2>
-        <p>See <code>index.md</code> for detailed explanation</p>
+        <p>See <code>index</code> for detailed explanation</p>
         <p>Use <code>test.http</code> for API testing</p>
     </div>
 </body>

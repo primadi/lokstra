@@ -936,9 +936,9 @@ config/
 
 ## See Also
 
-- **[Deploy](./deploy.md)** - Deployment topology management
-- **[Schema](./schema.md)** - YAML schema definitions
-- **[lokstra_registry](../02-registry/lokstra_registry.md)** - Registry API
+- **[Deploy](./deploy)** - Deployment topology management
+- **[Schema](./schema)** - YAML schema definitions
+- **[lokstra_registry](../02-registry/lokstra_registry)** - Registry API
 
 ---
 

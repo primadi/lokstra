@@ -42,7 +42,7 @@ Learn HTTP routing, handler registration, and route organization.
 - Route groups for API versioning
 - Per-route vs global middleware
 
-👉 [Start with Router](01-router/README.md)
+👉 [Start with Router](01-router)
 
 ---
 
@@ -61,7 +61,7 @@ Learn service patterns, dependency injection, and service-as-router.
 - Dependency injection
 - **Service methods → HTTP endpoints automatically!**
 
-👉 [Continue to Service](02-service/README.md)
+👉 [Continue to Service](02-service)
 
 ---
 
@@ -80,7 +80,7 @@ Learn request/response processing, middleware patterns, and built-in middleware.
 - Global vs per-route middleware
 - Using built-in middleware
 
-👉 [Continue to Middleware](03-middleware/README.md)
+👉 [Continue to Middleware](03-middleware)
 
 ---
 
@@ -99,7 +99,7 @@ Learn YAML configuration, environment variables, and configuration strategies.
 - Environment variables in YAML
 - Multi-file configuration
 
-👉 [Continue to Configuration](04-configuration/README.md)
+👉 [Continue to Configuration](04-configuration)
 
 ---
 
@@ -117,7 +117,7 @@ Learn application lifecycle, server management, and graceful shutdown.
 - Server manages apps
 - Automatic graceful shutdown
 
-👉 [Continue to App & Server](05-app-and-server/README.md)
+👉 [Continue to App & Server](05-app-and-server)
 
 ---
 
@@ -140,7 +140,7 @@ Build a complete REST API using everything you've learned.
 - Project structure best practices
 - Production-ready patterns
 
-👉 [Final Project](06-putting-it-together/README.md)
+👉 [Final Project](06-putting-it-together)
 
 ---
 
@@ -177,7 +177,7 @@ Day 2 Afternoon: 06-Complete Example      (1 hour)
 
 ### Fast Track (1 hour):
 ```
-1. Read each README.md
+1. Read each index
 2. Run one example per section
 3. Build the final project
 ```
@@ -212,7 +212,7 @@ curl http://localhost:3000/ping
 ```
 01-basic-routes/
 ├── main.go          # Working code
-├── README.md        # What it demonstrates
+├── index        # What it demonstrates
 └── test.http        # Test requests (optional)
 ```
 
@@ -234,7 +234,7 @@ Each section builds on previous knowledge. Skipping will cause confusion.
 ### Stuck? 
 - Re-read the section
 - Check the complete example in section 06
-- Look at [Deep Dive](../02-deep-dive/README.md) for more details
+- Look at [Deep Dive](../02-deep-dive) for more details
 - Ask in [Discussions](https://github.com/primadi/lokstra/discussions)
 
 ---
@@ -250,14 +250,14 @@ Each section builds on previous knowledge. Skipping will cause confusion.
 
 ### Ready For:
 - 🚀 Building real applications
-- 🚀 Exploring [Deep Dive](../02-deep-dive/README.md) for advanced features
-- 🚀 Reading [Complete Examples](../05-examples/README.md)
-- 🚀 Implementing [Specific Patterns](../04-guides/README.md)
+- 🚀 Exploring [Deep Dive](../02-deep-dive) for advanced features
+- 🚀 Reading [Complete Examples](../05-examples)
+- 🚀 Implementing [Specific Patterns](../04-guides)
 
 ### Next Steps:
 1. **Build Something!** - Best way to solidify learning
-2. **Explore [Deep Dive](../02-deep-dive/README.md)** - Learn advanced patterns
-3. **Study [Complete Examples](../05-examples/README.md)** - Real-world applications
+2. **Explore [Deep Dive](../02-deep-dive)** - Learn advanced patterns
+3. **Study [Complete Examples](../05-examples)** - Real-world applications
 
 ---
 
@@ -289,4 +289,4 @@ Track your progress through Essentials:
 
 ---
 
-**Ready to start?** 👉 [Begin with Router](01-router/README.md)
+**Ready to start?** 👉 [Begin with Router](01-router)

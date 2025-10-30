@@ -842,14 +842,14 @@ You now understand:
 ### Next Steps:
 
 **Continue Learning**:  
-1. 👉 **[03 - Middleware](../03-middleware/README.md)** - Cross-cutting concerns
-2. 👉 **[04 - Configuration](../04-configuration/README.md)** - Config-driven services
-3. 👉 **[05 - App and Server](../05-app-and-server/README.md)** - Application lifecycle
+1. 👉 **[03 - Middleware](../03-middleware)** - Cross-cutting concerns
+2. 👉 **[04 - Configuration](../04-configuration)** - Config-driven services
+3. 👉 **[05 - App and Server](../05-app-and-server)** - Application lifecycle
 
 **Deep Dive Topics**:
-- [Service Lifecycle](../../02-deep-dive/service/lifecycle.md) (coming soon)
-- [Service as Router Details](../../02-deep-dive/service/router-generation.md) (coming soon)
-- [Testing Services](../../02-deep-dive/service/testing.md) (coming soon)
+- [Service Lifecycle](../../02-deep-dive/service/lifecycle) (coming soon)
+- [Service as Router Details](../../02-deep-dive/service/router-generation) (coming soon)
+- [Testing Services](../../02-deep-dive/service/testing) (coming soon)
 
 ---
 
@@ -881,4 +881,4 @@ lokstra_registry.MustGetServiceAsRouter("name")
 
 ---
 
-**Continue learning** → [03 - Middleware](../03-middleware/README.md)
+**Continue learning** → [03 - Middleware](../03-middleware)

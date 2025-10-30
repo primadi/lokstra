@@ -648,9 +648,9 @@ client.Timeout = 10 * time.Second
 
 ## See Also
 
-- **[ClientRouter](./client-router.md)** - Client router management
-- **[RemoteService](./remote-service.md)** - Remote service patterns
-- **[Response](../01-core-packages/response.md)** - Response formatting
+- **[ClientRouter](./client-router)** - Client router management
+- **[RemoteService](./remote-service)** - Remote service patterns
+- **[Response](../01-core-packages/response)** - Response formatting
 
 ---
 
