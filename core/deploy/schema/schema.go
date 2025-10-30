@@ -111,8 +111,9 @@ type MiddlewareDef struct {
 
 // ServiceDef defines a service instance
 type ServiceDef struct {
-	Name      string         `yaml:"name"`
-	Type      string         `yaml:"type"`       // Factory type
-	DependsOn []string       `yaml:"depends-on"` // Dependencies (can be "paramName:serviceName")
-	Config    map[string]any `yaml:"config"`     // Optional config
+	Name        string         `yaml:"name"`
+	Type        string         `yaml:"type"`        // Factory type
+	DependsOn   []string       `yaml:"depends-on"`  // Dependencies (can be "paramName:serviceName")
+	Middlewares []string       `yaml:"middlewares"` // Default middlewares for auto-generated router
+	Config      map[string]any `yaml:"config"`      // Optional config
 }

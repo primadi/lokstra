@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -260,6 +261,6 @@ func main() {
 
 	app.PrintStartInfo()
 	if err := app.Run(30 * time.Second); err != nil {
-		panic(err) // Or use log.Fatal(err)
+		log.Fatal("❌ Failed to start server:", err)
 	}
 }

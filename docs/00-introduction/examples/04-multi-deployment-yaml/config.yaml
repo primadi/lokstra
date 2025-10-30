@@ -23,21 +23,24 @@ service-definitions:
   # Infrastructure layer - Repositories
   user-repository:
     type: user-repository-factory
+    config:
+      dsn: "user:password@tcp(localhost:3306)/users_db"
 
   order-repository:
     type: order-repository-factory
+    config:
+      dsn: "user:password@tcp(localhost:3306)/orders_db"
 
   # Application layer - Services
   user-service:
     type: user-service-factory
-    depends-on:
-      - user-repository
+    depends-on: [user-repository]
+    middlewares: [ "recovery", "before-after-logger"]    
 
   order-service:
     type: order-service-factory
-    depends-on:
-      - order-repository
-      - user-service  # Can be local OR remote
+    depends-on: [order-repository, user-service]
+    middlewares: [ "recovery", "before-after-logger"]
 
 # ========================================
 # Router Definitions (Optional Overrides)

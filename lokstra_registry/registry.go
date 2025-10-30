@@ -85,17 +85,26 @@ func RegisterMiddlewareFactory(mwType string, factory any, opts ...RegisterOptio
 	var deployFactory deploy.MiddlewareFactory
 
 	// Check if it's already the right signature
-	if f, ok := factory.(func(map[string]any) any); ok {
+	switch f := factory.(type) {
+	case MiddlewareFactory:
 		deployFactory = f
-	} else if f, ok := factory.(func(map[string]any) request.HandlerFunc); ok {
-		// Wrap old-style factory that returns request.HandlerFunc
-		deployFactory = func(config map[string]any) any {
-			return f(config)
+	case func(map[string]any) request.HandlerFunc:
+		deployFactory = func(cfg map[string]any) any {
+			return f(cfg)
 		}
-	} else {
-		panic(fmt.Sprintf("invalid middleware factory signature for type %s: must be func(map[string]any) any or func(map[string]any) request.HandlerFunc", mwType))
+	case func(map[string]any) any:
+		deployFactory = f
+	case func() request.HandlerFunc:
+		deployFactory = func(cfg map[string]any) any {
+			return f()
+		}
+	case func() any:
+		deployFactory = func(cfg map[string]any) any {
+			return f()
+		}
+	default:
+		panic(fmt.Sprintf("invalid middleware factory signature: %T", factory))
 	}
-
 	deploy.Global().RegisterMiddlewareType(mwType, deployFactory, deployOpts...)
 }
 

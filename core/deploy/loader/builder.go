@@ -202,6 +202,11 @@ func LoadAndBuild(configPaths []string) error {
 			configMap["depends-on"] = svc.DependsOn
 		}
 
+		// Add middlewares to config if specified
+		if len(svc.Middlewares) > 0 {
+			configMap["middlewares"] = svc.Middlewares
+		}
+
 		// Register using new unified API (string factory type)
 		registry.RegisterLazyService(name, svc.Type, configMap)
 	}

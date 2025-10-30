@@ -73,6 +73,32 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 				}
 			}
 
+			// Collect middleware names from both sources
+			var middlewareNames []string
+
+			// Source 1: Middlewares from RegisterServiceType (metadata.MiddlewareNames)
+			if len(metadata.MiddlewareNames) > 0 {
+				middlewareNames = append(middlewareNames, metadata.MiddlewareNames...)
+			}
+
+			// Source 2: Middlewares from service-definitions YAML (serviceDef.Middlewares)
+			if len(serviceDef.Middlewares) > 0 {
+				middlewareNames = append(middlewareNames, serviceDef.Middlewares...)
+			}
+
+			// Create middleware instances
+			if len(middlewareNames) > 0 {
+				override.Middlewares = make([]any, 0, len(middlewareNames))
+				for _, mwName := range middlewareNames {
+					mw := deploy.Global().CreateMiddleware(mwName)
+					if mw != nil {
+						override.Middlewares = append(override.Middlewares, mw)
+					} else {
+						fmt.Printf("⚠️  Warning: Middleware '%s' not found for service '%s' (skipping)\n", mwName, serviceName)
+					}
+				}
+			}
+
 			// Config can still override
 			if routerDef.Convention != "" {
 				rule.Convention = convention.ConventionType(routerDef.Convention)

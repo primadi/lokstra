@@ -1,7 +1,10 @@
 package repository
 
 import (
+	"log"
+
 	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/docs/00-introduction/examples/05-multi-deployment-pure-code/model"
 )
 
@@ -28,7 +31,9 @@ type UserRepositoryMemory struct {
 var _ UserRepository = (*UserRepositoryMemory)(nil)
 
 // NewUserRepositoryMemory creates a new in-memory user repository with seed data
-func NewUserRepositoryMemory() *UserRepositoryMemory {
+func NewUserRepositoryMemory(config map[string]any) *UserRepositoryMemory {
+	dsn := utils.GetValueFromMap(config, "dsn", "")
+	log.Printf("⚙️  Initializing UserRepositoryMemory with DSN: %s", dsn)
 	repo := &UserRepositoryMemory{
 		users: make(map[int]*model.User),
 	}

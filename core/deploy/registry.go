@@ -70,6 +70,7 @@ type deferredServiceDef struct {
 	Name        string
 	FactoryType string
 	DependsOn   []string
+	Middlewares []string // Middleware names to apply to auto-generated router
 	Config      map[string]any
 }
 
@@ -334,52 +335,6 @@ func normalizeServiceFactory(factoryInput any, serviceType, factoryKind string) 
 	}
 }
 
-// RegisterMiddlewareType registers a middleware factory
-// Supports optional AllowOverride option
-func (g *GlobalRegistry) RegisterMiddlewareType(middlewareType string, factory MiddlewareFactory, opts ...MiddlewareTypeOption) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	var options middlewareTypeOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-
-	if !options.allowOverride {
-		if _, exists := g.middlewareFactories[middlewareType]; exists {
-			panic(fmt.Sprintf("middleware type %s already registered", middlewareType))
-		}
-	}
-
-	g.middlewareFactories[middlewareType] = factory
-}
-
-// RegisterMiddlewareName registers a middleware entry by name, associating it with a type and config.
-// This allows creating multiple middleware instances from the same factory with different configurations.
-//
-// Example:
-//
-//	g.RegisterMiddlewareType("logger", loggerFactory)
-//	g.RegisterMiddlewareName("logger-debug", "logger", map[string]any{"level": "debug"})
-//	g.RegisterMiddlewareName("logger-info", "logger", map[string]any{"level": "info"})
-func (g *GlobalRegistry) RegisterMiddlewareName(name, middlewareType string, config map[string]any, opts ...MiddlewareNameOption) {
-	var options middlewareNameOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-
-	if !options.allowOverride {
-		if _, exists := g.middlewareEntries.Load(name); exists {
-			panic(fmt.Sprintf("middleware name %s already registered", name))
-		}
-	}
-
-	g.middlewareEntries.Store(name, &MiddlewareEntry{
-		Type:   middlewareType,
-		Config: config,
-	})
-}
-
 // RegisterResolver registers a custom config resolver
 func (g *GlobalRegistry) RegisterResolver(r resolver.Resolver) {
 	g.resolver.Register(r)
@@ -441,14 +396,6 @@ func (g *GlobalRegistry) GetServiceMetadata(serviceType string) *ServiceMetadata
 	}
 
 	return entry.Metadata
-}
-
-// GetMiddlewareFactory returns the middleware factory
-func (g *GlobalRegistry) GetMiddlewareFactory(middlewareType string) MiddlewareFactory {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.middlewareFactories[middlewareType]
 }
 
 // GetConfig returns a config definition
@@ -663,11 +610,27 @@ func (g *GlobalRegistry) registerDeferredService(name, factoryType string, confi
 		}
 	}
 
+	// Extract middlewares from config
+	var middlewares []string
+	if mwRaw, ok := config["middlewares"]; ok {
+		switch mws := mwRaw.(type) {
+		case []string:
+			middlewares = mws
+		case []interface{}:
+			// Handle YAML unmarshaling []interface{}
+			middlewares = make([]string, len(mws))
+			for i, m := range mws {
+				middlewares[i] = m.(string)
+			}
+		}
+	}
+
 	// Store deferred definition
 	def := &deferredServiceDef{
 		Name:        name,
 		FactoryType: factoryType,
 		DependsOn:   dependsOn,
+		Middlewares: middlewares,
 		Config:      config,
 	}
 
@@ -882,10 +845,11 @@ func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
 	if defAny, ok := g.serviceDefs.Load(name); ok {
 		deferredDef := defAny.(*deferredServiceDef)
 		return &schema.ServiceDef{
-			Name:      deferredDef.Name,
-			Type:      deferredDef.FactoryType,
-			DependsOn: deferredDef.DependsOn,
-			Config:    deferredDef.Config,
+			Name:        deferredDef.Name,
+			Type:        deferredDef.FactoryType,
+			DependsOn:   deferredDef.DependsOn,
+			Middlewares: deferredDef.Middlewares,
+			Config:      deferredDef.Config,
 		}
 	}
 	return nil
@@ -1039,66 +1003,6 @@ func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.Serv
 	g.RegisterLazyServiceWithDeps(name, func(_, cfg map[string]any) any {
 		return factory(nil, cfg)
 	}, nil, remoteConfig, WithRegistrationMode(LazyServiceSkip))
-}
-
-// RegisterMiddleware registers a middleware instance by name
-func (g *GlobalRegistry) RegisterMiddleware(name string, mw request.HandlerFunc) {
-	if _, exists := g.middlewareInstances.Load(name); exists {
-		panic(fmt.Sprintf("middleware %s already registered", name))
-	}
-	g.middlewareInstances.Store(name, mw)
-}
-
-// GetMiddleware retrieves a middleware instance by name
-func (g *GlobalRegistry) GetMiddleware(name string) (request.HandlerFunc, bool) {
-	if v, ok := g.middlewareInstances.Load(name); ok {
-		return v.(request.HandlerFunc), true
-	}
-	return nil, false
-}
-
-// CreateMiddleware creates a middleware instance from definition
-func (g *GlobalRegistry) CreateMiddleware(name string) request.HandlerFunc {
-	// First check if already instantiated
-	if mw, ok := g.middlewareInstances.Load(name); ok {
-		return mw.(request.HandlerFunc)
-	}
-
-	// Check if it's registered via RegisterMiddlewareName (factory pattern)
-	if entryAny, ok := g.middlewareEntries.Load(name); ok {
-		entry := entryAny.(*MiddlewareEntry)
-		factory := g.GetMiddlewareFactory(entry.Type)
-		if factory != nil {
-			mw := factory(entry.Config)
-			if handlerFunc, ok := mw.(request.HandlerFunc); ok {
-				// Cache it
-				g.middlewareInstances.Store(name, handlerFunc)
-				return handlerFunc
-			}
-		}
-		return nil
-	}
-
-	// Try to create from middleware entry (RegisterMiddlewareName)
-	if entryAny, exists := g.middlewareEntries.Load(name); exists {
-		entry := entryAny.(*MiddlewareEntry)
-
-		// Get factory
-		factory := g.GetMiddlewareFactory(entry.Type)
-		if factory == nil {
-			return nil
-		}
-
-		// Create instance
-		mw := factory(entry.Config)
-		if handlerFunc, ok := mw.(request.HandlerFunc); ok {
-			// Cache it
-			g.RegisterMiddleware(name, handlerFunc)
-			return handlerFunc
-		}
-	}
-
-	return nil
 }
 
 // ===== TOPOLOGY MANAGEMENT (2-Layer Architecture) =====

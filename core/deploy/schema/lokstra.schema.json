@@ -66,6 +66,15 @@
                 "pattern": "^([a-zA-Z][a-zA-Z0-9]*:)?[a-z][a-z0-9-]*$"
               }
             },
+            "middlewares": {
+              "type": "array",
+              "description": "List of middleware names to apply to auto-generated router",
+              "items": {
+                "type": "string",
+                "description": "Middleware name (must be registered via RegisterMiddlewareType)",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              }
+            },
             "config": {
               "type": "object",
               "description": "Service-specific configuration",
