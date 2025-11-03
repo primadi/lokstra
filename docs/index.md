@@ -21,7 +21,22 @@ description: Lokstra - Modern Go web framework for building microservices with e
 
 ## What is Lokstra?
 
-Lokstra is a **production-ready Go web framework** that combines the simplicity of manual coding with the power of declarative configuration. Build scalable applications with **lazy dependency injection**, **auto-generated routers**, and **flexible deployment topologies**.
+Lokstra is a **versatile Go web framework** that works in two ways:
+
+### 🎯 Track 1: As a Router (Like Echo, Gin, Chi)
+Use Lokstra as a fast, flexible HTTP router with elegant middleware support. Perfect when you just need routing without the complexity of DI frameworks.
+
+```go
+r := lokstra.NewRouter("api")
+r.GET("/", func() string {
+    return "Hello, Lokstra!"
+})
+app := lokstra.NewApp("hello", ":3000", r)
+app.Run(30 * time.Second)
+```
+
+### 🏗️ Track 2: As a Business Application Framework (Like NestJS, Spring Boot)
+Leverage the full framework with **lazy dependency injection**, **auto-generated routers**, and **configuration-driven deployment**. Build enterprise applications that scale from monolith to microservices.
 
 ```go
 // Define services in YAML
@@ -30,16 +45,15 @@ service-definitions:
     type: user-service-factory
     depends-on: [database]
 
-// Or use them directly in code
+// Access with type-safe lazy loading
 userService := service.LazyLoad[*UserService]("user-service")
 users := userService.MustGet().GetAll()
 ```
 
-Perfect for:
-- 🚀 **Startups**: Start simple, scale declaratively
-- 🏢 **Enterprises**: Type-safe DI with YAML configuration
-- 🔄 **Microservices**: Multi-deployment support (monolith → microservices)
-- 📦 **API Services**: Auto-generated REST routers from services
+**Choose your path:**
+- 🚀 **Need a Router?** → Read [Router Guide](./01-router-guide/) (like Echo/Gin)
+- 🏢 **Building Enterprise Apps?** → Read [Framework Guide](./02-framework-guide/) (like NestJS/Spring)
+- � **New to Lokstra?** → Start with [Introduction](./00-introduction/)
 
 ---
 
@@ -309,6 +323,65 @@ Each guide includes:
 
 ## Why Lokstra?
 
+### 🎯 Two Ways to Use Lokstra
+
+#### Use as Router Only (Track 1)
+Compare with **Echo, Gin, Chi, Fiber**:
+
+```go
+// Just routing - no DI, no config files
+r := lokstra.NewRouter("api")
+r.GET("/users", getUsersHandler)
+r.Use(logging.Middleware(), cors.Middleware())
+
+app := lokstra.NewApp("api", ":8080", r)
+app.Run(30 * time.Second)
+```
+
+✅ Flexible handler signatures (29 forms!)  
+✅ Clean middleware support  
+✅ Group routing for API versioning  
+✅ No framework lock-in  
+
+**[→ Router Guide](./01-router-guide/)**
+
+---
+
+#### Use as Full Framework (Track 2)
+Compare with **NestJS, Spring Boot, Uber Fx**:
+
+```yaml
+# config.yaml
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [database]
+
+deployments:
+  production:
+    servers:
+      api:
+        published-services: [user-service]  # Auto-router!
+```
+
+```go
+// Type-safe lazy DI
+var userService = service.LazyLoad[*UserService]("user-service")
+
+func handler() {
+    users := userService.MustGet().GetAll()
+}
+```
+
+✅ Lazy dependency injection (type-safe)  
+✅ Auto-generated REST routers from services  
+✅ Configuration-driven deployment  
+✅ Monolith → Microservices without code changes  
+
+**[→ Framework Guide](./02-framework-guide/)**
+
+---
+
 ### vs Traditional DI Frameworks
 - ✅ **Type-safe** with generics (no `interface{}` casting)
 - ✅ **Zero reflection** overhead in hot path
@@ -342,33 +415,33 @@ Each guide includes:
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 2rem 0;">
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
+    <h3>🎯 Router Guide</h3>
+    <p>Use Lokstra as a Router</p>
+    <a href="./01-router-guide/">Like Echo, Gin, Chi →</a>
+  </div>
+  
+  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
+    <h3>🏗️ Framework Guide</h3>
+    <p>Full framework with DI</p>
+    <a href="./02-framework-guide/">Like NestJS, Spring →</a>
+  </div>
+  
+  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
     <h3>🚀 Quick Start</h3>
     <p>New to Lokstra? Start here!</p>
-    <a href="./01-essentials/01-quick-start/">Get Started in 5 Minutes →</a>
+    <a href="./00-introduction/">Get Started →</a>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>📚 Examples</h3>
+    <h3>� Examples</h3>
     <p>Learn by doing</p>
-    <a href="./00-introduction/examples/">Browse Working Examples →</a>
+    <a href="./00-introduction/examples/">Browse Examples →</a>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>🎓 Essential Guides</h3>
-    <p>Master core concepts</p>
-    <a href="./01-essentials/">Learning Path →</a>
-  </div>
-  
-  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>📖 API Reference</h3>
+    <h3>� API Reference</h3>
     <p>Complete documentation</p>
     <a href="./03-api-reference/">Technical Docs →</a>
-  </div>
-  
-  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>🔧 Configuration</h3>
-    <p>YAML schema & patterns</p>
-    <a href="./03-api-reference/03-configuration/schema">Schema Reference →</a>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">

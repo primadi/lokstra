@@ -11,7 +11,8 @@ import (
 
 func main() {
 	// Parse command line flags
-	server := flag.String("server", "monolith.api-server", "Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
+	server := flag.String("server", "monolith.api-server",
+		"Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
 	flag.Parse()
 
 	fmt.Println("")

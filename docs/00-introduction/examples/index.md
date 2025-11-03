@@ -5,592 +5,153 @@ title: Examples
 
 # Lokstra Examples
 
-> 🎯 **Progressive learning path: Manual basics → Production patterns**
+> 🎯 **Two learning tracks: Router-only or Full Framework**
 
-Learn Lokstra step by step, from basic routing to production-ready middleware and architecture.
-
----
-
-## 📚 Learning Path
-
-```
-01-hello-world
-    ↓ Learn: Router basics, simple handlers
-02-handler-forms
-    ↓ Learn: 29 handler variations, request/response patterns
-03-crud-api
-    ↓ Learn: Services, dependency injection, manual routing
-04-multi-deployment-yaml
-    ↓ Learn: YAML config, auto-router, microservices
-05-multi-deployment-pure-code ⭐ NEW!
-    ↓ Learn: Pure code config, no YAML, type safety
-06-external-services
-    ↓ Learn: External API integration, proxy.Service, route overrides
-07-remote-router ⭐ NEW!
-    ↓ Learn: Quick API access with proxy.Router
-08-middleware
-    ↓ Learn: Global/route middleware, auth, recovery, rate limiting
-```
-
-**Time investment**: ~10-14 hours to complete all examples  
-**Outcome**: Ready to build production REST APIs with Lokstra
+Choose your learning path based on how you want to use Lokstra.
 
 ---
 
-## 📂 Examples
+## 🎯 Choose Your Track
 
-### [01-hello-world](./01-hello-world/)
+### Track 1: Router Only (Like Echo, Gin, Chi)
+**Time**: 2-3 hours • **Use Lokstra as a flexible HTTP router**
 
-**Your first Lokstra API**
+Learn routing, handlers, and middleware without dependency injection complexity.
 
-- Simple router with GET handlers
-- Auto JSON responses
-- Basic string and map returns
+👉 **[Start with Router Examples](./router-only/)**
 
+**What you'll learn:**
+- ✅ Basic routing and handlers
+- ✅ 29 handler form variations
+- ✅ Middleware patterns (global, per-route, groups)
+- ✅ Quick prototyping
+
+**Perfect for:**
+- Quick APIs and prototypes
+- Learning HTTP routing fundamentals
+- Developers familiar with Echo, Gin, or Chi
+- Projects that don't need DI
+
+---
+
+### Track 2: Full Framework (Like NestJS, Spring Boot)
+**Time**: 8-12 hours • **Use Lokstra as a complete application framework**
+
+Learn services, dependency injection, auto-routers, and deployment patterns.
+
+👉 **[Start with Framework Examples](./full-framework/)**
+
+**What you'll learn:**
+- ✅ Service layer and dependency injection
+- ✅ Auto-generated REST routers
+- ✅ Configuration-driven deployment (YAML or Code)
+- ✅ Monolith → Microservices migrations
+- ✅ External service integration
+
+**Perfect for:**
+- Enterprise applications
+- Microservices architectures
+- Teams wanting DI and auto-router
+- Production-scale projects
+
+---
+
+## 📚 Complete Feature Map
+
+| Feature | Track 1 (Router) | Track 2 (Framework) |
+|---------|------------------|---------------------|
+| **HTTP Routing** | ✅ Core focus | ✅ Included |
+| **Handler Forms** | ✅ 29 variations | ✅ Same flexibility |
+| **Middleware** | ✅ Global, per-route | ✅ Plus registry-based |
+| **Services** | ❌ Not covered | ✅ Core pattern |
+| **Dependency Injection** | ❌ Not needed | ✅ Lazy, type-safe |
+| **Auto-Router** | ❌ Manual only | ✅ From services |
+| **Configuration** | ❌ Code only | ✅ YAML or Code |
+| **Microservices** | ❌ Not covered | ✅ Multi-deployment |
+
+---
+
+## 🔄 Can I Switch Tracks?
+
+**Yes! Start with Track 1, upgrade to Track 2 later.**
+
+Track 1 code is compatible with Track 2. You can:
+1. Start with router-only examples (simple, fast)
+2. Add services and DI when needed (gradual)
+3. Enable auto-router for new features (optional)
+4. Keep manual routing for existing routes (backward compatible)
+
+**Track 1 → Track 2 is an upgrade, not a rewrite!**
+
+---
+
+## 🚀 Quick Start
+
+### For Router Track:
 ```bash
-cd 01-hello-world && go run main.go
+cd docs/00-introduction/examples/router-only/01-hello-world
+go run main.go
 curl http://localhost:3000/
 ```
 
-**Why manual?** Perfect for quick prototyping and learning basics!
-
----
-
-### [02-handler-forms](./02-handler-forms/)
-
-**Explore 29 handler variations**
-
-- Request binding (JSON, path, query, header)
-- Response forms (string, map, struct, error handling)
-- Context access patterns
-
+### For Framework Track:
 ```bash
-cd 02-handler-forms && go run main.go
-```
-
-**Why manual?** Understanding handler flexibility is fundamental!
-
----
-
-### [03-crud-api](./03-crud-api/)
-
-**Full CRUD with service pattern**
-
-- Service-based architecture
-- Dependency injection
-- Manual router registration
-
-```bash
-cd 03-crud-api && go run main.go
+cd docs/00-introduction/examples/full-framework/01-crud-api
+go run main.go
 curl http://localhost:3000/users
 ```
 
-**Features:**
-- ✅ Service factories
-- ✅ Lazy dependency injection
-- ✅ Clean separation of concerns
-- ✅ Manual route registration (understand the foundation!)
+---
+
+## 📖 What's Next?
+
+After examples, continue learning:
+
+### Completed Track 1 (Router)?
+- **[Router Guide](../../01-router-guide/)** - Deep dive into routing
+- **[API Reference](../../03-api-reference/)** - Complete API docs
+
+**Want more?** → Explore Track 2 for DI and auto-router!
+
+### Completed Track 2 (Framework)?
+- **[Framework Guide](../../02-framework-guide/)** - Advanced DI patterns
+- **[Configuration Schema](../../03-api-reference/03-configuration/)** - Full YAML reference
+- **[Production Patterns](../../02-framework-guide/)** - Microservices deployment
 
 ---
 
-### [04-multi-deployment-yaml](./04-multi-deployment-yaml/)
+## 💡 Comparison with Other Frameworks
 
-**One binary, multiple deployments (YAML config)**
+### Track 1 (Router) compares with:
+- **Echo** - Similar flexibility, more handler forms
+- **Gin** - Similar performance, cleaner API
+- **Chi** - Similar routing, more middleware options
+- **Fiber** - Similar speed, Go-idiomatic (no fasthttp)
 
-- YAML-based configuration
-- Monolith vs Microservices
-- Service interface pattern (local vs remote)
-- Cross-service communication
-
-```bash
-# Run as monolith
-go run . -server=monolith.api-server
-
-# Run as microservices
-go run . -server=microservice.user-server    # Terminal 1
-go run . -server=microservice.order-server   # Terminal 2
-```
-
-**Key Learning:**
-- Auto-router generation from service metadata
-- Interface abstraction (UserService local vs remote)
-- Proxy pattern for remote calls
-- YAML deployment configuration
+### Track 2 (Framework) compares with:
+- **NestJS** (Node.js) - Similar DI and auto-router concepts
+- **Spring Boot** (Java) - Similar enterprise patterns
+- **Uber Fx** (Go) - Similar DI, plus auto-router
+- **Buffalo** (Go) - Similar full-stack, more flexible
 
 ---
 
-### [05-multi-deployment-pure-code](./05-multi-deployment-pure-code/) ⭐ NEW!
-
-**Pure code deployment (no YAML)**
-
-Same as example 04, but 100% code-based configuration!
-
-- ✅ `RegisterLazyService` for service definitions
-- ✅ `RegisterDeployment` for deployment topology
-- ✅ Type safety with IDE autocomplete
-- ✅ Refactoring-friendly
-
-```bash
-# Run as monolith
-go run . -server=monolith.api-server
-
-# Run as microservices
-go run . -server=microservice.user-server    # Terminal 1
-go run . -server=microservice.order-server   # Terminal 2
-```
-
-**Key Difference:**
-```go
-// Instead of config.yaml
-lokstra_registry.RegisterLazyService("user-service", "user-service-factory", 
-    map[string]any{"depends-on": []string{"user-repository"}})
-
-lokstra_registry.RegisterDeployment("monolith", &lokstra_registry.DeploymentConfig{
-    Servers: map[string]*lokstra_registry.ServerConfig{
-        "api-server": {
-            BaseURL: "http://localhost",
-            Addr: ":3003",
-            PublishedServices: []string{"user-service", "order-service"},
-        },
-    },
-})
-```
-
-**Benefits:**
-- ✅ Type safety (compile-time errors)
-- ✅ IDE autocomplete
-- ✅ Safe refactoring
-- ✅ Dynamic configuration (conditionals, loops)
-- ✅ Single language (no YAML context switching)
-
-**When to use:**
-- YAML (04): Ops teams, runtime config, non-coders
-- Pure Code (05): Dev teams, version control, compile-time safety
-
----
-
-### [06-external-services](./06-external-services/) ⭐
-
-**External API integration with best DX**
-
-This is where you learn production-ready request handling!
-
-- ✅ Global middleware (applied to all routes)
-- ✅ Route-specific middleware (per-endpoint auth)
-- ✅ Custom middleware creation
-- ✅ Built-in middleware (CORS, Recovery, Logger)
-- ✅ Middleware chaining and execution order
-
-```bash
-cd 05-middleware
-go run main.go
-
-# Test with different scenarios
-curl http://localhost:3000/                           # Public
-curl http://localhost:3000/protected -H "X-API-Key: secret-key-123"  # Auth required
-curl http://localhost:3000/api/admin/dashboard -H "X-API-Key: admin-key-456"  # Admin only
-curl http://localhost:3000/panic                      # Recovery middleware
-```
-
-**What you'll learn:**
-- ✅ **Global middleware**: Recovery, CORS, Logger, Rate Limiting
-- ✅ **Auth middleware**: API key validation
-- ✅ **Role-based access**: Admin-only endpoints
-- ✅ **Custom middleware**: LoggingMiddleware, RateLimitMiddleware
-- ✅ **Middleware chain**: Multiple middleware per route
-- ✅ **Override parent**: Route with `WithOverrideParentMwOption(true)`
-
-**Production patterns covered:**
-- Panic recovery (graceful error handling)
-- Request logging with timing
-- Rate limiting per IP
-- Authentication & Authorization
-- CORS for API access
-
-**Code size**: ~180 lines  
-**Endpoints**: 11 routes with various middleware combinations
-
-**This is essential for production!** 🚀
-
----
-
-### [06-external-services](./06-external-services/) ⭐ NEW!
-
-**External API integration with best DX**
-
-Learn how to integrate third-party APIs (payment gateways, email services, etc.) as Lokstra services.
-
-- ✅ **ServiceMeta** interface for metadata (works for local & remote!)
-- ✅ **Route overrides in code** (not config!)
-- ✅ **Auto-wrapper creation** from `external-service-definitions`
-- ✅ **Convention-based proxy** with `proxy.Service`
-- ✅ **Custom routes** for non-standard APIs
-
-```bash
-# Terminal 1: Start mock payment gateway
-cd mock-payment-gateway
-go run main.go
-
-# Terminal 2: Start main app
-cd ..
-go run main.go
-
-# Test
-curl -X POST http://localhost:3000/orders \
-  -H "Content-Type: application/json" \
-  -d '{\"user_id\":1,\"items\":[\"Laptop\"],\"total_amount\":1299.99}'
-```
-
-**What you'll learn:**
-- ✅ **External service definition**: Auto-create wrappers with `type` field
-- ✅ **Clean metadata pattern**: All metadata in `RegisterServiceType` options
-- ✅ **Route overrides**: Custom routes via `deploy.WithRouteOverride()`
-- ✅ **Smart method names**: Use `Create`, `Get`, `Refund` (match REST convention when possible)
-- ✅ **DX improvements**: Single source of truth - no duplication!
-
-**Key Pattern:**
-```go
-// Simple service wrapper - no embedded metadata!
-type PaymentServiceRemote struct {
-    proxyService *proxy.Service
-}
-
-func (s *PaymentServiceRemote) CreatePayment(p *CreatePaymentParams) (*Payment, error) {
-    return proxy.CallWithData[*Payment](s.proxyService, "CreatePayment", p)
-}
-
-// Metadata in RegisterServiceType (single source of truth!)
-lokstra_registry.RegisterServiceType(
-    "payment-service-remote-factory",
-    nil, service.PaymentServiceRemoteFactory,
-    deploy.WithResource("payment", "payments"),
-    deploy.WithConvention("rest"),
-    deploy.WithRouteOverride("CreatePayment", "POST /payments"),
-    deploy.WithRouteOverride("Refund", "POST /payments/{id}/refund"),
-)
-```
-
-**Code size**: ~400 lines  
-**Endpoints**: 3 order routes + 3 payment gateway routes
-
-**Real-world ready!** Use this pattern for Stripe, SendGrid, Twilio, etc.
-
----
-
-### [07-remote-router](./07-remote-router/) ⭐ NEW!
-
-**Quick API access without service wrappers**
-
-Learn when to use `proxy.Router` for simple, direct HTTP calls vs `proxy.Service`.
-
-- ✅ **Simple URL config** (no router-definitions!)
-- ✅ **No service wrapper needed**
-- ✅ **Direct HTTP calls** with `DoJSON()`
-- ✅ **Quick integration** for one-off API calls
-- ✅ **Comparison**: proxy.Router vs proxy.Service
-
-```bash
-# Terminal 1: Start mock weather API
-cd mock-weather-api
-go run main.go
-
-# Terminal 2: Start main app
-cd ..
-go run main.go
-
-# Test
-curl -X POST "http://localhost:3001/weather-reports?city=jakarta&forecast=true&days=5"
-```
-
-**What you'll learn:**
-- ✅ **When to use proxy.Router**: One-off calls, prototyping, simple APIs
-- ✅ **Simple config**: Just URL, no special definitions
-- ✅ **Direct HTTP**: `router.DoJSON(method, path, ...)`
-- ✅ **vs proxy.Service**: When to upgrade to service wrapper
-
-**Key Pattern:**
-```go
-type WeatherService struct {
-    weatherAPI *proxy.Router
-}
-
-func (s *WeatherService) Create(p *GetWeatherReportParams) (*WeatherReport, error) {
-    // Direct HTTP call - no wrapper!
-    var current WeatherData
-    err := s.weatherAPI.DoJSON("GET", fmt.Sprintf("/weather/%s", p.City), 
-        nil, nil, &current)
-    
-    return &WeatherReport{Current: &current}, nil
-}
-
-// Factory creates router from URL
-func WeatherServiceFactory(deps map[string]any, config map[string]any) any {
-    url := config["weather-api-url"].(string)
-    return &WeatherService{
-        weatherAPI: proxy.NewRemoteRouter(url),
-    }
-}
-```
-
-**Code size**: ~200 lines  
-**Endpoints**: 1 weather report route + 2 mock API routes
-
-**Perfect for**: Weather APIs, currency converters, quick integrations!
-
----
-
-### [08-middleware](./08-middleware/) ⭐
-
-**Global and route-specific middleware**
-
-This is where you learn production-ready request handling!
-
-- ✅ Global middleware (applied to all routes)
-- ✅ Route-specific middleware (per-endpoint auth)
-- ✅ Custom middleware creation
-- ✅ Built-in middleware (CORS, Recovery, Logger)
-- ✅ Middleware chaining and execution order
-
-```bash
-cd 08-middleware
-go run main.go
-
-# Test with different scenarios
-curl http://localhost:3000/                           # Public
-curl http://localhost:3000/protected -H "X-API-Key: secret-key-123"  # Auth required
-curl http://localhost:3000/api/admin/dashboard -H "X-API-Key: admin-key-456"  # Admin only
-curl http://localhost:3000/panic                      # Recovery middleware
-```
-
-**What you'll learn:**
-- ✅ **Global middleware**: Recovery, CORS, Logger, Rate Limiting
-- ✅ **Auth middleware**: API key validation
-- ✅ **Role-based access**: Admin-only endpoints
-- ✅ **Custom middleware**: LoggingMiddleware, RateLimitMiddleware
-- ✅ **Middleware chain**: Multiple middleware per route
-- ✅ **Override parent**: Route with `WithOverrideParentMwOption(true)`
-
-**Production patterns covered:**
-- Panic recovery (graceful error handling)
-- Request logging with timing
-- Rate limiting per IP
-- Authentication & Authorization
-- CORS for API access
-
-**Code size**: ~180 lines  
-**Endpoints**: 11 routes with various middleware combinations
-
-**This is essential for production!** 🚀
-
----
-
-## 🎯 What You'll Learn
-
-### 📊 Feature Coverage
-
-| Example | What's Covered |
-|---------|----------------|
-| **01** | ✅ Basic Router, ✅ Simple Handlers |
-| **02** | ✅ Routes, ✅ 29 Handler Forms |
-| **03** | ✅ Manual Router, ✅ Services, ✅ Dependency Injection |
-| **04** | ✅ YAML Config, ✅ Auto-Router, ✅ Microservices |
-| **05** | ✅ Pure Code Config, ✅ Type Safety, ✅ No YAML |
-| **06** | ✅ External APIs, ✅ proxy.Service, ✅ Route Overrides |
-| **07** | ✅ proxy.Router, ✅ Quick Integration, ✅ Direct HTTP Calls |
-| **08** | ✅ Global Middleware, ✅ Auth, ✅ Production Patterns |
-
-### 🎓 Skills Progression
-
-```
-Example 01-02:  Basic Foundations
-    → Router creation, handler patterns
-
-Example 03:     Service Architecture  
-    → DI, service layer, manual routing
-
-Example 04-05:  Advanced Deployment
-    → Auto-router, microservices, YAML vs Pure Code
-
-Example 06-07:  External Integration
-    → proxy.Service (structured), proxy.Router (simple)
-
-Example 08:     Production Ready
-    → Middleware chains, auth, recovery, CORS
-```
-
----
-
-## 🔄 Recommended Learning Strategy
-
-### Week 1: Foundations (5-6 hours)
-- **Day 1**: Example 01 (15min) + Example 02 (30min)
-- **Day 2**: Example 03 (1 hour)
-- **Day 3**: Example 04 - YAML Config (1-2 hours)
-- **Day 4**: Example 05 - Pure Code (30min, compare with 04)
-- **Day 5**: Review and build small API
-
-**Goal**: Understand basics, service patterns, deployment configurations
-
-### Week 2: Production Patterns (5-6 hours)
-- **Day 1**: Example 08 - Middleware (1-2 hours)
-- **Day 2**: Example 06 - External Services (1 hour)
-- **Day 3**: Example 07 - Remote Router (30min)
-- **Day 4-5**: Build your project using examples as template
-
-**Goal**: Master production-ready architecture with middleware and external integrations
-
----
-
-## 💡 Key Progression
-
-### Example 01 → Router Basics
-```go
-r := lokstra.NewRouter("api")
-r.GET("/ping", func() string { return "pong" })
-```
-
-### Example 02 → Handler Flexibility
-```go
-r.GET("/users/{id}", func(p *GetUserParams) (*User, error) {
-    return db.GetUser(p.ID)
-})
-```
-
-### Example 03 → Service Pattern
-```go
-type UserService struct {
-    DB *service.Cached[*Database]
-}
-
-r.GET("/users", func() ([]*User, error) {
-    return userService.List()
-})
-```
-
-### Example 04 → Auto-Router + YAML Config
-```go
-# config.yaml
-deployments:
-  monolith:
-    servers:
-      api-server:
-        addr: ":3003"
-        published-services:
-          - user-service
-          - order-service
-
-# Just define the service interface and implementation
-# Routes auto-generated from metadata!
-# GetByID() → GET /users/{id}
-# List()    → GET /users
-```
-
-### Example 05 → Auto-Router + Pure Code Config
-```go
-// No YAML! 100% type-safe Go code
-lokstra_registry.RegisterLazyService("user-service", "user-service-factory",
-    map[string]any{"depends-on": []string{"user-repository"}})
-
-lokstra_registry.RegisterDeployment("monolith", &lokstra_registry.DeploymentConfig{
-    Servers: map[string]*lokstra_registry.ServerConfig{
-        "api-server": {
-            Addr: ":3003",
-            PublishedServices: []string{"user-service", "order-service"},
-        },
-    },
-})
-```
-
-### Example 06 → External Services Integration
-```go
-// Global middleware
-r.Use(RecoveryMiddleware)
-r.Use(CORSMiddleware)
-r.Use(LoggerMiddleware)
-
-// Route-specific auth
-r.GET("/protected", ProtectedHandler, AuthMiddleware)
-r.GET("/admin", AdminHandler, AuthMiddleware, AdminOnlyMiddleware)
-```
-
-### Example 06 → External Services Integration
-```go
-// Clean service wrapper - no embedded metadata
-type PaymentServiceRemote struct {
-    proxyService *proxy.Service
-}
-
-// Metadata in RegisterServiceType (single source of truth!)
-lokstra_registry.RegisterServiceType(
-    "payment-service-remote-factory",
-    nil, service.PaymentServiceRemoteFactory,
-    deploy.WithResource("payment", "payments"),
-    deploy.WithRouteOverride("CreatePayment", "POST /payments"),
-)
-```
-
-### Example 08 → Production Middleware
-```go
-// Global middleware
-r.Use(RecoveryMiddleware)
-r.Use(CORSMiddleware)
-r.Use(LoggerMiddleware)
-
-// Route-specific auth
-r.GET("/protected", ProtectedHandler, AuthMiddleware)
-r.GET("/admin", AdminHandler, AuthMiddleware, AdminOnlyMiddleware)
-```
-
----
-
-## 🚀 Running Examples
-
-```bash
-# Navigate to any example
-cd 01-hello-world  # or 02, 03, 04, 05, 06
-
-# Run it
-go run main.go
-
-# Test it (use test.http or curl from README)
-curl http://localhost:3000/
-```
-
-**For multi-server examples:**
-
-Example 04-05 (same commands for both):
-```bash
-cd 04-multi-deployment-yaml  # or 05-multi-deployment-pure-code
-
-# Option 1: Monolith
-go run . -server=monolith.api-server
-
-# Option 2: Microservices (2 terminals)
-go run . -server=microservice.user-server     # Terminal 1
-go run . -server=microservice.order-server    # Terminal 2
-```
-
-Example 06:
-```bash
-cd 06-external-services
-
-# Terminal 1: Mock gateway
-cd mock-payment-gateway && go run main.go
-
-# Terminal 2: Main app
-cd .. && go run main.go
-```
-
----
-
-## 📚 Next Steps
-
-After completing these examples:
-
-- **Deep Dive**: [01-essentials](../../01-essentials)
-- **API Reference**: [03-api-reference](../../03-api-reference) (coming soon)
-- **Advanced Topics**: [02-deep-dive](../../02-deep-dive) (coming soon)
-
----
-
-**Start here**: → [01-hello-world](./01-hello-world/) 🚀
+**Ready?** Choose your track:
+
+<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;\">
+  <div style=\"padding: 2rem; border: 2px solid #4a9eff; border-radius: 8px; background: #1a1a2e;\">
+    <h3>🎯 Track 1: Router Only</h3>
+    <p><strong>Time:</strong> 2-3 hours</p>
+    <p><strong>Like:</strong> Echo, Gin, Chi</p>
+    <p><strong>Focus:</strong> HTTP routing</p>
+    <a href=\"./router-only/\" style=\"display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #4a9eff; color: white; text-decoration: none; border-radius: 4px;\">Start Router Track →</a>
+  </div>
+  
+  <div style=\"padding: 2rem; border: 2px solid #ff6b6b; border-radius: 8px; background: #1a1a2e;\">
+    <h3>🏗️ Track 2: Full Framework</h3>
+    <p><strong>Time:</strong> 8-12 hours</p>
+    <p><strong>Like:</strong> NestJS, Spring Boot</p>
+    <p><strong>Focus:</strong> Enterprise apps</p>
+    <a href=\"./full-framework/\" style=\"display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #ff6b6b; color: white; text-decoration: none; border-radius: 4px;\">Start Framework Track →</a>
+  </div>
+</div>

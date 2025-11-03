@@ -15,14 +15,14 @@ import (
 func registerServiceTypes() {
 	// Clean Architecture: Separate layers for contract, model, service, repository
 
-	// Register repositories (infrastructure layer)
+	// Register repositories (infrastructure layer - local only)
 	lokstra_registry.RegisterServiceType("user-repository-factory",
 		repository.NewUserRepositoryMemory, nil)
 
 	lokstra_registry.RegisterServiceType("order-repository-factory",
 		repository.NewOrderRepositoryMemory, nil)
 
-	// Register services (application layer)
+	// Register services (application layer - local and remote)
 	// Metadata provided via RegisterServiceType options (not in factory structs)
 	lokstra_registry.RegisterServiceType("user-service-factory",
 		service.UserServiceFactory,

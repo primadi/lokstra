@@ -94,9 +94,7 @@ deployments:
       api-server:
         base-url: "http://localhost"
         addr: ":3003"
-        published-services:
-          - user-service    # Auto-detects: user-repository (local)
-          - order-service   # Auto-detects: order-repository (local), user-service (local)
+        published-services: [user-service, order-service]
 
   # ========================================
   # MICROSERVICE: each service in its own process 

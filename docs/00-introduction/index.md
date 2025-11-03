@@ -5,16 +5,79 @@ title: Introduction
 
 # What is Lokstra?
 
-> **A Go framework for building REST APIs with convention over configuration, powerful dependency injection, and flexible deployment options.**
+> **A versatile Go web framework that works in two ways: as a Router or as a complete Business Application Framework**
 
 ---
 
-## 🎯 The Big Idea
+## 🎯 Two Ways to Use Lokstra
 
-Lokstra helps you build Go REST APIs that are:
-- **Easy to start** - Simple, intuitive API
-- **Easy to scale** - From monolith to microservices without code changes
-- **Easy to maintain** - Clean separation of concerns
+Lokstra is designed to meet you where you are:
+
+### 🎯 Track 1: As a Router (Like Echo, Gin, Chi)
+**Quick, simple HTTP routing without framework complexity**
+
+Use Lokstra as a pure HTTP router for:
+- Quick prototypes and MVPs
+- Simple REST APIs
+- Learning HTTP routing fundamentals
+- Projects without DI needs
+
+```go
+r := lokstra.NewRouter("api")
+r.GET("/users", getUsersHandler)
+r.Use(logging.Middleware())
+
+app := lokstra.NewApp("api", ":8080", r)
+app.Run(30 * time.Second)
+```
+
+**Compare with:** Echo, Gin, Chi, Fiber  
+**Learn more:** [Router Guide](../01-router-guide/)
+
+---
+
+### �️ Track 2: As a Business Application Framework (Like NestJS, Spring Boot)
+**Enterprise features with DI, auto-router, and configuration-driven deployment**
+
+Use Lokstra as a complete framework for:
+- Enterprise applications
+- Microservices architectures
+- Dependency injection and service layer
+- Configuration-driven deployment
+
+```yaml
+# Define services in YAML
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [database]
+```
+
+```go
+// Type-safe lazy loading
+var userService = service.LazyLoad[*UserService]("user-service")
+
+func handler() {
+    users := userService.MustGet().GetAll()
+}
+
+// Auto-router generates REST endpoints from service methods!
+```
+
+**Compare with:** NestJS, Spring Boot, Uber Fx, Buffalo  
+**Learn more:** [Framework Guide](../02-framework-guide/)
+
+---
+
+## 🚀 The Big Idea
+
+**Start simple, scale when needed:**
+1. Start with routing (Track 1) for quick results
+2. Add services and DI when complexity grows (Track 2)
+3. Enable auto-router to reduce boilerplate
+4. Switch deployment topology without code changes
+
+**Lokstra grows with your needs!**
 
 ---
 
@@ -341,41 +404,73 @@ func (u *UserService) GetUsers() ([]User, error) {
 
 ## 🎓 What You'll Learn
 
-After working through this documentation:
+Choose your learning path:
 
-### Essentials (2-3 hours)
+### Track 1: Router Only (2-3 hours)
 ✅ Create routers and register routes  
-✅ Write handlers in multiple styles  
-✅ Organize code with services  
-✅ Apply middleware  
-✅ Configure via YAML  
-✅ Build complete REST APIs  
+✅ Write handlers in 29 different styles  
+✅ Apply middleware (global, per-route, groups)  
+✅ Manage app and server lifecycle  
+✅ Build REST APIs without DI
 
-### Deep Dive (4-6 hours)
-✅ Master all 29 handler forms  
+**[→ Router Guide](../01-router-guide/)**
+
+### Track 2: Full Framework (6-8 hours)
+✅ Everything in Track 1, plus:  
+✅ Service layer and dependency injection  
 ✅ Auto-generate routes from services  
-✅ Create custom middleware  
-✅ Multi-deployment strategies  
-✅ Remote service communication  
-✅ Performance optimization  
+✅ Configuration-driven deployment (YAML or Code)  
+✅ Monolith → Microservices migration  
+✅ External service integration  
+
+**[→ Framework Guide](../02-framework-guide/)**
 
 ---
 
 ## 🚦 Where to Go Next?
 
-### I want to understand the "why"
-👉 [Why Lokstra?](why-lokstra) - Compare with other frameworks
+### New to Lokstra? Start Here:
 
-### I want to see the big picture
-👉 [Architecture](architecture) - Deep dive into design
+#### Option 1: Quick Start (Fastest)
+**Just want to see it work?**
+- 👉 [Quick Start](quick-start) - Build your first API in 5 minutes
+- 👉 [Examples - Router Track](examples/router-only/) - 3 quick examples (2-3 hours)
 
-### I want to code NOW
-👉 [Quick Start](quick-start) - Build your first API in 5 minutes  
-👉 [Examples](examples) - 4 progressive examples (hello-world → production)
+#### Option 2: Understand First (Recommended)
+**Want to understand before coding?**
+- 👉 [Why Lokstra?](why-lokstra) - Compare with other frameworks
+- 👉 [Architecture](architecture) - Deep dive into design
+- 👉 [Key Features](key-features) - What makes Lokstra different
 
-### I want to learn systematically
-👉 [Examples](examples) - Hands-on progressive learning (4-6 hours)  
-👉 [Essentials](../01-essentials) - Step-by-step deep dive
+### Ready to Learn? Choose Your Track:
+
+#### Track 1: Router Only
+**For: Quick APIs, prototypes, simple projects**
+1. [Examples - Router Track](examples/router-only/) - Hands-on learning (2-3 hours)
+2. [Router Guide](../01-router-guide/) - Deep dive into routing
+3. [API Reference - Router](../03-api-reference/01-core-packages/router) - Complete API
+
+#### Track 2: Full Framework  
+**For: Enterprise apps, microservices, DI architecture**
+1. [Examples - Framework Track](examples/full-framework/) - Hands-on learning (8-12 hours)
+2. [Framework Guide](../02-framework-guide/) - Services, DI, auto-router
+3. [Configuration Reference](../03-api-reference/03-configuration/) - YAML schema
+
+### Not Sure Which Track?
+
+**Start with Track 1 (Router)** if:
+- New to Lokstra
+- Building MVP or prototype
+- Want quick results
+- Don't need DI yet
+
+**Start with Track 2 (Framework)** if:
+- Need dependency injection
+- Building microservices
+- Want auto-generated routers
+- Familiar with NestJS/Spring Boot
+
+**Remember:** You can always upgrade from Track 1 to Track 2 later!
 
 ---
 
@@ -383,42 +478,57 @@ After working through this documentation:
 
 Before moving on, remember:
 
-1. **Lokstra is flexible** - Multiple ways to do things, pick what works
-2. **Convention over configuration** - Smart defaults, configure when needed
-3. **Service-oriented** - Services are first-class citizens
-4. **Deployment-agnostic** - Same code, monolith or microservices
-5. **Production-ready** - Built for real applications
+1. **Lokstra is flexible** - Use as router-only OR full framework
+2. **Start simple, scale up** - Begin with Track 1, upgrade to Track 2 when needed
+3. **Convention over configuration** - Smart defaults, configure when needed
+4. **Service-oriented** - Services are first-class citizens (Track 2)
+5. **Deployment-agnostic** - Same code, monolith or microservices (Track 2)
+6. **Production-ready** - Built for real applications
 
 ---
 
 ## 📚 Learning with Examples
 
-We provide **7 progressive examples** that build on each other:
+We provide **two example tracks** based on how you want to use Lokstra:
 
-### [Example 01: Hello World](examples/01-hello-world/)
-⏱️ 15 minutes • Learn router basics and simple handlers
+### Track 1: Router-Only Examples
+⏱️ **2-3 hours total** • Perfect for quick APIs
 
-### [Example 02: Handler Forms](examples/02-handler-forms/)
-⏱️ 30 minutes • Explore all 29 handler variations
+- [01: Hello World](examples/router-only/01-hello-world/) - Basic routing (15 min)
+- [02: Handler Forms](examples/router-only/02-handler-forms/) - 29 handler signatures (30 min)
+- [03: Middleware](examples/router-only/03-middleware/) - Global, per-route, groups (45 min)
 
-### [Example 03: CRUD API](examples/03-crud-api/)
-⏱️ 1 hour • Build with services, DI, and manual routing
+**What you'll build:** REST APIs with routing and middleware (no DI)
 
-### [Example 04: Multi-Deployment](examples/04-multi-deployment/) ⭐
-⏱️ 2-3 hours • Production architecture with Clean Architecture, auto-router, and microservices
+👉 **[Start Router Examples](examples/router-only/)**
 
-### [Example 05: Middleware](examples/05-middleware/)
-⏱️ 45 minutes • Global, router-level, and route-level middleware
+---
 
-### [Example 06: External Services](examples/06-external-services/)
-⏱️ 1 hour • Integrate external APIs with proxy.Service
+### Track 2: Full Framework Examples
+⏱️ **8-12 hours total** • For enterprise apps
 
-### [Example 07: Remote Router](examples/07-remote-router/)
-⏱️ 30 minutes • Quick API access with proxy.Router
+- [01: CRUD with Services](examples/full-framework/01-crud-api/) - Service layer, DI (1 hour)
+- [02: Multi-Deployment YAML](examples/full-framework/02-multi-deployment-yaml/) - Auto-router, microservices (2-3 hours)
+- [03: Multi-Deployment Code](examples/full-framework/03-multi-deployment-pure-code/) - Type-safe config (30 min)
+- [04: External Services](examples/full-framework/04-external-services/) - proxy.Service patterns (1-2 hours)
+- [05: Remote Router](examples/full-framework/05-remote-router/) - Quick HTTP integration (30 min)
 
-**Total**: 6-8 hours from zero to production-ready patterns!
+**What you'll build:** Enterprise apps with DI, auto-router, and microservices
 
-👉 [Start with examples](examples)
+👉 **[Start Framework Examples](examples/full-framework/)**
+
+---
+
+### 🤔 Which Track to Choose?
+
+| | Router Track | Framework Track |
+|---|---|---|
+| **Time** | 2-3 hours | 8-12 hours |
+| **Use Case** | Quick APIs, prototypes | Enterprise, microservices |
+| **Features** | Routing, middleware | + DI, auto-router, config |
+| **Compare With** | Echo, Gin, Chi | NestJS, Spring Boot |
+
+**Not sure?** Start with Router Track (it's compatible with Framework features!)
 
 ---
 
