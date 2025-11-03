@@ -100,6 +100,9 @@ go run . -server=microservices.user-server
 - Proxy pattern for remote calls
 - Monolith vs microservices topology
 
+**🔍 Framework Comparison:**  
+**[Lokstra vs NestJS vs Spring Boot](./02-multi-deployment-yaml/framework-comparison)** - See how the same microservice application would be implemented in different frameworks with detailed code examples and trade-offs.
+
 ---
 
 ### [03 - Multi-Deployment (Pure Code)](./03-multi-deployment-pure-code/) ⏱️ 30 min
@@ -304,6 +307,11 @@ Example 05:  Quick Integration
 - ✅ Auto-router from service methods
 - ✅ Zero-code deployment topology changes
 - ✅ Code or YAML configuration (your choice)
+
+**📖 Detailed Framework Comparisons:**
+- **[Practical Example: Microservices in 3 Frameworks](./02-multi-deployment-yaml/framework-comparison)** - Same app, different approaches
+- **[Lokstra vs NestJS](../../02-framework-guide/lokstra-vs-nestjs)** - TypeScript framework comparison
+- **[Lokstra vs Spring Boot](../../02-framework-guide/lokstra-vs-spring-boot)** - Java framework comparison
 
 ---
 

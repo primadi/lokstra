@@ -9,7 +9,7 @@ import (
 )
 
 func TestCorsMiddleware_AllOrigins(t *testing.T) {
-	h := Middleware([]string{"*"})
+	h := Middleware("*")
 
 	// Test GET with Origin
 	req := httptest.NewRequest("GET", "/", nil)
@@ -27,7 +27,7 @@ func TestCorsMiddleware_AllOrigins(t *testing.T) {
 }
 
 func TestCorsMiddleware_AllowedOrigin(t *testing.T) {
-	h := Middleware([]string{"http://allowed.com"})
+	h := Middleware("http://allowed.com")
 
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Origin", "http://allowed.com")
@@ -41,7 +41,7 @@ func TestCorsMiddleware_AllowedOrigin(t *testing.T) {
 }
 
 func TestCorsMiddleware_DisallowedOrigin(t *testing.T) {
-	h := Middleware([]string{"http://allowed.com"})
+	h := Middleware("http://allowed.com")
 
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Origin", "http://forbidden.com")
@@ -55,7 +55,7 @@ func TestCorsMiddleware_DisallowedOrigin(t *testing.T) {
 }
 
 func TestCorsMiddleware_OPTIONS(t *testing.T) {
-	h := Middleware([]string{"*"})
+	h := Middleware("*")
 
 	req := httptest.NewRequest("OPTIONS", "/", nil)
 	req.Header.Set("Origin", "http://example.com")

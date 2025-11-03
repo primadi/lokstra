@@ -255,7 +255,7 @@ type CreateUserParams struct {
 func createUser(ctx *request.Context, params *CreateUserParams) error {
     // params are already validated and ready to use
     user := db.CreateUser(params.Name, params.Email, params.Age)
-    return ctx.Api.Success(user)
+    return ctx.Api.Ok(user)
 }
 ```
 
@@ -332,13 +332,13 @@ Compare with **Echo, Gin, Chi, Fiber**:
 // Just routing - no DI, no config files
 r := lokstra.NewRouter("api")
 r.GET("/users", getUsersHandler)
-r.Use(logging.Middleware(), cors.Middleware())
+r.Use(cors.Middleware("*")
 
 app := lokstra.NewApp("api", ":8080", r)
 app.Run(30 * time.Second)
 ```
 
-✅ Flexible handler signatures (29 forms!)  
+✅ Flexible handler signatures (29+ forms!)  
 ✅ Clean middleware support  
 ✅ Group routing for API versioning  
 ✅ No framework lock-in  
@@ -424,6 +424,7 @@ func handler() {
     <h3>🏗️ Framework Guide</h3>
     <p>Full framework with DI</p>
     <a href="./02-framework-guide/">Like NestJS, Spring →</a>
+    <br><small><a href="./02-framework-guide/lokstra-vs-nestjs">vs NestJS</a> • <a href="./02-framework-guide/lokstra-vs-spring-boot">vs Spring Boot</a></small>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">

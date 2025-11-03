@@ -36,6 +36,12 @@ This example showcases Lokstra's **production-ready patterns** for building flex
 6. **Deployment Flexibility**: Same code, different runtime behavior
 7. **Interface-Based DI**: Depend on contracts, not implementations
 
+### 🔍 **Framework Comparison**
+
+Want to see how this same application would be implemented in other frameworks?
+
+**[👉 Framework Comparison: Lokstra vs NestJS vs Spring Boot](./framework-comparison)** - Same functionality, different approaches with detailed code examples and trade-offs analysis.
+
 ---
 
 ## 🏗️ Architecture
@@ -846,6 +852,9 @@ Before deploying:
 
 ## 📚 Related Topics
 
+- **[Framework Comparison](./framework-comparison)** - Same app in Lokstra vs NestJS vs Spring Boot
+- **[Lokstra vs NestJS](../../../02-framework-guide/lokstra-vs-nestjs)** - Detailed TypeScript framework comparison
+- **[Lokstra vs Spring Boot](../../../02-framework-guide/lokstra-vs-spring-boot)** - Detailed Java framework comparison
 - **01-essentials/auto-router**: Deep dive into convention system
 - **01-essentials/proxy-service**: Advanced proxy patterns
 - **01-essentials/metadata**: Metadata architecture

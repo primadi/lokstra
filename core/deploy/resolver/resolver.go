@@ -286,7 +286,7 @@ func cleanKey(flagArg string) string {
 		key = key[1:]
 	}
 
-	return key
+	return strings.ToLower(key)
 }
 
 // getCommandLineParam extracts value from command-line arguments
@@ -294,7 +294,7 @@ func cleanKey(flagArg string) string {
 func getCommandLineParam(key string) (string, bool) {
 	flagOnce.Do(parseFlags)
 
-	value, ok := flagValues[key]
+	value, ok := flagValues[strings.ToLower(key)]
 	return value, ok
 }
 

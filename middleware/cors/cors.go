@@ -14,7 +14,7 @@ const PARAMS_ALLOW_ORIGINS = "allow_origins"
 
 // CORS middleware to handle CORS requests
 // allowOrigins can be a list of allowed origins or ["*"] to allow all
-func Middleware(allowOrigins []string) request.HandlerFunc {
+func Middleware(allowOrigins ...string) request.HandlerFunc {
 	AllOrigins := slices.Contains(allowOrigins, "*")
 	return request.HandlerFunc(func(c *request.Context) error {
 		origin := c.R.Header.Get("Origin")
@@ -46,11 +46,11 @@ func Middleware(allowOrigins []string) request.HandlerFunc {
 
 func MiddlewareFactory(params map[string]any) request.HandlerFunc {
 	if params == nil {
-		return Middleware([]string{"*"})
+		return Middleware("*")
 	}
 
 	allowOrigins := utils.GetValueFromMap(params, PARAMS_ALLOW_ORIGINS, []string{})
-	return Middleware(allowOrigins)
+	return Middleware(allowOrigins...)
 }
 
 func Register() {

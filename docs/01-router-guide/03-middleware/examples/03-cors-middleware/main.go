@@ -19,7 +19,7 @@ func main() {
 	}
 
 	// Add CORS middleware globally
-	router.Use(cors.Middleware(allowedOrigins))
+	router.Use(cors.Middleware(allowedOrigins...))
 
 	// Register routes
 	router.GET("/users", func() map[string]any {

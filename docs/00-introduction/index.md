@@ -25,7 +25,7 @@ Use Lokstra as a pure HTTP router for:
 ```go
 r := lokstra.NewRouter("api")
 r.GET("/users", getUsersHandler)
-r.Use(logging.Middleware())
+r.Use(cors.Middleware("*"))
 
 app := lokstra.NewApp("api", ":8080", r)
 app.Run(30 * time.Second)
@@ -117,7 +117,7 @@ lokstra_registry.RegisterServiceType("user-service", func() any {
 
 ### 3. **Middleware** - Request Processing
 ```go
-r.Use(logging.Middleware(), auth.Middleware())
+r.Use(recovery.Middleware(nil), cors.Middleware("*"))
 ```
 
 **Key Feature**: Apply middleware globally or per-route
@@ -185,7 +185,10 @@ func main() {
     
     // 3. Create app & run
     app := lokstra.NewApp("demo", ":8080", r)
-    app.Run(30 * time.Second)
+    app.PrintStartInfo()
+    if err := app.Run(30 * time.Second); err != nil {
+      log.Fatal(err)
+    }
 }
 ```
 
@@ -217,16 +220,24 @@ r.GET("/users", func() ([]User, error) {
 
 // With context
 r.POST("/users", func(ctx *request.Context, user *User) error {
-    return db.Save(user)
+    result, err := db.Save(user)
+    if err != nil {
+      return ctx.Api.InternalError(err.Error())
+    }
+    return ctx.Api.Ok(result)
 })
 
-// With full control
-r.GET("/complex", func(ctx *request.Context) (*response.Response, error) {
-    return response.Ok(data), nil
+// With response.ApiHelper
+r.GET("/complex", func(user *User) (*response.ApiHelper, error) {
+    result, err := db.Save(user)
+    if err != nil {
+      return nil, err
+    }
+    return response.NewApiOk(result), nil
 })
 ```
 
-**29 different handler forms supported!**
+**29+ different handler forms supported!**
 
 ---
 
@@ -425,7 +436,7 @@ Choose your learning path:
 
 ### Track 1: Router Only (2-3 hours)
 ✅ Create routers and register routes  
-✅ Write handlers in 29 different styles  
+✅ Write handlers in 29+ different styles  
 ✅ Apply middleware (global, per-route, groups)  
 ✅ Manage app and server lifecycle  
 ✅ Build REST APIs without DI
@@ -512,7 +523,7 @@ We provide **two example tracks** based on how you want to use Lokstra:
 ⏱️ **2-3 hours total** • Perfect for quick APIs
 
 - [01: Hello World](examples/router-only/01-hello-world/) - Basic routing (15 min)
-- [02: Handler Forms](examples/router-only/02-handler-forms/) - 29 handler signatures (30 min)
+- [02: Handler Forms](examples/router-only/02-handler-forms/) - 29+ handler signatures (30 min)
 - [03: Middleware](examples/router-only/03-middleware/) - Global, per-route, groups (45 min)
 
 **What you'll build:** REST APIs with routing and middleware (no DI)
