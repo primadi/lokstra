@@ -6,8 +6,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/05-multi-deployment-pure-code/repository"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/05-multi-deployment-pure-code/service"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/repository"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/middleware/recovery"
 )

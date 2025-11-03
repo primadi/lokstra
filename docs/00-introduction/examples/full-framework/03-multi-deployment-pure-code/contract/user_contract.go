@@ -1,6 +1,6 @@
 package contract
 
-import "github.com/primadi/lokstra/docs/00-introduction/examples/05-multi-deployment-pure-code/model"
+import "github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/03-multi-deployment-pure-code/model"
 
 // ========================================
 // User Service Contract

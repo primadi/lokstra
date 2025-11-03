@@ -2,9 +2,9 @@ package service
 
 import (
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment-yaml/contract"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment-yaml/model"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment-yaml/repository"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/contract"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/model"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/repository"
 )
 
 // ========================================

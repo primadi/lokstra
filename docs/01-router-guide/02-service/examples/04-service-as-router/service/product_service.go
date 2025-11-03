@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/04-service-as-router/contract"
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/04-service-as-router/model"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/04-service-as-router/contract"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/04-service-as-router/model"
 )
 
 // ProductService handles product-related business logic

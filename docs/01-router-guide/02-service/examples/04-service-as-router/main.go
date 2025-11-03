@@ -7,11 +7,11 @@ import (
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/deploy"
 	coreService "github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/lokstra_registry"
 
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/04-service-as-router/contract"
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/04-service-as-router/model"
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/04-service-as-router/service"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/04-service-as-router/contract"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/04-service-as-router/model"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/04-service-as-router/service"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {

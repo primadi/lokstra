@@ -9,7 +9,7 @@ import (
 
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
-	svc "github.com/primadi/lokstra/docs/00-introduction/examples/06-external-services/service"
+	svc "github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/04-external-services/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 

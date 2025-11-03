@@ -6,9 +6,10 @@ import (
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/03-service-dependencies/model"
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/03-service-dependencies/repository"
-	svc "github.com/primadi/lokstra/docs/01-essentials/02-service/examples/03-service-dependencies/service"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/03-service-dependencies/model"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/03-service-dependencies/repository"
+	svc "github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/03-service-dependencies/service"
+
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 

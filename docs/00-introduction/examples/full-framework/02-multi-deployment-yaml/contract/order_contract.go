@@ -1,6 +1,6 @@
 package contract
 
-import "github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment-yaml/model"
+import "github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/model"
 
 // ========================================
 // Order Service Contract

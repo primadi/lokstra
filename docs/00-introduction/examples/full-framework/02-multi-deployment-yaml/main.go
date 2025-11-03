@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"time"
@@ -11,9 +10,9 @@ import (
 
 func main() {
 	// Parse command line flags
-	server := flag.String("server", "monolith.api-server",
-		"Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
-	flag.Parse()
+	// server := flag.String("server", "monolith.api-server",
+	// 	"Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
+	// flag.Parse()
 
 	fmt.Println("")
 	fmt.Println("╔═════════════════════════════════════════════╗")
@@ -24,7 +23,7 @@ func main() {
 	// 1. Register service types
 	registerServiceTypes()
 
-	// 2, Register middleware types
+	// 2, Register middleware types4
 	registerMiddlewareTypes()
 
 	// 2. Load config (loads ALL deployments into Global registry)
@@ -32,8 +31,10 @@ func main() {
 		log.Fatal("❌ Failed to load config:", err)
 	}
 
+	server := lokstra_registry.GetConfig("server", "monolith.api-server")
+
 	// 3. Run server
-	if err := lokstra_registry.RunServer(*server, 30*time.Second); err != nil {
+	if err := lokstra_registry.RunServer(server, 30*time.Second); err != nil {
 		log.Fatal("❌ Failed to run server:", err)
 	}
 }

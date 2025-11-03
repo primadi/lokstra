@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/04-multi-deployment-yaml/model"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/model"
 )
 
 // ========================================

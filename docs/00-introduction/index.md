@@ -222,7 +222,7 @@ r.POST("/users", func(ctx *request.Context, user *User) error {
 
 // With full control
 r.GET("/complex", func(ctx *request.Context) (*response.Response, error) {
-    return response.Success(data), nil
+    return response.Ok(data), nil
 })
 ```
 
@@ -234,6 +234,7 @@ r.GET("/complex", func(ctx *request.Context) (*response.Response, error) {
 Your service methods automatically become HTTP endpoints:
 
 ```go
+// Step 1: Define service with methods
 type UserService struct {}
 
 type GetAllParams struct {}
@@ -248,10 +249,26 @@ func (s *UserService) GetAll(p *GetAllParams) ([]User, error) { ... }
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) { ... }
 func (s *UserService) Create(p *CreateUserParams) error { ... }
 
+func NewUserService() *UserService {
+    return &UserService{}
+}
+
+// Step 2: Register service factory with metadata
+lokstra_registry.RegisterServiceType(
+    "user-service-factory",
+    NewUserService,
+    nil,
+    deploy.WithResource("user", "users"),
+    deploy.WithConvention("rest"),
+)
+
+// Step 3: Auto-generate router from service!
+userRouter := lokstra_registry.NewRouterFromServiceType("user-service-factory")
+
 // Automatically creates:
-// GET  /users
-// GET  /users/{id}
-// POST /users
+// GET  /users       → GetAll() method
+// GET  /users/{id}  → GetByID() method  
+// POST /users       → Create() method
 ```
 
 **Zero boilerplate routing code!**

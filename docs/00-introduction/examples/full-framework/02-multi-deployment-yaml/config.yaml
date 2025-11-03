@@ -10,6 +10,9 @@
 #   3. order-service - Only order endpoints (microservices)
 #
 
+configs:
+  server: ${SERVER:monolith.api-server}  # Default server to run
+
 # ========================================
 # Service Definitions (Global) - MAP format
 # ========================================

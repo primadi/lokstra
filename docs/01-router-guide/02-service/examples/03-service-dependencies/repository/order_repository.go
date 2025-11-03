@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/primadi/lokstra/docs/01-essentials/02-service/examples/03-service-dependencies/model"
+	"github.com/primadi/lokstra/docs/01-router-guide/02-service/examples/03-service-dependencies/model"
 )
 
 type OrderRepository struct {

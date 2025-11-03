@@ -2,9 +2,9 @@ package service
 
 import (
 	"github.com/primadi/lokstra/core/service"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/05-multi-deployment-pure-code/contract"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/05-multi-deployment-pure-code/model"
-	"github.com/primadi/lokstra/docs/00-introduction/examples/05-multi-deployment-pure-code/repository"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/03-multi-deployment-pure-code/contract"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/03-multi-deployment-pure-code/model"
+	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/03-multi-deployment-pure-code/repository"
 )
 
 // ========================================
