@@ -404,7 +404,8 @@
       <div class="nav-title">{{ site.title }}</div>
       <div class="nav-links">
         <a href="{{ site.baseurl }}/" class="btn">Home</a>
-        <a href="{{ site.baseurl }}/01-essentials/" class="btn">Documentation</a>
+        <a href="{{ site.baseurl }}/01-router-guide/" class="btn">Router Guide</a>
+        <a href="{{ site.baseurl }}/02-framework-guide/" class="btn">Framework Guide</a>
         <a href="{{ site.baseurl }}/00-introduction/examples/" class="btn">Examples</a>
         <a href="https://github.com/{{ site.github.owner_name }}/{{ site.github.repository_name }}" class="btn">GitHub</a>
       </div>
@@ -433,89 +434,88 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-section">
-        <div class="sidebar-title">Introduction</div>
+        <div class="sidebar-title">🚀 Getting Started</div>
         <ul class="sidebar-nav">
-          <li><a href="{{ site.baseurl }}/00-introduction/">Overview</a></li>
-          <li><a href="{{ site.baseurl }}/00-introduction/why-lokstra">Why Lokstra</a></li>
-          <li><a href="{{ site.baseurl }}/00-introduction/key-features">Key Features</a></li>
-          <li><a href="{{ site.baseurl }}/00-introduction/architecture">Architecture</a></li>
-          <li><a href="{{ site.baseurl }}/00-introduction/quick-start">Quick Start</a></li>
+          <li><a href="{{ site.baseurl }}/">🏠 Overview</a></li>
+          <li><a href="{{ site.baseurl }}/00-introduction/">📖 Introduction</a></li>
+          <li><a href="{{ site.baseurl }}/00-introduction/why-lokstra">💡 Why Lokstra</a></li>
+          <li><a href="{{ site.baseurl }}/00-introduction/key-features">⭐ Key Features</a></li>
+          <li><a href="{{ site.baseurl }}/00-introduction/architecture">🏛️ Architecture</a></li>
+          <li><a href="{{ site.baseurl }}/00-introduction/quick-start">⚡ Quick Start</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section" style="background-color: rgba(102,126,234,0.05); margin: 0 1rem; padding: 1rem; border-radius: 6px; border-left: 3px solid var(--primary);">
+        <div style="color: var(--primary); font-size: 0.85rem; font-weight: bold; margin-bottom: 0.5rem;">🎯 Choose Your Path</div>
+        <div style="color: var(--text-secondary); font-size: 0.8rem; line-height: 1.4;">
+          <div style="margin-bottom: 0.5rem;"><strong style="color: #667eea;">Track 1: Router</strong> - Simple routing like Echo/Gin</div>
+          <div><strong style="color: #764ba2;">Track 2: Framework</strong> - Full DI like NestJS/Spring Boot</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">📘 Examples & Tutorials</div>
+        <ul class="sidebar-nav">
           <li>
-            <a href="{{ site.baseurl }}/00-introduction/examples/">Examples</a>
+            <a href="{{ site.baseurl }}/00-introduction/examples/">All Examples</a>
             <ul class="nested">
-              <li><a href="{{ site.baseurl }}/00-introduction/examples/01-hello-world/">Hello World</a></li>
-              <li><a href="{{ site.baseurl }}/00-introduction/examples/02-handler-forms/">Handler Forms</a></li>
-              <li><a href="{{ site.baseurl }}/00-introduction/examples/03-crud-api/">CRUD API</a></li>
-              <li><a href="{{ site.baseurl }}/00-introduction/examples/04-multi-deployment/">Multi-Deployment</a></li>
-              <li><a href="{{ site.baseurl }}/00-introduction/examples/05-middleware/">Middleware</a></li>
-              <li><a href="{{ site.baseurl }}/00-introduction/examples/06-external-services/">External Services</a></li>
-              <li><a href="{{ site.baseurl }}/00-introduction/examples/07-remote-router/">Remote Router</a></li>
+              <li>
+                <span style="color: #667eea; font-size: 0.8em; font-weight: bold;">🎯 Track 1: Router Only</span>
+                <ul class="nested">
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/router-only/01-hello-world/">Hello World</a></li>
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/router-only/02-handler-forms/">Handler Forms</a></li>
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/router-only/03-middleware/">Middleware</a></li>
+                </ul>
+              </li>
+              <li>
+                <span style="color: #764ba2; font-size: 0.8em; font-weight: bold;">🏗️ Track 2: Full Framework</span>
+                <ul class="nested">
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/full-framework/01-crud-api/">CRUD API</a></li>
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/full-framework/02-multi-deployment-yaml/">Multi-Deployment</a></li>
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/full-framework/02-multi-deployment-yaml/framework-comparison">📊 Framework Comparison</a></li>
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/full-framework/03-multi-deployment-pure-code/">Pure Code Config</a></li>
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/full-framework/04-external-services/">External Services</a></li>
+                  <li><a href="{{ site.baseurl }}/00-introduction/examples/full-framework/05-remote-router/">Remote Router</a></li>
+                </ul>
+              </li>
             </ul>
           </li>
         </ul>
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-title">Essentials</div>
+        <div class="sidebar-title">🎯 Track 1: Router (Like Echo/Gin)</div>
         <ul class="sidebar-nav">
-          <li><a href="{{ site.baseurl }}/01-essentials/">Getting Started</a></li>
-          <li><a href="{{ site.baseurl }}/01-essentials/01-router/">Router</a></li>
-          <li><a href="{{ site.baseurl }}/01-essentials/02-service/">Service Management</a></li>
-          <li><a href="{{ site.baseurl }}/01-essentials/03-middleware/">Middleware</a></li>
-          <li><a href="{{ site.baseurl }}/01-essentials/04-configuration/">Configuration</a></li>
-          <li><a href="{{ site.baseurl }}/01-essentials/05-app-and-server/">App & Server</a></li>
-          <li><a href="{{ site.baseurl }}/01-essentials/06-putting-it-together/">Putting it Together</a></li>
+          <li><a href="{{ site.baseurl }}/01-router-guide/">Getting Started</a></li>
+          <li><a href="{{ site.baseurl }}/01-router-guide/01-router/">Router Basics</a></li>
+          <li><a href="{{ site.baseurl }}/01-router-guide/02-service/">Simple Services</a></li>
+          <li><a href="{{ site.baseurl }}/01-router-guide/03-middleware/">Middleware</a></li>
+          <li><a href="{{ site.baseurl }}/01-router-guide/04-configuration/">Configuration</a></li>
+          <li><a href="{{ site.baseurl }}/01-router-guide/05-app-and-server/">App & Server</a></li>
+          <li><a href="{{ site.baseurl }}/01-router-guide/06-putting-it-together/">Putting it Together</a></li>
+          <li>
+            <span style="color: #8b949e; font-size: 0.8em; font-style: italic;">Use when: Simple APIs, microservices, fast development</span>
+          </li>
         </ul>
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-title">Deep Dive</div>
+        <div class="sidebar-title">🏗️ Track 2: Framework (Like NestJS/Spring)</div>
         <ul class="sidebar-nav">
+          <li><a href="{{ site.baseurl }}/02-framework-guide/">Getting Started</a></li>
+          <li><a href="{{ site.baseurl }}/02-framework-guide/01-router/">Auto-Router Generation</a></li>
+          <li><a href="{{ site.baseurl }}/02-framework-guide/02-service/">Dependency Injection</a></li>
+          <li><a href="{{ site.baseurl }}/02-framework-guide/03-middleware/">Enterprise Middleware</a></li>
+          <li><a href="{{ site.baseurl }}/02-framework-guide/04-configuration/">YAML Configuration</a></li>
+          <li><a href="{{ site.baseurl }}/02-framework-guide/05-app-and-server/">Multi-Deployment</a></li>
           <li>
-            <a href="{{ site.baseurl }}/02-deep-dive/01-router/">Router</a>
-            <ul class="nested">
-              <li><a href="{{ site.baseurl }}/02-deep-dive/01-router/examples/">Examples</a></li>
-            </ul>
+            <span style="color: #8b949e; font-size: 0.8em; font-style: italic;">Use when: Enterprise apps, team projects, microservices architecture</span>
           </li>
           <li>
-            <a href="{{ site.baseurl }}/02-deep-dive/02-service/">Service</a>
+            <span style="color: #764ba2; font-size: 0.8em; font-weight: bold;">📊 Framework Comparisons</span>
             <ul class="nested">
-              <li><a href="{{ site.baseurl }}/02-deep-dive/02-service/examples/">Examples</a></li>
-            </ul>
-          </li>
-          <li>
-            <a href="{{ site.baseurl }}/02-deep-dive/03-middleware/">Middleware</a>
-            <ul class="nested">
-              <li><a href="{{ site.baseurl }}/02-deep-dive/03-middleware/examples/">Examples</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/03-middleware/examples/01-custom-middleware/">01 Custom Middleware</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/03-middleware/examples/02-middleware-composition/">02 Composition</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/03-middleware/examples/03-context-management/">03 Context</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/03-middleware/examples/04-error-recovery/">04 Error Recovery</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/03-middleware/examples/05-performance/">05 Performance</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/03-middleware/examples/06-integration/">06 Integration</a></li>
-            </ul>
-          </li>
-          <li>
-            <a href="{{ site.baseurl }}/02-deep-dive/04-configuration/">Configuration</a>
-            <ul class="nested">
-              <li><a href="{{ site.baseurl }}/02-deep-dive/04-configuration/examples/">Examples</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/04-configuration/examples/01-monolith-to-microservices/">01 Monolith to Microservices</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/04-configuration/examples/02-environment-management/">02 Environment Management</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/04-configuration/examples/03-configuration-validation/">03 Validation</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/04-configuration/examples/04-dynamic-configuration/">04 Dynamic Config</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/04-configuration/examples/05-secrets-management/">05 Secrets</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/04-configuration/examples/06-production-patterns/">06 Production Patterns</a></li>
-            </ul>
-          </li>
-          <li>
-            <a href="{{ site.baseurl }}/02-deep-dive/05-app-and-server/">App & Server</a>
-            <ul class="nested">
-              <li><a href="{{ site.baseurl }}/02-deep-dive/05-app-and-server/examples/">Examples</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/05-app-and-server/examples/01-lifecycle-hooks/">01 Lifecycle Hooks</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/05-app-and-server/examples/02-multiple-servers/">02 Multiple Servers</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/05-app-and-server/examples/03-graceful-shutdown/">03 Graceful Shutdown</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/05-app-and-server/examples/04-health-checks/">04 Health Checks</a></li>
-              <li><a href="{{ site.baseurl }}/02-deep-dive/05-app-and-server/examples/05-production-monitoring/">05 Production Monitoring</a></li>
+              <li><a href="{{ site.baseurl }}/02-framework-guide/lokstra-vs-nestjs">🟨 vs NestJS (TypeScript)</a></li>
+              <li><a href="{{ site.baseurl }}/02-framework-guide/lokstra-vs-spring-boot">☕ vs Spring Boot (Java)</a></li>
             </ul>
           </li>
         </ul>
