@@ -21,14 +21,31 @@ var (
 	currentCompositeKey string
 )
 
+// getFirstServerCompositeKey returns the first available server composite key from the global registry
+func getFirstServerCompositeKey() string {
+	registry := deploy.Global()
+	return registry.GetFirstServerCompositeKey()
+}
+
 // LoadAndBuild loads config and builds ALL deployments into Global registry
 func LoadAndBuild(configPaths []string) error {
 	return loader.LoadAndBuild(configPaths)
 }
 
 // SetCurrentServer sets the current server using composite key: "deploymentName.serverName"
+// If compositeKey is empty, it will automatically use the first deployment and server available
 // Example: SetCurrentServer("order-service.order-api")
 func SetCurrentServer(compositeKey string) error {
+	// If compositeKey is empty, get the first deployment and server
+	if compositeKey == "" {
+		firstKey := getFirstServerCompositeKey()
+		if firstKey == "" {
+			return fmt.Errorf("no server topologies found in global registry")
+		}
+		compositeKey = firstKey
+		log.Printf("🎯 Auto-selected first server: %s", compositeKey)
+	}
+
 	parts := strings.Split(compositeKey, ".")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid server key format, expected 'deployment.server', got: %s", compositeKey)
@@ -329,6 +346,8 @@ func RunCurrentServer(timeout time.Duration) error {
 
 		// Create Lokstra App for this deploy app. Name it using serverName#index to keep unique names
 		appName := fmt.Sprintf("%s#%s", serverName, strconv.Itoa(i+1))
+
+		// Address is already resolved by ResolveConfigs()
 		coreApp := app.New(appName, appTopo.Addr, routers...)
 		coreApps = append(coreApps, coreApp)
 	}

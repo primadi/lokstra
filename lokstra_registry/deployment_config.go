@@ -40,6 +40,7 @@ type ServerConfig struct {
 
 // GetBaseURL implements deploy.ServerConfig interface
 func (s *ServerConfig) GetBaseURL() string {
+	// Values are already resolved by ResolveConfigs()
 	return s.BaseURL
 }
 
@@ -54,6 +55,7 @@ func (s *ServerConfig) GetApps() []deploy.AppConfig {
 
 // GetAddr implements deploy.ServerConfig interface
 func (s *ServerConfig) GetAddr() string {
+	// Values are already resolved by ResolveConfigs()
 	return s.Addr
 }
 
@@ -76,6 +78,7 @@ type AppConfig struct {
 
 // GetAddr implements deploy.AppConfig interface
 func (a *AppConfig) GetAddr() string {
+	// Values are already resolved by ResolveConfigs()
 	return a.Addr
 }
 

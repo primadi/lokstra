@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/lokstra_registry"
@@ -18,15 +17,8 @@ func main() {
 	// 2. Register router factory
 	lokstra_registry.RegisterRouter("api", createAPIRouter())
 
-	// 3. Load and build from YAML config
-	if err := lokstra_registry.LoadAndBuild([]string{"config.yaml"}); err != nil {
-		log.Fatal("❌ Failed to load config:", err)
-	}
-
-	// 4. Run server (registers services and starts apps)
-	if err := lokstra_registry.RunServer("development.api", 30*time.Second); err != nil {
-		log.Fatal("❌ Failed to start server:", err)
-	}
+	// 3. Run server from config file
+	lokstra_registry.RunServerFromConfig()
 }
 
 // ========================================

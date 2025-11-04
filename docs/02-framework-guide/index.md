@@ -99,8 +99,9 @@ deployments:
 **4. Run Application**:
 ```go
 func main() {
-    app := lokstra.NewApp("my-app", lokstra.FromConfig())
-    app.Run(30 * time.Second)
+    RegisterServiceAndMiddlewareTypes()
+
+    lokstra_registry.RunServerFromConfig()
 }
 ```
 

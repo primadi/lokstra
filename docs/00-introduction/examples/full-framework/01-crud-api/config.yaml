@@ -7,8 +7,7 @@
 
 # Global configs
 configs:
-  APP_NAME: "User CRUD API"
-  APP_VERSION: "1.0.0"
+  server: ${SERVER:}
 
 # Service definitions
 service-definitions:
@@ -32,6 +31,6 @@ deployments:
   development:
     servers:
       api:
-        base-url: http://localhost:3002
-        addr: ":3002"
+        base-url: ${API_BASE_URL:http://localhost}
+        addr: ${API_ADDR::3002}
         routers: [api]  # Manual router registered in code

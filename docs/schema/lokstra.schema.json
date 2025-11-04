@@ -76,7 +76,7 @@
         }
       }
     },
-    "routers": {
+    "router-definitions": {
       "type": "object",
       "description": "Router definitions (auto-generated from services)",
       "patternProperties": {
@@ -189,8 +189,11 @@
           "properties": {
             "url": {
               "type": "string",
-              "description": "Base URL of external service",
-              "pattern": "^https?://"
+              "description": "Base URL of external service (supports resolver: ${VAR:default} or direct URL)",
+              "oneOf": [
+                { "pattern": "^https?://" },
+                { "pattern": "^\\$\\{.*\\}$" }
+              ]
             },
             "type": {
               "type": "string",
@@ -249,8 +252,11 @@
                   "properties": {
                     "base-url": {
                       "type": "string",
-                      "description": "Server base URL",
-                      "pattern": "^https?://"
+                      "description": "Server base URL (supports resolver: ${VAR:default} or direct URL)",
+                      "oneOf": [
+                        { "pattern": "^https?://" },
+                        { "pattern": "^\\$\\{[^}]+\\}$" }
+                      ]
                     },
                     "apps": {
                       "type": "array",
@@ -261,8 +267,11 @@
                         "properties": {
                           "addr": {
                             "type": "string",
-                            "description": "Application address (e.g., ':8080', '127.0.0.1:8080', 'unix:/tmp/app.sock')",
-                            "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
+                            "description": "Application address (supports resolver: ${VAR:default} or direct address like ':8080', '127.0.0.1:8080', 'unix:/tmp/app.sock')",
+                            "oneOf": [
+                              { "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$" },
+                              { "pattern": "^\\$\\{.*\\}$" }
+                            ]
                           },
                           "routers": {
                             "type": "array",
@@ -286,8 +295,11 @@
                     },
                     "addr": {
                       "type": "string",
-                      "description": "Shorthand: Application address (creates new app prepended to apps array)",
-                      "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
+                      "description": "Shorthand: Application address (supports resolver: ${VAR:default} or direct address)",
+                      "oneOf": [
+                        { "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$" },
+                        { "pattern": "^\\$\\{.*\\}$" }
+                      ]
                     },
                     "routers": {
                       "type": "array",

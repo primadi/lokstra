@@ -117,11 +117,6 @@ func LoadAndBuild(configPaths []string) error {
 		})
 	}
 
-	// Resolve configs
-	if err := registry.ResolveConfigs(); err != nil {
-		return fmt.Errorf("failed to resolve configs: %w", err)
-	}
-
 	// Register middlewares from YAML (using unified API)
 	for name, mw := range config.MiddlewareDefinitions {
 		mw.Name = name // Set name from map key
@@ -388,6 +383,12 @@ func LoadAndBuild(configPaths []string) error {
 
 		// Store topology in global registry
 		registry.StoreDeploymentTopology(deployTopo)
+	}
+
+	// Resolve ALL config values throughout the entire configuration
+	// This includes configs, deployment values, service configs, etc.
+	if err := registry.ResolveConfigs(); err != nil {
+		return fmt.Errorf("failed to resolve configs: %w", err)
 	}
 
 	return nil

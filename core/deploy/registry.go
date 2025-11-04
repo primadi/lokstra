@@ -416,46 +416,131 @@ func (g *GlobalRegistry) GetRouterDef(name string) *schema.RouterDef {
 
 // ===== CONFIG RESOLUTION =====
 
-// ResolveConfigs resolves all config values using the resolver
-// This performs 2-step resolution:
-//  1. Resolve all ${...} except ${@cfg:...}
+// ResolveConfigs resolves ALL values throughout the entire configuration using the resolver
+// This performs 2-step resolution globally across all sections:
+//  1. Resolve all ${...} except ${@cfg:...} in configs, deployments, service configs, etc.
 //  2. Resolve ${@cfg:...} using step 1 results
+//
+// After this call, all ${...} values are resolved and ready for use.
 func (g *GlobalRegistry) ResolveConfigs() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// Build initial resolved configs map (before resolution)
+	// Build initial resolved configs map (before resolution) - needed for @cfg references
 	tempConfigs := make(map[string]any)
 	for name, def := range g.configs {
 		tempConfigs[name] = def.Value
 	}
 
-	// Resolve each config value
+	// STEP 1: Resolve configs section first (needed for @cfg references)
 	for name, def := range g.configs {
-		// Convert value to string if needed
-		var valueStr string
-		switch v := def.Value.(type) {
-		case string:
-			valueStr = v
-		default:
-			// Non-string values are used as-is
-			g.resolvedConfigs[name] = v
-			continue
-		}
-
-		// Resolve the value
-		resolved, err := g.resolver.ResolveValue(valueStr, tempConfigs)
+		resolved, err := g.resolveAnyValue(def.Value, tempConfigs)
 		if err != nil {
 			return fmt.Errorf("failed to resolve config %s: %w", name, err)
 		}
-
 		g.resolvedConfigs[name] = resolved
-
-		// Update temp map for subsequent @cfg references
-		tempConfigs[name] = resolved
+		tempConfigs[name] = resolved // Update for subsequent @cfg references
 	}
 
+	// STEP 2: Resolve ALL deployment topology values in-place
+	g.deploymentTopologies.Range(func(key, value any) bool {
+		deployment := value.(*DeploymentTopology)
+
+		// Resolve config overrides
+		for configKey, configValue := range deployment.ConfigOverrides {
+			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
+			if err != nil {
+				// Don't fail the whole process, just log warning
+				fmt.Printf("Warning: failed to resolve deployment config override %s.%s: %v\n",
+					deployment.Name, configKey, err)
+				continue
+			}
+			deployment.ConfigOverrides[configKey] = resolved
+		}
+
+		// Resolve server values
+		for _, server := range deployment.Servers {
+			// Resolve BaseURL
+			resolved, err := g.resolveAnyValue(server.BaseURL, tempConfigs)
+			if err != nil {
+				fmt.Printf("Warning: failed to resolve server base-url %s.%s: %v\n",
+					deployment.Name, server.Name, err)
+			} else {
+				if resolvedStr, ok := resolved.(string); ok {
+					server.BaseURL = resolvedStr
+				}
+			}
+
+			// Resolve app addresses
+			for _, app := range server.Apps {
+				resolved, err := g.resolveAnyValue(app.Addr, tempConfigs)
+				if err != nil {
+					fmt.Printf("Warning: failed to resolve app addr %s.%s: %v\n",
+						deployment.Name, server.Name, err)
+				} else {
+					if resolvedStr, ok := resolved.(string); ok {
+						app.Addr = resolvedStr
+					}
+				}
+			}
+		}
+		return true // Continue iteration
+	})
+
+	// STEP 3: Resolve service definition config values
+	g.serviceDefs.Range(func(key, value any) bool {
+		serviceDef := value.(*deferredServiceDef)
+
+		// Resolve config map
+		for configKey, configValue := range serviceDef.Config {
+			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
+			if err != nil {
+				fmt.Printf("Warning: failed to resolve service config %s.%s: %v\n",
+					serviceDef.Name, configKey, err)
+				continue
+			}
+			serviceDef.Config[configKey] = resolved
+		}
+		return true // Continue iteration
+	})
+
+	// STEP 4: Resolve middleware definition config values
+	g.middlewareEntries.Range(func(key, value any) bool {
+		middlewareEntry := value.(*MiddlewareEntry)
+
+		// Resolve config map
+		for configKey, configValue := range middlewareEntry.Config {
+			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
+			if err != nil {
+				middlewareName := key.(string)
+				fmt.Printf("Warning: failed to resolve middleware config %s.%s: %v\n",
+					middlewareName, configKey, err)
+				continue
+			}
+			middlewareEntry.Config[configKey] = resolved
+		}
+		return true // Continue iteration
+	})
+
 	return nil
+}
+
+// resolveAnyValue resolves a value of any type using the resolver
+// Only string values containing ${...} are processed, others are returned as-is
+func (g *GlobalRegistry) resolveAnyValue(value any, tempConfigs map[string]any) (any, error) {
+	// Only process string values
+	valueStr, ok := value.(string)
+	if !ok {
+		return value, nil // Non-string values are used as-is
+	}
+
+	// Only resolve if contains resolver syntax
+	if !strings.Contains(valueStr, "${") {
+		return value, nil // No resolver syntax, return as-is
+	}
+
+	// Resolve the value using 2-step process
+	return g.resolver.ResolveValue(valueStr, tempConfigs)
 }
 
 // GetResolvedConfig returns a resolved config value
@@ -465,21 +550,6 @@ func (g *GlobalRegistry) GetResolvedConfig(name string) (any, bool) {
 
 	value, ok := g.resolvedConfigs[name]
 	return value, ok
-}
-
-// ResolveConfigValue resolves a single config value (helper for service configs)
-func (g *GlobalRegistry) ResolveConfigValue(value any) (any, error) {
-	// Convert to string if needed
-	valueStr, ok := value.(string)
-	if !ok {
-		// Non-string values are used as-is
-		return value, nil
-	}
-
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.resolver.ResolveValue(valueStr, g.resolvedConfigs)
 }
 
 // ===== RUNTIME INSTANCE REGISTRATION =====
@@ -1271,6 +1341,8 @@ func (a *shorthandAppConfig) GetAddr() string                { return a.addr }
 func (a *shorthandAppConfig) GetRouters() []string           { return a.routers }
 func (a *shorthandAppConfig) GetPublishedServices() []string { return a.publishedServices }
 
+var FirstServer string
+
 // StoreDeploymentTopology stores deployment topology in global registry
 func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
 	g.deploymentTopologies.Store(topology.Name, topology)
@@ -1279,6 +1351,9 @@ func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
 	for serverName, serverTopo := range topology.Servers {
 		compositeKey := topology.Name + "." + serverName
 		g.serverTopologies.Store(compositeKey, serverTopo)
+		if FirstServer == "" {
+			FirstServer = compositeKey
+		}
 	}
 }
 
@@ -1310,6 +1385,12 @@ func (g *GlobalRegistry) GetCurrentCompositeKey() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.currentCompositeKey
+}
+
+// GetFirstServerCompositeKey returns the first available server composite key from server topologies
+// Returns empty string if no server topologies are found
+func (g *GlobalRegistry) GetFirstServerCompositeKey() string {
+	return FirstServer
 }
 
 // ===== SHUTDOWN =====

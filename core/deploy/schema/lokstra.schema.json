@@ -66,15 +66,6 @@
                 "pattern": "^([a-zA-Z][a-zA-Z0-9]*:)?[a-z][a-z0-9-]*$"
               }
             },
-            "middlewares": {
-              "type": "array",
-              "description": "List of middleware names to apply to auto-generated router",
-              "items": {
-                "type": "string",
-                "description": "Middleware name (must be registered via RegisterMiddlewareType)",
-                "pattern": "^[a-z][a-z0-9-]*$"
-              }
-            },
             "config": {
               "type": "object",
               "description": "Service-specific configuration",
@@ -87,40 +78,40 @@
     },
     "router-definitions": {
       "type": "object",
-      "description": "Router definitions with inline overrides. Service name is derived from router name using pattern '{service-name}-router'. Example: 'user-service-router' → service is 'user-service'.",
+      "description": "Router definitions (auto-generated from services). Service name is derived from router name by removing '-router' suffix.",
       "patternProperties": {
         "^[a-z][a-z0-9-]*$": {
           "type": "object",
           "properties": {
             "convention": {
               "type": "string",
-              "description": "Convention type (rest, rpc, graphql) - for auto-generated routers only",
+              "description": "Convention type (rest, rpc, graphql) - optional if set in RegisterServiceType",
               "pattern": "^[a-z][a-z0-9-]*$"
             },
             "resource": {
               "type": "string",
-              "description": "Singular form of resource name (e.g., 'user') - for auto-generated routers only",
+              "description": "Singular form of resource name (e.g., 'user') - optional if set in RegisterServiceType",
               "pattern": "^[a-z][a-z-]*$"
             },
             "resource-plural": {
               "type": "string",
-              "description": "Plural form of resource name (e.g., 'users') - for auto-generated routers only",
+              "description": "Plural form of resource name (e.g., 'users') - optional if set in RegisterServiceType",
               "pattern": "^[a-z][a-z-]*$"
             },
             "path-prefix": {
               "type": "string",
-              "description": "Path prefix for all routes (e.g., '/api/v1') - works for both auto-generated and manual routers"
+              "description": "Path prefix for all routes (e.g., '/api/v1')"
             },
             "path-rewrites": {
               "type": "array",
-              "description": "Regex-based path rewrite rules - works for both auto-generated and manual routers",
+              "description": "Regex-based path rewrites",
               "items": {
                 "type": "object",
                 "required": ["pattern", "replacement"],
                 "properties": {
                   "pattern": {
                     "type": "string",
-                    "description": "Regex pattern to match in path (e.g., '^/api/v1/(.*)$')"
+                    "description": "Regex pattern to match (e.g., '^/api/v1/(.*)$')"
                   },
                   "replacement": {
                     "type": "string",
@@ -132,7 +123,7 @@
             },
             "middlewares": {
               "type": "array",
-              "description": "Router-level middleware names - works for both auto-generated and manual routers",
+              "description": "Router-level middleware names",
               "items": {
                 "type": "string",
                 "pattern": "^[a-z][a-z0-9-]*$"
@@ -140,7 +131,7 @@
             },
             "hidden": {
               "type": "array",
-              "description": "Method names to hide from router - for auto-generated routers only",
+              "description": "Method names to hide from router",
               "items": {
                 "type": "string",
                 "pattern": "^[A-Z][a-zA-Z0-9]*$"
@@ -148,14 +139,15 @@
             },
             "custom": {
               "type": "array",
-              "description": "Custom route definitions - works for both auto-generated and manual routers",
+              "description": "Custom route definitions",
               "items": {
                 "type": "object",
                 "required": ["name"],
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Route name (manual or auto-generated like 'GET_/users')"
+                    "description": "Method name",
+                    "pattern": "^[A-Z][a-zA-Z0-9]*$"
                   },
                   "method": {
                     "type": "string",
@@ -193,8 +185,11 @@
           "properties": {
             "url": {
               "type": "string",
-              "description": "Base URL of external service",
-              "pattern": "^https?://"
+              "description": "Base URL of external service (supports resolver: ${VAR:default} or direct URL)",
+              "oneOf": [
+                { "pattern": "^https?://" },
+                { "pattern": "^\\$\\{.*\\}$" }
+              ]
             },
             "type": {
               "type": "string",
@@ -223,26 +218,7 @@
             },
             "path-prefix": {
               "type": "string",
-              "description": "Path prefix for routes (e.g., '/api/v1')"
-            },
-            "path-rewrites": {
-              "type": "array",
-              "description": "Regex-based path rewrite rules",
-              "items": {
-                "type": "object",
-                "required": ["pattern", "replacement"],
-                "properties": {
-                  "pattern": {
-                    "type": "string",
-                    "description": "Regex pattern to match in path (e.g., '^/api/v1/(.*)$')"
-                  },
-                  "replacement": {
-                    "type": "string",
-                    "description": "Replacement string (e.g., '/api/v2/$1')"
-                  }
-                },
-                "additionalProperties": false
-              }
+              "description": "Path prefix for all routes (e.g., '/api/v1')"
             },
             "middlewares": {
               "type": "array",
@@ -269,16 +245,17 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "Route name"
+                    "description": "Method name",
+                    "pattern": "^[A-Z][a-zA-Z0-9]*$"
                   },
                   "method": {
                     "type": "string",
-                    "description": "HTTP method override",
+                    "description": "HTTP method override (GET, POST, PUT, DELETE, PATCH)",
                     "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"]
                   },
                   "path": {
                     "type": "string",
-                    "description": "Path override"
+                    "description": "Path override (e.g., '/custom/{id}')"
                   },
                   "middlewares": {
                     "type": "array",
@@ -319,8 +296,11 @@
                   "properties": {
                     "base-url": {
                       "type": "string",
-                      "description": "Server base URL",
-                      "pattern": "^https?://"
+                      "description": "Server base URL (supports resolver: ${VAR:default} or direct URL)",
+                      "oneOf": [
+                        { "pattern": "^https?://" },
+                        { "pattern": "^\\$\\{[^}]+\\}$" }
+                      ]
                     },
                     "apps": {
                       "type": "array",
@@ -331,8 +311,11 @@
                         "properties": {
                           "addr": {
                             "type": "string",
-                            "description": "Application address (e.g., ':8080', '127.0.0.1:8080', 'unix:/tmp/app.sock')",
-                            "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
+                            "description": "Application address (supports resolver: ${VAR:default} or direct address like ':8080', '127.0.0.1:8080', 'unix:/tmp/app.sock')",
+                            "oneOf": [
+                              { "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$" },
+                              { "pattern": "^\\$\\{.*\\}$" }
+                            ]
                           },
                           "routers": {
                             "type": "array",
@@ -356,8 +339,11 @@
                     },
                     "addr": {
                       "type": "string",
-                      "description": "Shorthand: Application address (creates new app prepended to apps array)",
-                      "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$"
+                      "description": "Shorthand: Application address (supports resolver: ${VAR:default} or direct address)",
+                      "oneOf": [
+                        { "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$" },
+                        { "pattern": "^\\$\\{.*\\}$" }
+                      ]
                     },
                     "routers": {
                       "type": "array",

@@ -82,7 +82,9 @@ func main() {
     })
     
     app := lokstra.NewApp("hello", ":3000", r)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+      log.Fatal(err)
+    }
 }
 ```
 

@@ -1,23 +1,15 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"log"
 	"strings"
-	"time"
 
 	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/core/deploy/loader"
 	svc "github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/04-external-services/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
-	// Parse flags
-	serverFlag := flag.String("server", "app.api-server", "Server to run (deployment.server format)")
-	flag.Parse()
-
 	// Register service factories
 	lokstra_registry.RegisterServiceType("order-service-factory",
 		svc.OrderServiceFactory, nil,
@@ -35,18 +27,9 @@ func main() {
 		deploy.WithRouteOverride("Refund", "POST /payments/{id}/refund"),
 	)
 
-	// Load config and build deployment topology
-	if err := loader.LoadAndBuild([]string{"config.yaml"}); err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Print info and run server
 	printStartInfo()
 
-	// Run server (compositeKey format: "deployment.server")
-	if err := lokstra_registry.RunServer(*serverFlag, 30*time.Second); err != nil {
-		log.Fatal(err)
-	}
+	lokstra_registry.RunServerFromConfig()
 }
 
 func printStartInfo() {

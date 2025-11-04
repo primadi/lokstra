@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"time"
 
 	"github.com/primadi/lokstra/lokstra_registry"
 )
@@ -23,18 +21,9 @@ func main() {
 	// 1. Register service types
 	registerServiceTypes()
 
-	// 2, Register middleware types4
+	// 2. Register middleware types
 	registerMiddlewareTypes()
 
-	// 2. Load config (loads ALL deployments into Global registry)
-	if err := lokstra_registry.LoadAndBuild([]string{"config.yaml"}); err != nil {
-		log.Fatal("❌ Failed to load config:", err)
-	}
-
-	server := lokstra_registry.GetConfig("server", "monolith.api-server")
-
-	// 3. Run server
-	if err := lokstra_registry.RunServer(server, 30*time.Second); err != nil {
-		log.Fatal("❌ Failed to run server:", err)
-	}
+	// 3. RunServerFromConfig
+	lokstra_registry.RunServerFromConfig()
 }
