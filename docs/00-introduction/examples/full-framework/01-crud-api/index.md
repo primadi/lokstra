@@ -380,7 +380,7 @@ users, err := userService.MustGet().GetAll()
 // Panics: "nil pointer dereference" (unclear what's wrong!)
 ```
 
-**📖 Deep Dive**: See [Essentials → Service Guide](../../01-essentials/02-service/) for comprehensive patterns and best practices.
+**📖 Deep Dive**: See [Framework Guide](../../02-framework-guide/) for comprehensive patterns and best practices.
 
 ### 3. Request Binding
 

@@ -856,7 +856,7 @@ app := lokstra.NewApp("demo", ":3001", r)  // Use 3001
 ```
 
 **"Handler signature error"**
-Check supported forms in [Router Guide](../01-essentials/01-router)
+Check supported forms in [Router Guide](../01-router-guide/)
 
 ---
 
@@ -871,4 +871,4 @@ Check supported forms in [Router Guide](../01-essentials/01-router)
 
 **Happy coding!** 🚀
 
-**Next**: [Learn Essentials](../01-essentials) or [Understand Architecture](architecture)
+**Next**: [Learn Router Guide](../01-router-guide/) or [Understand Architecture](architecture)

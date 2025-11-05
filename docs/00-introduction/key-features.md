@@ -257,7 +257,7 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
 }
 ```
 
-📖 **Learn more**: [Service as Router Guide](../01-essentials/02-service/index#service-as-router)
+📖 **Learn more**: [Framework Guide](../02-framework-guide/)
 
 ---
 
@@ -476,7 +476,7 @@ GetService[T](name)
 // That's it!
 ```
 
-📖 **Learn more**: [Service Guide](../01-essentials/02-service)
+📖 **Learn more**: [Framework Guide](../02-framework-guide/)
 
 ---
 
@@ -593,7 +593,7 @@ config.LoadConfigFile("dev.yaml", &cfg)  // Merges with base
 - Multiple environments
 - Easy deployment
 
-📖 **Learn more**: [Configuration Guide](../01-essentials/04-configuration)
+📖 **Learn more**: [Framework Guide](../02-framework-guide/)
 
 ---
 
@@ -617,16 +617,16 @@ config.LoadConfigFile("dev.yaml", &cfg)  // Merges with base
 ### Quick Demos:
 
 **Handler Forms**:
-👉 [Handler Forms Example](../01-essentials/01-router/examples/all-handler-forms/)
+👉 [Handler Forms Example](../01-router-guide/01-router/examples/04-handler-forms/)
 
 **Service as Router**:
-👉 [Service Router Example](../01-essentials/02-service/examples/service-as-router/)
+👉 [Service Router Example](../01-router-guide/02-service/examples/)
 
 **Multi-Deployment**:
 👉 [Single Binary Example](../05-examples/single-binary-deployment/)
 
 **Full Stack**:
-👉 [Complete Todo API](../01-essentials/06-putting-it-together/examples/todo-api/)
+👉 [Complete Todo API](../01-router-guide/06-putting-it-together/)
 
 ---
 
@@ -652,7 +652,7 @@ Most frameworks focus on **one thing**:
 
 **Deep Dives**:
 - [Architecture](architecture) - How it all works together
-- [Essentials](../01-essentials) - Hands-on tutorials
+- [Router Guide](../01-router-guide/) - Hands-on tutorials
 - [Deep Dive](../02-deep-dive) - Advanced patterns
 
 **Try It**:

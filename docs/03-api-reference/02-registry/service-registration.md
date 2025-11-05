@@ -819,6 +819,6 @@ lokstra_registry.RegisterServiceType("user-service",
 
 ## Related Guides
 
-- **[Service Essentials](../../01-essentials/02-service/)** - Service basics
+- **[Service Essentials](../../02-framework-guide/02-service/)** - Service basics
 - **[Dependency Injection](../../02-deep-dive/service/)** - Advanced DI patterns
 - **[Auto-Router](../../02-deep-dive/auto-router/)** - Auto-router generation

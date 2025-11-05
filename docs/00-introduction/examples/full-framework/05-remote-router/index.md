@@ -417,7 +417,7 @@ func main() {
 
 - [Architecture - Proxy Patterns](../../architecture#proxy-patterns)
 - [Example 06 - External Services](../06-external-services)
-- [Remote Services Guide](../../../01-essentials/02-service)
+- [Remote Services Guide](../../../02-framework-guide/02-service)
 
 ---
 

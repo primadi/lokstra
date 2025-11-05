@@ -966,6 +966,6 @@ router-definitions:
 
 ## Related Guides
 
-- **[YAML Configuration](../../01-essentials/04-configuration/)** - Configuration basics
+- **[YAML Configuration](../../02-framework-guide/04-configuration/)** - Configuration basics
 - **[Deployment Strategies](../../04-guides/deployment/)** - Deployment patterns
 - **[Schema Validation](../../04-guides/validation/)** - Validation techniques

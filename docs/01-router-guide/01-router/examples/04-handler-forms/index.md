@@ -18,7 +18,7 @@
 ## 🚀 Run It
 
 ```bash
-cd docs/01-essentials/01-router/examples/04-handler-forms
+cd docs/01-router-guide/01-router/examples/04-handler-forms
 go run main.go
 ```
 

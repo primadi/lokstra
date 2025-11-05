@@ -13,7 +13,7 @@ Demonstrates authentication and authorization middleware patterns.
 ## Running
 
 ```bash
-cd docs/01-essentials/03-middleware/examples/02-auth-middleware
+cd docs/01-router-guide/03-middleware/examples/02-auth-middleware
 go run main.go
 ```
 

@@ -12,7 +12,7 @@ Demonstrates running multiple apps on different ports with a server.
 
 ```bash
 # Navigate to example directory
-cd docs/01-essentials/05-app-and-server/02-multiple-apps
+cd docs/01-router-guide/05-app-and-server/02-multiple-apps
 
 # Run directly (go.mod already exists in project root)
 go run main.go

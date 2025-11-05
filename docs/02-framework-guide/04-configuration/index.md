@@ -1,7 +1,7 @@
 # Configuration Deep Dive
 
 > **Master multi-deployment strategies and advanced configuration patterns**  
-> **Time**: 60-75 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Configuration](../../01-essentials/04-configuration/)
+> **Time**: 60-75 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Configuration](../../02-framework-guide/04-configuration/)
 
 ---
 
@@ -109,9 +109,9 @@ go run main.go
 ## 📖 Prerequisites
 
 Before diving in, make sure you understand:
-- [Configuration basics](../../01-essentials/04-configuration/)
-- [Environment variables](../../01-essentials/04-configuration/#environment)
-- [CFG references](../../01-essentials/04-configuration/#references)
+- [Configuration basics](../../02-framework-guide/04-configuration/)
+- [Environment variables](../../02-framework-guide/04-configuration/#environment)
+- [CFG references](../../02-framework-guide/04-configuration/#references)
 
 ---
 

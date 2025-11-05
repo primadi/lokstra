@@ -1,7 +1,7 @@
 # App & Server Deep Dive
 
 > **Master application lifecycle and production deployment patterns**  
-> **Time**: 45-60 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - App & Server](../../01-essentials/05-app-and-server/)
+> **Time**: 45-60 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - App & Server](../../01-router-guide/05-app-and-server/)
 
 ---
 
@@ -114,9 +114,9 @@ go run main.go
 ## 📖 Prerequisites
 
 Before diving in, make sure you understand:
-- [App & Server basics](../../01-essentials/05-app-and-server/)
-- [Server configuration](../../01-essentials/05-app-and-server/#server)
-- [Application structure](../../01-essentials/05-app-and-server/#app)
+- [App & Server basics](../../01-router-guide/05-app-and-server/)
+- [Server configuration](../../01-router-guide/05-app-and-server/#server)
+- [Application structure](../../01-router-guide/05-app-and-server/#app)
 
 ---
 
@@ -168,4 +168,4 @@ Load Balancer
 
 **Coming Soon** - Examples and detailed content are being prepared.
 
-**Back to**: [Deep Dive Home](../) | [Essentials](../../01-essentials/)
+**Back to**: [Deep Dive Home](../) | [Essentials](../../00-introduction/)

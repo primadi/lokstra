@@ -1,7 +1,7 @@
 # Router Deep Dive
 
 > **Master all 29 handler forms and advanced routing patterns**  
-> **Time**: 60-75 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Router](../../01-essentials/01-router/)
+> **Time**: 60-75 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Router](../../01-router-guide/01-router/)
 
 ---
 
@@ -120,9 +120,9 @@ go run main.go
 ## 📖 Prerequisites
 
 Before diving in, make sure you understand:
-- [Basic routing](../../01-essentials/01-router/)
-- [Handler basics](../../01-essentials/01-router/#handlers)
-- [Parameter binding](../../01-essentials/01-router/#parameters)
+- [Basic routing](../../01-router-guide/01-router/)
+- [Handler basics](../../01-router-guide/01-router/#handlers)
+- [Parameter binding](../../01-router-guide/01-router/#parameters)
 
 ---
 

@@ -12,7 +12,7 @@ Demonstrates automatic request logging using Lokstra's built-in request_logger m
 ## Running
 
 ```bash
-cd docs/01-essentials/03-middleware/examples/01-logging-middleware
+cd docs/01-router-guide/03-middleware/examples/01-logging-middleware
 go run main.go
 ```
 

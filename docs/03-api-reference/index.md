@@ -342,7 +342,7 @@ Every section links to working examples in the main documentation.
 ## 🔗 Related Documentation
 
 - **[Introduction](../00-introduction/)** - Getting started and overview
-- **[Essentials](../01-essentials/)** - Core concepts and tutorials
+- **[Essentials](../00-introduction/)** - Core concepts and tutorials
 - **[Examples](../00-introduction/examples/)** - Progressive learning examples
 - **[Architecture](../00-introduction/architecture)** - System design and patterns
 

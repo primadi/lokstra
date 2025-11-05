@@ -18,7 +18,7 @@
 ## 🚀 Run It
 
 ```bash
-cd docs/01-essentials/02-service/examples/01-simple-service
+cd docs/01-router-guide/02-service/examples/01-simple-service
 go run main.go
 ```
 

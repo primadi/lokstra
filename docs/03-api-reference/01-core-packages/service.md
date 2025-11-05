@@ -646,6 +646,6 @@ func TestService(t *testing.T) {
 
 ## Related Guides
 
-- **[Service Essentials](../../01-essentials/02-service/)** - Service basics
+- **[Service Essentials](../../02-framework-guide/02-service/)** - Service basics
 - **[Dependency Injection](../../02-deep-dive/service/)** - Advanced DI patterns
 - **[Testing](../../04-guides/testing/)** - Testing with services

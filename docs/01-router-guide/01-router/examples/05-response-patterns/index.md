@@ -23,7 +23,7 @@ Lokstra provides **flexibility** in how you send responses:
 ## 🚀 Run It
 
 ```bash
-cd docs/01-essentials/01-router/examples/05-response-patterns
+cd docs/01-router-guide/01-router/examples/05-response-patterns
 go run main.go
 ```
 

@@ -12,7 +12,7 @@ description: Lokstra - Modern Go web framework for building microservices with e
     <a href="#quick-start">Quick Start</a> •
     <a href="#key-features">Features</a> •
     <a href="#examples">Examples</a> •
-    <a href="./01-essentials/">Documentation</a> •
+    <a href="./00-introduction/">Documentation</a> •
     <a href="https://github.com/primadi/lokstra">GitHub</a>
   </p>
 </div>
@@ -108,7 +108,7 @@ deployments:
 **2. Register factory** (one-time setup):
 ```go
 lokstra_registry.RegisterServiceType("user-service-factory", 
-    func() any { return service.NewUserService() })
+    func() any { return service.NewUserService() }, nil)
 ```
 
 **3. Use anywhere** (zero overhead after first access):
@@ -120,7 +120,7 @@ func handler() {
 }
 ```
 
-**[👉 Full Tutorial](./01-essentials/)**
+**[👉 Full Tutorial](./00-introduction/)**
 
 ---
 
@@ -144,7 +144,7 @@ users := db.MustGet().GetAll()
 - Memory efficient
 - Fail-fast with clear errors
 
-**[Learn More →](./01-essentials/02-service/)**
+**[Learn More →](./02-framework-guide/)**
 
 ---
 
@@ -266,7 +266,7 @@ func createUser(ctx *request.Context, params *CreateUserParams) error {
 - Validation via struct tags
 - Clear error messages on failure
 
-**[Learn More →](./01-essentials/03-routing/)**
+**[Learn More →](./01-router-guide/01-router/)**
 
 ---
 
@@ -286,14 +286,14 @@ func createUser(ctx *request.Context, params *CreateUserParams) error {
 
 ---
 
-### 🎓 [Essential Guides](./01-essentials/)
+### 🎓 [Essential Guides](./00-introduction/)
 
 **Step-by-step learning path:**
 
-1. **[Quick Start](./01-essentials/01-quick-start/)** - Get up and running in 5 minutes
-2. **[Service Management](./01-essentials/02-service/)** - Master lazy dependency injection
-3. **[Routing & Handlers](./01-essentials/03-routing/)** - Request handling patterns
-4. **[Configuration](./01-essentials/04-configuration/)** - YAML setup and environment management
+1. **[Quick Start](./00-introduction/quick-start/)** - Get up and running in 5 minutes
+2. **[Service Management](./02-framework-guide/)** - Master lazy dependency injection
+3. **[Routing & Handlers](./01-router-guide/)** - Request handling patterns
+4. **[Configuration](./02-framework-guide/)** - YAML setup and environment management
 
 Each guide includes:
 - Clear explanations
@@ -337,7 +337,9 @@ r.GET("/users", getUsersHandler)
 r.Use(cors.Middleware("*")
 
 app := lokstra.NewApp("api", ":8080", r)
-app.Run(30 * time.Second)
+if err := app.Run(30 * time.Second); err != nil {
+  log.Fatal(err)
+}
 ```
 
 ✅ Flexible handler signatures (29+ forms!)  
@@ -460,6 +462,6 @@ func handler() {
   <p>Made with ❤️ by <a href="https://github.com/primadi">Primadi</a></p>
   <p>
     <a href="https://github.com/primadi/lokstra">⭐ Star on GitHub</a> •
-    <a href="https://github.com/primadi/lokstra/blob/main/LICENSE">MIT License</a>
+    <a href="https://github.com/primadi/lokstra/blob/main/LICENSE">Apache 2.0 License</a>
   </p>
 </div>

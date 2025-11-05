@@ -707,6 +707,6 @@ middleware-definitions:
 
 ## Related Guides
 
-- **[Middleware Essentials](../../01-essentials/03-middleware/)** - Middleware basics
+- **[Middleware Essentials](../../01-router-guide/03-middleware/)** - Middleware basics
 - **[Authentication](../../04-guides/auth/)** - Auth patterns
 - **[Error Handling](../../04-guides/error-handling/)** - Error patterns

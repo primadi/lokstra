@@ -481,7 +481,7 @@ r.GET("/admin", AdminHandler, AuthMiddleware, AdminMW)   // Has auth + admin
 ## 📚 Next Steps
 
 - [Example 06: Auto-Router](../06-auto-router/) (coming soon) - Combine middleware with auto-generated routes
-- [Built-in Middlewares Documentation](../../../../01-essentials/middleware/) - Deep dive into all built-in middlewares
+- [Built-in Middlewares Documentation](../../../../01-router-guide/03-middleware/) - Deep dive into all built-in middlewares
 - [Custom Middleware Guide](../../../../02-deep-dive/middleware/) - Advanced patterns
 
 ---

@@ -855,9 +855,9 @@ Before deploying:
 - **[Framework Comparison](./framework-comparison)** - Same app in Lokstra vs NestJS vs Spring Boot
 - **[Lokstra vs NestJS](../../../02-framework-guide/lokstra-vs-nestjs)** - Detailed TypeScript framework comparison
 - **[Lokstra vs Spring Boot](../../../02-framework-guide/lokstra-vs-spring-boot)** - Detailed Java framework comparison
-- **01-essentials/auto-router**: Deep dive into convention system
-- **01-essentials/proxy-service**: Advanced proxy patterns
-- **01-essentials/metadata**: Metadata architecture
+- **02-framework-guide/auto-router**: Deep dive into convention system
+- **02-framework-guide/proxy-service**: Advanced proxy patterns
+- **02-framework-guide/metadata**: Metadata architecture
 - **02-advanced/custom-conventions**: Build your own conventions
 - **03-production/service-discovery**: Kubernetes, Consul integration
 

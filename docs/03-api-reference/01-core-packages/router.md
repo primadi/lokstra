@@ -991,6 +991,6 @@ router.GETPrefix("/", func(c *lokstra.RequestContext) error {
 
 ## Related Guides
 
-- **[Router Essentials](../../01-essentials/01-router/)** - Learn router basics
-- **[Middleware Guide](../../01-essentials/03-middleware/)** - Working with middleware
+- **[Router Essentials](../../01-router-guide/01-router/)** - Learn router basics
+- **[Middleware Guide](../../01-router-guide/03-middleware/)** - Working with middleware
 - **[Handler Patterns](../../02-deep-dive/router/)** - Advanced handler techniques

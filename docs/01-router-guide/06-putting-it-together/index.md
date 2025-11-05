@@ -23,7 +23,7 @@ A complete REST API built with Lokstra's auto-router feature.
 
 ```bash
 # Navigate to example directory
-cd docs/01-essentials/06-putting-it-together
+cd docs/01-router-guide/06-putting-it-together
 
 # Run directly (go.mod already exists in project root)
 go run .

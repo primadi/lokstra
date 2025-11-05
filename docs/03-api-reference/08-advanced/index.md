@@ -123,4 +123,4 @@ Choose a topic based on your needs:
 
 ---
 
-**Note:** This section assumes you're familiar with Lokstra basics. If you're new, start with the [Quick Start Guide](../../01-essentials).
+**Note:** This section assumes you're familiar with Lokstra basics. If you're new, start with the [Quick Start Guide](../../00-introduction).

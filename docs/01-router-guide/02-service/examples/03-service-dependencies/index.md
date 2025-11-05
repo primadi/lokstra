@@ -326,7 +326,7 @@ lokstra_registry.RegisterLazyService("user-service", func() any {
 ## 🚀 Running the Example
 
 ```bash
-cd docs/01-essentials/02-service/examples/03-service-dependencies
+cd docs/01-router-guide/02-service/examples/03-service-dependencies
 go run .
 ```
 

@@ -18,7 +18,7 @@
 ## 🚀 Run It
 
 ```bash
-cd docs/01-essentials/01-router/examples/02-route-parameters
+cd docs/01-router-guide/01-router/examples/02-route-parameters
 go run main.go
 ```
 

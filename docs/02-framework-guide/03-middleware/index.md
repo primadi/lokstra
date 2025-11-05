@@ -1,7 +1,7 @@
 # Middleware Deep Dive
 
 > **Master custom middleware creation and advanced patterns**  
-> **Time**: 45-60 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Middleware](../../01-essentials/03-middleware/)
+> **Time**: 45-60 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Middleware](../../01-router-guide/03-middleware/)
 
 ---
 
@@ -100,9 +100,9 @@ go run main.go
 ## 📖 Prerequisites
 
 Before diving in, make sure you understand:
-- [Middleware basics](../../01-essentials/03-middleware/)
-- [Built-in middleware](../../01-essentials/03-middleware/#built-in)
-- [Request context](../../01-essentials/01-router/#context)
+- [Middleware basics](../../01-router-guide/03-middleware/)
+- [Built-in middleware](../../01-router-guide/03-middleware/#built-in)
+- [Request context](../../01-router-guide/01-router/#context)
 
 ---
 

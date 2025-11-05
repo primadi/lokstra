@@ -630,6 +630,6 @@ func main() {
 
 ## Related Guides
 
-- **[App & Server Guide](../../01-essentials/05-app-and-server/)** - Lifecycle management tutorial
-- **[Configuration](../../01-essentials/04-configuration/)** - Configuring apps from YAML
+- **[App & Server Guide](../../01-router-guide/05-app-and-server/)** - Lifecycle management tutorial
+- **[Configuration](../../02-framework-guide/04-configuration/)** - Configuring apps from YAML
 - **[Deployment](../../02-deep-dive/app-and-server/)** - Production deployment patterns

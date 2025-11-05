@@ -1173,5 +1173,5 @@ return response.NewApiUnauthorized(fmt.Sprintf("Auth failed: %v", err))
 
 ## Related Guides
 
-- **[Router Essentials](../../01-essentials/01-router/)** - Handler basics
+- **[Router Essentials](../../01-router-guide/01-router/)** - Handler basics
 - **[API Design](../../02-deep-dive/router/)** - Best practices

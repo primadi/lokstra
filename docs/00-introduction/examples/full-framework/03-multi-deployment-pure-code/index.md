@@ -846,9 +846,9 @@ Before deploying:
 
 ## 📚 Related Topics
 
-- **01-essentials/auto-router**: Deep dive into convention system
-- **01-essentials/proxy-service**: Advanced proxy patterns
-- **01-essentials/metadata**: Metadata architecture
+- **02-framework-guide/auto-router**: Deep dive into convention system
+- **02-framework-guide/proxy-service**: Advanced proxy patterns
+- **02-framework-guide/metadata**: Metadata architecture
 - **02-advanced/custom-conventions**: Build your own conventions
 - **03-production/service-discovery**: Kubernetes, Consul integration
 

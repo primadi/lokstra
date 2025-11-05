@@ -787,6 +787,6 @@ service-definitions:
 
 ## Related Guides
 
-- **[Deployment Essentials](../../01-essentials/05-deployment/)** - Deployment basics
+- **[Deployment Essentials](../../02-framework-guide/)** - Deployment basics
 - **[Multi-Environment Setup](../../04-guides/multi-environment/)** - Environment strategies
 - **[Microservices Architecture](../../04-guides/microservices/)** - Distributed deployment

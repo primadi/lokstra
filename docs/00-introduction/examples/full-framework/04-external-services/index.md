@@ -548,8 +548,8 @@ All follow the same pattern: define external service → create wrapper → use 
 
 - [Architecture - Service Categories](../../architecture#service-categories)
 - [Architecture - Proxy Patterns](../../architecture#proxy-patterns)
-- [Remote Services Guide](../../../01-essentials/02-service)
-- [Configuration Guide](../../../01-essentials/03-configuration)
+- [Remote Services Guide](../../../02-framework-guide/02-service)
+- [Configuration Guide](../../../02-framework-guide/)
 
 ---
 

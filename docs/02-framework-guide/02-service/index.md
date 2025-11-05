@@ -1,7 +1,7 @@
 # Service Deep Dive
 
 > **Master dependency injection, remote services, and service architecture**  
-> **Time**: 75-90 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Service](../../01-essentials/02-service/)
+> **Time**: 75-90 minutes • **Level**: Advanced • **Prerequisites**: [Essentials - Service](../../02-framework-guide/02-service/)
 
 ---
 
@@ -123,9 +123,9 @@ go run main.go
 ## 📖 Prerequisites
 
 Before diving in, make sure you understand:
-- [Service basics](../../01-essentials/02-service/)
-- [Dependency injection](../../01-essentials/02-service/#dependency-injection)
-- [Service registration](../../01-essentials/02-service/#registration)
+- [Service basics](../../02-framework-guide/02-service/)
+- [Dependency injection](../../02-framework-guide/02-service/#dependency-injection)
+- [Service registration](../../02-framework-guide/02-service/#registration)
 
 ---
 

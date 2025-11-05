@@ -18,7 +18,7 @@
 ## 🚀 Run It
 
 ```bash
-cd docs/01-essentials/01-router/examples/01-basic-routes
+cd docs/01-router-guide/01-router/examples/01-basic-routes
 go run main.go
 ```
 

@@ -944,6 +944,6 @@ config/
 
 ## Related Guides
 
-- **[Configuration Essentials](../../01-essentials/04-configuration/)** - Configuration basics
+- **[Configuration Essentials](../../02-framework-guide/04-configuration/)** - Configuration basics
 - **[Environment Variables](../../04-guides/environment-variables/)** - Environment management
 - **[Deployment Patterns](../../04-guides/deployment/)** - Deployment strategies

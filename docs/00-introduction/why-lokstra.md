@@ -461,7 +461,7 @@ Convinced? Here's what to do next:
 👉 [Examples](examples) - 7 progressive examples from basics to production
 
 ### 4. **Deep Dive (as needed)**
-👉 [Essentials Guide](../01-essentials) - Comprehensive reference
+👉 [Router Guide](../01-router-guide/) - Comprehensive reference
 
 ---
 

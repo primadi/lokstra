@@ -490,5 +490,5 @@ func authMiddleware(c *lokstra.RequestContext) error {
 ## Related Guides
 
 - **[Quick Start](../../00-introduction/quick-start)** - Build your first app
-- **[Router Essentials](../../01-essentials/01-router/)** - Learn routing basics
-- **[App & Server Guide](../../01-essentials/05-app-and-server/)** - Lifecycle management
+- **[Router Essentials](../../01-router-guide/01-router/)** - Learn routing basics
+- **[App & Server Guide](../../01-router-guide/05-app-and-server/)** - Lifecycle management

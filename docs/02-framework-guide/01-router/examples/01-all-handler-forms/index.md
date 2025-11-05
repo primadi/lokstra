@@ -279,4 +279,4 @@ X-API-Key: test-key
 
 - [Parameter Binding Example](../02-parameter-binding/) - Deep dive into parameter types
 - [Lifecycle Hooks](../03-lifecycle-hooks/) - Middleware before/after patterns
-- [Response Helpers Guide](../../../01-essentials/03-response-types/) - Response.Response vs ApiHelper
+- [Response Helpers Guide](../../../00-introduction/03-response-types/) - Response.Response vs ApiHelper

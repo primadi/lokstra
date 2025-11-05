@@ -12,7 +12,7 @@ Demonstrates combining multiple routers into one app.
 
 ```bash
 # Navigate to example directory
-cd docs/01-essentials/05-app-and-server/01-basic-app
+cd docs/01-router-guide/05-app-and-server/01-basic-app
 
 # Run directly (go.mod already exists in project root)
 go run main.go

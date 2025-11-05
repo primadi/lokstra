@@ -955,6 +955,6 @@ router.POST("/users", auth, logger, rateLimiter, handler)
 
 ## Related Guides
 
-- **[Router Essentials](../../01-essentials/01-router/)** - Router basics
+- **[Router Essentials](../../01-router-guide/01-router/)** - Router basics
 - **[Auto-Router Guide](../../02-deep-dive/auto-router/)** - Auto-router patterns
 - **[API Design](../../04-guides/api-design/)** - API best practices

@@ -13,7 +13,7 @@ Demonstrates Cross-Origin Resource Sharing (CORS) configuration in Lokstra.
 ## Running
 
 ```bash
-cd docs/01-essentials/03-middleware/examples/03-cors-middleware
+cd docs/01-router-guide/03-middleware/examples/03-cors-middleware
 go run main.go
 ```
 

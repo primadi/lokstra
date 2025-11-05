@@ -46,7 +46,7 @@ users := userService.MustGet().GetUsers()
 ## Running
 
 ```bash
-cd docs/01-essentials/02-service/examples/02-lazyload-vs-getservice
+cd docs/01-router-guide/02-service/examples/02-lazyload-vs-getservice
 go run main.go
 ```
 

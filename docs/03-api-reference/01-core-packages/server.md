@@ -513,6 +513,6 @@ if err := server.Run(30 * time.Second); err != nil {
 
 ## Related Guides
 
-- **[App & Server Guide](../../01-essentials/05-app-and-server/)** - Lifecycle management tutorial
+- **[App & Server Guide](../../01-router-guide/05-app-and-server/)** - Lifecycle management tutorial
 - **[Multi-Deployment](../../00-introduction/examples/04-multi-deployment/)** - Example with multiple apps
 - **[Production Deployment](../../02-deep-dive/app-and-server/)** - Best practices for production
