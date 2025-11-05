@@ -1,0 +1,107 @@
+### Lokstra Single App Demo - API Tests
+### Use this file with REST Client extension in VS Code
+
+@baseUrl = http://localhost:3000
+
+#########################################
+# Health Check Endpoints
+#########################################
+
+### Health check
+GET {{baseUrl}}/health
+
+### Readiness check
+GET {{baseUrl}}/ready
+
+#########################################
+# User Endpoints
+#########################################
+
+### Get all users
+GET {{baseUrl}}/users
+
+### Get a specific user by ID
+GET {{baseUrl}}/users/123
+
+### Create a new user
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Alice Johnson",
+  "email": "alice@example.com"
+}
+
+### Update a user (full update)
+PUT {{baseUrl}}/users/123
+Content-Type: application/json
+
+{
+  "name": "Alice Johnson",
+  "email": "alice.johnson@example.com"
+}
+
+### Partially update a user
+PATCH {{baseUrl}}/users/123
+Content-Type: application/json
+
+{
+  "email": "newemail@example.com",
+  "name": "Updated Name"
+}
+
+### Delete a user
+DELETE {{baseUrl}}/users/123
+
+#########################################
+# Role Endpoints
+#########################################
+
+### Get all roles
+GET {{baseUrl}}/roles
+
+### Get a specific role by ID
+GET {{baseUrl}}/roles/1
+
+### Create a new role
+POST {{baseUrl}}/roles
+Content-Type: application/json
+
+{
+  "name": "Moderator",
+  "description": "Can moderate content",
+  "permissions": ["read", "write", "moderate"]
+}
+
+### Update a role (full update)
+PUT {{baseUrl}}/roles/1
+Content-Type: application/json
+
+{
+  "name": "Admin",
+  "description": "Full system access",
+  "permissions": ["read", "write", "delete", "admin"]
+}
+
+### Partially update a role
+PATCH {{baseUrl}}/roles/1
+Content-Type: application/json
+
+{
+  "description": "Updated administrator role",
+  "permissions": ["read", "write", "delete"]
+}
+
+### Delete a role
+DELETE {{baseUrl}}/roles/1
+
+### Assign role to user (nested resource)
+POST {{baseUrl}}/roles/1/users/123
+
+#########################################
+# Test Graceful Shutdown
+#########################################
+
+### Start a long request, then press Ctrl+C in terminal
+### The app should wait for this to complete before shutting down
+GET {{baseUrl}}/users

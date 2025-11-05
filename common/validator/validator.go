@@ -178,8 +178,10 @@ func ValidateStruct(structData any) ([]api_formatter.FieldError, error) {
 		val = val.Elem()
 	}
 
+	// If not a struct, skip validation (e.g., map, slice, primitive types)
+	// These types don't have struct tags to validate
 	if val.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("structData must be a struct or pointer to struct")
+		return nil, nil
 	}
 
 	// Get or build cached metadata

@@ -1,0 +1,173 @@
+### Main API (Port 3000)
+
+# Health Check
+GET http://localhost:3000/health HTTP/1.1
+
+###
+GET http://localhost:3000/ready HTTP/1.1
+
+# ==================== Users Endpoints ====================
+
+### Get all users
+GET http://localhost:3000/api/users HTTP/1.1
+
+### Get user by ID
+GET http://localhost:3000/api/users/1 HTTP/1.1
+
+### Create user
+POST http://localhost:3000/api/users HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Alice Johnson",
+  "email": "alice@example.com"
+}
+
+### Update user
+PUT http://localhost:3000/api/users/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "John Updated",
+  "email": "john.updated@example.com"
+}
+
+### Partially update user
+PATCH http://localhost:3000/api/users/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "John Partially Updated"
+}
+
+### Delete user
+DELETE http://localhost:3000/api/users/1 HTTP/1.1
+
+# ==================== Roles Endpoints ====================
+
+### Get all roles
+GET http://localhost:3000/api/roles HTTP/1.1
+
+### Get role by ID
+GET http://localhost:3000/api/roles/1 HTTP/1.1
+
+### Create role
+POST http://localhost:3000/api/roles HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Moderator",
+  "description": "Can moderate content",
+  "permissions": ["read", "write", "moderate"]
+}
+
+### Update role
+PUT http://localhost:3000/api/roles/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Admin Updated",
+  "description": "Updated administrator role",
+  "permissions": ["read", "write", "delete", "manage"]
+}
+
+### Partially update role
+PATCH http://localhost:3000/api/roles/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "permissions": ["read", "write", "delete"]
+}
+
+### Delete role
+DELETE http://localhost:3000/api/roles/1 HTTP/1.1
+
+
+### ==================== ADMIN API (Port 3001) ====================
+
+# Admin Health Check
+GET http://localhost:3001/health HTTP/1.1
+
+###
+GET http://localhost:3001/ready HTTP/1.1
+
+# ==================== Admin User Management ====================
+
+### Get all users (admin view with extra details)
+GET http://localhost:3001/admin/users HTTP/1.1
+
+### Get user by ID (admin view)
+GET http://localhost:3001/admin/users/1 HTTP/1.1
+
+### Suspend user account
+POST http://localhost:3001/admin/users/1/suspend HTTP/1.1
+
+### Activate suspended user account
+POST http://localhost:3001/admin/users/1/activate HTTP/1.1
+
+### Create user (admin)
+POST http://localhost:3001/admin/users HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Admin Created User",
+  "email": "admin.user@example.com"
+}
+
+### Update user (admin)
+PUT http://localhost:3001/admin/users/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Admin Updated User",
+  "email": "admin.updated@example.com"
+}
+
+### Delete user (admin)
+DELETE http://localhost:3001/admin/users/1 HTTP/1.1
+
+# ==================== Admin Role Management ====================
+
+### Get all roles (admin view)
+GET http://localhost:3001/admin/roles HTTP/1.1
+
+### Get role by ID (admin view)
+GET http://localhost:3001/admin/roles/1 HTTP/1.1
+
+### Remove role from user
+DELETE http://localhost:3001/admin/roles/1/users/2 HTTP/1.1
+
+### Create role (admin)
+POST http://localhost:3001/admin/roles HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "SuperAdmin",
+  "description": "Super administrator with all permissions",
+  "permissions": ["all"]
+}
+
+### Update role (admin)
+PUT http://localhost:3001/admin/roles/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Admin Role Updated",
+  "description": "Updated admin role",
+  "permissions": ["all", "system"]
+}
+}
+
+### Delete role (admin)
+DELETE http://localhost:3001/admin/roles/1 HTTP/1.1
+
+# ==================== Admin System Management ====================
+
+### Get system statistics
+GET http://localhost:3001/admin/system/stats HTTP/1.1
+
+### Get system configuration
+GET http://localhost:3001/admin/system/config HTTP/1.1
+
+### Clear application cache
+POST http://localhost:3001/admin/system/cache/clear HTTP/1.1

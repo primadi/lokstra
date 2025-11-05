@@ -1,0 +1,37 @@
+# Order Module Configuration
+# This YAML defines deployment for the Order bounded context
+
+deployments:
+  - name: api-server  # Same deployment name - will merge with user.yaml
+    type: server
+    port: 3000
+    
+    services:
+      # Order Repository
+      - name: order-repository
+        factory: order-repository-factory
+      
+      # Order Service
+      - name: order-service
+        factory: order-service-factory
+        dependencies:
+          order-repository: order-repository
+        endpoints:
+          - path: /api/orders/{id}
+            method: GET
+            handler: GetByID
+          - path: /api/orders
+            method: GET
+            handler: List
+          - path: /api/orders
+            method: POST
+            handler: Create
+          - path: /api/orders/{id}/status
+            method: PUT
+            handler: UpdateStatus
+          - path: /api/orders/{id}/cancel
+            method: POST
+            handler: Cancel
+          - path: /api/orders/{id}
+            method: DELETE
+            handler: Delete

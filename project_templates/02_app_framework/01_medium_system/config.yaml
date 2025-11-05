@@ -1,0 +1,44 @@
+# Lokstra configuration for medium system
+deployments:
+  - name: monolith
+    type: monolith
+    instances:
+      - name: api-server
+        listen_addr: ":8080"
+        apps:
+          - name: api-app
+            routers:
+              - name: users-router
+                group: /api
+                middlewares:
+                  - recovery
+                  - request-logger
+                services:
+                  - type: user-service-factory
+                    depends_on:
+                      - user-repository
+                    config:
+                      cache_ttl: 300
+
+              - name: orders-router
+                group: /api
+                middlewares:
+                  - recovery
+                  - request-logger
+                services:
+                  - type: order-service-factory
+                    depends_on:
+                      - order-repository
+                    config:
+                      cache_ttl: 300
+
+        services:
+          - name: user-repository
+            type: user-repository-factory
+            config:
+              dsn: "memory://users"
+
+          - name: order-repository
+            type: order-repository-factory
+            config:
+              dsn: "memory://orders"

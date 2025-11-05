@@ -1,0 +1,44 @@
+# User Module Configuration
+# This YAML defines deployment for the User bounded context
+
+deployments:
+  - name: api-server
+    type: server
+    port: 3000
+    
+    middleware:
+      - name: recovery
+      - name: request-logger
+    
+    services:
+      # User Repository
+      - name: user-repository
+        factory: user-repository-factory
+      
+      # User Service
+      - name: user-service
+        factory: user-service-factory
+        dependencies:
+          user-repository: user-repository
+        endpoints:
+          - path: /api/users/{id}
+            method: GET
+            handler: GetByID
+          - path: /api/users
+            method: GET
+            handler: List
+          - path: /api/users
+            method: POST
+            handler: Create
+          - path: /api/users/{id}
+            method: PUT
+            handler: Update
+          - path: /api/users/{id}/suspend
+            method: POST
+            handler: Suspend
+          - path: /api/users/{id}/activate
+            method: POST
+            handler: Activate
+          - path: /api/users/{id}
+            method: DELETE
+            handler: Delete
