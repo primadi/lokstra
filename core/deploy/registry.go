@@ -73,7 +73,6 @@ type deferredServiceDef struct {
 	Name        string
 	FactoryType string
 	DependsOn   []string
-	Middlewares []string // Middleware names to apply to auto-generated router
 	Config      map[string]any
 }
 
@@ -683,27 +682,11 @@ func (g *GlobalRegistry) registerDeferredService(name, factoryType string, confi
 		}
 	}
 
-	// Extract middlewares from config
-	var middlewares []string
-	if mwRaw, ok := config["middlewares"]; ok {
-		switch mws := mwRaw.(type) {
-		case []string:
-			middlewares = mws
-		case []interface{}:
-			// Handle YAML unmarshaling []interface{}
-			middlewares = make([]string, len(mws))
-			for i, m := range mws {
-				middlewares[i] = m.(string)
-			}
-		}
-	}
-
 	// Store deferred definition
 	def := &deferredServiceDef{
 		Name:        name,
 		FactoryType: factoryType,
 		DependsOn:   dependsOn,
-		Middlewares: middlewares,
 		Config:      config,
 	}
 
@@ -918,11 +901,10 @@ func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
 	if defAny, ok := g.serviceDefs.Load(name); ok {
 		deferredDef := defAny.(*deferredServiceDef)
 		return &schema.ServiceDef{
-			Name:        deferredDef.Name,
-			Type:        deferredDef.FactoryType,
-			DependsOn:   deferredDef.DependsOn,
-			Middlewares: deferredDef.Middlewares,
-			Config:      deferredDef.Config,
+			Name:      deferredDef.Name,
+			Type:      deferredDef.FactoryType,
+			DependsOn: deferredDef.DependsOn,
+			Config:    deferredDef.Config,
 		}
 	}
 	return nil

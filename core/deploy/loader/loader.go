@@ -3,6 +3,7 @@ package loader
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,6 +24,7 @@ func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
 	var merged *schema.DeployConfig
 
 	basePath := utils.GetBasePath()
+	log.Println(basePath)
 	// Load and merge each file
 	for _, path := range paths {
 		normPath := filepath.Join(basePath, path)
@@ -212,27 +214,29 @@ func configToMap(config *schema.DeployConfig) map[string]any {
 			esMap := map[string]any{
 				"url": es.URL,
 			}
-			if es.Resource != "" {
-				esMap["resource"] = es.Resource
-			}
-			if es.ResourcePlural != "" {
-				esMap["resource-plural"] = es.ResourcePlural
-			}
-			if es.Convention != "" {
-				esMap["convention"] = es.Convention
-			}
-			// Inline override fields
-			if es.PathPrefix != "" {
-				esMap["path-prefix"] = es.PathPrefix
-			}
-			if len(es.Middlewares) > 0 {
-				esMap["middlewares"] = es.Middlewares
-			}
-			if len(es.Hidden) > 0 {
-				esMap["hidden"] = es.Hidden
-			}
-			if len(es.Custom) > 0 {
-				esMap["custom"] = es.Custom
+			if es.Router != nil {
+				if es.Router.Resource != "" {
+					esMap["resource"] = es.Router.Resource
+				}
+				if es.Router.ResourcePlural != "" {
+					esMap["resource-plural"] = es.Router.ResourcePlural
+				}
+				if es.Router.Convention != "" {
+					esMap["convention"] = es.Router.Convention
+				}
+				// Inline override fields
+				if es.Router.PathPrefix != "" {
+					esMap["path-prefix"] = es.Router.PathPrefix
+				}
+				if len(es.Router.Middlewares) > 0 {
+					esMap["middlewares"] = es.Router.Middlewares
+				}
+				if len(es.Router.Hidden) > 0 {
+					esMap["hidden"] = es.Router.Hidden
+				}
+				if len(es.Router.Custom) > 0 {
+					esMap["custom"] = es.Router.Custom
+				}
 			}
 			externals[name] = esMap
 		}

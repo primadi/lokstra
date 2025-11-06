@@ -73,17 +73,10 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 				}
 			}
 
-			// Collect middleware names from both sources
+			// Collect middleware names from RegisterServiceType metadata
 			var middlewareNames []string
-
-			// Source 1: Middlewares from RegisterServiceType (metadata.MiddlewareNames)
 			if len(metadata.MiddlewareNames) > 0 {
 				middlewareNames = append(middlewareNames, metadata.MiddlewareNames...)
-			}
-
-			// Source 2: Middlewares from service-definitions YAML (serviceDef.Middlewares)
-			if len(serviceDef.Middlewares) > 0 {
-				middlewareNames = append(middlewareNames, serviceDef.Middlewares...)
 			}
 
 			// Create middleware instances

@@ -244,10 +244,21 @@ func NormalizeInlineDefinitionsForServer(
 			}
 		}
 
-		// Update middleware references
-		for i, mwName := range svcDef.Middlewares {
-			if normalizedName, found := renamings[mwName]; found {
-				svcDef.Middlewares[i] = normalizedName
+		// Update middleware references in service.router (if exists)
+		if svcDef.Router != nil {
+			for i, mwName := range svcDef.Router.Middlewares {
+				if normalizedName, found := renamings[mwName]; found {
+					svcDef.Router.Middlewares[i] = normalizedName
+				}
+			}
+
+			// Update middleware references in custom routes
+			for _, customRoute := range svcDef.Router.Custom {
+				for i, mwName := range customRoute.Middlewares {
+					if normalizedName, found := renamings[mwName]; found {
+						customRoute.Middlewares[i] = normalizedName
+					}
+				}
 			}
 		}
 	}
@@ -273,15 +284,19 @@ func NormalizeInlineDefinitionsForServer(
 
 	// Update references in ALL external service definitions (global + normalized inline)
 	for _, extSvc := range config.ExternalServiceDefinitions {
+		if extSvc.Router == nil {
+			continue
+		}
+
 		// Update middleware references
-		for i, mwName := range extSvc.Middlewares {
+		for i, mwName := range extSvc.Router.Middlewares {
 			if normalizedName, found := renamings[mwName]; found {
-				extSvc.Middlewares[i] = normalizedName
+				extSvc.Router.Middlewares[i] = normalizedName
 			}
 		}
 
 		// Update custom route middleware references
-		for _, customRoute := range extSvc.Custom {
+		for _, customRoute := range extSvc.Router.Custom {
 			for i, mwName := range customRoute.Middlewares {
 				if normalizedName, found := renamings[mwName]; found {
 					customRoute.Middlewares[i] = normalizedName
@@ -379,12 +394,9 @@ func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.
 			svcConfig = make(map[string]any)
 		}
 
-		// Add depends-on and middlewares to config (required by registerDeferredService)
+		// Add depends-on to config (required by registerDeferredService)
 		if len(svc.DependsOn) > 0 {
 			svcConfig["depends-on"] = svc.DependsOn
-		}
-		if len(svc.Middlewares) > 0 {
-			svcConfig["middlewares"] = svc.Middlewares
 		}
 
 		// Call internal method via reflection or expose public method
@@ -457,28 +469,35 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 				maps.Copy(autoServiceDef.Config, extSvc.Config)
 			}
 
-			// Add URL, resource, convention metadata to config
+			// Add URL to config
 			autoServiceDef.Config["url"] = extSvc.URL
-			if extSvc.Resource != "" {
-				autoServiceDef.Config["resource"] = extSvc.Resource
-			}
-			if extSvc.ResourcePlural != "" {
-				autoServiceDef.Config["resource_plural"] = extSvc.ResourcePlural
-			}
-			if extSvc.Convention != "" {
-				autoServiceDef.Config["convention"] = extSvc.Convention
-			}
-			if extSvc.PathPrefix != "" {
-				autoServiceDef.Config["path_prefix"] = extSvc.PathPrefix
-			}
-			if len(extSvc.Middlewares) > 0 {
-				autoServiceDef.Config["middlewares"] = extSvc.Middlewares
-			}
-			if len(extSvc.Hidden) > 0 {
-				autoServiceDef.Config["hidden"] = extSvc.Hidden
-			}
-			if len(extSvc.Custom) > 0 {
-				autoServiceDef.Config["custom"] = extSvc.Custom
+
+			// Copy router definition from external service to service definition
+			if extSvc.Router != nil {
+				autoServiceDef.Router = extSvc.Router
+
+				// Also add to config for backward compatibility
+				if extSvc.Router.Resource != "" {
+					autoServiceDef.Config["resource"] = extSvc.Router.Resource
+				}
+				if extSvc.Router.ResourcePlural != "" {
+					autoServiceDef.Config["resource_plural"] = extSvc.Router.ResourcePlural
+				}
+				if extSvc.Router.Convention != "" {
+					autoServiceDef.Config["convention"] = extSvc.Router.Convention
+				}
+				if extSvc.Router.PathPrefix != "" {
+					autoServiceDef.Config["path_prefix"] = extSvc.Router.PathPrefix
+				}
+				if len(extSvc.Router.Middlewares) > 0 {
+					autoServiceDef.Config["middlewares"] = extSvc.Router.Middlewares
+				}
+				if len(extSvc.Router.Hidden) > 0 {
+					autoServiceDef.Config["hidden"] = extSvc.Router.Hidden
+				}
+				if len(extSvc.Router.Custom) > 0 {
+					autoServiceDef.Config["custom"] = extSvc.Router.Custom
+				}
 			}
 
 			config.ServiceDefinitions[name] = autoServiceDef
@@ -550,6 +569,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 
 	// Auto-generate router definitions for published services
 	// Also update Apps.Routers to use normalized router names
+	// Priority: service.router > router-definitions > metadata > auto-generate
 	routerRenamings := make(map[string]string) // old router name -> new router name
 
 	for serviceName := range publishedServicesMap {
@@ -565,29 +585,60 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 
 		var resourceName, resourcePlural, convention string
 		var pathPrefix string
+		var pathRewrites []schema.PathRewriteDef
 		var middlewares []string
 		var hidden []string
 		var custom []schema.RouteDef
 
-		// Check if router manually defined in YAML
-		if yamlRouter, exists := config.RouterDefinitions[routerName]; exists {
-			resourceName = yamlRouter.Resource
-			resourcePlural = yamlRouter.ResourcePlural
-			convention = yamlRouter.Convention
-			pathPrefix = yamlRouter.PathPrefix
-			middlewares = yamlRouter.Middlewares
-			hidden = yamlRouter.Hidden
-			custom = yamlRouter.Custom
+		// Priority 1: Check if service has embedded router definition
+		if serviceDef.Router != nil {
+			resourceName = serviceDef.Router.Resource
+			resourcePlural = serviceDef.Router.ResourcePlural
+			convention = serviceDef.Router.Convention
+			pathPrefix = serviceDef.Router.PathPrefix
+			pathRewrites = serviceDef.Router.PathRewrites
+			middlewares = serviceDef.Router.Middlewares
+			hidden = serviceDef.Router.Hidden
+			custom = serviceDef.Router.Custom
 		}
 
-		// Fallback to metadata from RegisterServiceType
+		// Priority 2: Check if router manually defined in router-definitions (override/standalone)
+		if yamlRouter, exists := config.RouterDefinitions[routerName]; exists {
+			// Override only if not set in service.router
+			if resourceName == "" {
+				resourceName = yamlRouter.Resource
+			}
+			if resourcePlural == "" {
+				resourcePlural = yamlRouter.ResourcePlural
+			}
+			if convention == "" {
+				convention = yamlRouter.Convention
+			}
+			if pathPrefix == "" {
+				pathPrefix = yamlRouter.PathPrefix
+			}
+			if len(pathRewrites) == 0 {
+				pathRewrites = yamlRouter.PathRewrites
+			}
+			if len(middlewares) == 0 {
+				middlewares = yamlRouter.Middlewares
+			}
+			if len(hidden) == 0 {
+				hidden = yamlRouter.Hidden
+			}
+			if len(custom) == 0 {
+				custom = yamlRouter.Custom
+			}
+		}
+
+		// Priority 3: Fallback to metadata from RegisterServiceType
 		if resourceName == "" && metadata != nil && metadata.Resource != "" {
 			resourceName = metadata.Resource
 			resourcePlural = metadata.ResourcePlural
 			convention = metadata.Convention
 		}
 
-		// Final fallback - auto-generate from service name
+		// Priority 4: Final fallback - auto-generate from service name
 		if resourceName == "" {
 			// Extract resource name from normalized service name
 			// Examples:
@@ -607,6 +658,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			Resource:       resourceName,
 			ResourcePlural: resourcePlural,
 			PathPrefix:     pathPrefix,
+			PathRewrites:   pathRewrites,
 			Middlewares:    middlewares,
 			Hidden:         hidden,
 			Custom:         custom,

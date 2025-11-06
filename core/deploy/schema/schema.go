@@ -96,18 +96,10 @@ type AppDefMap struct {
 // RemoteServiceSimple defines an external service (outside this deployment)
 // For external services, you typically need to override everything since their API structure may differ
 type RemoteServiceSimple struct {
-	URL            string         `yaml:"url" json:"url"`
-	Type           string         `yaml:"type,omitempty" json:"type,omitempty"`                       // Factory type (auto-creates service wrapper)
-	Resource       string         `yaml:"resource,omitempty" json:"resource,omitempty"`               // Resource name (singular)
-	ResourcePlural string         `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Resource name (plural)
-	Convention     string         `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql)
-	Config         map[string]any `yaml:"config,omitempty" json:"config,omitempty"`                   // Additional config for factory
-
-	// Inline overrides (no more references)
-	PathPrefix  string     `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"` // e.g., "/api/v1"
-	Middlewares []string   `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Router-level middleware names
-	Hidden      []string   `yaml:"hidden,omitempty" json:"hidden,omitempty"`           // Methods to hide
-	Custom      []RouteDef `yaml:"custom,omitempty" json:"custom,omitempty"`           // Custom route definitions
+	URL    string         `yaml:"url" json:"url"`
+	Type   string         `yaml:"type,omitempty" json:"type,omitempty"`     // Factory type (auto-creates service wrapper)
+	Router *RouterDef     `yaml:"router,omitempty" json:"router,omitempty"` // Embedded router definition
+	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"` // Additional config for factory
 }
 
 // ConfigDef defines a configuration value
@@ -125,9 +117,9 @@ type MiddlewareDef struct {
 
 // ServiceDef defines a service instance
 type ServiceDef struct {
-	Name        string         `yaml:"name"`
-	Type        string         `yaml:"type"`        // Factory type
-	DependsOn   []string       `yaml:"depends-on"`  // Dependencies (can be "paramName:serviceName")
-	Middlewares []string       `yaml:"middlewares"` // Default middlewares for auto-generated router
-	Config      map[string]any `yaml:"config"`      // Optional config
+	Name      string         `yaml:"name"`
+	Type      string         `yaml:"type"`             // Factory type
+	DependsOn []string       `yaml:"depends-on"`       // Dependencies (can be "paramName:serviceName")
+	Router    *RouterDef     `yaml:"router,omitempty"` // Embedded router definition (auto-generated router for this service)
+	Config    map[string]any `yaml:"config"`           // Optional config
 }

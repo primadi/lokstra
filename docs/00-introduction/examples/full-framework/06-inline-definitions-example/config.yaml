@@ -17,6 +17,7 @@ middleware-definitions:
 service-definitions:
   order-service:
     type: order-service-type
+    router: { path-prefix: /api/v1 }  # ✅ Global inline router definition
 
 deployments:
   development:
@@ -33,8 +34,10 @@ deployments:
     service-definitions:
       user-service:
         type: user-service-type
-        middlewares:
-          - dev-logger  # Short name, will be normalize
+        router:                   # ✅ Embedded router definition
+          path-prefix: /api/v1    # Custom path prefix
+          middlewares:
+            - dev-logger          # Middlewares at router level (HTTP concern)
 
     servers:
       dev-server:
@@ -53,9 +56,11 @@ deployments:
         service-definitions:
           product-service:
             type: product-service-type
-            middlewares:
-              - api-logger      # References server-level inline
-              - cors-global     # References global
+            router:                   # ✅ Embedded router definition
+              path-prefix: /api/v1    # Custom path prefix
+              middlewares:
+                - api-logger          # References server-level inline
+                - cors-global         # References global
         
         # App configuration
         addr: ":3000"
@@ -85,9 +90,10 @@ deployments:
     service-definitions:
       user-service:
         type: user-service-type
-        middlewares:
-          - prod-logger
-          - auth-middleware
+        router:
+          middlewares:
+            - prod-logger
+            - auth-middleware
 
     servers:
       prod-api:
@@ -97,9 +103,10 @@ deployments:
         service-definitions:
           product-service:
             type: product-service-type
-            middlewares:
-              - prod-logger
-              - auth-middleware
+            router:
+              middlewares:
+                - prod-logger
+                - auth-middleware
         
         addr: ":4000"
         # Routers are auto-generated from published-services
