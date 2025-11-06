@@ -59,6 +59,9 @@ type GlobalRegistry struct {
 	deploymentTopologies sync.Map // map[deploymentName]*DeploymentTopology
 	serverTopologies     sync.Map // map[compositeKey]*ServerTopology (key: "deployment.server")
 
+	// Original config (for inline definitions normalization)
+	deployConfig *schema.DeployConfig
+
 	// Current server context (for runtime service resolution)
 	currentCompositeKey string // "deployment.server" - set by SetCurrentServer
 }
@@ -1385,6 +1388,20 @@ func (g *GlobalRegistry) GetCurrentCompositeKey() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.currentCompositeKey
+}
+
+// StoreDeployConfig stores the original deploy configuration for inline definitions normalization
+func (g *GlobalRegistry) StoreDeployConfig(config *schema.DeployConfig) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.deployConfig = config
+}
+
+// GetDeployConfig returns the stored deploy configuration
+func (g *GlobalRegistry) GetDeployConfig() *schema.DeployConfig {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.deployConfig
 }
 
 // GetFirstServerCompositeKey returns the first available server composite key from server topologies

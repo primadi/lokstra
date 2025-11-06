@@ -55,14 +55,28 @@ type RouteDef struct {
 
 // DeploymentDefMap is a deployment using map structure
 type DeploymentDefMap struct {
-	ConfigOverrides map[string]any           `yaml:"config-overrides,omitempty" json:"config-overrides,omitempty"`
-	Servers         map[string]*ServerDefMap `yaml:"servers" json:"servers"`
+	ConfigOverrides map[string]any `yaml:"config-overrides,omitempty" json:"config-overrides,omitempty"`
+
+	// Inline definitions at deployment level (will be normalized to {deployment}.{name})
+	InlineMiddlewares      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
+	InlineServices         map[string]*ServiceDef          `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
+	InlineRouters          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
+	InlineExternalServices map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
+
+	Servers map[string]*ServerDefMap `yaml:"servers" json:"servers"`
 }
 
 // ServerDefMap is a server using map structure
 type ServerDefMap struct {
-	BaseURL string       `yaml:"base-url" json:"base-url"`
-	Apps    []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
+	BaseURL string `yaml:"base-url" json:"base-url"`
+
+	// Inline definitions at server level (will be normalized to {deployment}.{server}.{name})
+	InlineMiddlewares      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
+	InlineServices         map[string]*ServiceDef          `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
+	InlineRouters          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
+	InlineExternalServices map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
+
+	Apps []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
 
 	// Helper fields (1 server = 1 app shorthand)
 	// If these are present, a new app will be created and PREPENDED to Apps array

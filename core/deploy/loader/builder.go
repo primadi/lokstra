@@ -2,12 +2,14 @@ package loader
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
+	"github.com/primadi/lokstra/core/service"
 )
 
 // normalizeServerDefinitions converts server-level helper fields to a new app
@@ -96,20 +98,266 @@ func mergeStringSlices(a, b []string) []string {
 	return result
 }
 
-// LoadAndBuild loads config and builds ALL deployments into Global registry
-// Returns error only - deployments are stored in deploy.Global()
-func LoadAndBuild(configPaths []string) error {
-	config, err := LoadConfig(configPaths...)
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+// NormalizeInlineDefinitionsForServer performs lazy normalization of inline definitions
+// for a specific deployment and server. This is called just before running the server.
+//
+// Normalization strategy:
+//   - Deployment-level inline: {deployment}.{name}
+//   - Server-level inline: {deployment}.{server}.{name}
+//
+// This function ONLY updates the config structure (moves inline to global definitions).
+// The actual registration happens in the normal flow via LoadAndBuild logic.
+func NormalizeInlineDefinitionsForServer(
+	config *schema.DeployConfig,
+	deploymentName, serverName string,
+) error {
+	depDef, ok := config.Deployments[deploymentName]
+	if !ok {
+		return fmt.Errorf("deployment %s not found", deploymentName)
 	}
 
-	registry := deploy.Global()
+	serverDef, ok := depDef.Servers[serverName]
+	if !ok {
+		return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
+	}
 
-	// Get external service definitions
-	externalServices := config.ExternalServiceDefinitions
+	// Initialize global maps if nil
+	if config.MiddlewareDefinitions == nil {
+		config.MiddlewareDefinitions = make(map[string]*schema.MiddlewareDef)
+	}
+	if config.ServiceDefinitions == nil {
+		config.ServiceDefinitions = make(map[string]*schema.ServiceDef)
+	}
+	if config.RouterDefinitions == nil {
+		config.RouterDefinitions = make(map[string]*schema.RouterDef)
+	}
+	if config.ExternalServiceDefinitions == nil {
+		config.ExternalServiceDefinitions = make(map[string]*schema.RemoteServiceSimple)
+	}
 
-	// Register configs from YAML
+	// Process deployment-level inline definitions
+	// Move to global with normalized names
+	for name, mwDef := range depDef.InlineMiddlewares {
+		normalizedName := deploymentName + "." + name
+		config.MiddlewareDefinitions[normalizedName] = mwDef
+	}
+
+	for name, svcDef := range depDef.InlineServices {
+		normalizedName := deploymentName + "." + name
+		config.ServiceDefinitions[normalizedName] = svcDef
+	}
+
+	for name, rtrDef := range depDef.InlineRouters {
+		normalizedName := deploymentName + "." + name
+		config.RouterDefinitions[normalizedName] = rtrDef
+	}
+
+	for name, extDef := range depDef.InlineExternalServices {
+		normalizedName := deploymentName + "." + name
+		config.ExternalServiceDefinitions[normalizedName] = extDef
+	}
+
+	// Process server-level inline definitions
+	// Move to global with normalized names (server-level overrides deployment-level if same name)
+	for name, mwDef := range serverDef.InlineMiddlewares {
+		normalizedName := deploymentName + "." + serverName + "." + name
+		config.MiddlewareDefinitions[normalizedName] = mwDef
+	}
+
+	for name, svcDef := range serverDef.InlineServices {
+		normalizedName := deploymentName + "." + serverName + "." + name
+		config.ServiceDefinitions[normalizedName] = svcDef
+	}
+
+	for name, rtrDef := range serverDef.InlineRouters {
+		normalizedName := deploymentName + "." + serverName + "." + name
+		config.RouterDefinitions[normalizedName] = rtrDef
+	}
+
+	for name, extDef := range serverDef.InlineExternalServices {
+		normalizedName := deploymentName + "." + serverName + "." + name
+		config.ExternalServiceDefinitions[normalizedName] = extDef
+	}
+
+	// Build renaming map for reference resolution BEFORE clearing inline definitions
+	// Maps short names to normalized names for this deployment+server context
+	renamings := make(map[string]string)
+
+	// Add deployment-level renamings
+	for name := range depDef.InlineMiddlewares {
+		renamings[name] = deploymentName + "." + name
+	}
+	for name := range depDef.InlineServices {
+		renamings[name] = deploymentName + "." + name
+	}
+	for name := range depDef.InlineRouters {
+		renamings[name] = deploymentName + "." + name
+	}
+	for name := range depDef.InlineExternalServices {
+		renamings[name] = deploymentName + "." + name
+	}
+
+	// Add server-level renamings (these override deployment-level if same name)
+	for name := range serverDef.InlineMiddlewares {
+		renamings[name] = deploymentName + "." + serverName + "." + name
+	}
+	for name := range serverDef.InlineServices {
+		renamings[name] = deploymentName + "." + serverName + "." + name
+	}
+	for name := range serverDef.InlineRouters {
+		renamings[name] = deploymentName + "." + serverName + "." + name
+	}
+	for name := range serverDef.InlineExternalServices {
+		renamings[name] = deploymentName + "." + serverName + "." + name
+	}
+
+	// Clear inline definitions (they're now in global)
+	depDef.InlineMiddlewares = nil
+	depDef.InlineServices = nil
+	depDef.InlineRouters = nil
+	depDef.InlineExternalServices = nil
+
+	serverDef.InlineMiddlewares = nil
+	serverDef.InlineServices = nil
+	serverDef.InlineRouters = nil
+	serverDef.InlineExternalServices = nil
+
+	// Update references in ALL service definitions (global + normalized inline)
+	for _, svcDef := range config.ServiceDefinitions {
+		// Update depends-on references
+		for i, dep := range svcDef.DependsOn {
+			// Parse "paramName:serviceName" or just "serviceName"
+			parts := strings.SplitN(dep, ":", 2)
+			if len(parts) == 2 {
+				// Format: "paramName:serviceName"
+				paramName := parts[0]
+				serviceName := parts[1]
+				if normalizedName, found := renamings[serviceName]; found {
+					svcDef.DependsOn[i] = paramName + ":" + normalizedName
+				}
+			} else {
+				// Format: "serviceName"
+				serviceName := parts[0]
+				if normalizedName, found := renamings[serviceName]; found {
+					svcDef.DependsOn[i] = normalizedName
+				}
+			}
+		}
+
+		// Update middleware references
+		for i, mwName := range svcDef.Middlewares {
+			if normalizedName, found := renamings[mwName]; found {
+				svcDef.Middlewares[i] = normalizedName
+			}
+		}
+	}
+
+	// Update references in ALL router definitions (global + normalized inline)
+	for _, rtrDef := range config.RouterDefinitions {
+		// Update middleware references
+		for i, mwName := range rtrDef.Middlewares {
+			if normalizedName, found := renamings[mwName]; found {
+				rtrDef.Middlewares[i] = normalizedName
+			}
+		}
+
+		// Update custom route middleware references
+		for _, customRoute := range rtrDef.Custom {
+			for i, mwName := range customRoute.Middlewares {
+				if normalizedName, found := renamings[mwName]; found {
+					customRoute.Middlewares[i] = normalizedName
+				}
+			}
+		}
+	}
+
+	// Update references in ALL external service definitions (global + normalized inline)
+	for _, extSvc := range config.ExternalServiceDefinitions {
+		// Update middleware references
+		for i, mwName := range extSvc.Middlewares {
+			if normalizedName, found := renamings[mwName]; found {
+				extSvc.Middlewares[i] = normalizedName
+			}
+		}
+
+		// Update custom route middleware references
+		for _, customRoute := range extSvc.Custom {
+			for i, mwName := range customRoute.Middlewares {
+				if normalizedName, found := renamings[mwName]; found {
+					customRoute.Middlewares[i] = normalizedName
+				}
+			}
+		}
+	}
+
+	// Update published-services references in apps
+	// This is CRITICAL - apps reference services by name
+	for _, appDef := range serverDef.Apps {
+		for i, svcName := range appDef.PublishedServices {
+			if normalizedName, found := renamings[svcName]; found {
+				appDef.PublishedServices[i] = normalizedName
+			}
+		}
+
+		// Also update router references (in case they reference inline routers)
+		for i, rtrName := range appDef.Routers {
+			if normalizedName, found := renamings[rtrName]; found {
+				appDef.Routers[i] = normalizedName
+			}
+		}
+	}
+
+	// CRITICAL: Update server topology service names to normalized names
+	// This is needed because RegisterDefinitionsForRuntime uses serverTopo.Services
+	// to lookup services in config.ServiceDefinitions (which now has normalized names)
+	compositeKey := deploymentName + "." + serverName
+	serverTopo, ok := deploy.Global().GetServerTopology(compositeKey)
+	if ok {
+		// Update service names in topology
+		for i, svcName := range serverTopo.Services {
+			if normalizedName, found := renamings[svcName]; found {
+				serverTopo.Services[i] = normalizedName
+			}
+		}
+
+		// Update remote services map keys
+		if len(serverTopo.RemoteServices) > 0 {
+			newRemoteServices := make(map[string]string)
+			for svcName, remoteURL := range serverTopo.RemoteServices {
+				if normalizedName, found := renamings[svcName]; found {
+					newRemoteServices[normalizedName] = remoteURL
+				} else {
+					newRemoteServices[svcName] = remoteURL
+				}
+			}
+			serverTopo.RemoteServices = newRemoteServices
+		}
+
+		// CRITICAL: Update router names in app topologies
+		// Routers auto-generated from published-services need to be updated to normalized names
+		// Example: "user-service-router" -> "development.user-service-router"
+		for _, appTopo := range serverTopo.Apps {
+			for i, routerName := range appTopo.Routers {
+				// Check if this router name was auto-generated from a service name
+				// Format: "{service-name}-router"
+				serviceName := strings.TrimSuffix(routerName, "-router")
+				if normalizedServiceName, found := renamings[serviceName]; found {
+					// Service was renamed, so router should be renamed too
+					normalizedRouterName := normalizedServiceName + "-router"
+					appTopo.Routers[i] = normalizedRouterName
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// StoreDefinitionsToRegistry stores all definitions to the global registry WITHOUT runtime registration
+// This is called during LoadAndBuild to prepare definitions for later lazy registration
+// Runtime registration happens in RunCurrentServer after normalization
+func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
+	// Store configs as definitions (not registered yet)
 	for name, value := range config.Configs {
 		registry.DefineConfig(&schema.ConfigDef{
 			Name:  name,
@@ -117,38 +365,96 @@ func LoadAndBuild(configPaths []string) error {
 		})
 	}
 
-	// Register middlewares from YAML (using unified API)
+	// Store middleware definitions to registry (no runtime registration yet)
+	// Middlewares will be registered in RegisterDefinitionsForRuntime
+	// For now, we don't need to store them - they're in config.MiddlewareDefinitions
+
+	// Store service definitions to registry as deferred (no runtime registration yet)
+	// This allows GetDeferredServiceDef to work during RegisterDefinitionsForRuntime
+	for name, svc := range config.ServiceDefinitions {
+		svc.Name = name
+		// Convert ServiceDef to config map for registerDeferredService
+		svcConfig := svc.Config
+		if svcConfig == nil {
+			svcConfig = make(map[string]any)
+		}
+
+		// Add depends-on and middlewares to config (required by registerDeferredService)
+		if len(svc.DependsOn) > 0 {
+			svcConfig["depends-on"] = svc.DependsOn
+		}
+		if len(svc.Middlewares) > 0 {
+			svcConfig["middlewares"] = svc.Middlewares
+		}
+
+		// Call internal method via reflection or expose public method
+		// For now, we'll use a workaround: store directly via RegisterLazyService with nil factory
+		// Actually, let's use the fact that registry has serviceDefs field
+		// But that's private... so we need to expose a public method
+		//
+		// WORKAROUND: Call RegisterLazyService with mode=Skip so it doesn't error on duplicates
+		// But we DON'T want to register yet, just store definition
+		//
+		// BETTER: Don't store now - GetDeferredServiceDef will be called in RegisterDefinitionsForRuntime
+		// But the problem is GetDeferredServiceDef reads from serviceDefs which is populated by registerDeferredService
+		// And registerDeferredService is private!
+		//
+		// SOLUTION: We need to expose a public method in registry to store deferred service definitions
+		// OR: We can skip storing here and directly use config.ServiceDefinitions in RegisterDefinitionsForRuntime
+	}
+
+	// Store router definitions to registry (deferred)
+	for name, rtr := range config.RouterDefinitions {
+		registry.DefineRouter(name, rtr)
+	}
+
+	// External service definitions don't need to be stored separately
+	// They'll be processed in RegisterDefinitionsForRuntime
+
+	return nil
+}
+
+// RegisterDefinitionsForRuntime performs runtime registration of definitions
+// This is called in RunCurrentServer AFTER normalization
+// It registers middlewares, services (with remote/local logic), and auto-generates routers for published services
+func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *schema.DeployConfig, deploymentName, serverName string, serverTopo *deploy.ServerTopology) error {
+	// Get the current server's apps to know which services are published
+	depDef, ok := config.Deployments[deploymentName]
+	if !ok {
+		return fmt.Errorf("deployment %s not found", deploymentName)
+	}
+
+	serverDef, ok := depDef.Servers[serverName]
+	if !ok {
+		return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
+	}
+
+	// Register middlewares
 	for name, mw := range config.MiddlewareDefinitions {
-		mw.Name = name // Set name from map key
+		mw.Name = name
 		registry.RegisterMiddlewareName(name, mw.Type, mw.Config)
 	}
 
-	// Normalize server definitions (convert helper fields to apps)
-	normalizeServerDefinitions(config)
-
 	// Auto-create service wrappers for external services with factory type
-	// This allows external-service-definitions to directly specify the factory
-	// without needing a separate service-definitions entry
+	externalServices := config.ExternalServiceDefinitions
 	for name, extSvc := range externalServices {
 		if extSvc.Type != "" {
 			// Check if service definition already exists (manual override)
 			if _, exists := config.ServiceDefinitions[name]; exists {
-				continue // Skip auto-creation, use manual definition
+				continue
 			}
 
 			// Auto-create service definition
 			autoServiceDef := &schema.ServiceDef{
 				Name:      name,
 				Type:      extSvc.Type,
-				DependsOn: nil, // External services have no dependencies
+				DependsOn: nil,
 				Config:    make(map[string]any),
 			}
 
-			// Copy external service config if provided
+			// Copy external service config
 			if extSvc.Config != nil {
-				for k, v := range extSvc.Config {
-					autoServiceDef.Config[k] = v
-				}
+				maps.Copy(autoServiceDef.Config, extSvc.Config)
 			}
 
 			// Add URL, resource, convention metadata to config
@@ -175,109 +481,128 @@ func LoadAndBuild(configPaths []string) error {
 				autoServiceDef.Config["custom"] = extSvc.Custom
 			}
 
-			// Add to service definitions (will be registered below)
 			config.ServiceDefinitions[name] = autoServiceDef
 		}
 	}
 
-	// Register services from YAML (includes auto-created external services)
-	for name, svc := range config.ServiceDefinitions {
-		svc.Name = name // Set name from map key
+	// Register service definitions with remote/local logic
+	// Iterate through services in the server topology (these are normalized names after NormalizeInlineDefinitionsForServer)
+	for _, serviceName := range serverTopo.Services {
+		svc, exists := config.ServiceDefinitions[serviceName]
+		if !exists {
+			return fmt.Errorf("service %s in topology not found in service definitions", serviceName)
+		}
 
-		// Prepare config map including depends-on
-		configMap := make(map[string]any)
-		if svc.Config != nil {
-			for k, v := range svc.Config {
-				configMap[k] = v
+		svc.Name = serviceName
+
+		// Check if this is a remote service
+		remoteURL, isRemote := serverTopo.RemoteServices[serviceName]
+
+		if isRemote && remoteURL != "" {
+			// Register REMOTE service
+			registry.AutoRegisterRemoteService(serviceName, svc, remoteURL)
+		} else {
+			// Register LOCAL service with dependency resolution
+			// Convert DependsOn to deps map
+			deps := make(map[string]string)
+			for _, depStr := range svc.DependsOn {
+				// Parse "paramName:serviceName" or just "serviceName"
+				parts := strings.SplitN(depStr, ":", 2)
+				if len(parts) == 2 {
+					deps[parts[0]] = parts[1]
+				} else {
+					deps[depStr] = depStr
+				}
 			}
-		}
 
-		// Add depends-on to config if specified
-		if len(svc.DependsOn) > 0 {
-			configMap["depends-on"] = svc.DependsOn
-		}
+			// Get service type factory (LOCAL)
+			serviceType := svc.Type
+			factory := registry.GetServiceFactory(serviceType, true) // true = local factory
+			if factory == nil {
+				return fmt.Errorf("service factory %s (local) not registered for service %s", serviceType, serviceName)
+			}
 
-		// Add middlewares to config if specified
-		if len(svc.Middlewares) > 0 {
-			configMap["middlewares"] = svc.Middlewares
-		}
+			// Register as lazy service with wrapper factory
+			// Use Skip mode to allow idempotent calls
+			registry.RegisterLazyServiceWithDeps(serviceName, func(resolvedDeps, cfg map[string]any) any {
+				// Factory expects lazy loaders (service.Cached), so wrap resolved deps
+				lazyDeps := make(map[string]any)
+				for key, depSvc := range resolvedDeps {
+					depSvcCopy := depSvc // Capture for closure
+					lazyDeps[key] = service.LazyLoadWith(func() any {
+						return depSvcCopy
+					})
+				}
 
-		// Register using new unified API (string factory type)
-		registry.RegisterLazyService(name, svc.Type, configMap)
+				// Call original factory
+				return factory(lazyDeps, cfg)
+			}, deps, svc.Config, deploy.WithRegistrationMode(deploy.LazyServiceSkip))
+		}
+	}
+
+	// Collect published services from current server's apps
+	publishedServicesMap := make(map[string]bool)
+	for _, appDef := range serverDef.Apps {
+		for _, serviceName := range appDef.PublishedServices {
+			publishedServicesMap[serviceName] = true
+		}
 	}
 
 	// Auto-generate router definitions for published services
-	// Router name format: {service-name}-router
-	// Service name is derived from router name by removing "-router" suffix
-	publishedServicesMap := make(map[string]bool)
-	for _, depDef := range config.Deployments {
-		for _, serverDef := range depDef.Servers {
-			for _, appDef := range serverDef.Apps {
-				for _, serviceName := range appDef.PublishedServices {
-					publishedServicesMap[serviceName] = true
-				}
-			}
-		}
-	}
+	// Also update Apps.Routers to use normalized router names
+	routerRenamings := make(map[string]string) // old router name -> new router name
 
-	// Define routers for each published service
 	for serviceName := range publishedServicesMap {
 		routerName := serviceName + "-router"
 
-		// Check if service is registered (via RegisterLazyService)
-		if !registry.HasLazyService(serviceName) {
-			return fmt.Errorf("published service '%s' not found in service-definitions", serviceName)
+		// Get service definition from config (already normalized)
+		serviceDef, exists := config.ServiceDefinitions[serviceName]
+		if !exists {
+			return fmt.Errorf("published service '%s' not found in service-definitions after normalization", serviceName)
 		}
 
-		// Get service definition to find service type
-		serviceDef := registry.GetDeferredServiceDef(serviceName)
-		if serviceDef == nil {
-			return fmt.Errorf("published service '%s' definition not found", serviceName)
-		}
-
-		// Get service metadata from factory registration (RegisterServiceType options)
 		metadata := registry.GetServiceMetadata(serviceDef.Type)
 
-		// Metadata Resolution Priority (3 levels):
-		//   1. YAML router-definitions: section (highest - deployment-specific override)
-		//   2. RegisterServiceType metadata (medium - framework default)
-		//   3. Auto-generate from service name (lowest - fallback)
 		var resourceName, resourcePlural, convention string
 		var pathPrefix string
 		var middlewares []string
 		var hidden []string
 		var custom []schema.RouteDef
 
-		// Priority 1: Check if router manually defined in YAML (for overrides)
+		// Check if router manually defined in YAML
 		if yamlRouter, exists := config.RouterDefinitions[routerName]; exists {
-			// Use YAML definition (allows inline overrides)
 			resourceName = yamlRouter.Resource
 			resourcePlural = yamlRouter.ResourcePlural
 			convention = yamlRouter.Convention
-
-			// Inline overrides from YAML
 			pathPrefix = yamlRouter.PathPrefix
 			middlewares = yamlRouter.Middlewares
 			hidden = yamlRouter.Hidden
 			custom = yamlRouter.Custom
 		}
 
-		// Priority 2: Fallback to metadata from RegisterServiceType
+		// Fallback to metadata from RegisterServiceType
 		if resourceName == "" && metadata != nil && metadata.Resource != "" {
 			resourceName = metadata.Resource
 			resourcePlural = metadata.ResourcePlural
 			convention = metadata.Convention
 		}
 
-		// Priority 3: Final fallback - auto-generate from service name
+		// Final fallback - auto-generate from service name
 		if resourceName == "" {
-			resourceName = strings.TrimSuffix(serviceName, "-service")
-			resourcePlural = resourceName + "s" // Simple pluralization
+			// Extract resource name from normalized service name
+			// Examples:
+			//   "development.user-service" -> "user"
+			//   "development.dev-server.product-service" -> "product"
+			//   "order-service" -> "order"
+			parts := strings.Split(serviceName, ".")
+			lastPart := parts[len(parts)-1]
+			resourceName = strings.TrimSuffix(lastPart, "-service")
+			resourcePlural = resourceName + "s"
 			convention = "rest"
 		}
 
-		// Define router (will override if exists in YAML)
-		registry.DefineRouter(routerName, &schema.RouterDef{
+		// Define auto-generated router
+		autoRouter := &schema.RouterDef{
 			Convention:     convention,
 			Resource:       resourceName,
 			ResourcePlural: resourcePlural,
@@ -285,17 +610,66 @@ func LoadAndBuild(configPaths []string) error {
 			Middlewares:    middlewares,
 			Hidden:         hidden,
 			Custom:         custom,
-		})
+		}
+
+		// Store to config.RouterDefinitions so it's available for later lookup
+		config.RouterDefinitions[routerName] = autoRouter
+
+		// Also define in registry
+		if registry.GetRouterDef(routerName) == nil {
+			registry.DefineRouter(routerName, autoRouter)
+		}
+
+		// Track router renamings for Apps.Routers update
+		// Old name: extract from service name without prefix
+		// Example: "development.user-service" -> "user-service-router"
+		serviceShortName := strings.Split(serviceName, ".")[len(strings.Split(serviceName, "."))-1]
+		oldRouterName := serviceShortName + "-router"
+		if oldRouterName != routerName {
+			routerRenamings[oldRouterName] = routerName
+		}
 	}
 
-	// Register standalone router definitions (for manual routers)
-	// These are router-definitions in YAML that don't have corresponding published-services
+	// Update Apps.Routers to use normalized router names
+	for _, appDef := range serverDef.Apps {
+		for i, routerName := range appDef.Routers {
+			if normalizedName, found := routerRenamings[routerName]; found {
+				appDef.Routers[i] = normalizedName
+			}
+		}
+	}
+
+	// Register standalone router definitions
 	for routerName, routerDef := range config.RouterDefinitions {
-		// Skip if already defined (from published-services above)
 		if registry.GetRouterDef(routerName) != nil {
 			continue
 		}
 		registry.DefineRouter(routerName, routerDef)
+	}
+
+	return nil
+}
+
+// LoadAndBuild loads config and builds ALL deployments into Global registry
+// Returns error only - deployments are stored in deploy.Global()
+func LoadAndBuild(configPaths []string) error {
+	config, err := LoadConfig(configPaths...)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	registry := deploy.Global()
+
+	// Store original config for inline definitions normalization
+	registry.StoreDeployConfig(config)
+
+	// Normalize server definitions (convert helper fields to apps)
+	normalizeServerDefinitions(config)
+
+	// Store definitions to registry (NO runtime registration, just store data)
+	// Runtime registration will happen in RunCurrentServer
+	if err := StoreDefinitionsToRegistry(registry, config); err != nil {
+		return fmt.Errorf("failed to store definitions: %w", err)
 	}
 
 	// Build ALL deployments (2-Layer Architecture: YAML -> Topology only)
@@ -354,7 +728,7 @@ func LoadAndBuild(configPaths []string) error {
 
 			// Add external services to RemoteServices map
 			// External services are ALWAYS remote (never local)
-			for extSvcName, extSvc := range externalServices {
+			for extSvcName, extSvc := range config.ExternalServiceDefinitions {
 				if extSvc.URL != "" {
 					serverTopo.RemoteServices[extSvcName] = extSvc.URL
 				}

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
@@ -21,9 +22,11 @@ func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
 
 	var merged *schema.DeployConfig
 
+	basePath := utils.GetBasePath()
 	// Load and merge each file
 	for _, path := range paths {
-		config, err := loadSingleFile(path)
+		normPath := filepath.Join(basePath, path)
+		config, err := loadSingleFile(normPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load %s: %w", path, err)
 		}
