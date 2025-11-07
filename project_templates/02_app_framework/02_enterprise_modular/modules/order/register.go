@@ -28,6 +28,11 @@ func Register() {
 			},
 		}),
 	)
+
+	lokstra_registry.RegisterLazyService("order-repository", "order-repository-factory", nil)
+	lokstra_registry.RegisterLazyService("order-service", "order-service-factory", map[string]any{
+		"depends-on": []string{"order-repository", "user-service"},
+	})
 }
 
 // OrderServiceRemoteFactory creates a remote HTTP client for OrderService

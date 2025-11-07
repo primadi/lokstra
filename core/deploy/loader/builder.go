@@ -545,6 +545,10 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 		}
 	}
 
+	// Merge service definitions from registry (RegisterLazyService) into config
+	// This allows services registered via code to be available in config.ServiceDefinitions
+	registry.MergeRegistryServicesToConfig(config)
+
 	// Collect all services needed for this server (published services + their dependencies)
 	servicesToRegister := collectAllServiceDependencies(config, serverTopo.Services)
 

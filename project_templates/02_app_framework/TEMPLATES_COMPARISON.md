@@ -67,22 +67,34 @@ Lokstra provides **two framework templates** for building applications with doma
 │   │   │   ├── service.go
 │   │   │   └── dto.go
 │   │   ├── application/
-│   │   │   └── user_service.go
-│   │   └── infrastructure/
-│   │       └── repository/
-│   │           └── user_repository.go
+│   │   │   ├── user_service.go
+│   │   │   └── user_service_remote.go
+│   │   ├── infrastructure/
+│   │   │   └── repository/
+│   │   │       └── user_repository.go
+│   │   └── register.go    # Module self-registration
 │   └── order/          # Order bounded context
 │       ├── domain/
 │       ├── application/
-│       └── infrastructure/
+│       │   ├── order_service.go
+│       │   └── order_service_remote.go
+│       ├── infrastructure/
+│       └── register.go    # Module self-registration
 ├── config/
-│   ├── user.yaml       # Per-module config
-│   └── order.yaml
+│   ├── deployment.yaml    # Deployment topology
+│   ├── user.yaml          # User module config
+│   └── order.yaml         # Order module config
 ├── main.go
-└── register.go
+└── register.go            # Calls all module registrations
 ```
 
 **Organization**: By business capability (everything for user module together)
+
+**Key Feature**: Each module has its own `register.go` that defines:
+- Service type registration (local factory)
+- Remote factory for microservices
+- Routing metadata (path prefix, custom routes)
+- Module is **self-contained and portable**
 
 ---
 
@@ -209,6 +221,67 @@ func (s *UserServiceImpl) GetByID(p *domain.GetUserRequest) (*domain.User, error
 
 ---
 
+### Enterprise Modular - Module Registration
+
+**NEW**: Each module has `register.go` for self-registration:
+
+```go
+// modules/user/register.go
+package user
+
+import (
+    "github.com/primadi/lokstra/core/deploy"
+    "github.com/primadi/lokstra/core/proxy"
+    "github.com/primadi/lokstra/lokstra_registry"
+    "github.com/primadi/lokstra/project_templates/.../modules/user/application"
+    "github.com/primadi/lokstra/project_templates/.../modules/user/infrastructure/repository"
+)
+
+func Register() {
+    // Register repository (local only)
+    lokstra_registry.RegisterServiceType("user-repository-factory",
+        repository.UserRepositoryFactory, nil)
+
+    // Register service (local + remote)
+    lokstra_registry.RegisterServiceType("user-service-factory",
+        application.UserServiceFactory,      // Local factory
+        UserServiceRemoteFactory,            // Remote factory
+        deploy.WithRouter(&deploy.ServiceTypeRouter{
+            PathPrefix:  "/api",
+            Middlewares: []string{"recovery", "request-logger"},
+            CustomRoutes: map[string]string{
+                "Suspend":  "POST /user/{id}/suspend",
+                "Activate": "POST /user/{id}/activate",
+            },
+        }),
+    )
+}
+
+// Remote factory creates HTTP client wrapper
+func UserServiceRemoteFactory(deps, config map[string]any) any {
+    proxyService := config["remote"].(*proxy.Service)
+    return application.NewUserServiceRemote(proxyService)
+}
+```
+
+**Main register.go** calls all modules:
+
+```go
+// register.go (root)
+func registerServiceTypes() {
+    user.Register()   // Self-contained
+    order.Register()  // Self-contained
+}
+```
+
+**Benefits**:
+- ✅ Module owns its routing config
+- ✅ Easy to copy module to another project
+- ✅ Remote factory enables microservices
+- ✅ No central routing config needed
+
+---
+
 ## Configuration Differences
 
 ### Medium System - Single Config
@@ -242,39 +315,56 @@ deployments:
 
 ### Enterprise Modular - Per-Module Config
 
-**config/user.yaml**:
+**config/deployment.yaml** (topology):
 ```yaml
 deployments:
-  - name: api-server
-    type: server
-    port: 3000
-    
-    services:
-      - name: user-service
-        factory: user-service-factory
-        endpoints:
-          - path: /api/users/{id}
-            method: GET
-            handler: GetByID
+  microservice:
+    servers:
+      user-server:
+        base-url: "http://localhost"
+        addr: ":4000"
+        published-services: [ user-service ]
+      order-server:
+        base-url: "http://localhost"
+        addr: ":5000"
+        published-services: [ order-service ]
 ```
 
-**config/order.yaml**:
+**config/user.yaml** (service definitions):
 ```yaml
-deployments:
-  - name: api-server  # Same name = merges
-    type: server
-    port: 3000
-    
-    services:
-      - name: order-service
-        factory: order-service-factory
-        endpoints:
-          - path: /api/orders/{id}
-            method: GET
-            handler: GetByID
+service-definitions:
+  user-repository:
+    type: user-repository-factory
+  
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
 ```
 
-**Lokstra automatically merges** configs with same deployment name!
+**config/order.yaml** (service definitions):
+```yaml
+service-definitions:
+  order-repository:
+    type: order-repository-factory
+  
+  order-service:
+    type: order-service-factory
+    depends-on: [order-repository, user-service]
+    # user-service will be REMOTE when running on order-server
+    # user-service will be LOCAL when running on monolith
+```
+
+**Key Points**:
+- `deployment.yaml` defines **where services run**
+- Module YAMLs define **service dependencies**
+- Framework **auto-detects** local vs remote based on topology
+- Same code runs as monolith or microservices!
+
+**Lokstra automatically**:
+- Merges all YAMLs in config/ folder
+- Detects if service is local or remote based on topology
+- Creates HTTP proxy for remote services
+- No code change needed for deployment mode!
 
 ---
 
@@ -291,10 +381,13 @@ deployments:
 
 ✅ **Modularity**: Clear module boundaries  
 ✅ **Team Scalability**: Each team owns a module  
-✅ **Portability**: Copy module = portable unit  
+✅ **Portability**: Copy module folder = portable unit  
 ✅ **Microservices Ready**: Easy to split later  
 ✅ **Domain Clarity**: Bounded contexts make complex domains manageable  
 ✅ **Independent Evolution**: Change one module without affecting others  
+✅ **Self-Registration**: Each module owns its routing config  
+✅ **Deployment Flexibility**: Same code, different deployment modes  
+✅ **Auto Remote Detection**: Framework handles local vs remote automatically  
 
 ---
 

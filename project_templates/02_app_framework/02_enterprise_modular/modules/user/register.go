@@ -28,6 +28,11 @@ func Register() {
 			},
 		}),
 	)
+
+	lokstra_registry.RegisterLazyService("user-repository", "user-repository-factory", nil)
+	lokstra_registry.RegisterLazyService("user-service", "user-service-factory", map[string]any{
+		"depends-on": []string{"user-repository"},
+	})
 }
 
 // UserServiceRemoteFactory creates a remote HTTP client for UserService

@@ -38,12 +38,14 @@ service-definitions:
   user-service:
     type: user-service-factory
     depends-on: [user-repository]
-    middlewares: [ "recovery", "before-after-logger"]    
+    router:
+      middlewares: [ "recovery", "before-after-logger"]    
 
   order-service:
     type: order-service-factory
     depends-on: [order-repository, user-service]
-    middlewares: [ "recovery", "before-after-logger"]
+    router:
+      middlewares: [ "recovery", "before-after-logger"]
 
 # ========================================
 # Router Definitions (Optional Overrides)

@@ -955,6 +955,31 @@ func (g *GlobalRegistry) HasLazyService(name string) bool {
 	return false
 }
 
+// MergeRegistryServicesToConfig merges services from registry (RegisterLazyService)
+// into config.ServiceDefinitions. This allows services registered via code to be
+// available in config for dependency resolution and topology checks.
+func (g *GlobalRegistry) MergeRegistryServicesToConfig(config *schema.DeployConfig) {
+	g.serviceDefs.Range(func(key, value any) bool {
+		serviceName := key.(string)
+		deferredDef := value.(*deferredServiceDef)
+
+		// Skip if already exists in config (YAML takes priority)
+		if _, exists := config.ServiceDefinitions[serviceName]; exists {
+			return true // continue iteration
+		}
+
+		// Add to config.ServiceDefinitions
+		config.ServiceDefinitions[serviceName] = &schema.ServiceDef{
+			Name:      deferredDef.Name,
+			Type:      deferredDef.FactoryType,
+			DependsOn: deferredDef.DependsOn,
+			Config:    deferredDef.Config,
+		}
+
+		return true // continue iteration
+	})
+}
+
 // GetDeferredServiceDef retrieves a deferred service definition by name.
 // Returns the definition if found in serviceDefs, or nil if not found.
 // This is primarily used by wrapper functions that need access to service metadata.
