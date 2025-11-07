@@ -24,16 +24,21 @@ func registerServiceTypes() {
 	lokstra_registry.RegisterServiceType("user-service-factory",
 		service.UserServiceFactory,
 		service.UserServiceRemoteFactory,
-		deploy.WithResource("user", "users"),
-		deploy.WithConvention("rest"),
+		deploy.WithRouter(&deploy.ServiceTypeRouter{
+			PathPrefix:  "/api",
+			Middlewares: []string{"recovery", "request-logger"},
+		}),
 	)
 
 	lokstra_registry.RegisterServiceType("order-service-factory",
 		service.OrderServiceFactory,
 		service.OrderServiceRemoteFactory,
-		deploy.WithResource("order", "orders"),
-		deploy.WithConvention("rest"),
-		deploy.WithRouteOverride("GetByUserID", "/users/{user_id}/orders"),
+		deploy.WithRouter(&deploy.ServiceTypeRouter{
+			CustomRoutes: map[string]string{
+				"GetByUserID":  "/users/{user_id}/orders",
+				"UpdateStatus": "PATCH /orders/{id}/status",
+			},
+		}),
 	)
 }
 

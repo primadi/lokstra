@@ -14,12 +14,12 @@
   //     "**/include-*.yaml"
   //   ]
   // },
-  "yaml.format.enable": true,
-  "yaml.validate": true,
-  "yaml.completion": true,
-  "yaml.hover": true,
-  "files.associations": {
-    "*.lokstra.yaml": "yaml",
-    "*.lokstra.yml": "yaml"
-  }
+  // "yaml.format.enable": true,
+  // "yaml.validate": true,
+  // "yaml.completion": true,
+  // "yaml.hover": true,
+  // "files.associations": {
+  //   "*.lokstra.yaml": "yaml",
+  //   "*.lokstra.yml": "yaml"
+  // }
 }

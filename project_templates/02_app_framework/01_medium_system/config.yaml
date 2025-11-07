@@ -1,44 +1,53 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
 # Lokstra configuration for medium system
+
+# middleware-definitions:
+  # recovery:
+  #   type: recovery
+  #   config: {}
+  
+  # request-logger:
+  #   type: request-logger
+  #   config:
+  #     prefix: "API"
+
+service-definitions:
+  user-repository:
+    type: user-repository-factory
+    config:
+      dsn: "memory://users"
+  
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - user-repository
+    config:
+      cache_ttl: 300
+
+  order-repository:
+    type: order-repository-factory
+    config:
+      dsn: "memory://orders"
+  
+  order-service:
+    type: order-service-factory
+    depends-on:
+      - order-repository
+    router:
+      path-prefix: /api
+      middlewares:
+        - recovery
+        - request-logger
+    config:
+      cache_ttl: 300
+
 deployments:
-  - name: monolith
-    type: monolith
-    instances:
-      - name: api-server
-        listen_addr: ":8080"
-        apps:
-          - name: api-app
-            routers:
-              - name: users-router
-                group: /api
-                middlewares:
-                  - recovery
-                  - request-logger
-                services:
-                  - type: user-service-factory
-                    depends_on:
-                      - user-repository
-                    config:
-                      cache_ttl: 300
-
-              - name: orders-router
-                group: /api
-                middlewares:
-                  - recovery
-                  - request-logger
-                services:
-                  - type: order-service-factory
-                    depends_on:
-                      - order-repository
-                    config:
-                      cache_ttl: 300
-
-        services:
-          - name: user-repository
-            type: user-repository-factory
-            config:
-              dsn: "memory://users"
-
-          - name: order-repository
-            type: order-repository-factory
-            config:
-              dsn: "memory://orders"
+  development:
+    servers:
+      api-server:
+        base-url: "http://localhost:8080"
+        addr: ":8080"
+        published-services:
+          - user-service
+          - order-service

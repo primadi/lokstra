@@ -6,6 +6,7 @@ import "time"
 type Order struct {
 	ID         int       `json:"id"`
 	UserID     int       `json:"user_id"`
+	UserName   string    `json:"user_name"`
 	TotalPrice float64   `json:"total_price"`
 	Status     string    `json:"status"` // pending, processing, completed, cancelled
 	CreatedAt  time.Time `json:"created_at"`

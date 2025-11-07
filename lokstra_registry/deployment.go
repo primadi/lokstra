@@ -10,7 +10,6 @@ import (
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
-	"github.com/primadi/lokstra/core/route"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
 )
@@ -247,36 +246,28 @@ func RunCurrentServer(timeout time.Duration) error {
 				}
 
 				// Apply route-level overrides (custom routes)
+				// NOTE: Path and Method are already handled by autogen.NewFromService
+				// We only need to apply route-level middlewares here if specified
 				if len(routerDef.Custom) > 0 {
 					for _, customRoute := range routerDef.Custom {
 						var options []any
 
-						// Add method override if specified
-						if customRoute.Method != "" {
-							options = append(options, route.WithMethodOption(customRoute.Method))
-						}
-
-						// Add path override if specified
-						if customRoute.Path != "" {
-							options = append(options, route.WithPathOption(customRoute.Path))
-						}
-
-						// Add middlewares if specified
+						// Add middlewares if specified (route-level)
 						if len(customRoute.Middlewares) > 0 {
 							for _, mwName := range customRoute.Middlewares {
 								options = append(options, mwName)
 							}
 						}
 
-						// Apply all options to the route
+						// Apply options to the route only if there are route-level middlewares
 						if len(options) > 0 {
 							err := r.UpdateRoute(customRoute.Name, options...)
 							if err != nil {
 								log.Printf("⚠️  Warning: Failed to update route '%s' in router '%s': %v\n",
 									customRoute.Name, routerName, err)
 							} else {
-								log.Printf("🔧 Applied route overrides to '%s.%s' (method: %s, path: %s, middlewares: %v)\n",
-									routerName, customRoute.Name, customRoute.Method, customRoute.Path, customRoute.Middlewares)
+								log.Printf("🔧 Applied route-level middlewares to '%s.%s': %v\n",
+									routerName, customRoute.Name, customRoute.Middlewares)
 							}
 						}
 					}

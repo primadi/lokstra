@@ -426,6 +426,47 @@ func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.
 	return nil
 }
 
+// collectAllServiceDependencies recursively collects all services and their dependencies
+func collectAllServiceDependencies(config *schema.DeployConfig, publishedServices []string) []string {
+	visited := make(map[string]bool)
+	result := []string{}
+
+	var collectDeps func(serviceName string)
+	collectDeps = func(serviceName string) {
+		if visited[serviceName] {
+			return
+		}
+		visited[serviceName] = true
+
+		// Get service definition
+		svc, exists := config.ServiceDefinitions[serviceName]
+		if !exists {
+			return
+		}
+
+		// Add this service to result
+		result = append(result, serviceName)
+
+		// Recursively collect dependencies
+		for _, depStr := range svc.DependsOn {
+			// Parse "paramName:serviceName" or just "serviceName"
+			parts := strings.SplitN(depStr, ":", 2)
+			depServiceName := depStr
+			if len(parts) == 2 {
+				depServiceName = parts[1]
+			}
+			collectDeps(depServiceName)
+		}
+	}
+
+	// Start with published services
+	for _, serviceName := range publishedServices {
+		collectDeps(serviceName)
+	}
+
+	return result
+}
+
 // RegisterDefinitionsForRuntime performs runtime registration of definitions
 // This is called in RunCurrentServer AFTER normalization
 // It registers middlewares, services (with remote/local logic), and auto-generates routers for published services
@@ -504,9 +545,12 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 		}
 	}
 
+	// Collect all services needed for this server (published services + their dependencies)
+	servicesToRegister := collectAllServiceDependencies(config, serverTopo.Services)
+
 	// Register service definitions with remote/local logic
-	// Iterate through services in the server topology (these are normalized names after NormalizeInlineDefinitionsForServer)
-	for _, serviceName := range serverTopo.Services {
+	// Iterate through all services (published + dependencies)
+	for _, serviceName := range servicesToRegister {
 		svc, exists := config.ServiceDefinitions[serviceName]
 		if !exists {
 			return fmt.Errorf("service %s in topology not found in service definitions", serviceName)
@@ -733,6 +777,8 @@ func LoadAndBuild(configPaths []string) error {
 			for _, appDef := range serverDef.Apps {
 				for _, serviceName := range appDef.PublishedServices {
 					// Build full URL: base-url + addr
+					// base-url should be protocol + host (e.g., "http://localhost")
+					// addr should be port (e.g., ":4000")
 					fullURL := serverDef.BaseURL + appDef.Addr
 					serviceLocations[serviceName] = fullURL
 				}
@@ -776,6 +822,16 @@ func LoadAndBuild(configPaths []string) error {
 			// Convert to slice
 			for svcName := range serviceMap {
 				serverTopo.Services = append(serverTopo.Services, svcName)
+			}
+
+			// Build RemoteServices map (services published on OTHER servers in this deployment)
+			for svcName, svcURL := range serviceLocations {
+				// Skip if service is local to this server
+				if serviceMap[svcName] {
+					continue
+				}
+				// Add as remote service
+				serverTopo.RemoteServices[svcName] = svcURL
 			}
 
 			// Add external services to RemoteServices map

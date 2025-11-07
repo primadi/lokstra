@@ -3,7 +3,6 @@ package loader
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +23,6 @@ func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
 	var merged *schema.DeployConfig
 
 	basePath := utils.GetBasePath()
-	log.Println(basePath)
 	// Load and merge each file
 	for _, path := range paths {
 		normPath := filepath.Join(basePath, path)

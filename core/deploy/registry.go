@@ -204,6 +204,8 @@ func NewGlobalRegistry() *GlobalRegistry {
 // Both local and remote factories support all three signatures.
 func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any,
 	configOrOptions ...any) {
+	LogDebug("[RegisterServiceType CALLED] serviceType=%s, options count=%d", serviceType, len(configOrOptions))
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -246,10 +248,51 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 		}
 	}
 
-	// Only store metadata if resource name is provided
+	// Infer Resource from serviceType if not provided
+	if metadata.Resource == "" {
+		// Auto-generate from service type: "order-service-factory" -> "order"
+		resource := strings.TrimSuffix(serviceType, "-factory")
+		resource = strings.TrimSuffix(resource, "-service")
+		if resource != "" && resource != serviceType {
+			metadata.Resource = resource
+			LogDebug("[RegisterServiceType] %s: Inferred Resource=%s", serviceType, resource)
+		}
+	}
+
+	// Infer ResourcePlural if Resource is set but ResourcePlural is empty
+	if metadata.Resource != "" && metadata.ResourcePlural == "" {
+		metadata.ResourcePlural = metadata.Resource + "s"
+		LogDebug("[RegisterServiceType] %s: Inferred ResourcePlural=%s", serviceType, metadata.ResourcePlural)
+	}
+
+	// Set default convention if not provided
+	if metadata.Convention == "" {
+		metadata.Convention = "rest"
+	}
+
+	// Debug: log metadata before filtering
+	LogDebug("[RegisterServiceType] %s (before filter): Resource='%s', PathPrefix='%s', RouteOverrides=%d",
+		serviceType, metadata.Resource, metadata.PathPrefix, len(metadata.RouteOverrides))
+
+	// Store metadata if any meaningful configuration is provided
 	var metadataPtr *ServiceMetadata
-	if metadata.Resource != "" {
+	hasConfig := metadata.Resource != "" ||
+		metadata.Convention != "rest" || // Non-default convention
+		metadata.PathPrefix != "" ||
+		len(metadata.RouteOverrides) > 0 ||
+		len(metadata.MiddlewareNames) > 0 ||
+		len(metadata.HiddenMethods) > 0
+
+	if hasConfig {
 		metadataPtr = metadata
+		// Debug log
+		LogDebug("[RegisterServiceType] %s: STORED - Resource=%s, PathPrefix=%s, RouteOverrides count=%d",
+			serviceType, metadata.Resource, metadata.PathPrefix, len(metadata.RouteOverrides))
+		for methodName, route := range metadata.RouteOverrides {
+			LogDebug("  - %s: method=%s, path=%s", methodName, route.Method, route.Path)
+		}
+	} else {
+		LogDebug("[RegisterServiceType] %s: NOT STORED (no meaningful config)", serviceType)
 	}
 
 	// Normalize local and remote factories
@@ -394,7 +437,15 @@ func (g *GlobalRegistry) GetServiceMetadata(serviceType string) *ServiceMetadata
 
 	entry, ok := g.serviceFactories[serviceType]
 	if !ok {
+		LogDebug("[GetServiceMetadata] serviceType '%s' NOT FOUND", serviceType)
 		return nil
+	}
+
+	if entry.Metadata != nil {
+		LogDebug("[GetServiceMetadata] serviceType '%s' FOUND: Resource=%s, RouteOverrides=%d",
+			serviceType, entry.Metadata.Resource, len(entry.Metadata.RouteOverrides))
+	} else {
+		LogDebug("[GetServiceMetadata] serviceType '%s' FOUND but Metadata=nil", serviceType)
 	}
 
 	return entry.Metadata
@@ -588,6 +639,10 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 		panic(fmt.Sprintf("service %s already registered", name))
 	}
 	g.serviceInstances.Store(name, service)
+
+	if GetLogLevel() >= LogLevelInfo {
+		fmt.Printf("ℹ️  Registered service instance: '%s'\n", name)
+	}
 }
 
 // RegisterLazyService registers a lazy service factory that will be instantiated on first access.
@@ -869,6 +924,12 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 		}
 
 		// Call factory with resolved deps or nil
+		// Check if this is a remote service (has "remote" in config)
+		if _, isRemote := entry.Config["remote"]; isRemote {
+			LogInfo("📦 Creating remote service wrapper: '%s'", name)
+		} else {
+			LogInfo("📦 Creating service instance: '%s'", name)
+		}
 		instance := entry.Factory(resolvedDeps, entry.Config)
 		g.serviceInstances.Store(name, instance)
 	})
@@ -898,8 +959,10 @@ func (g *GlobalRegistry) HasLazyService(name string) bool {
 // Returns the definition if found in serviceDefs, or nil if not found.
 // This is primarily used by wrapper functions that need access to service metadata.
 func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
+	LogDebug("[GetDeferredServiceDef] looking for '%s'", name)
 	if defAny, ok := g.serviceDefs.Load(name); ok {
 		deferredDef := defAny.(*deferredServiceDef)
+		LogDebug("[GetDeferredServiceDef] FOUND '%s': Type=%s", name, deferredDef.FactoryType)
 		return &schema.ServiceDef{
 			Name:      deferredDef.Name,
 			Type:      deferredDef.FactoryType,
@@ -907,6 +970,7 @@ func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
 			Config:    deferredDef.Config,
 		}
 	}
+	LogDebug("[GetDeferredServiceDef] NOT FOUND '%s'", name)
 	return nil
 }
 
@@ -916,8 +980,10 @@ func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
 func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.ServiceDef) {
 	// Get current deployment context
 	currentKey := g.GetCurrentCompositeKey()
+	LogDebug("[autoRegisterLazyService] service '%s', currentKey='%s'", name, currentKey)
 	if currentKey == "" {
 		// No current context - default to LOCAL
+		LogDebug("[autoRegisterLazyService] No currentKey - registering '%s' as LOCAL", name)
 		g.autoRegisterLocalService(name, def)
 		return
 	}
@@ -926,19 +992,23 @@ func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.Servic
 	currentServerTopo, ok := g.GetServerTopology(currentKey)
 	if !ok {
 		// No topology found - default to LOCAL
+		LogDebug("[autoRegisterLazyService] No topology found for '%s' - registering '%s' as LOCAL", currentKey, name)
 		g.autoRegisterLocalService(name, def)
 		return
 	}
 
 	// Check if service is published on another server (REMOTE)
 	remoteBaseURL, isRemote := currentServerTopo.RemoteServices[name]
+	LogDebug("[autoRegisterLazyService] service '%s': isRemote=%v, remoteBaseURL='%s'", name, isRemote, remoteBaseURL)
 	if isRemote {
 		// Register as REMOTE service (HTTP proxy)
+		LogDebug("[autoRegisterLazyService] Registering '%s' as REMOTE -> %s", name, remoteBaseURL)
 		g.AutoRegisterRemoteService(name, def, remoteBaseURL)
 		return
 	}
 
 	// Not remote - register as LOCAL
+	LogDebug("[autoRegisterLazyService] Registering '%s' as LOCAL", name)
 	g.autoRegisterLocalService(name, def)
 }
 
@@ -979,12 +1049,15 @@ func (g *GlobalRegistry) autoRegisterLocalService(name string, def *schema.Servi
 		}
 
 		// Call original factory
+		LogInfo("📦 Creating service instance: '%s' (type: %s)", name, def.Type)
 		return factory(lazyDeps, cfg)
 	}, deps, def.Config)
 }
 
 // AutoRegisterRemoteService registers a service as REMOTE (HTTP proxy)
 func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.ServiceDef, remoteBaseURL string) {
+	LogInfo("🌐 Creating remote service proxy: '%s' -> %s", name, remoteBaseURL)
+
 	// Get remote factory
 	factory := g.GetServiceFactory(def.Type, false) // false = remote factory
 	if factory == nil {

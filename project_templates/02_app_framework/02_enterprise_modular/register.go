@@ -4,44 +4,18 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/middleware/recovery"
 
-	userApp "github.com/primadi/lokstra/project_templates/02_app_framework/02_enterprise_modular/modules/user/application"
-	userRepo "github.com/primadi/lokstra/project_templates/02_app_framework/02_enterprise_modular/modules/user/infrastructure/repository"
-
-	orderApp "github.com/primadi/lokstra/project_templates/02_app_framework/02_enterprise_modular/modules/order/application"
-	orderRepo "github.com/primadi/lokstra/project_templates/02_app_framework/02_enterprise_modular/modules/order/infrastructure/repository"
+	"github.com/primadi/lokstra/project_templates/02_app_framework/02_enterprise_modular/modules/order"
+	"github.com/primadi/lokstra/project_templates/02_app_framework/02_enterprise_modular/modules/user"
 )
 
 func registerServiceTypes() {
-	// ==================== USER MODULE ====================
-	// Register user repository (infrastructure - local only)
-	lokstra_registry.RegisterServiceType("user-repository-factory",
-		userRepo.UserRepositoryFactory, nil)
-
-	// Register user service (application - local and remote)
-	lokstra_registry.RegisterServiceType("user-service-factory",
-		userApp.UserServiceFactory,
-		nil, // Remote factory would go here for microservices
-		deploy.WithResource("user", "users"),
-		deploy.WithConvention("rest"),
-	)
-
-	// ==================== ORDER MODULE ====================
-	// Register order repository (infrastructure - local only)
-	lokstra_registry.RegisterServiceType("order-repository-factory",
-		orderRepo.OrderRepositoryFactory, nil)
-
-	// Register order service (application - local and remote)
-	lokstra_registry.RegisterServiceType("order-service-factory",
-		orderApp.OrderServiceFactory,
-		nil, // Remote factory would go here for microservices
-		deploy.WithResource("order", "orders"),
-		deploy.WithConvention("rest"),
-	)
+	// Register modules (each module owns its service type registration)
+	user.Register()
+	order.Register()
 }
 
 func registerMiddlewareTypes() {

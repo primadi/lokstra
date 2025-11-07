@@ -2,7 +2,7 @@
 ### Development Server - Port 3000
 ### Production Server - Port 4000
 
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3000/api/v1
 
 # User Service APIs (from deployment-level inline)
 GET {{baseUrl}}/users

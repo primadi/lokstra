@@ -85,7 +85,9 @@ func registerCustomRoute(router lokstra.Router, service any, methodName string, 
 	// Apply path prefix using path.Join to avoid double slashes
 	fullPath := route.Path
 	if pathPrefix != "" {
-		fullPath = path.Join(pathPrefix, route.Path)
+		// Strip leading slash from route.Path to ensure proper joining
+		routePath := strings.TrimPrefix(route.Path, "/")
+		fullPath = path.Join(pathPrefix, routePath)
 	}
 
 	// If method is empty, auto-detect from method name

@@ -28,6 +28,10 @@ func NewService(baseURL string, rule autogen.ConversionRule, override autogen.Ro
 		IsLocal: false,
 		Timeout: 30 * time.Second,
 	}
+
+	// Log remote service creation
+	log.Printf("🌐 Created remote service proxy: %s (resource: %s)", baseURL, rule.Resource)
+
 	return &Service{
 		client:         client,
 		baseURL:        baseURL,
