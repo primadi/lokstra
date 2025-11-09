@@ -1,0 +1,7 @@
+# Development Configuration
+
+configs:
+  - name: log_level
+    value: "DEBUG"
+  - name: enable_debug
+    value: true

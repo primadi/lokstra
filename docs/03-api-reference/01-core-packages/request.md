@@ -706,14 +706,14 @@ func complexHandler(c *lokstra.RequestContext) error {
 
 ## See Also
 
-- **[Response](response.md)** - Response building API
-- **[Router](router.md)** - Handler registration
-- **[Validation](../07-helpers/common-validator.md)** - Validation utilities
+- **[Response](response)** - Response building API
+- **[Router](router)** - Handler registration
+- **[Validation](../07-helpers/common-validator)** - Validation utilities
 
 ---
 
 ## Related Guides
 
-- **[Router Essentials](../../01-essentials/01-router/)** - Handler basics
-- **[Middleware Guide](../../01-essentials/03-middleware/)** - Middleware patterns
+- **[Router Essentials](../../01-router-guide/01-router/)** - Handler basics
+- **[Middleware Guide](../../01-router-guide/03-middleware/)** - Middleware patterns
 - **[Request Handling](../../02-deep-dive/router/)** - Advanced techniques

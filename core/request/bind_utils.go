@@ -46,6 +46,27 @@ func setValue(field reflect.Value, raw string, isUnmarshalJSON bool) error {
 		}).UnmarshalJSON(data)
 	}
 
+	// Handle pointer types
+	if field.Kind() == reflect.Ptr {
+		// If raw is empty and it's a pointer, leave it as nil (for omitempty)
+		if raw == "" {
+			return nil
+		}
+
+		// Create new instance of the type being pointed to
+		elemType := field.Type().Elem()
+		newElem := reflect.New(elemType)
+
+		// Set the value on the element
+		if err := setValue(newElem.Elem(), raw, isUnmarshalJSON); err != nil {
+			return err
+		}
+
+		// Set the pointer
+		field.Set(newElem)
+		return nil
+	}
+
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(raw)

@@ -810,13 +810,13 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 ## Related Documentation
 
-- [Services Overview](README.md) - Service architecture
-- [Auth Validator](auth-validator.md) - Token validation for middleware
-- [Auth Token JWT](auth-token-jwt.md) - JWT token generation
-- [Auth Flow Password](auth-flow-password.md) - Password authentication
-- [Auth Session Redis](auth-session-redis.md) - Session management
-- [JWT Middleware](../05-middleware/jwt-auth.md) - Request authentication
+- [Services Overview](index) - Service architecture
+- [Auth Validator](auth-validator) - Token validation for middleware
+- [Auth Token JWT](auth-token-jwt) - JWT token generation
+- [Auth Flow Password](auth-flow-password) - Password authentication
+- [Auth Session Redis](auth-session-redis) - Session management
+- [JWT Middleware](../05-middleware/jwt-auth) - Request authentication
 
 ---
 
-**Next:** [Auth Validator Service](auth-validator.md) - Token validation
+**Next:** [Auth Validator Service](auth-validator) - Token validation

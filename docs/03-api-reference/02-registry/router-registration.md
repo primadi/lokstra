@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Router Registration
+---
+
 # Router Registration
 
 > Router registration patterns, auto-router generation, and YAML-based router configuration
@@ -817,7 +822,9 @@ func main() {
     app.AddRouter(lokstra_registry.GetRouter("order-router"))
     app.AddRouter(lokstra_registry.GetRouter("product-router"))
     
-    app.Run()
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 
 // Generated API:
@@ -856,7 +863,9 @@ func main() {
     app.AddRouter(lokstra_registry.GetRouter("user-router-v1"))
     app.AddRouter(lokstra_registry.GetRouter("user-router-v2"))
     
-    app.Run()
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 
 // Generated API:
@@ -937,15 +946,15 @@ router.POST("/users", auth, logger, rateLimiter, handler)
 
 ## See Also
 
-- **[lokstra_registry](./lokstra_registry.md)** - Registry API
-- **[Service Registration](./service-registration.md)** - Service patterns
-- **[Router](../01-core-packages/router.md)** - Router interface
-- **[Auto-Router](../08-advanced/auto-router.md)** - Auto-router internals
+- **[lokstra_registry](./lokstra_registry)** - Registry API
+- **[Service Registration](./service-registration)** - Service patterns
+- **[Router](../01-core-packages/router)** - Router interface
+- **[Auto-Router](../08-advanced/auto-router)** - Auto-router internals
 
 ---
 
 ## Related Guides
 
-- **[Router Essentials](../../01-essentials/01-router/)** - Router basics
+- **[Router Essentials](../../01-router-guide/01-router/)** - Router basics
 - **[Auto-Router Guide](../../02-deep-dive/auto-router/)** - Auto-router patterns
 - **[API Design](../../04-guides/api-design/)** - API best practices

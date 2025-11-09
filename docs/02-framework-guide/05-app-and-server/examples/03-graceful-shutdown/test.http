@@ -1,0 +1,12 @@
+### Home page
+GET http://localhost:3090/
+
+### Status - check active requests
+GET http://localhost:3090/status
+
+### Fast request
+GET http://localhost:3090/fast
+
+### Slow request (5 seconds)
+# Make this request, then press Ctrl+C to test graceful shutdown
+GET http://localhost:3090/slow

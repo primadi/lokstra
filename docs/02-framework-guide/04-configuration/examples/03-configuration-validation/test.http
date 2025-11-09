@@ -1,0 +1,11 @@
+### Test valid configuration
+# Run: go run main.go valid
+
+GET http://localhost:3030/
+GET http://localhost:3030/status
+
+---
+
+### Test invalid configuration (should fail at startup)
+# Run: go run main.go invalid
+# Server won't start - validation will fail

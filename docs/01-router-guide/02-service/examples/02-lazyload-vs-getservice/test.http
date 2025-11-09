@@ -1,0 +1,45 @@
+### LazyLoad vs GetService Performance Demo
+
+### ========================================
+### Method 1: GetService() - SLOW
+### Registry lookup EVERY request
+### ========================================
+
+GET http://localhost:3000/method1-getservice
+
+###
+
+### ========================================
+### Method 2: MustGetService() - SLOW
+### Registry lookup EVERY request, panics if not found
+### ========================================
+
+GET http://localhost:3000/method2-mustgetservice
+
+###
+
+### ========================================
+### Method 3: LazyLoad.MustGet() - FAST ⭐
+### Cached after first access
+### ========================================
+
+GET http://localhost:3000/method3-lazyload
+
+###
+
+### ========================================
+### Benchmark - Compare all methods
+### Calls each method 1000 times
+### ========================================
+
+GET http://localhost:3000/benchmark
+
+###
+
+### ========================================
+### Stats - Total service calls
+### ========================================
+
+GET http://localhost:3000/stats
+
+###

@@ -57,7 +57,7 @@ app := app.New("my-app", ":8080", apiRouter)
 ```
 
 **See Also:**
-- [lokstra.NewApp](lokstra.md#newapp) - Convenience function
+- [lokstra.NewApp](lokstra#newapp) - Convenience function
 
 ---
 
@@ -112,7 +112,7 @@ app := app.NewWithConfig("api", ":8080", "h2c", h2cConfig, router)
 - `key-file` - TLS private key file path (for "tls")
 
 **See Also:**
-- [lokstra.NewAppWithConfig](lokstra.md#newappwithconfig) - Convenience function
+- [lokstra.NewAppWithConfig](lokstra#newappwithconfig) - Convenience function
 
 ---
 
@@ -359,7 +359,7 @@ app := lokstra.NewApp("api", ":8080", router)
 
 // Run with 30s graceful shutdown
 if err := app.Run(30 * time.Second); err != nil {
-    log.Fatal(err)
+    fmt.Println("Error starting server:", err)
 }
 ```
 
@@ -531,7 +531,9 @@ func main() {
     app.AddRouter(apiRouter)
     app.AddRouterWithPrefix(adminRouter, "/admin")
     
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -548,7 +550,9 @@ func main() {
     }
     
     app := lokstra.NewAppWithConfig("api", ":443", "tls", tlsConfig, router)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -575,7 +579,9 @@ func main() {
     }
     
     app.AddReverseProxies(proxies)
-    app.Run(30 * time.Second)
+    if err := app.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -615,15 +621,15 @@ func main() {
 
 ## See Also
 
-- **[lokstra](lokstra.md)** - Convenience functions (NewApp, NewAppWithConfig)
-- **[Server](server.md)** - Managing multiple apps
-- **[Router](router.md)** - Router API
-- **[Listener](../08-advanced/listener.md)** - Custom listeners
+- **[lokstra](lokstra)** - Convenience functions (NewApp, NewAppWithConfig)
+- **[Server](server)** - Managing multiple apps
+- **[Router](router)** - Router API
+- **[Listener](../08-advanced/listener)** - Custom listeners
 
 ---
 
 ## Related Guides
 
-- **[App & Server Guide](../../01-essentials/05-app-and-server/)** - Lifecycle management tutorial
-- **[Configuration](../../01-essentials/04-configuration/)** - Configuring apps from YAML
+- **[App & Server Guide](../../01-router-guide/05-app-and-server/)** - Lifecycle management tutorial
+- **[Configuration](../../02-framework-guide/04-configuration/)** - Configuring apps from YAML
 - **[Deployment](../../02-deep-dive/app-and-server/)** - Production deployment patterns

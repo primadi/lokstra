@@ -452,16 +452,16 @@ Make developers happy:
 Convinced? Here's what to do next:
 
 ### 1. **Quick Evaluation (5 minutes)**
-👉 [Quick Start Guide](quick-start.md) - Build your first API
+👉 [Quick Start Guide](quick-start) - Build your first API
 
 ### 2. **Deep Understanding (20 minutes)**
-👉 [Architecture](architecture.md) - How Lokstra works internally
+👉 [Architecture](architecture) - How Lokstra works internally
 
 ### 3. **Learn by Doing (6-8 hours)**
-👉 [Examples](examples/README.md) - 7 progressive examples from basics to production
+👉 [Examples](examples) - 7 progressive examples from basics to production
 
 ### 4. **Deep Dive (as needed)**
-👉 [Essentials Guide](../01-essentials/README.md) - Comprehensive reference
+👉 [Router Guide](../01-router-guide/) - Comprehensive reference
 
 ---
 
@@ -626,9 +626,9 @@ Visit: [github.com/primadi/lokstra](https://github.com/primadi/lokstra)
 
 ## �📚 Learn More
 
-- **Next**: [Architecture Overview](architecture.md) - Understand how it works
-- **Or**: [Quick Start](quick-start.md) - Start coding now
-- **Or**: [Key Features](key-features.md) - Deep dive into unique features
+- **Next**: [Architecture Overview](architecture) - Understand how it works
+- **Or**: [Quick Start](quick-start) - Start coding now
+- **Or**: [Key Features](key-features) - Deep dive into unique features
 
 ---
 

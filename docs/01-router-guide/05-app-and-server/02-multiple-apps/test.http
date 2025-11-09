@@ -1,0 +1,39 @@
+### Multiple Apps Example - Server Managing 3 Apps
+### Server should be running with 3 apps on different ports
+
+### ========================================
+### API App (Port 8081)
+### ========================================
+
+### Test API - Health Check
+GET http://localhost:8081/health
+
+###
+
+### Test API - Get Users
+GET http://localhost:8081/users
+
+###
+
+### ========================================
+### Admin App (Port 8082)
+### ========================================
+
+### Test Admin - Dashboard
+GET http://localhost:8082/dashboard
+
+###
+
+### Test Admin - Get Users (with actions)
+GET http://localhost:8082/users
+
+###
+
+### ========================================
+### Metrics App (Port 8083)
+### ========================================
+
+### Test Metrics - Get Metrics
+GET http://localhost:8083/metrics
+
+###

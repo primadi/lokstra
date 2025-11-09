@@ -10,10 +10,8 @@ import (
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
-	"github.com/primadi/lokstra/core/route"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
-	"github.com/primadi/lokstra/core/service"
 )
 
 var (
@@ -21,14 +19,31 @@ var (
 	currentCompositeKey string
 )
 
+// getFirstServerCompositeKey returns the first available server composite key from the global registry
+func getFirstServerCompositeKey() string {
+	registry := deploy.Global()
+	return registry.GetFirstServerCompositeKey()
+}
+
 // LoadAndBuild loads config and builds ALL deployments into Global registry
 func LoadAndBuild(configPaths []string) error {
 	return loader.LoadAndBuild(configPaths)
 }
 
 // SetCurrentServer sets the current server using composite key: "deploymentName.serverName"
+// If compositeKey is empty, it will automatically use the first deployment and server available
 // Example: SetCurrentServer("order-service.order-api")
 func SetCurrentServer(compositeKey string) error {
+	// If compositeKey is empty, get the first deployment and server
+	if compositeKey == "" {
+		firstKey := getFirstServerCompositeKey()
+		if firstKey == "" {
+			return fmt.Errorf("no server topologies found in global registry")
+		}
+		compositeKey = firstKey
+		log.Printf("🎯 Auto-selected first server: %s", compositeKey)
+	}
+
 	parts := strings.Split(compositeKey, ".")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid server key format, expected 'deployment.server', got: %s", compositeKey)
@@ -43,75 +58,6 @@ func SetCurrentServer(compositeKey string) error {
 	// Set current context (both in package variable and GlobalRegistry)
 	currentCompositeKey = compositeKey
 	deploy.Global().SetCurrentCompositeKey(compositeKey)
-	return nil
-}
-
-// registerLazyServicesForServer registers lazy services for all apps in the server
-// Services are at SERVER level (shared across all apps)
-// compositeKey format: "deploymentName.serverName"
-func registerLazyServicesForServer(compositeKey string) error {
-	registry := deploy.Global()
-
-	// Get server topology from Global registry
-	serverTopo, ok := registry.GetServerTopology(compositeKey)
-	if !ok {
-		return fmt.Errorf("server topology '%s' not found in global registry", compositeKey)
-	}
-
-	// Iterate all services at server level and register them
-	for _, serviceName := range serverTopo.Services {
-		// Get service definition
-		serviceDef := registry.GetServiceDef(serviceName)
-		if serviceDef == nil {
-			return fmt.Errorf("service %s not defined in global registry", serviceName)
-		}
-
-		// Check if this is a remote service
-		remoteURL, isRemote := serverTopo.RemoteServices[serviceName]
-
-		if isRemote && remoteURL != "" {
-			// Register REMOTE service via core registry
-			// This delegates to AutoRegisterRemoteService which handles metadata properly
-			registry.AutoRegisterRemoteService(serviceName, serviceDef, remoteURL)
-		} else {
-			// Register LOCAL service
-			// Convert DependsOn to deps map
-			deps := make(map[string]string)
-			for _, depStr := range serviceDef.DependsOn {
-				// Parse "paramName:serviceName" or just "serviceName"
-				parts := strings.SplitN(depStr, ":", 2)
-				if len(parts) == 2 {
-					deps[parts[0]] = parts[1]
-				} else {
-					deps[depStr] = depStr
-				}
-			}
-
-			// Get service type factory (LOCAL)
-			serviceType := serviceDef.Type
-			factory := registry.GetServiceFactory(serviceType, true) // true = local factory
-			if factory == nil {
-				return fmt.Errorf("service factory %s (local) not registered for service %s", serviceType, serviceName)
-			}
-
-			// Register as lazy service with wrapper factory
-			// Use Skip mode to allow idempotent calls (e.g., re-running RunCurrentServer)
-			registry.RegisterLazyServiceWithDeps(serviceName, func(resolvedDeps, cfg map[string]any) any {
-				// Factory expects lazy loaders (service.Cached), so wrap resolved deps
-				lazyDeps := make(map[string]any)
-				for key, depSvc := range resolvedDeps {
-					depSvcCopy := depSvc // Capture for closure
-					lazyDeps[key] = service.LazyLoadWith(func() any {
-						return depSvcCopy
-					})
-				}
-
-				// Call original factory
-				return factory(lazyDeps, cfg)
-			}, deps, serviceDef.Config, deploy.WithRegistrationMode(deploy.LazyServiceSkip))
-		}
-	}
-
 	return nil
 }
 
@@ -213,10 +159,32 @@ func RunCurrentServer(timeout time.Duration) error {
 		return fmt.Errorf("server topology '%s' not found in global registry", currentCompositeKey)
 	}
 
-	// Register lazy services for this server (on-demand, just before running)
-	if err := registerLazyServicesForServer(currentCompositeKey); err != nil {
-		return fmt.Errorf("failed to register lazy services: %w", err)
+	// Get original config for inline definitions normalization
+	config := registry.GetDeployConfig()
+	if config != nil {
+		// Extract deployment and server names from composite key
+		deploymentName := GetCurrentDeploymentName()
+		serverName := GetCurrentServerName()
+
+		// Perform lazy normalization of inline definitions for this server only
+		// This updates the config structure (moves inline definitions to global with normalized names)
+		err := loader.NormalizeInlineDefinitionsForServer(config, deploymentName, serverName)
+		if err != nil {
+			return fmt.Errorf("failed to normalize inline definitions: %w", err)
+		}
+
+		// Perform runtime registration of all definitions (global + normalized inline)
+		// This registers middlewares, services (with remote/local logic), and auto-generates routers
+		err = loader.RegisterDefinitionsForRuntime(registry, config, deploymentName, serverName, serverTopo)
+		if err != nil {
+			return fmt.Errorf("failed to register definitions for runtime: %w", err)
+		}
+
+		log.Printf("📝 Normalized and registered definitions for server %s.%s", deploymentName, serverName)
 	}
+
+	// NOTE: registerLazyServicesForServer is NO LONGER NEEDED
+	// All service registration (including remote/local logic) is now handled in RegisterDefinitionsForRuntime
 
 	// Get apps from topology
 	serverName := GetCurrentServerName()
@@ -237,8 +205,6 @@ func RunCurrentServer(timeout time.Duration) error {
 			// Try to get manually registered router first
 			r := GetRouter(routerName)
 
-			var isAutoGenerated bool
-
 			// If not found, try to build from router definition (auto-generated)
 			if r == nil {
 				autoRouter, err := BuildRouterFromDefinition(routerName)
@@ -246,7 +212,6 @@ func RunCurrentServer(timeout time.Duration) error {
 					return fmt.Errorf("router '%s' not found in registry and failed to auto-build: %w", routerName, err)
 				}
 				r = autoRouter
-				isAutoGenerated = true
 				// Derive service name from router name: "{service-name}-router" -> "{service-name}"
 				serviceName := strings.TrimSuffix(routerName, "-router")
 				log.Printf("✨ Auto-generated router '%s' from service '%s'\n", routerName, serviceName)
@@ -255,15 +220,8 @@ func RunCurrentServer(timeout time.Duration) error {
 			// Apply overrides from router-definitions (works for both manual and auto-generated routers)
 			routerDef := deploy.Global().GetRouterDef(routerName)
 			if routerDef != nil {
-				// Apply path prefix override if specified
-				if routerDef.PathPrefix != "" {
-					r.SetPathPrefix(routerDef.PathPrefix)
-					routerType := "manual"
-					if isAutoGenerated {
-						routerType = "auto-generated"
-					}
-					log.Printf("🔧 Applied path prefix override to %s router '%s': %s\n", routerType, routerName, routerDef.PathPrefix)
-				}
+				// NOTE: PathPrefix is already applied in BuildRouterFromDefinition via override.PathPrefix
+				// No need to apply again here to avoid double prefix
 
 				// Apply path rewrites if specified
 				if len(routerDef.PathRewrites) > 0 {
@@ -288,36 +246,28 @@ func RunCurrentServer(timeout time.Duration) error {
 				}
 
 				// Apply route-level overrides (custom routes)
+				// NOTE: Path and Method are already handled by autogen.NewFromService
+				// We only need to apply route-level middlewares here if specified
 				if len(routerDef.Custom) > 0 {
 					for _, customRoute := range routerDef.Custom {
 						var options []any
 
-						// Add method override if specified
-						if customRoute.Method != "" {
-							options = append(options, route.WithMethodOption(customRoute.Method))
-						}
-
-						// Add path override if specified
-						if customRoute.Path != "" {
-							options = append(options, route.WithPathOption(customRoute.Path))
-						}
-
-						// Add middlewares if specified
+						// Add middlewares if specified (route-level)
 						if len(customRoute.Middlewares) > 0 {
 							for _, mwName := range customRoute.Middlewares {
 								options = append(options, mwName)
 							}
 						}
 
-						// Apply all options to the route
+						// Apply options to the route only if there are route-level middlewares
 						if len(options) > 0 {
 							err := r.UpdateRoute(customRoute.Name, options...)
 							if err != nil {
 								log.Printf("⚠️  Warning: Failed to update route '%s' in router '%s': %v\n",
 									customRoute.Name, routerName, err)
 							} else {
-								log.Printf("🔧 Applied route overrides to '%s.%s' (method: %s, path: %s, middlewares: %v)\n",
-									routerName, customRoute.Name, customRoute.Method, customRoute.Path, customRoute.Middlewares)
+								log.Printf("🔧 Applied route-level middlewares to '%s.%s': %v\n",
+									routerName, customRoute.Name, customRoute.Middlewares)
 							}
 						}
 					}
@@ -329,6 +279,8 @@ func RunCurrentServer(timeout time.Duration) error {
 
 		// Create Lokstra App for this deploy app. Name it using serverName#index to keep unique names
 		appName := fmt.Sprintf("%s#%s", serverName, strconv.Itoa(i+1))
+
+		// Address is already resolved by ResolveConfigs()
 		coreApp := app.New(appName, appTopo.Addr, routers...)
 		coreApps = append(coreApps, coreApp)
 	}
@@ -337,7 +289,7 @@ func RunCurrentServer(timeout time.Duration) error {
 	coreServer := server.New(serverName, coreApps...)
 	coreServer.PrintStartInfo()
 
-	// Delegate to core Server.Run() - no code duplication!
+	// Delegate to coreServer.Run() - no code duplication!
 	return coreServer.Run(timeout)
 }
 

@@ -1,0 +1,10 @@
+### Auto-Router Advanced Example
+
+### Home
+GET http://localhost:3000/
+
+### List users
+GET http://localhost:3000/users
+
+### Get user by ID
+GET http://localhost:3000/users/1

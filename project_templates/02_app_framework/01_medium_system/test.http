@@ -1,0 +1,67 @@
+@baseUrl = http://localhost:8080
+
+#########################################
+# User Endpoints
+#########################################
+
+### Get all users
+GET {{baseUrl}}/api/users HTTP/1.1
+
+### Get user by ID
+GET {{baseUrl}}/api/users/1 HTTP/1.1
+
+### Create new user
+POST {{baseUrl}}/api/users HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Charlie Brown",
+  "email": "charlie@example.com"
+}
+
+### Update user
+PUT {{baseUrl}}/api/users/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Alice Johnson Updated",
+  "email": "alice.updated@example.com"
+}
+
+### Delete user
+DELETE {{baseUrl}}/api/users/2 HTTP/1.1
+
+#########################################
+# Order Endpoints
+#########################################
+
+### Get all orders
+GET {{baseUrl}}/api/orders HTTP/1.1
+
+### Get order by ID
+GET {{baseUrl}}/api/orders/1 HTTP/1.1
+
+### Get orders by user ID
+GET {{baseUrl}}/api/users/1/orders HTTP/1.1
+
+### Create new order
+POST {{baseUrl}}/api/orders HTTP/1.1
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "product": "Keyboard",
+  "quantity": 1,
+  "total": 75.50
+}
+
+### Update order status
+PATCH {{baseUrl}}/api/orders/1/status HTTP/1.1
+Content-Type: application/json
+
+{
+  "status": "processing"
+}
+
+### Delete order
+DELETE {{baseUrl}}/api/orders/2 HTTP/1.1

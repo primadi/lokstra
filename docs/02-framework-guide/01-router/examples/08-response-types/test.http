@@ -1,0 +1,94 @@
+### Response Types Demo
+# Complete demonstration of all response types in Lokstra
+# Server: http://localhost:8080
+
+### ===== JSON RESPONSES =====
+
+### Method 1: NewJsonResponse (RECOMMENDED)
+GET http://localhost:8080/json/quick
+
+### Method 2: Manual with chainable methods
+GET http://localhost:8080/json/manual
+
+### Method 3: Using ctx.Resp helper
+GET http://localhost:8080/json/context
+
+### ===== API HELPER RESPONSES (Structured JSON) =====
+
+### Success response
+GET http://localhost:8080/api/success
+
+### Success with message
+GET http://localhost:8080/api/success-message
+
+### 201 Created
+GET http://localhost:8080/api/created
+
+### 400 Bad Request
+GET http://localhost:8080/api/bad-request
+
+### 401 Unauthorized
+GET http://localhost:8080/api/unauthorized
+
+### 404 Not Found
+GET http://localhost:8080/api/not-found
+
+### Manual method (old way - not recommended)
+GET http://localhost:8080/api/manual
+
+### ===== HTML RESPONSES =====
+
+### Quick HTML response
+GET http://localhost:8080/html/quick
+
+### Manual HTML with more control
+GET http://localhost:8080/html/manual
+
+### Dynamic HTML with parameters
+GET http://localhost:8080/html/dynamic?name=Alice
+
+### Dynamic HTML - no name parameter
+GET http://localhost:8080/html/dynamic
+
+### ===== TEXT RESPONSES =====
+
+### Plain text
+GET http://localhost:8080/text/plain
+
+### Dynamic text with request info
+GET http://localhost:8080/text/dynamic
+
+### ===== RAW RESPONSES (Custom Content-Type) =====
+
+### CSV file
+GET http://localhost:8080/raw/csv
+
+### XML response
+GET http://localhost:8080/raw/xml
+
+### Binary response (PDF simulation)
+GET http://localhost:8080/raw/binary
+
+### ===== STREAM RESPONSES =====
+
+### Server-Sent Events (SSE)
+GET http://localhost:8080/stream/sse
+
+### Chunked transfer
+GET http://localhost:8080/stream/chunked
+
+### ===== COMPARISON (All produce identical JSON) =====
+
+### Compare Method 1: NewJsonResponse
+GET http://localhost:8080/compare/json1
+
+### Compare Method 2: Manual chaining
+GET http://localhost:8080/compare/json2
+
+### Compare Method 3: ctx.Resp
+GET http://localhost:8080/compare/json3
+
+### ===== HOME PAGE =====
+
+### Interactive demo page (open in browser)
+GET http://localhost:8080/

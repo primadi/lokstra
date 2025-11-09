@@ -97,3 +97,75 @@ func WithMiddlewares(middlewares ...string) RegisterServiceTypeOption {
 		m.MiddlewareNames = append(m.MiddlewareNames, middlewares...)
 	}
 }
+
+// ServiceTypeRouter defines router configuration for a service type
+// This is a cleaner alternative to functional options
+type ServiceTypeRouter struct {
+	Resource       string            // Singular resource name (e.g., "user")
+	ResourcePlural string            // Plural resource name (e.g., "users")
+	Convention     string            // Convention type (e.g., "rest", "rpc")
+	PathPrefix     string            // Path prefix for all routes (e.g., "/api")
+	Middlewares    []string          // Middleware names to apply to all routes
+	Hidden         []string          // Method names to hide from router
+	CustomRoutes   map[string]string // Custom route overrides: methodName -> pathSpec (e.g., "GET /path")
+}
+
+// WithRouter creates a RegisterServiceTypeOption from router configuration
+// Example:
+//
+//	deploy.WithRouter(&deploy.ServiceTypeRouter{
+//	    Resource:       "order",
+//	    ResourcePlural: "orders",
+//	    Convention:     "rest",
+//	    CustomRoutes: map[string]string{
+//	        "GetByUserID":  "/users/{user_id}/orders",
+//	        "UpdateStatus": "PATCH /orders/{id}/status",
+//	    },
+//	})
+func WithRouter(config *ServiceTypeRouter) RegisterServiceTypeOption {
+	return func(m *ServiceMetadata) {
+		if config.Resource != "" {
+			m.Resource = config.Resource
+		}
+		if config.ResourcePlural != "" {
+			m.ResourcePlural = config.ResourcePlural
+		}
+		if config.Convention != "" {
+			m.Convention = config.Convention
+		}
+		if config.PathPrefix != "" {
+			m.PathPrefix = config.PathPrefix
+		}
+		if len(config.Middlewares) > 0 {
+			m.MiddlewareNames = append(m.MiddlewareNames, config.Middlewares...)
+		}
+		if len(config.Hidden) > 0 {
+			m.HiddenMethods = append(m.HiddenMethods, config.Hidden...)
+		}
+		if len(config.CustomRoutes) > 0 {
+			if m.RouteOverrides == nil {
+				m.RouteOverrides = make(map[string]RouteMetadata)
+			}
+			for methodName, pathSpec := range config.CustomRoutes {
+				// Parse pathSpec: "POST /path" or "/path"
+				parts := strings.SplitN(strings.TrimSpace(pathSpec), " ", 2)
+				method := ""
+				path := pathSpec
+
+				if len(parts) == 2 {
+					possibleMethod := strings.ToUpper(parts[0])
+					switch possibleMethod {
+					case "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS":
+						method = possibleMethod
+						path = strings.TrimSpace(parts[1])
+					}
+				}
+
+				m.RouteOverrides[methodName] = RouteMetadata{
+					Method: method,
+					Path:   path,
+				}
+			}
+		}
+	}
+}

@@ -564,9 +564,9 @@ func TestCORSForbidden(t *testing.T) {
 
 ## See Also
 
-- **[JWT Auth](./jwt-auth.md)** - Authentication middleware
-- **[Recovery](./recovery.md)** - Panic recovery
-- **[Request Logger](./request-logger.md)** - Request logging
+- **[JWT Auth](./jwt-auth)** - Authentication middleware
+- **[Recovery](./recovery)** - Panic recovery
+- **[Request Logger](./request-logger)** - Request logging
 
 ---
 

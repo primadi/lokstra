@@ -1,0 +1,39 @@
+### Remote Services Example
+### http://localhost:3000
+
+### Home Page
+GET http://localhost:3000/
+
+### ============================================
+### Remote Service Calls
+### ============================================
+
+### Get user by ID
+GET http://localhost:3000/users/1
+
+###
+
+### Get another user
+GET http://localhost:3000/users/42
+
+###
+
+### Create new user
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+
+###
+
+### Create another user
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane@example.com"
+}

@@ -1,0 +1,7 @@
+# Production Environment Configuration
+
+configs:
+  - name: db_host
+    value: "prod-db.example.com:5432"
+  - name: log_level
+    value: "WARN"

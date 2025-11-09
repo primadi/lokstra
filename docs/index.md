@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Home
+description: Lokstra - Modern Go web framework for building microservices with elegant configuration-driven architecture, declarative service management, and lazy dependency injection
 ---
 
 <div align="center">
@@ -11,7 +12,7 @@ title: Home
     <a href="#quick-start">Quick Start</a> •
     <a href="#key-features">Features</a> •
     <a href="#examples">Examples</a> •
-    <a href="./01-essentials/">Documentation</a> •
+    <a href="./00-introduction/">Documentation</a> •
     <a href="https://github.com/primadi/lokstra">GitHub</a>
   </p>
 </div>
@@ -20,7 +21,22 @@ title: Home
 
 ## What is Lokstra?
 
-Lokstra is a **production-ready Go web framework** that combines the simplicity of manual coding with the power of declarative configuration. Build scalable applications with **lazy dependency injection**, **auto-generated routers**, and **flexible deployment topologies**.
+Lokstra is a **versatile Go web framework** that works in two ways:
+
+### 🎯 Track 1: As a Router (Like Echo, Gin, Chi)
+Use Lokstra as a fast, flexible HTTP router with elegant middleware support. Perfect when you just need routing without the complexity of DI frameworks.
+
+```go
+r := lokstra.NewRouter("api")
+r.GET("/", func() string {
+    return "Hello, Lokstra!"
+})
+app := lokstra.NewApp("hello", ":3000", r)
+app.Run(30 * time.Second)
+```
+
+### 🏗️ Track 2: As a Business Application Framework (Like NestJS, Spring Boot)
+Leverage the full framework with **lazy dependency injection**, **auto-generated routers**, and **configuration-driven deployment**. Build enterprise applications that scale from monolith to microservices.
 
 ```go
 // Define services in YAML
@@ -29,16 +45,15 @@ service-definitions:
     type: user-service-factory
     depends-on: [database]
 
-// Or use them directly in code
+// Access with type-safe lazy loading
 userService := service.LazyLoad[*UserService]("user-service")
 users := userService.MustGet().GetAll()
 ```
 
-Perfect for:
-- 🚀 **Startups**: Start simple, scale declaratively
-- 🏢 **Enterprises**: Type-safe DI with YAML configuration
-- 🔄 **Microservices**: Multi-deployment support (monolith → microservices)
-- 📦 **API Services**: Auto-generated REST routers from services
+**Choose your path:**
+- 🚀 **Need a Router?** → Read [Router Guide](./01-router-guide/) (like Echo/Gin)
+- 🏢 **Building Enterprise Apps?** → Read [Framework Guide](./02-framework-guide/) (like NestJS/Spring)
+- � **New to Lokstra?** → Start with [Introduction](./00-introduction/)
 
 ---
 
@@ -56,11 +71,20 @@ package main
 import "github.com/primadi/lokstra"
 
 func main() {
-    app := lokstra.New()
-    app.GET("/", func() string {
+    r := lokstra.NewRouter("api")
+    
+    r.GET("/", func() string {
         return "Hello, Lokstra!"
     })
-    app.Run(":8080")
+    
+    r.GET("/ping", func() string {
+        return "pong"
+    })
+    
+    app := lokstra.NewApp("hello", ":3000", r)
+    if err := app.Run(30 * time.Second); err != nil {
+      log.Fatal(err)
+    }
 }
 ```
 
@@ -84,7 +108,7 @@ deployments:
 **2. Register factory** (one-time setup):
 ```go
 lokstra_registry.RegisterServiceType("user-service-factory", 
-    func() any { return service.NewUserService() })
+    func() any { return service.NewUserService() }, nil)
 ```
 
 **3. Use anywhere** (zero overhead after first access):
@@ -96,7 +120,7 @@ func handler() {
 }
 ```
 
-**[👉 Full Tutorial](./01-essentials/)**
+**[👉 Full Tutorial](./00-introduction/)**
 
 ---
 
@@ -120,7 +144,7 @@ users := db.MustGet().GetAll()
 - Memory efficient
 - Fail-fast with clear errors
 
-**[Learn More →](./01-essentials/02-service/)**
+**[Learn More →](./02-framework-guide/)**
 
 ---
 
@@ -160,7 +184,7 @@ router-definitions:
     hidden: [InternalMethod]
 ```
 
-**[Learn More →](./03-api-reference/02-registry/router-registration.md)**
+**[Learn More →](./03-api-reference/02-registry/router-registration)**
 
 ---
 
@@ -215,12 +239,12 @@ router-definitions:
 - A/B testing
 - Legacy URL migration
 
-**[Learn More →](./03-api-reference/03-configuration/schema.md#path-rewrites)**
+**[Learn More →](./03-api-reference/03-configuration/schema#path-rewrites)**
 
 ---
 
 ### 📝 Type-Safe Request Binding
-Automatic validation with struct tags.
+Automatic validation with struct tags. Lokstra automatically injects and validates parameters.
 
 ```go
 type CreateUserParams struct {
@@ -229,16 +253,20 @@ type CreateUserParams struct {
     Age   int    `json:"age" validate:"min=18,max=100"`
 }
 
-func createUser(ctx *request.Context) error {
-    var params CreateUserParams
-    if err := ctx.Req.BindBody(&params); err != nil {
-        return ctx.Api.BadRequest("INVALID_INPUT", err.Error())
-    }
-    // params are validated and ready to use
+// Parameters automatically injected and validated!
+func createUser(ctx *request.Context, params *CreateUserParams) error {
+    // params are already validated and ready to use
+    user := db.CreateUser(params.Name, params.Email, params.Age)
+    return ctx.Api.Ok(user)
 }
 ```
 
-**[Learn More →](./01-essentials/03-routing/)**
+**No manual binding code needed!** Lokstra handles:
+- JSON/Form parsing
+- Validation via struct tags
+- Clear error messages on failure
+
+**[Learn More →](./01-router-guide/01-router/)**
 
 ---
 
@@ -253,19 +281,19 @@ func createUser(ctx *request.Context) error {
 - **[Multi-Deployment](./00-introduction/examples/04-multi-deployment/)** - Monolith vs microservices
 
 **Comparing Approaches:**
-- **[Code vs Config](./00-introduction/CODE-VS-CONFIG.md)** - When to use which approach
-- **[Architecture Overview](./00-introduction/architecture.md)** - Framework design principles
+- **[Code vs Config](./00-introduction/CODE-VS-CONFIG)** - When to use which approach
+- **[Architecture Overview](./00-introduction/architecture)** - Framework design principles
 
 ---
 
-### 🎓 [Essential Guides](./01-essentials/)
+### 🎓 [Essential Guides](./00-introduction/)
 
 **Step-by-step learning path:**
 
-1. **[Quick Start](./01-essentials/01-quick-start/)** - Get up and running in 5 minutes
-2. **[Service Management](./01-essentials/02-service/)** - Master lazy dependency injection
-3. **[Routing & Handlers](./01-essentials/03-routing/)** - Request handling patterns
-4. **[Configuration](./01-essentials/04-configuration/)** - YAML setup and environment management
+1. **[Quick Start](./00-introduction/quick-start/)** - Get up and running in 5 minutes
+2. **[Service Management](./02-framework-guide/)** - Master lazy dependency injection
+3. **[Routing & Handlers](./01-router-guide/)** - Request handling patterns
+4. **[Configuration](./02-framework-guide/)** - YAML setup and environment management
 
 Each guide includes:
 - Clear explanations
@@ -280,12 +308,12 @@ Each guide includes:
 **Complete technical documentation:**
 
 - **[Registry API](./03-api-reference/02-registry/)**
-  - [Service Registration](./03-api-reference/02-registry/service-registration.md)
-  - [Router Registration](./03-api-reference/02-registry/router-registration.md)
+  - [Service Registration](./03-api-reference/02-registry/service-registration)
+  - [Router Registration](./03-api-reference/02-registry/router-registration)
   
 - **[Configuration](./03-api-reference/03-configuration/)**
-  - [YAML Schema](./03-api-reference/03-configuration/schema.md) - Complete reference
-  - [Deployment Patterns](./03-api-reference/03-configuration/deploy.md) - Topology strategies
+  - [YAML Schema](./03-api-reference/03-configuration/schema) - Complete reference
+  - [Deployment Patterns](./03-api-reference/03-configuration/deploy) - Topology strategies
 
 **Advanced Topics:**
 - Auto-generated routers
@@ -296,6 +324,67 @@ Each guide includes:
 ---
 
 ## Why Lokstra?
+
+### 🎯 Two Ways to Use Lokstra
+
+#### Use as Router Only (Track 1)
+Compare with **Echo, Gin, Chi, Fiber**:
+
+```go
+// Just routing - no DI, no config files
+r := lokstra.NewRouter("api")
+r.GET("/users", getUsersHandler)
+r.Use(cors.Middleware("*")
+
+app := lokstra.NewApp("api", ":8080", r)
+if err := app.Run(30 * time.Second); err != nil {
+  log.Fatal(err)
+}
+```
+
+✅ Flexible handler signatures (29+ forms!)  
+✅ Clean middleware support  
+✅ Group routing for API versioning  
+✅ No framework lock-in  
+
+**[→ Router Guide](./01-router-guide/)**
+
+---
+
+#### Use as Full Framework (Track 2)
+Compare with **NestJS, Spring Boot, Uber Fx**:
+
+```yaml
+# config.yaml
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [database]
+
+deployments:
+  production:
+    servers:
+      api:
+        published-services: [user-service]  # Auto-router!
+```
+
+```go
+// Type-safe lazy DI
+var userService = service.LazyLoad[*UserService]("user-service")
+
+func handler() {
+    users := userService.MustGet().GetAll()
+}
+```
+
+✅ Lazy dependency injection (type-safe)  
+✅ Auto-generated REST routers from services  
+✅ Configuration-driven deployment  
+✅ Monolith → Microservices without code changes  
+
+**[→ Framework Guide](./02-framework-guide/)**
+
+---
 
 ### vs Traditional DI Frameworks
 - ✅ **Type-safe** with generics (no `interface{}` casting)
@@ -319,10 +408,10 @@ Each guide includes:
 
 ## Community & Support
 
-- 📖 **[Full Documentation](./README.md)** - Complete guide
+- 📖 **[Full Documentation](./index)** - Complete guide
 - 💡 **[Examples](./00-introduction/examples/)** - Working code samples
 - 🐛 **[GitHub Issues](https://github.com/primadi/lokstra/issues)** - Bug reports & features
-- 🗺️ **[Roadmap](./ROADMAP.md)** - Upcoming features
+- 🗺️ **[Roadmap](./ROADMAP)** - Upcoming features
 
 ---
 
@@ -330,39 +419,40 @@ Each guide includes:
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 2rem 0;">
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
+    <h3>🎯 Router Guide</h3>
+    <p>Use Lokstra as a Router</p>
+    <a href="./01-router-guide/">Like Echo, Gin, Chi →</a>
+  </div>
+  
+  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
+    <h3>🏗️ Framework Guide</h3>
+    <p>Full framework with DI</p>
+    <a href="./02-framework-guide/">Like NestJS, Spring →</a>
+    <br><small><a href="./02-framework-guide/lokstra-vs-nestjs">vs NestJS</a> • <a href="./02-framework-guide/lokstra-vs-spring-boot">vs Spring Boot</a></small>
+  </div>
+  
+  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
     <h3>🚀 Quick Start</h3>
     <p>New to Lokstra? Start here!</p>
-    <a href="./01-essentials/01-quick-start/">Get Started in 5 Minutes →</a>
+    <a href="./00-introduction/">Get Started →</a>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>📚 Examples</h3>
+    <h3>� Examples</h3>
     <p>Learn by doing</p>
-    <a href="./00-introduction/examples/">Browse Working Examples →</a>
+    <a href="./00-introduction/examples/">Browse Examples →</a>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>🎓 Essential Guides</h3>
-    <p>Master core concepts</p>
-    <a href="./01-essentials/">Learning Path →</a>
-  </div>
-  
-  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>📖 API Reference</h3>
+    <h3>� API Reference</h3>
     <p>Complete documentation</p>
     <a href="./03-api-reference/">Technical Docs →</a>
   </div>
   
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
-    <h3>🔧 Configuration</h3>
-    <p>YAML schema & patterns</p>
-    <a href="./03-api-reference/03-configuration/schema.md">Schema Reference →</a>
-  </div>
-  
-  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
     <h3>🏗️ Architecture</h3>
     <p>Design principles</p>
-    <a href="./00-introduction/architecture.md">Framework Design →</a>
+    <a href="./00-introduction/architecture">Framework Design →</a>
   </div>
 </div>
 
@@ -372,6 +462,6 @@ Each guide includes:
   <p>Made with ❤️ by <a href="https://github.com/primadi">Primadi</a></p>
   <p>
     <a href="https://github.com/primadi/lokstra">⭐ Star on GitHub</a> •
-    <a href="https://github.com/primadi/lokstra/blob/main/LICENSE">MIT License</a>
+    <a href="https://github.com/primadi/lokstra/blob/main/LICENSE">Apache 2.0 License</a>
   </p>
 </div>

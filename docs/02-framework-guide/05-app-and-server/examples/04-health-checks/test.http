@@ -1,0 +1,30 @@
+### Home page
+GET http://localhost:3100/
+
+### Basic health check
+GET http://localhost:3100/health
+
+### Detailed health check
+GET http://localhost:3100/health/detailed
+
+### Readiness check (for load balancers)
+GET http://localhost:3100/readiness
+
+### Liveness check (for orchestrators)
+GET http://localhost:3100/liveness
+
+---
+
+### Simulate health issues
+
+# Toggle overall health
+GET http://localhost:3100/toggle-health
+
+# Check health after toggle
+GET http://localhost:3100/health/detailed
+
+# Toggle database connection
+GET http://localhost:3100/toggle-db
+
+# Check readiness (should be false now)
+GET http://localhost:3100/readiness

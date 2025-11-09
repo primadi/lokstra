@@ -23,6 +23,14 @@ import (
 	"github.com/primadi/lokstra/core/service"
 )
 
+// ===== TYPE ALIASES FOR CLEANER API =====
+
+// ServiceTypeConfig is a structured configuration for service type registration
+type ServiceTypeConfig = deploy.ServiceTypeConfig
+
+// RouteConfig defines custom configuration for a specific route
+type RouteConfig = deploy.RouteConfig
+
 // ===== MIDDLEWARE FACTORY (compatible with old_registry) =====
 
 // MiddlewareFactory is a function that creates a middleware handler from config
@@ -77,17 +85,26 @@ func RegisterMiddlewareFactory(mwType string, factory any, opts ...RegisterOptio
 	var deployFactory deploy.MiddlewareFactory
 
 	// Check if it's already the right signature
-	if f, ok := factory.(func(map[string]any) any); ok {
+	switch f := factory.(type) {
+	case MiddlewareFactory:
 		deployFactory = f
-	} else if f, ok := factory.(func(map[string]any) request.HandlerFunc); ok {
-		// Wrap old-style factory that returns request.HandlerFunc
-		deployFactory = func(config map[string]any) any {
-			return f(config)
+	case func(map[string]any) request.HandlerFunc:
+		deployFactory = func(cfg map[string]any) any {
+			return f(cfg)
 		}
-	} else {
-		panic(fmt.Sprintf("invalid middleware factory signature for type %s: must be func(map[string]any) any or func(map[string]any) request.HandlerFunc", mwType))
+	case func(map[string]any) any:
+		deployFactory = f
+	case func() request.HandlerFunc:
+		deployFactory = func(cfg map[string]any) any {
+			return f()
+		}
+	case func() any:
+		deployFactory = func(cfg map[string]any) any {
+			return f()
+		}
+	default:
+		panic(fmt.Sprintf("invalid middleware factory signature: %T", factory))
 	}
-
 	deploy.Global().RegisterMiddlewareType(mwType, deployFactory, deployOpts...)
 }
 
@@ -165,24 +182,14 @@ func GetAllRouters() map[string]router.Router {
 //	    },
 //	    nil,
 //	)
-func RegisterServiceType(serviceType string, local, remote any, options ...deploy.RegisterServiceTypeOption) {
-	// Convert options to []any for variadic parameter
-	anyOptions := make([]any, len(options))
-	for i, opt := range options {
-		anyOptions[i] = opt
-	}
-	deploy.Global().RegisterServiceType(serviceType, local, remote, anyOptions...)
+func RegisterServiceType(serviceType string, local, remote any, configOrOptions ...any) {
+	deploy.Global().RegisterServiceType(serviceType, local, remote, configOrOptions...)
 }
 
 // GetServiceFactory returns the service factory for a service type
 // isLocal: true for local factory, false for remote factory
 func GetServiceFactory(serviceType string, isLocal bool) deploy.ServiceFactory {
 	return deploy.Global().GetServiceFactory(serviceType, isLocal)
-}
-
-// DefineService defines a service in the global registry (for code-based config)
-func DefineService(def *schema.ServiceDef) {
-	deploy.Global().DefineService(def)
 }
 
 // RegisterService registers a service instance in the runtime registry
@@ -430,4 +437,29 @@ type Shutdownable interface {
 //	}()
 func ShutdownServices() {
 	deploy.Global().ShutdownServices()
+}
+
+// ===== DEPLOYMENT TOPOLOGY REGISTRATION =====
+
+// RegisterDeployment registers a deployment topology from code
+// This is the code-equivalent of YAML deployment definition
+//
+// Example:
+//
+//	lokstra_registry.RegisterDeployment("microservice", &lokstra_registry.DeploymentConfig{
+//	    Servers: map[string]*lokstra_registry.ServerConfig{
+//	        "user-server": {
+//	            BaseURL: "http://localhost:3001",
+//	            Addr: ":3001",
+//	            PublishedServices: []string{"user-service"},
+//	        },
+//	        "order-server": {
+//	            BaseURL: "http://localhost:3002",
+//	            Addr: ":3002",
+//	            PublishedServices: []string{"order-service"},
+//	        },
+//	    },
+//	})
+func RegisterDeployment(name string, config *DeploymentConfig) error {
+	return deploy.Global().RegisterDeployment(name, config)
 }

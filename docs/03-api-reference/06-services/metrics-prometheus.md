@@ -779,11 +779,11 @@ func (s *SystemMetrics) collect() {
 
 ## Related Documentation
 
-- [Services Overview](README.md) - Service architecture and patterns
-- [Request Logger Middleware](../05-middleware/request-logger.md) - Request logging
-- [Slow Request Logger](../05-middleware/slow-request-logger.md) - Performance monitoring
-- [Configuration](../03-configuration/config.md) - YAML configuration
+- [Services Overview](index) - Service architecture and patterns
+- [Request Logger Middleware](../05-middleware/request-logger) - Request logging
+- [Slow Request Logger](../05-middleware/slow-request-logger) - Performance monitoring
+- [Configuration](../03-configuration/config) - YAML configuration
 
 ---
 
-**Next:** [Redis Service](redis.md) - Direct Redis client access
+**Next:** [Redis Service](redis) - Direct Redis client access

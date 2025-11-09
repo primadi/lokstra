@@ -1,0 +1,22 @@
+### Basic App Example - Multiple Routers in One App
+### Server should be running on port 8080
+
+### Test API Router - Get Users
+GET http://localhost:8080/users
+
+###
+
+### Test API Router - Get Products
+GET http://localhost:8080/products
+
+###
+
+### Test Admin Router - Get Stats
+GET http://localhost:8080/stats
+
+###
+
+### Test Admin Router - Get Logs
+GET http://localhost:8080/logs
+
+###

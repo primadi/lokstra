@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Example: Inline Definitions (3-Level Architecture)
+# Demonstrates Global, Deployment-level, and Server-level inline definitions
+
+configs:
+  server: ${SERVER:}
+
+# ========== GLOBAL LEVEL ==========
+# Definitions here are shared across ALL deployments
+
+middleware-definitions:
+  cors-global:
+    type: cors
+    config: {}
+
+service-definitions:
+  order-service:
+    type: order-service-type
+    router: { path-prefix: /api/v1 }  # ✅ Global inline router definition
+
+deployments:
+  development:
+    # ========== DEPLOYMENT LEVEL ==========
+    # Inline definitions shared across all servers in 'development' deployment
+    # Will be normalized to: development.{name}
+    
+    middleware-definitions:
+      dev-logger:
+        type: logging
+        config:
+          prefix: "DEV"
+    
+    service-definitions:
+      user-service:
+        type: user-service-type
+        router:                   # ✅ Embedded router definition
+          path-prefix: /api/v1    # Custom path prefix
+          middlewares:
+            - dev-logger          # Middlewares at router level (HTTP concern)
+
+    servers:
+      dev-server:
+        base-url: "http://localhost:3000"
+        
+        # ========== SERVER LEVEL ==========
+        # Inline definitions specific to 'dev-server' only
+        # Will be normalized to: development.dev-server.{name}
+        
+        middleware-definitions:
+          api-logger:
+            type: logging
+            config:
+              prefix: "API"
+        
+        service-definitions:
+          product-service:
+            type: product-service-type
+            router:                   # ✅ Embedded router definition
+              path-prefix: /api/v1    # Custom path prefix
+              middlewares:
+                - api-logger          # References server-level inline
+                - cors-global         # References global
+        
+        # App configuration
+        addr: ":3000"
+        # NOTE: routers are auto-generated from published-services
+        # Format: {service-name}-router
+        # No need to explicitly list them in 'routers' field
+        published-services:
+          - user-service     # References deployment-level inline (will be normalized)
+          - product-service  # References server-level inline (will be normalized)
+          - order-service    # References global definition (no normalization needed)
+
+  production:
+    # ========== DEPLOYMENT LEVEL (Production) ==========
+    # Different configuration for production environment
+    
+    middleware-definitions:
+      prod-logger:
+        type: logging
+        config:
+          prefix: "PROD"
+      
+      auth-middleware:
+        type: auth
+        config:
+          strict: true
+    
+    service-definitions:
+      user-service:
+        type: user-service-type
+        router:
+          middlewares:
+            - prod-logger
+            - auth-middleware
+
+    servers:
+      prod-api:
+        base-url: "http://api.production.com"
+        
+        # Server-level inline for production
+        service-definitions:
+          product-service:
+            type: product-service-type
+            router:
+              middlewares:
+                - prod-logger
+                - auth-middleware
+        
+        addr: ":4000"
+        # Routers are auto-generated from published-services
+        published-services:
+          - user-service
+          - product-service
+          - order-service

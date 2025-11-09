@@ -1,0 +1,27 @@
+### Logging Middleware Example
+
+### Test GET request
+GET http://localhost:3000/users
+
+###
+
+### Test GET another endpoint
+GET http://localhost:3000/products
+
+###
+
+### Test POST request
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "David",
+  "email": "david@example.com"
+}
+
+###
+
+### Test error handling (will be logged)
+GET http://localhost:3000/error
+
+###

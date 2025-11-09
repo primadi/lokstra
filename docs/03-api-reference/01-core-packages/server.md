@@ -73,7 +73,7 @@ server := server.New("my-server", apiApp, adminApp)
 ```
 
 **See Also:**
-- [lokstra.NewServer](lokstra.md#newserver) - Convenience function
+- [lokstra.NewServer](lokstra#newserver) - Convenience function
 
 ---
 
@@ -336,7 +336,9 @@ func main() {
     
     // Server with both apps
     server := lokstra.NewServer("production-server", httpApp, httpsApp)
-    server.Run(30 * time.Second)
+    if err := server.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 
 func redirectToHTTPS(c *lokstra.RequestContext) error {
@@ -414,7 +416,9 @@ func main() {
     // - /v2/users
     // - /admin/stats
     
-    server.Run(30 * time.Second)
+    if err := server.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -434,7 +438,9 @@ func main() {
     healthApp := lokstra.NewApp("health", "127.0.0.1:9090", healthRouter)
     
     server := lokstra.NewServer("my-server", apiApp, healthApp)
-    server.Run(30 * time.Second)
+    if err := server.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -445,7 +451,9 @@ func main() {
 ### 1. Use Run() for Production
 ```go
 // ✅ Recommended
-server.Run(30 * time.Second)
+if err := server.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 
 // 🚫 Avoid (unless you need custom control)
 go server.Start()
@@ -465,13 +473,19 @@ apiApp.AddRouter(adminRouter)
 ### 3. Graceful Shutdown Timeout
 ```go
 // ✅ Production: 30-60 seconds
-server.Run(30 * time.Second)
+if err := server.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 
 // ✅ Development: 5-10 seconds
-server.Run(5 * time.Second)
+if err := server.Run(5 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 
 // 🚫 Too short: May terminate active requests
-server.Run(1 * time.Second)
+if err := server.Run(1 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 ```
 
 ### 4. Error Handling
@@ -482,21 +496,23 @@ if err := server.Run(30 * time.Second); err != nil {
 }
 
 // 🚫 Ignore errors
-server.Run(30 * time.Second)
+if err := server.Run(30 * time.Second); err != nil {
+    fmt.Println("Error starting server:", err)
+}
 ```
 
 ---
 
 ## See Also
 
-- **[lokstra](lokstra.md)** - Convenience function (NewServer)
-- **[App](app.md)** - App lifecycle and configuration
-- **[Router](router.md)** - Router API
+- **[lokstra](lokstra)** - Convenience function (NewServer)
+- **[App](app)** - App lifecycle and configuration
+- **[Router](router)** - Router API
 
 ---
 
 ## Related Guides
 
-- **[App & Server Guide](../../01-essentials/05-app-and-server/)** - Lifecycle management tutorial
+- **[App & Server Guide](../../01-router-guide/05-app-and-server/)** - Lifecycle management tutorial
 - **[Multi-Deployment](../../00-introduction/examples/04-multi-deployment/)** - Example with multiple apps
 - **[Production Deployment](../../02-deep-dive/app-and-server/)** - Best practices for production

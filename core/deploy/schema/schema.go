@@ -55,14 +55,28 @@ type RouteDef struct {
 
 // DeploymentDefMap is a deployment using map structure
 type DeploymentDefMap struct {
-	ConfigOverrides map[string]any           `yaml:"config-overrides,omitempty" json:"config-overrides,omitempty"`
-	Servers         map[string]*ServerDefMap `yaml:"servers" json:"servers"`
+	ConfigOverrides map[string]any `yaml:"config-overrides,omitempty" json:"config-overrides,omitempty"`
+
+	// Inline definitions at deployment level (will be normalized to {deployment}.{name})
+	InlineMiddlewares      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
+	InlineServices         map[string]*ServiceDef          `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
+	InlineRouters          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
+	InlineExternalServices map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
+
+	Servers map[string]*ServerDefMap `yaml:"servers" json:"servers"`
 }
 
 // ServerDefMap is a server using map structure
 type ServerDefMap struct {
-	BaseURL string       `yaml:"base-url" json:"base-url"`
-	Apps    []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
+	BaseURL string `yaml:"base-url" json:"base-url"`
+
+	// Inline definitions at server level (will be normalized to {deployment}.{server}.{name})
+	InlineMiddlewares      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
+	InlineServices         map[string]*ServiceDef          `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
+	InlineRouters          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
+	InlineExternalServices map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
+
+	Apps []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
 
 	// Helper fields (1 server = 1 app shorthand)
 	// If these are present, a new app will be created and PREPENDED to Apps array
@@ -82,18 +96,10 @@ type AppDefMap struct {
 // RemoteServiceSimple defines an external service (outside this deployment)
 // For external services, you typically need to override everything since their API structure may differ
 type RemoteServiceSimple struct {
-	URL            string         `yaml:"url" json:"url"`
-	Type           string         `yaml:"type,omitempty" json:"type,omitempty"`                       // Factory type (auto-creates service wrapper)
-	Resource       string         `yaml:"resource,omitempty" json:"resource,omitempty"`               // Resource name (singular)
-	ResourcePlural string         `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Resource name (plural)
-	Convention     string         `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql)
-	Config         map[string]any `yaml:"config,omitempty" json:"config,omitempty"`                   // Additional config for factory
-
-	// Inline overrides (no more references)
-	PathPrefix  string     `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"` // e.g., "/api/v1"
-	Middlewares []string   `yaml:"middlewares,omitempty" json:"middlewares,omitempty"` // Router-level middleware names
-	Hidden      []string   `yaml:"hidden,omitempty" json:"hidden,omitempty"`           // Methods to hide
-	Custom      []RouteDef `yaml:"custom,omitempty" json:"custom,omitempty"`           // Custom route definitions
+	URL    string         `yaml:"url" json:"url"`
+	Type   string         `yaml:"type,omitempty" json:"type,omitempty"`     // Factory type (auto-creates service wrapper)
+	Router *RouterDef     `yaml:"router,omitempty" json:"router,omitempty"` // Embedded router definition
+	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"` // Additional config for factory
 }
 
 // ConfigDef defines a configuration value
@@ -112,7 +118,8 @@ type MiddlewareDef struct {
 // ServiceDef defines a service instance
 type ServiceDef struct {
 	Name      string         `yaml:"name"`
-	Type      string         `yaml:"type"`       // Factory type
-	DependsOn []string       `yaml:"depends-on"` // Dependencies (can be "paramName:serviceName")
-	Config    map[string]any `yaml:"config"`     // Optional config
+	Type      string         `yaml:"type"`             // Factory type
+	DependsOn []string       `yaml:"depends-on"`       // Dependencies (can be "paramName:serviceName")
+	Router    *RouterDef     `yaml:"router,omitempty"` // Embedded router definition (auto-generated router for this service)
+	Config    map[string]any `yaml:"config"`           // Optional config
 }

@@ -1,0 +1,28 @@
+### Test Monolith Deployment
+# Run: go run main.go monolith
+
+### Home page
+GET http://localhost:3010/
+
+### Get users (monolith)
+GET http://localhost:3010/users
+
+### Get orders (monolith)
+GET http://localhost:3010/orders
+
+---
+
+### Test Microservices Deployment
+# Run: go run main.go microservices
+
+### User service home
+GET http://localhost:3011/
+
+### Get users (microservice)
+GET http://localhost:3011/users
+
+### Order service home
+GET http://localhost:3012/
+
+### Get orders (microservice)
+GET http://localhost:3012/orders

@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Deploy
+---
+
 # Deploy
 
 > Deployment topology management and YAML-based deployment configuration
@@ -773,15 +778,15 @@ service-definitions:
 
 ## See Also
 
-- **[Config](./config.md)** - Configuration management
-- **[Schema](./schema.md)** - YAML schema definitions
-- **[lokstra_registry](../02-registry/lokstra_registry.md)** - Registry API
-- **[Service Registration](../02-registry/service-registration.md)** - Service patterns
+- **[Config](./config)** - Configuration management
+- **[Schema](./schema)** - YAML schema definitions
+- **[lokstra_registry](../02-registry/lokstra_registry)** - Registry API
+- **[Service Registration](../02-registry/service-registration)** - Service patterns
 
 ---
 
 ## Related Guides
 
-- **[Deployment Essentials](../../01-essentials/05-deployment/)** - Deployment basics
+- **[Deployment Essentials](../../02-framework-guide/)** - Deployment basics
 - **[Multi-Environment Setup](../../04-guides/multi-environment/)** - Environment strategies
 - **[Microservices Architecture](../../04-guides/microservices/)** - Distributed deployment

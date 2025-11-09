@@ -1,0 +1,22 @@
+### Environment Configuration Example
+### Run (dev): go run main.go
+### Run (prod): APP_ENV=prod go run main.go
+
+@baseUrlDev = http://localhost:3000
+@baseUrlProd = http://localhost:8080
+
+### ===== Development Environment (port 3000) =====
+
+### 1. Health Check (dev)
+GET {{baseUrlDev}}/health
+
+### 2. Environment Info (dev)
+GET {{baseUrlDev}}/info
+
+### ===== Production Environment (port 8080) =====
+
+### 3. Health Check (prod)
+GET {{baseUrlProd}}/health
+
+### 4. Environment Info (prod)
+GET {{baseUrlProd}}/info

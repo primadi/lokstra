@@ -122,7 +122,7 @@ r.GET("/api", func(ctx *request.Context, req *ComplexRequest) (*response.Respons
 
 **One size doesn't fit all** - Lokstra adapts to your needs.
 
-📖 **See all 29 forms**: [Deep Dive: Handler Forms](../02-deep-dive/router/handler-forms.md)
+📖 **See all 29 forms**: [Deep Dive: Handler Forms](../02-deep-dive/router/handler-forms)
 
 ---
 
@@ -179,12 +179,16 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
     return s.DB.MustGet().Insert("INSERT INTO users ...", p.Name, p.Email)
 }
 
-// 2. Register service
-lokstra_registry.RegisterServiceType("users", func() any {
-    return &UserService{
-        DB: service.LazyLoad[*Database]("db"),
-    }
-})
+// 2. Register service factory
+lokstra_registry.RegisterServiceFactory("users-factory", 
+    func(deps map[string]any, config map[string]any) any {
+        return &UserService{
+            DB: service.Cast[*Database](deps["db"]),
+        }
+    })
+
+lokstra_registry.RegisterLazyService("users", "users-factory", 
+    map[string]any{"depends-on": []string{"db"}})
 
 // 3. Auto-generate router from service
 userRouter := router.NewFromService(
@@ -253,7 +257,7 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
 }
 ```
 
-📖 **Learn more**: [Service as Router Guide](../01-essentials/02-service/README.md#service-as-router)
+📖 **Learn more**: [Framework Guide](../02-framework-guide/)
 
 ---
 
@@ -384,32 +388,38 @@ orderService := NewOrderService(orderRepo, userService)
 ```go
 import "github.com/primadi/lokstra/core/service"
 
-// 1. Define services with lazy dependencies
+// 1. Define services with dependencies
 type OrderService struct {
     DB    *service.Cached[*Database]
-    Users *service.Cached[*UserService]     // Lazy reference
+    Users *service.Cached[*UserService]
     Cache *service.Cached[*CacheService]
 }
 
-// 2. Register factories (order doesn't matter!)
+// 2. Register factories (order doesn't matter with depends-on!)
 lokstra_registry.RegisterServiceType("db", createDatabase)
 lokstra_registry.RegisterServiceType("cache", createCache)
 
-lokstra_registry.RegisterServiceType("users", func() any {
-    return &UserService{
-        DB: service.LazyLoad[*Database]("db"),
-    }
-})
+lokstra_registry.RegisterServiceFactory("users-factory", 
+    func(deps map[string]any, config map[string]any) any {
+        return &UserService{
+            DB: service.Cast[*Database](deps["db"]),
+        }
+    })
+lokstra_registry.RegisterLazyService("users", "users-factory", 
+    map[string]any{"depends-on": []string{"db"}})
 
-lokstra_registry.RegisterServiceType("orders", func() any {
-    return &OrderService{
-        DB:    service.LazyLoad[*Database]("db"),
-        Users: service.LazyLoad[*UserService]("users"),
-        Cache: service.LazyLoad[*CacheService]("cache"),
-    }
-})
+lokstra_registry.RegisterServiceFactory("orders-factory", 
+    func(deps map[string]any, config map[string]any) any {
+        return &OrderService{
+            DB:    service.Cast[*Database](deps["db"]),
+            Users: service.Cast[*UserService](deps["users"]),
+            Cache: service.Cast[*CacheService](deps["cache"]),
+        }
+    })
+lokstra_registry.RegisterLazyService("orders", "orders-factory", 
+    map[string]any{"depends-on": []string{"db", "users", "cache"}})
 
-// 3. Use anywhere - auto-resolved
+// 3. Use anywhere - dependencies auto-injected
 orders := lokstra_registry.GetService[*OrderService]("orders")
 ```
 
@@ -466,7 +476,7 @@ GetService[T](name)
 // That's it!
 ```
 
-📖 **Learn more**: [Service Guide](../01-essentials/02-service/README.md)
+📖 **Learn more**: [Framework Guide](../02-framework-guide/)
 
 ---
 
@@ -583,7 +593,7 @@ config.LoadConfigFile("dev.yaml", &cfg)  // Merges with base
 - Multiple environments
 - Easy deployment
 
-📖 **Learn more**: [Configuration Guide](../01-essentials/04-configuration/README.md)
+📖 **Learn more**: [Framework Guide](../02-framework-guide/)
 
 ---
 
@@ -607,16 +617,16 @@ config.LoadConfigFile("dev.yaml", &cfg)  // Merges with base
 ### Quick Demos:
 
 **Handler Forms**:
-👉 [Handler Forms Example](../01-essentials/01-router/examples/all-handler-forms/)
+👉 [Handler Forms Example](../01-router-guide/01-router/examples/04-handler-forms/)
 
 **Service as Router**:
-👉 [Service Router Example](../01-essentials/02-service/examples/service-as-router/)
+👉 [Service Router Example](../01-router-guide/02-service/examples/)
 
 **Multi-Deployment**:
 👉 [Single Binary Example](../05-examples/single-binary-deployment/)
 
 **Full Stack**:
-👉 [Complete Todo API](../01-essentials/06-putting-it-together/examples/todo-api/)
+👉 [Complete Todo API](../01-router-guide/06-putting-it-together/)
 
 ---
 
@@ -641,14 +651,14 @@ Most frameworks focus on **one thing**:
 ## 📚 Learn More
 
 **Deep Dives**:
-- [Architecture](architecture.md) - How it all works together
-- [Essentials](../01-essentials/README.md) - Hands-on tutorials
-- [Deep Dive](../02-deep-dive/README.md) - Advanced patterns
+- [Architecture](architecture) - How it all works together
+- [Router Guide](../01-router-guide/) - Hands-on tutorials
+- [Deep Dive](../02-deep-dive) - Advanced patterns
 
 **Try It**:
-- [Quick Start](quick-start.md) - Build your first API in 5 minutes
-- [Examples](../05-examples/README.md) - Real applications
+- [Quick Start](quick-start) - Build your first API in 5 minutes
+- [Examples](../05-examples) - Real applications
 
 ---
 
-**Ready to experience these features?** 👉 [Get Started](quick-start.md)
+**Ready to experience these features?** 👉 [Get Started](quick-start)

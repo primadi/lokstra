@@ -1,0 +1,36 @@
+### Lifecycle Hooks & Middleware Demo
+### Run: go run main.go
+### Watch console output to see execution order!
+
+@baseUrl = http://localhost:3000
+
+### 1. No middleware (only global requestID)
+GET {{baseUrl}}/h1
+
+### 2. Before + After hooks
+GET {{baseUrl}}/h2
+
+### 3. Logging middleware (watch duration)
+GET {{baseUrl}}/h3
+
+### 4. Auth middleware - No API key (fails)
+GET {{baseUrl}}/h4
+
+### 4b. Auth middleware - With API key (success)
+GET {{baseUrl}}/h4
+X-API-Key: secret-key-123
+
+### 5. Multiple middleware chain
+GET {{baseUrl}}/h5
+X-API-Key: secret-key-123
+
+### 6. Group middleware - Protected users
+GET {{baseUrl}}/api/users
+X-API-Key: secret-key-123
+
+### 7. Group middleware - Protected posts
+GET {{baseUrl}}/api/posts
+X-API-Key: secret-key-123
+
+### 8. Group middleware - No auth (fails)
+GET {{baseUrl}}/api/users

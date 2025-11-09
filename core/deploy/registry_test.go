@@ -64,61 +64,57 @@ func TestGlobalRegistry_ConfigReference(t *testing.T) {
 		Value: "debug",
 	})
 
-	// Resolve all configs first
+	// Create a service definition with config references
+	// This simulates how service configs with @cfg references are handled
+	reg.RegisterLazyService("test-service", "test-factory", map[string]any{
+		"max-conns": "${@cfg:MAX_CONNECTIONS}",
+		"level":     "${@cfg:LOG_LEVEL}",
+		"static":    "static-value",
+	})
+
+	// Resolve all configs - this should resolve service configs too
 	if err := reg.ResolveConfigs(); err != nil {
 		t.Fatalf("failed to resolve configs: %v", err)
 	}
 
-	// Now resolve a service config that references @cfg
-	serviceConfig := map[string]any{
-		"max-conns": "${@cfg:MAX_CONNECTIONS}",
-		"level":     "${@cfg:LOG_LEVEL}",
-		"static":    "static-value",
+	// Get the resolved service definition
+	serviceDef := reg.GetDeferredServiceDef("test-service")
+	if serviceDef == nil {
+		t.Fatal("service definition not found")
 	}
 
-	// Resolve each config value
-	resolvedMaxConns, err := reg.ResolveConfigValue(serviceConfig["max-conns"])
-	if err != nil {
-		t.Fatalf("failed to resolve max-conns: %v", err)
-	}
-	if resolvedMaxConns != 50 {
-		t.Errorf("expected 50, got %v (type %T)", resolvedMaxConns, resolvedMaxConns)
+	// Check resolved values
+	if serviceDef.Config["max-conns"] != 50 {
+		t.Errorf("expected 50, got %v (type %T)", serviceDef.Config["max-conns"], serviceDef.Config["max-conns"])
 	}
 
-	resolvedLevel, err := reg.ResolveConfigValue(serviceConfig["level"])
-	if err != nil {
-		t.Fatalf("failed to resolve level: %v", err)
-	}
-	if resolvedLevel != "debug" {
-		t.Errorf("expected 'debug', got %v", resolvedLevel)
+	if serviceDef.Config["level"] != "debug" {
+		t.Errorf("expected 'debug', got %v", serviceDef.Config["level"])
 	}
 
-	resolvedStatic, err := reg.ResolveConfigValue(serviceConfig["static"])
-	if err != nil {
-		t.Fatalf("failed to resolve static: %v", err)
-	}
-	if resolvedStatic != "static-value" {
-		t.Errorf("expected 'static-value', got %v", resolvedStatic)
+	if serviceDef.Config["static"] != "static-value" {
+		t.Errorf("expected 'static-value', got %v", serviceDef.Config["static"])
 	}
 }
 
 func TestGlobalRegistry_ServiceDefinition(t *testing.T) {
 	reg := NewGlobalRegistry()
 
-	// Define a service
-	reg.DefineService(&schema.ServiceDef{
-		Name:      "user-service",
-		Type:      "user-factory",
-		DependsOn: []string{"db-user", "logger"},
-		Config: map[string]any{
-			"cache-ttl": 300,
-		},
+	// Register a service with string factory type (new unified API)
+	reg.RegisterLazyService("user-service", "user-factory", map[string]any{
+		"depends-on": []string{"db-user", "logger"},
+		"cache-ttl":  300,
 	})
 
-	// Retrieve service definition
-	svc := reg.GetServiceDef("user-service")
-	if svc == nil {
+	// Check if service is registered
+	if !reg.HasLazyService("user-service") {
 		t.Fatal("user-service not found")
+	}
+
+	// Retrieve service definition
+	svc := reg.GetDeferredServiceDef("user-service")
+	if svc == nil {
+		t.Fatal("user-service definition not found")
 	}
 
 	if svc.Name != "user-service" {

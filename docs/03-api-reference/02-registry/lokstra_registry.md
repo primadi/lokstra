@@ -659,7 +659,9 @@ func main() {
     }()
     
     // Start server
-    server.Run()
+    if err := server.Run(30 * time.Second); err != nil {
+        fmt.Println("Error starting server:", err)
+    }
 }
 ```
 
@@ -789,16 +791,16 @@ func main() {
 
 ## See Also
 
-- **[Service](../01-core-packages/service.md)** - Lazy service loading
-- **[Service Registration](./service-registration.md)** - Detailed registration patterns
-- **[Middleware Registration](./middleware-registration.md)** - Middleware patterns
-- **[Router Registration](./router-registration.md)** - Router factories
-- **[Deploy](../03-configuration/deploy.md)** - Deployment configuration
+- **[Service](../01-core-packages/service)** - Lazy service loading
+- **[Service Registration](./service-registration)** - Detailed registration patterns
+- **[Middleware Registration](./middleware-registration)** - Middleware patterns
+- **[Router Registration](./router-registration)** - Router factories
+- **[Deploy](../03-configuration/deploy)** - Deployment configuration
 
 ---
 
 ## Related Guides
 
-- **[Service Essentials](../../01-essentials/02-service/)** - Service basics
+- **[Service Essentials](../../02-framework-guide/02-service/)** - Service basics
 - **[Dependency Injection](../../02-deep-dive/service/)** - Advanced DI patterns
 - **[Testing](../../04-guides/testing/)** - Testing strategies

@@ -1,0 +1,26 @@
+### Test Inline Definitions Example
+### Development Server - Port 3000
+### Production Server - Port 4000
+
+@baseUrl = http://localhost:3000/api/v1
+
+# User Service APIs (from deployment-level inline)
+GET {{baseUrl}}/users
+###
+
+GET {{baseUrl}}/users/1
+###
+
+# Product Service APIs (from server-level inline)
+GET {{baseUrl}}/products
+###
+
+GET {{baseUrl}}/products/1
+###
+
+# Order Service APIs (from global definitions - for comparison)
+GET {{baseUrl}}/orders
+###
+
+GET {{baseUrl}}/orders/1
+###

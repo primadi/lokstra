@@ -459,9 +459,9 @@ func CacheGet(c *request.Context) error {
 
 ## See Also
 
-- **[Request Logger](./request-logger.md)** - Request logging
-- **[Request](../01-core-packages/request.md)** - Request handling
-- **[Response](../01-core-packages/response.md)** - Response formatting
+- **[Request Logger](./request-logger)** - Request logging
+- **[Request](../01-core-packages/request)** - Request handling
+- **[Response](../01-core-packages/response)** - Response formatting
 
 ---
 

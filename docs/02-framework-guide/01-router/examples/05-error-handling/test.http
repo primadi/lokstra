@@ -1,0 +1,351 @@
+### Error Handling Example
+### Test all error scenarios and patterns
+
+### ============================================
+### Standard HTTP Errors
+### ============================================
+
+### 400 Bad Request
+GET http://localhost:3000/errors/400
+
+###
+
+### 401 Unauthorized
+GET http://localhost:3000/errors/401
+
+###
+
+### 403 Forbidden
+GET http://localhost:3000/errors/403
+
+###
+
+### 404 Not Found
+GET http://localhost:3000/errors/404
+
+###
+
+### 422 Validation Error
+GET http://localhost:3000/errors/422
+
+###
+
+### 500 Internal Error
+GET http://localhost:3000/errors/500
+
+###
+
+### ============================================
+### Custom Error Codes
+### ============================================
+
+### Insufficient Funds Error
+GET http://localhost:3000/errors/custom/insufficient-funds
+
+###
+
+### Duplicate Email Error
+GET http://localhost:3000/errors/custom/duplicate
+
+###
+
+### Quota Exceeded (429)
+GET http://localhost:3000/errors/custom/quota
+
+###
+
+### ============================================
+### Error Patterns
+### ============================================
+
+### Early Return Pattern (out of stock)
+GET http://localhost:3000/patterns/early-return
+
+###
+
+### Error Wrapping Pattern
+GET http://localhost:3000/patterns/error-wrapping
+
+###
+
+### Validation Pattern (GET info)
+GET http://localhost:3000/patterns/validation
+
+###
+
+### Validation Pattern (POST - success)
+POST http://localhost:3000/patterns/validation
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "age": 25,
+  "name": "John Doe"
+}
+
+###
+
+### Validation Pattern (POST - invalid email)
+POST http://localhost:3000/patterns/validation
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "age": 25,
+  "name": "John"
+}
+
+###
+
+### Validation Pattern (POST - age too young)
+POST http://localhost:3000/patterns/validation
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "age": 15,
+  "name": "Minor"
+}
+
+###
+
+### Validation Pattern (POST - missing required)
+POST http://localhost:3000/patterns/validation
+Content-Type: application/json
+
+{
+  "age": 25
+}
+
+###
+
+### ============================================
+### Simulated Errors
+### ============================================
+
+### Database Error (500)
+GET http://localhost:3000/simulate/db-error
+
+###
+
+### External API Error (503)
+GET http://localhost:3000/simulate/external-api
+
+###
+
+### Panic Recovery (500)
+GET http://localhost:3000/simulate/panic
+
+###
+
+### Not Found Simulation
+GET http://localhost:3000/simulate/not-found
+
+###
+
+### ============================================
+### Resource Operations - GET User
+### ============================================
+
+### Get user (success)
+GET http://localhost:3000/users/123
+
+###
+
+### Get user (not found - 404)
+GET http://localhost:3000/users/999
+
+###
+
+### Get user (database error - 500)
+GET http://localhost:3000/users/error
+
+###
+
+### ============================================
+### Resource Operations - Create User
+### ============================================
+
+### Create user (success)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "username": "johndoe",
+  "age": 25
+}
+
+###
+
+### Create user (duplicate email - 400)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "duplicate@example.com",
+  "username": "johndoe",
+  "age": 25
+}
+
+###
+
+### Create user (invalid email - 422)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "username": "johndoe",
+  "age": 25
+}
+
+###
+
+### Create user (age too young - 422)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "young@example.com",
+  "username": "minor",
+  "age": 15
+}
+
+###
+
+### Create user (missing required fields - 422)
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+###
+
+### ============================================
+### Resource Operations - Delete User
+### ============================================
+
+### Delete user (success)
+DELETE http://localhost:3000/users/123
+
+###
+
+### Delete user (forbidden - admin)
+DELETE http://localhost:3000/users/admin
+
+###
+
+### Delete user (not found)
+DELETE http://localhost:3000/users/999
+
+###
+
+### ============================================
+### Transfer Money
+### ============================================
+
+### Transfer (success)
+POST http://localhost:3000/transfer
+Content-Type: application/json
+
+{
+  "from_account": "ACC001",
+  "to_account": "ACC002",
+  "amount": 50.00
+}
+
+###
+
+### Transfer (insufficient funds - 400)
+POST http://localhost:3000/transfer
+Content-Type: application/json
+
+{
+  "from_account": "ACC001",
+  "to_account": "ACC002",
+  "amount": 150.00
+}
+
+###
+
+### Transfer (invalid amount - 422)
+POST http://localhost:3000/transfer
+Content-Type: application/json
+
+{
+  "from_account": "ACC001",
+  "to_account": "ACC002",
+  "amount": -50.00
+}
+
+###
+
+### Transfer (missing required - 422)
+POST http://localhost:3000/transfer
+Content-Type: application/json
+
+{
+  "from_account": "ACC001",
+  "amount": 50.00
+}
+
+###
+
+### ============================================
+### Create Order
+### ============================================
+
+### Create order (success)
+POST http://localhost:3000/orders
+Content-Type: application/json
+
+{
+  "product_id": "PROD123",
+  "quantity": 3
+}
+
+###
+
+### Create order (out of stock - 400)
+POST http://localhost:3000/orders
+Content-Type: application/json
+
+{
+  "product_id": "PROD123",
+  "quantity": 10
+}
+
+###
+
+### Create order (invalid quantity - 422)
+POST http://localhost:3000/orders
+Content-Type: application/json
+
+{
+  "product_id": "PROD123",
+  "quantity": 0
+}
+
+###
+
+### Create order (missing required - 422)
+POST http://localhost:3000/orders
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+
+###
+
+### ============================================
+### Home Page
+### ============================================
+
+### Home page (HTML)
+GET http://localhost:3000/
+
+###

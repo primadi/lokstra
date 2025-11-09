@@ -671,9 +671,9 @@ func TestUnauthorized(t *testing.T) {
 
 ## See Also
 
-- **[Access Control](./access-control.md)** - Role-based access control
-- **[CORS](./cors.md)** - Cross-origin handling
-- **[Recovery](./recovery.md)** - Panic recovery
+- **[Access Control](./access-control)** - Role-based access control
+- **[CORS](./cors)** - Cross-origin handling
+- **[Recovery](./recovery)** - Panic recovery
 
 ---
 

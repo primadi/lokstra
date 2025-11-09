@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"sync"
 
 	"github.com/primadi/lokstra/common/utils"
@@ -73,6 +74,11 @@ func (l *Cached[T]) Get() T {
 		if l.loader != nil {
 			// Custom loader
 			l.cache = l.loader()
+
+			// Log when service is loaded
+			if l.serviceName != "" && !utils.IsNil(l.cache) {
+				log.Printf("🔧 Lazy loaded service: '%s'", l.serviceName)
+			}
 		} else {
 			// No loader provided - return zero value
 			var zero T
@@ -173,10 +179,13 @@ func Value[T any](value T) *Cached[T] {
 //	}
 func Cast[T any](value any) *Cached[T] {
 	if cached, ok := value.(*Cached[any]); ok {
-		// Wrap the any Cached with a typed loader
-		return LazyLoadWith(func() T {
-			return cached.Get().(T)
-		})
+		// Wrap the any Cached with a typed loader, preserving serviceName
+		return &Cached[T]{
+			serviceName: cached.serviceName, // Preserve service name for logging
+			loader: func() T {
+				return cached.Get().(T)
+			},
+		}
 	}
 	// If it's already the right type, return as-is
 	if cached, ok := value.(*Cached[T]); ok {

@@ -556,10 +556,10 @@ DebugPrint(user)
 
 ## Related Documentation
 
-- [Helpers Overview](README.md) - All helper packages
-- [Custom Type Package](customtype.md) - DateTime, Date, Decimal with JSON support
-- [Response Writer Package](response-writer.md) - HTTP response utilities
+- [Helpers Overview](index) - All helper packages
+- [Custom Type Package](customtype) - DateTime, Date, Decimal with JSON support
+- [Response Writer Package](response-writer) - HTTP response utilities
 
 ---
 
-**Next:** [Response Writer Package](response-writer.md) - HTTP response helpers
+**Next:** [Response Writer Package](response-writer) - HTTP response helpers

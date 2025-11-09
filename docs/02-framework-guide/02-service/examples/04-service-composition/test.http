@@ -1,0 +1,13 @@
+### Service Composition Example
+
+### Home
+GET http://localhost:3000/
+
+### Get data (first call - no cache)
+GET http://localhost:3000/data/1
+
+### Get data (second call - cache hit)
+GET http://localhost:3000/data/1
+
+### Get different data
+GET http://localhost:3000/data/2

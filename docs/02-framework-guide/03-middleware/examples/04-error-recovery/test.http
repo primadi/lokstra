@@ -1,0 +1,8 @@
+### Test normal endpoint
+GET http://localhost:3003/ok
+
+### Test panic (check server logs)
+GET http://localhost:3003/panic
+
+### Test error
+GET http://localhost:3003/error

@@ -982,15 +982,15 @@ router.GETPrefix("/", func(c *lokstra.RequestContext) error {
 
 ## See Also
 
-- **[lokstra](lokstra.md)** - Main package functions
-- **[Request Context](request.md)** - Handler context API
-- **[Response](response.md)** - Response helpers
-- **[Route](../08-advanced/route.md)** - Route options and configuration
+- **[lokstra](lokstra)** - Main package functions
+- **[Request Context](request)** - Handler context API
+- **[Response](response)** - Response helpers
+- **[Route](../08-advanced/route)** - Route options and configuration
 
 ---
 
 ## Related Guides
 
-- **[Router Essentials](../../01-essentials/01-router/)** - Learn router basics
-- **[Middleware Guide](../../01-essentials/03-middleware/)** - Working with middleware
+- **[Router Essentials](../../01-router-guide/01-router/)** - Learn router basics
+- **[Middleware Guide](../../01-router-guide/03-middleware/)** - Working with middleware
 - **[Handler Patterns](../../02-deep-dive/router/)** - Advanced handler techniques

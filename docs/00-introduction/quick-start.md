@@ -772,7 +772,7 @@ In this guide, you've mastered:
 ### Want to Learn More?
 
 **Systematic Learning (Recommended)**:
-👉 [Examples](./examples/README.md) - 7 progressive examples (6-8 hours)
+👉 [Examples](./examples) - 7 progressive examples (6-8 hours)
 
 **Specific Topics**:
 - **[Example 03 - CRUD API](./examples/03-crud-api/)** - Service layer with lazy DI
@@ -781,8 +781,8 @@ In this guide, you've mastered:
 - **[Example 06 - External Services](./examples/06-external-services/)** - Integrate third-party APIs
 
 **Architecture Deep Dive**:
-👉 [Architecture Guide](./architecture.md) - How Lokstra works under the hood
-👉 [Why Lokstra](./why-lokstra.md) - Philosophy and design decisions
+👉 [Architecture Guide](./architecture) - How Lokstra works under the hood
+👉 [Why Lokstra](./why-lokstra) - Philosophy and design decisions
 
 ---
 
@@ -856,19 +856,19 @@ app := lokstra.NewApp("demo", ":3001", r)  // Use 3001
 ```
 
 **"Handler signature error"**
-Check supported forms in [Router Guide](../01-essentials/01-router/README.md)
+Check supported forms in [Router Guide](../01-router-guide/)
 
 ---
 
 ## 📚 Resources
 
-- **Documentation**: [Full Docs](../README.md)
-- **Examples**: [Code Examples](./examples/README.md)
-- **API Reference**: [API Docs](../03-api-reference/README.md)
+- **Documentation**: [Full Docs](..)
+- **Examples**: [Code Examples](./examples)
+- **API Reference**: [API Docs](../03-api-reference)
 - **GitHub**: [Report Issues](https://github.com/primadi/lokstra/issues)
 
 ---
 
 **Happy coding!** 🚀
 
-**Next**: [Learn Essentials](../01-essentials/README.md) or [Understand Architecture](architecture.md)
+**Next**: [Learn Router Guide](../01-router-guide/) or [Understand Architecture](architecture)

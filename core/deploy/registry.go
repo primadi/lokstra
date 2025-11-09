@@ -41,12 +41,15 @@ type GlobalRegistry struct {
 	lazyServiceFactories sync.Map // map[string]*LazyServiceEntry
 	lazyServiceOnce      sync.Map // map[string]*sync.Once
 
+	// Deferred service definitions (string factory type - instantiated on access)
+	serviceDefs sync.Map // map[string]*deferredServiceDef
+
 	// Definitions (YAML or code-defined)
-	configs     map[string]*schema.ConfigDef
-	middlewares map[string]*schema.MiddlewareDef
-	services    map[string]*schema.ServiceDef
-	routers     map[string]*schema.RouterDef
+	configs map[string]*schema.ConfigDef
+	routers map[string]*schema.RouterDef
 	// Note: routerOverrides removed - overrides are now inline in RouterDef
+	// Note: middlewares map removed - use middlewareEntries sync.Map (unified API)
+	// Note: services map removed - use serviceDefs sync.Map (unified API - Opsi 2)
 
 	// Resolved config values (after resolver processing)
 	resolvedConfigs map[string]any
@@ -56,8 +59,21 @@ type GlobalRegistry struct {
 	deploymentTopologies sync.Map // map[deploymentName]*DeploymentTopology
 	serverTopologies     sync.Map // map[compositeKey]*ServerTopology (key: "deployment.server")
 
+	// Original config (for inline definitions normalization)
+	deployConfig *schema.DeployConfig
+
 	// Current server context (for runtime service resolution)
 	currentCompositeKey string // "deployment.server" - set by SetCurrentServer
+}
+
+// deferredServiceDef holds service definition for deferred instantiation
+// Used when RegisterLazyService is called with string factory type
+// Instantiation is deferred until first access, allowing auto-detect LOCAL/REMOTE
+type deferredServiceDef struct {
+	Name        string
+	FactoryType string
+	DependsOn   []string
+	Config      map[string]any
 }
 
 // ServiceFactoryEntry holds local and remote factory functions plus metadata
@@ -163,11 +179,9 @@ func NewGlobalRegistry() *GlobalRegistry {
 		serviceFactories:    make(map[string]*ServiceFactoryEntry),
 		middlewareFactories: make(map[string]MiddlewareFactory),
 		configs:             make(map[string]*schema.ConfigDef),
-		middlewares:         make(map[string]*schema.MiddlewareDef),
-		services:            make(map[string]*schema.ServiceDef),
 		routers:             make(map[string]*schema.RouterDef),
 		resolvedConfigs:     make(map[string]any),
-		// Topology maps (deploymentTopologies, serverTopologies) use sync.Map, no initialization needed
+		// Topology maps, serviceDefs, and middlewareEntries use sync.Map, no initialization needed
 	}
 }
 
@@ -188,7 +202,10 @@ func NewGlobalRegistry() *GlobalRegistry {
 //   - func() any                          - no params
 //
 // Both local and remote factories support all three signatures.
-func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any, configOrOptions ...any) {
+func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any,
+	configOrOptions ...any) {
+	LogDebug("[RegisterServiceType CALLED] serviceType=%s, options count=%d", serviceType, len(configOrOptions))
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -217,11 +234,7 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 				if len(config.RouteOverrides) > 0 {
 					metadata.RouteOverrides = make(map[string]RouteMetadata)
 					for methodName, routeConfig := range config.RouteOverrides {
-						metadata.RouteOverrides[methodName] = RouteMetadata{
-							Method:      routeConfig.Method,
-							Path:        routeConfig.Path,
-							Middlewares: routeConfig.Middlewares,
-						}
+						metadata.RouteOverrides[methodName] = RouteMetadata(routeConfig)
 					}
 				}
 			}
@@ -235,10 +248,51 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 		}
 	}
 
-	// Only store metadata if resource name is provided
+	// Infer Resource from serviceType if not provided
+	if metadata.Resource == "" {
+		// Auto-generate from service type: "order-service-factory" -> "order"
+		resource := strings.TrimSuffix(serviceType, "-factory")
+		resource = strings.TrimSuffix(resource, "-service")
+		if resource != "" && resource != serviceType {
+			metadata.Resource = resource
+			LogDebug("[RegisterServiceType] %s: Inferred Resource=%s", serviceType, resource)
+		}
+	}
+
+	// Infer ResourcePlural if Resource is set but ResourcePlural is empty
+	if metadata.Resource != "" && metadata.ResourcePlural == "" {
+		metadata.ResourcePlural = metadata.Resource + "s"
+		LogDebug("[RegisterServiceType] %s: Inferred ResourcePlural=%s", serviceType, metadata.ResourcePlural)
+	}
+
+	// Set default convention if not provided
+	if metadata.Convention == "" {
+		metadata.Convention = "rest"
+	}
+
+	// Debug: log metadata before filtering
+	LogDebug("[RegisterServiceType] %s (before filter): Resource='%s', PathPrefix='%s', RouteOverrides=%d",
+		serviceType, metadata.Resource, metadata.PathPrefix, len(metadata.RouteOverrides))
+
+	// Store metadata if any meaningful configuration is provided
 	var metadataPtr *ServiceMetadata
-	if metadata.Resource != "" {
+	hasConfig := metadata.Resource != "" ||
+		metadata.Convention != "rest" || // Non-default convention
+		metadata.PathPrefix != "" ||
+		len(metadata.RouteOverrides) > 0 ||
+		len(metadata.MiddlewareNames) > 0 ||
+		len(metadata.HiddenMethods) > 0
+
+	if hasConfig {
 		metadataPtr = metadata
+		// Debug log
+		LogDebug("[RegisterServiceType] %s: STORED - Resource=%s, PathPrefix=%s, RouteOverrides count=%d",
+			serviceType, metadata.Resource, metadata.PathPrefix, len(metadata.RouteOverrides))
+		for methodName, route := range metadata.RouteOverrides {
+			LogDebug("  - %s: method=%s, path=%s", methodName, route.Method, route.Path)
+		}
+	} else {
+		LogDebug("[RegisterServiceType] %s: NOT STORED (no meaningful config)", serviceType)
 	}
 
 	// Normalize local and remote factories
@@ -326,52 +380,6 @@ func normalizeServiceFactory(factoryInput any, serviceType, factoryKind string) 
 	}
 }
 
-// RegisterMiddlewareType registers a middleware factory
-// Supports optional AllowOverride option
-func (g *GlobalRegistry) RegisterMiddlewareType(middlewareType string, factory MiddlewareFactory, opts ...MiddlewareTypeOption) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	var options middlewareTypeOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-
-	if !options.allowOverride {
-		if _, exists := g.middlewareFactories[middlewareType]; exists {
-			panic(fmt.Sprintf("middleware type %s already registered", middlewareType))
-		}
-	}
-
-	g.middlewareFactories[middlewareType] = factory
-}
-
-// RegisterMiddlewareName registers a middleware entry by name, associating it with a type and config.
-// This allows creating multiple middleware instances from the same factory with different configurations.
-//
-// Example:
-//
-//	g.RegisterMiddlewareType("logger", loggerFactory)
-//	g.RegisterMiddlewareName("logger-debug", "logger", map[string]any{"level": "debug"})
-//	g.RegisterMiddlewareName("logger-info", "logger", map[string]any{"level": "info"})
-func (g *GlobalRegistry) RegisterMiddlewareName(name, middlewareType string, config map[string]any, opts ...MiddlewareNameOption) {
-	var options middlewareNameOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-
-	if !options.allowOverride {
-		if _, exists := g.middlewareEntries.Load(name); exists {
-			panic(fmt.Sprintf("middleware name %s already registered", name))
-		}
-	}
-
-	g.middlewareEntries.Store(name, &MiddlewareEntry{
-		Type:   middlewareType,
-		Config: config,
-	})
-}
-
 // RegisterResolver registers a custom config resolver
 func (g *GlobalRegistry) RegisterResolver(r resolver.Resolver) {
 	g.resolver.Register(r)
@@ -389,30 +397,6 @@ func (g *GlobalRegistry) DefineConfig(def *schema.ConfigDef) {
 	}
 
 	g.configs[def.Name] = def
-}
-
-// DefineMiddleware defines a middleware instance
-func (g *GlobalRegistry) DefineMiddleware(def *schema.MiddlewareDef) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if _, exists := g.middlewares[def.Name]; exists {
-		panic(fmt.Sprintf("middleware %s already defined", def.Name))
-	}
-
-	g.middlewares[def.Name] = def
-}
-
-// DefineService defines a service instance
-func (g *GlobalRegistry) DefineService(def *schema.ServiceDef) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if _, exists := g.services[def.Name]; exists {
-		panic(fmt.Sprintf("service %s already defined", def.Name))
-	}
-
-	g.services[def.Name] = def
 }
 
 // DefineRouter defines a router
@@ -453,18 +437,18 @@ func (g *GlobalRegistry) GetServiceMetadata(serviceType string) *ServiceMetadata
 
 	entry, ok := g.serviceFactories[serviceType]
 	if !ok {
+		LogDebug("[GetServiceMetadata] serviceType '%s' NOT FOUND", serviceType)
 		return nil
 	}
 
+	if entry.Metadata != nil {
+		LogDebug("[GetServiceMetadata] serviceType '%s' FOUND: Resource=%s, RouteOverrides=%d",
+			serviceType, entry.Metadata.Resource, len(entry.Metadata.RouteOverrides))
+	} else {
+		LogDebug("[GetServiceMetadata] serviceType '%s' FOUND but Metadata=nil", serviceType)
+	}
+
 	return entry.Metadata
-}
-
-// GetMiddlewareFactory returns the middleware factory
-func (g *GlobalRegistry) GetMiddlewareFactory(middlewareType string) MiddlewareFactory {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.middlewareFactories[middlewareType]
 }
 
 // GetConfig returns a config definition
@@ -473,22 +457,6 @@ func (g *GlobalRegistry) GetConfig(name string) *schema.ConfigDef {
 	defer g.mu.RUnlock()
 
 	return g.configs[name]
-}
-
-// GetMiddlewareDef returns a middleware definition
-func (g *GlobalRegistry) GetMiddlewareDef(name string) *schema.MiddlewareDef {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.middlewares[name]
-}
-
-// GetServiceDef returns a service definition
-func (g *GlobalRegistry) GetServiceDef(name string) *schema.ServiceDef {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.services[name]
 }
 
 // GetRouterDef returns a router definition
@@ -501,46 +469,131 @@ func (g *GlobalRegistry) GetRouterDef(name string) *schema.RouterDef {
 
 // ===== CONFIG RESOLUTION =====
 
-// ResolveConfigs resolves all config values using the resolver
-// This performs 2-step resolution:
-//  1. Resolve all ${...} except ${@cfg:...}
+// ResolveConfigs resolves ALL values throughout the entire configuration using the resolver
+// This performs 2-step resolution globally across all sections:
+//  1. Resolve all ${...} except ${@cfg:...} in configs, deployments, service configs, etc.
 //  2. Resolve ${@cfg:...} using step 1 results
+//
+// After this call, all ${...} values are resolved and ready for use.
 func (g *GlobalRegistry) ResolveConfigs() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// Build initial resolved configs map (before resolution)
+	// Build initial resolved configs map (before resolution) - needed for @cfg references
 	tempConfigs := make(map[string]any)
 	for name, def := range g.configs {
 		tempConfigs[name] = def.Value
 	}
 
-	// Resolve each config value
+	// STEP 1: Resolve configs section first (needed for @cfg references)
 	for name, def := range g.configs {
-		// Convert value to string if needed
-		var valueStr string
-		switch v := def.Value.(type) {
-		case string:
-			valueStr = v
-		default:
-			// Non-string values are used as-is
-			g.resolvedConfigs[name] = v
-			continue
-		}
-
-		// Resolve the value
-		resolved, err := g.resolver.ResolveValue(valueStr, tempConfigs)
+		resolved, err := g.resolveAnyValue(def.Value, tempConfigs)
 		if err != nil {
 			return fmt.Errorf("failed to resolve config %s: %w", name, err)
 		}
-
 		g.resolvedConfigs[name] = resolved
-
-		// Update temp map for subsequent @cfg references
-		tempConfigs[name] = resolved
+		tempConfigs[name] = resolved // Update for subsequent @cfg references
 	}
 
+	// STEP 2: Resolve ALL deployment topology values in-place
+	g.deploymentTopologies.Range(func(key, value any) bool {
+		deployment := value.(*DeploymentTopology)
+
+		// Resolve config overrides
+		for configKey, configValue := range deployment.ConfigOverrides {
+			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
+			if err != nil {
+				// Don't fail the whole process, just log warning
+				fmt.Printf("Warning: failed to resolve deployment config override %s.%s: %v\n",
+					deployment.Name, configKey, err)
+				continue
+			}
+			deployment.ConfigOverrides[configKey] = resolved
+		}
+
+		// Resolve server values
+		for _, server := range deployment.Servers {
+			// Resolve BaseURL
+			resolved, err := g.resolveAnyValue(server.BaseURL, tempConfigs)
+			if err != nil {
+				fmt.Printf("Warning: failed to resolve server base-url %s.%s: %v\n",
+					deployment.Name, server.Name, err)
+			} else {
+				if resolvedStr, ok := resolved.(string); ok {
+					server.BaseURL = resolvedStr
+				}
+			}
+
+			// Resolve app addresses
+			for _, app := range server.Apps {
+				resolved, err := g.resolveAnyValue(app.Addr, tempConfigs)
+				if err != nil {
+					fmt.Printf("Warning: failed to resolve app addr %s.%s: %v\n",
+						deployment.Name, server.Name, err)
+				} else {
+					if resolvedStr, ok := resolved.(string); ok {
+						app.Addr = resolvedStr
+					}
+				}
+			}
+		}
+		return true // Continue iteration
+	})
+
+	// STEP 3: Resolve service definition config values
+	g.serviceDefs.Range(func(key, value any) bool {
+		serviceDef := value.(*deferredServiceDef)
+
+		// Resolve config map
+		for configKey, configValue := range serviceDef.Config {
+			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
+			if err != nil {
+				fmt.Printf("Warning: failed to resolve service config %s.%s: %v\n",
+					serviceDef.Name, configKey, err)
+				continue
+			}
+			serviceDef.Config[configKey] = resolved
+		}
+		return true // Continue iteration
+	})
+
+	// STEP 4: Resolve middleware definition config values
+	g.middlewareEntries.Range(func(key, value any) bool {
+		middlewareEntry := value.(*MiddlewareEntry)
+
+		// Resolve config map
+		for configKey, configValue := range middlewareEntry.Config {
+			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
+			if err != nil {
+				middlewareName := key.(string)
+				fmt.Printf("Warning: failed to resolve middleware config %s.%s: %v\n",
+					middlewareName, configKey, err)
+				continue
+			}
+			middlewareEntry.Config[configKey] = resolved
+		}
+		return true // Continue iteration
+	})
+
 	return nil
+}
+
+// resolveAnyValue resolves a value of any type using the resolver
+// Only string values containing ${...} are processed, others are returned as-is
+func (g *GlobalRegistry) resolveAnyValue(value any, tempConfigs map[string]any) (any, error) {
+	// Only process string values
+	valueStr, ok := value.(string)
+	if !ok {
+		return value, nil // Non-string values are used as-is
+	}
+
+	// Only resolve if contains resolver syntax
+	if !strings.Contains(valueStr, "${") {
+		return value, nil // No resolver syntax, return as-is
+	}
+
+	// Resolve the value using 2-step process
+	return g.resolver.ResolveValue(valueStr, tempConfigs)
 }
 
 // GetResolvedConfig returns a resolved config value
@@ -550,21 +603,6 @@ func (g *GlobalRegistry) GetResolvedConfig(name string) (any, bool) {
 
 	value, ok := g.resolvedConfigs[name]
 	return value, ok
-}
-
-// ResolveConfigValue resolves a single config value (helper for service configs)
-func (g *GlobalRegistry) ResolveConfigValue(value any) (any, error) {
-	// Convert to string if needed
-	valueStr, ok := value.(string)
-	if !ok {
-		// Non-string values are used as-is
-		return value, nil
-	}
-
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.resolver.ResolveValue(valueStr, g.resolvedConfigs)
 }
 
 // ===== RUNTIME INSTANCE REGISTRATION =====
@@ -601,6 +639,10 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 		panic(fmt.Sprintf("service %s already registered", name))
 	}
 	g.serviceInstances.Store(name, service)
+
+	if GetLogLevel() >= LogLevelInfo {
+		fmt.Printf("ℹ️  Registered service instance: '%s'\n", name)
+	}
 }
 
 // RegisterLazyService registers a lazy service factory that will be instantiated on first access.
@@ -626,25 +668,84 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 //
 // Supports three factory signatures (auto-wrapped by framework):
 //   - func(cfg map[string]any) any - with config
-//   - func() any                    - no params (simplest!)
 //
-// Dependencies are resolved manually via lokstra_registry.MustGetService() inside factory.
+// RegisterLazyService registers a lazy service with optional dependencies.
 //
-// Example with config:
+// The factory parameter can be:
+//   - A string: References a pre-registered factory type (via RegisterServiceType)
+//   - A function: Inline factory function
 //
-//	lokstra_registry.RegisterLazyService("db-main", func(cfg map[string]any) any {
-//	    return db.NewConnection(cfg["dsn"].(string))
-//	}, map[string]any{"dsn": "postgresql://localhost/main"})
+// When using string factory type:
+//   - Framework auto-wraps dependencies as service.Cached
+//   - Supports auto-router generation (if factory has metadata)
+//   - Equivalent to YAML service-definitions
+//   - Instantiation is deferred until first access
+//   - Auto-detects LOCAL vs REMOTE based on server topology
 //
-// Example without params:
+// When using inline function:
+//   - No metadata, no auto-router
+//   - Manual dependency handling required
+//   - Suitable for simple services or prototyping
+//   - Instantiated immediately (no auto-detect)
 //
-//	lokstra_registry.RegisterLazyService("user-repo", func() any {
-//	    return repository.NewUserRepository()
-//	}, nil)
+// Example with string factory type (YAML equivalent):
 //
-// For explicit dependency injection, use RegisterLazyServiceWithDeps instead.
+//	lokstra_registry.RegisterLazyService("user-service",
+//	    "user-service-factory",  // String factory type
+//	    map[string]any{
+//	        "depends-on": []string{"user-repository"},
+//	        "max-users": 1000,  // Additional config
+//	    })
+//
+// Example with inline function:
+//
+//	lokstra_registry.RegisterLazyService("cache",
+//	    func(deps, cfg map[string]any) any {
+//	        return redis.NewClient(&redis.Options{
+//	            Addr: cfg["addr"].(string),
+//	        })
+//	    },
+//	    map[string]any{"addr": "localhost:6379"})
 func (g *GlobalRegistry) RegisterLazyService(name string, factory any, config map[string]any) {
+	// Type detection: string factory type name vs inline function
+	if factoryTypeName, ok := factory.(string); ok {
+		// String factory type - store definition for deferred instantiation
+		g.registerDeferredService(name, factoryTypeName, config)
+		return
+	}
+
+	// Inline function - immediate registration (no auto-detect)
 	g.RegisterLazyServiceWithDeps(name, factory, nil, config)
+}
+
+// registerDeferredService stores a service definition using a factory type name.
+// The service will be instantiated on first access with auto-detect LOCAL/REMOTE
+// based on deployment topology.
+func (g *GlobalRegistry) registerDeferredService(name, factoryType string, config map[string]any) {
+	// Extract depends-on from config
+	var dependsOn []string
+	if depsRaw, ok := config["depends-on"]; ok {
+		switch deps := depsRaw.(type) {
+		case []string:
+			dependsOn = deps
+		case []interface{}:
+			// Handle YAML unmarshaling []interface{}
+			dependsOn = make([]string, len(deps))
+			for i, d := range deps {
+				dependsOn[i] = d.(string)
+			}
+		}
+	}
+
+	// Store deferred definition
+	def := &deferredServiceDef{
+		Name:        name,
+		FactoryType: factoryType,
+		DependsOn:   dependsOn,
+		Config:      config,
+	}
+
+	g.serviceDefs.Store(name, def)
 }
 
 // LazyServiceRegistrationMode defines how to handle duplicate registrations
@@ -770,12 +871,18 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 	// Check lazy registry and create if needed
 	onceAny, hasOnce := g.lazyServiceOnce.Load(name)
 	if !hasOnce {
-		// Not in lazy registry - check if in service-definitions
-		g.mu.RLock()
-		serviceDef, defExists := g.services[name]
-		g.mu.RUnlock()
+		// Not in lazy registry - check if in deferred service definitions
+		if defAny, exists := g.serviceDefs.Load(name); exists {
+			deferredDef := defAny.(*deferredServiceDef)
 
-		if defExists {
+			// Convert deferred definition to schema.ServiceDef for auto-registration
+			serviceDef := &schema.ServiceDef{
+				Name:      deferredDef.Name,
+				Type:      deferredDef.FactoryType,
+				DependsOn: deferredDef.DependsOn,
+				Config:    deferredDef.Config,
+			}
+
 			// Auto-create lazy service from definition
 			g.autoRegisterLazyService(name, serviceDef)
 
@@ -817,6 +924,12 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 		}
 
 		// Call factory with resolved deps or nil
+		// Check if this is a remote service (has "remote" in config)
+		if _, isRemote := entry.Config["remote"]; isRemote {
+			LogInfo("📦 Creating remote service wrapper: '%s'", name)
+		} else {
+			LogInfo("📦 Creating service instance: '%s'", name)
+		}
 		instance := entry.Factory(resolvedDeps, entry.Config)
 		g.serviceInstances.Store(name, instance)
 	})
@@ -826,14 +939,76 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 	return svc, ok
 }
 
+// HasLazyService checks if a service is registered in the lazy service registry
+// or defined in the deferred service definitions (from YAML or code).
+func (g *GlobalRegistry) HasLazyService(name string) bool {
+	// Check if already instantiated in lazy registry
+	if _, ok := g.lazyServiceFactories.Load(name); ok {
+		return true
+	}
+
+	// Check if defined but not yet instantiated
+	if _, ok := g.serviceDefs.Load(name); ok {
+		return true
+	}
+
+	return false
+}
+
+// MergeRegistryServicesToConfig merges services from registry (RegisterLazyService)
+// into config.ServiceDefinitions. This allows services registered via code to be
+// available in config for dependency resolution and topology checks.
+func (g *GlobalRegistry) MergeRegistryServicesToConfig(config *schema.DeployConfig) {
+	g.serviceDefs.Range(func(key, value any) bool {
+		serviceName := key.(string)
+		deferredDef := value.(*deferredServiceDef)
+
+		// Skip if already exists in config (YAML takes priority)
+		if _, exists := config.ServiceDefinitions[serviceName]; exists {
+			return true // continue iteration
+		}
+
+		// Add to config.ServiceDefinitions
+		config.ServiceDefinitions[serviceName] = &schema.ServiceDef{
+			Name:      deferredDef.Name,
+			Type:      deferredDef.FactoryType,
+			DependsOn: deferredDef.DependsOn,
+			Config:    deferredDef.Config,
+		}
+
+		return true // continue iteration
+	})
+}
+
+// GetDeferredServiceDef retrieves a deferred service definition by name.
+// Returns the definition if found in serviceDefs, or nil if not found.
+// This is primarily used by wrapper functions that need access to service metadata.
+func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
+	LogDebug("[GetDeferredServiceDef] looking for '%s'", name)
+	if defAny, ok := g.serviceDefs.Load(name); ok {
+		deferredDef := defAny.(*deferredServiceDef)
+		LogDebug("[GetDeferredServiceDef] FOUND '%s': Type=%s", name, deferredDef.FactoryType)
+		return &schema.ServiceDef{
+			Name:      deferredDef.Name,
+			Type:      deferredDef.FactoryType,
+			DependsOn: deferredDef.DependsOn,
+			Config:    deferredDef.Config,
+		}
+	}
+	LogDebug("[GetDeferredServiceDef] NOT FOUND '%s'", name)
+	return nil
+}
+
 // autoRegisterLazyService auto-registers a service from service-definitions as a lazy service
 // This enables zero-config pattern - services are created on-demand from YAML definitions
 // Logic: Check if published on another server → REMOTE, else → LOCAL from service-definitions
 func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.ServiceDef) {
 	// Get current deployment context
 	currentKey := g.GetCurrentCompositeKey()
+	LogDebug("[autoRegisterLazyService] service '%s', currentKey='%s'", name, currentKey)
 	if currentKey == "" {
 		// No current context - default to LOCAL
+		LogDebug("[autoRegisterLazyService] No currentKey - registering '%s' as LOCAL", name)
 		g.autoRegisterLocalService(name, def)
 		return
 	}
@@ -842,19 +1017,23 @@ func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.Servic
 	currentServerTopo, ok := g.GetServerTopology(currentKey)
 	if !ok {
 		// No topology found - default to LOCAL
+		LogDebug("[autoRegisterLazyService] No topology found for '%s' - registering '%s' as LOCAL", currentKey, name)
 		g.autoRegisterLocalService(name, def)
 		return
 	}
 
 	// Check if service is published on another server (REMOTE)
 	remoteBaseURL, isRemote := currentServerTopo.RemoteServices[name]
+	LogDebug("[autoRegisterLazyService] service '%s': isRemote=%v, remoteBaseURL='%s'", name, isRemote, remoteBaseURL)
 	if isRemote {
 		// Register as REMOTE service (HTTP proxy)
+		LogDebug("[autoRegisterLazyService] Registering '%s' as REMOTE -> %s", name, remoteBaseURL)
 		g.AutoRegisterRemoteService(name, def, remoteBaseURL)
 		return
 	}
 
 	// Not remote - register as LOCAL
+	LogDebug("[autoRegisterLazyService] Registering '%s' as LOCAL", name)
 	g.autoRegisterLocalService(name, def)
 }
 
@@ -895,12 +1074,15 @@ func (g *GlobalRegistry) autoRegisterLocalService(name string, def *schema.Servi
 		}
 
 		// Call original factory
+		LogInfo("📦 Creating service instance: '%s' (type: %s)", name, def.Type)
 		return factory(lazyDeps, cfg)
 	}, deps, def.Config)
 }
 
 // AutoRegisterRemoteService registers a service as REMOTE (HTTP proxy)
 func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.ServiceDef, remoteBaseURL string) {
+	LogInfo("🌐 Creating remote service proxy: '%s' -> %s", name, remoteBaseURL)
+
 	// Get remote factory
 	factory := g.GetServiceFactory(def.Type, false) // false = remote factory
 	if factory == nil {
@@ -976,71 +1158,273 @@ func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.Serv
 	}, nil, remoteConfig, WithRegistrationMode(LazyServiceSkip))
 }
 
-// RegisterMiddleware registers a middleware instance by name
-func (g *GlobalRegistry) RegisterMiddleware(name string, mw request.HandlerFunc) {
-	if _, exists := g.middlewareInstances.Load(name); exists {
-		panic(fmt.Sprintf("middleware %s already registered", name))
-	}
-	g.middlewareInstances.Store(name, mw)
+// ===== TOPOLOGY MANAGEMENT (2-Layer Architecture) =====
+
+// DeploymentConfig is used by RegisterDeployment for code-based topology registration
+// This is defined in lokstra_registry package to avoid import cycles
+type DeploymentConfig interface {
+	GetConfigOverrides() map[string]any
+	GetServers() map[string]ServerConfig
 }
 
-// GetMiddleware retrieves a middleware instance by name
-func (g *GlobalRegistry) GetMiddleware(name string) (request.HandlerFunc, bool) {
-	if v, ok := g.middlewareInstances.Load(name); ok {
-		return v.(request.HandlerFunc), true
-	}
-	return nil, false
+// ServerConfig interface for deployment registration
+type ServerConfig interface {
+	GetBaseURL() string
+	GetApps() []AppConfig
+	GetAddr() string
+	GetRouters() []string
+	GetPublishedServices() []string
 }
 
-// CreateMiddleware creates a middleware instance from definition
-func (g *GlobalRegistry) CreateMiddleware(name string) request.HandlerFunc {
-	// First check if already instantiated
-	if mw, ok := g.middlewareInstances.Load(name); ok {
-		return mw.(request.HandlerFunc)
-	}
+// AppConfig interface for deployment registration
+type AppConfig interface {
+	GetAddr() string
+	GetRouters() []string
+	GetPublishedServices() []string
+}
 
-	// Check if it's registered via RegisterMiddlewareName (factory pattern)
-	if entryAny, ok := g.middlewareEntries.Load(name); ok {
-		entry := entryAny.(*MiddlewareEntry)
-		factory := g.GetMiddlewareFactory(entry.Type)
-		if factory != nil {
-			mw := factory(entry.Config)
-			if handlerFunc, ok := mw.(request.HandlerFunc); ok {
-				// Cache it
-				g.middlewareInstances.Store(name, handlerFunc)
-				return handlerFunc
+// RegisterDeployment registers a deployment topology from code
+// This is the code-equivalent of YAML deployment definition
+// It builds the topology and stores it for runtime use
+func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config DeploymentConfig) error {
+	// Auto-generate router definitions for published services
+	// Collect all published services from all servers
+	publishedServicesMap := make(map[string]bool)
+	for _, serverConfig := range config.GetServers() {
+		// Collect apps (from Apps slice + shorthand fields)
+		apps := serverConfig.GetApps()
+
+		// If shorthand fields are set, create an app from them
+		if serverConfig.GetAddr() != "" {
+			shorthandApp := &shorthandAppConfig{
+				addr:              serverConfig.GetAddr(),
+				routers:           serverConfig.GetRouters(),
+				publishedServices: serverConfig.GetPublishedServices(),
+			}
+			// Prepend shorthand app
+			apps = append([]AppConfig{shorthandApp}, apps...)
+		}
+
+		for _, appConfig := range apps {
+			for _, serviceName := range appConfig.GetPublishedServices() {
+				publishedServicesMap[serviceName] = true
 			}
 		}
-		return nil
 	}
 
-	// Try to create from middleware definition (YAML config)
-	g.mu.RLock()
-	mwDef, defExists := g.middlewares[name]
-	g.mu.RUnlock()
+	// Define routers for each published service
+	for serviceName := range publishedServicesMap {
+		routerName := serviceName + "-router"
 
-	if !defExists {
-		return nil
+		// Check if router already defined manually
+		if g.GetRouterDef(routerName) != nil {
+			continue // Skip, use existing definition
+		}
+
+		// Check if service is registered
+		if !g.HasLazyService(serviceName) {
+			return fmt.Errorf("published service '%s' not found in service registry", serviceName)
+		}
+
+		// Get service definition to find service type
+		serviceDef := g.GetDeferredServiceDef(serviceName)
+		if serviceDef == nil {
+			return fmt.Errorf("published service '%s' definition not found", serviceName)
+		}
+
+		// Get service metadata from factory registration
+		metadata := g.GetServiceMetadata(serviceDef.Type)
+
+		// Build router definition
+		var resourceName, resourcePlural, convention string
+
+		// Use metadata from RegisterServiceType if available
+		if metadata != nil && metadata.Resource != "" {
+			resourceName = metadata.Resource
+			resourcePlural = metadata.ResourcePlural
+			convention = metadata.Convention
+		} else {
+			// Fallback: auto-generate from service name
+			resourceName = strings.TrimSuffix(serviceName, "-service")
+			resourcePlural = resourceName + "s" // Simple pluralization
+			convention = "rest"
+		}
+
+		// Define router with metadata
+		routerDef := &schema.RouterDef{
+			Convention:     convention,
+			Resource:       resourceName,
+			ResourcePlural: resourcePlural,
+		}
+
+		// Add metadata overrides if available
+		if metadata != nil {
+			routerDef.PathPrefix = metadata.PathPrefix
+			routerDef.Middlewares = metadata.MiddlewareNames
+			routerDef.Hidden = metadata.HiddenMethods
+
+			// Convert RouteOverrides to Custom routes
+			if len(metadata.RouteOverrides) > 0 {
+				routerDef.Custom = make([]schema.RouteDef, 0, len(metadata.RouteOverrides))
+				for methodName, routeMeta := range metadata.RouteOverrides {
+					routerDef.Custom = append(routerDef.Custom, schema.RouteDef{
+						Name:        methodName,
+						Method:      routeMeta.Method,
+						Path:        routeMeta.Path,
+						Middlewares: routeMeta.Middlewares,
+					})
+				}
+			}
+		}
+
+		g.DefineRouter(routerName, routerDef)
 	}
 
-	// Get factory
-	factory := g.GetMiddlewareFactory(mwDef.Type)
-	if factory == nil {
-		return nil
+	// Build service location registry (service-name → base-url)
+	// This maps published services to their server URLs for remote service resolution
+	serviceLocations := make(map[string]string)
+
+	for _, serverConfig := range config.GetServers() {
+		// Collect apps (from Apps slice + shorthand fields)
+		apps := serverConfig.GetApps()
+
+		// If shorthand fields are set, create an app from them
+		if serverConfig.GetAddr() != "" {
+			shorthandApp := &shorthandAppConfig{
+				addr:              serverConfig.GetAddr(),
+				routers:           serverConfig.GetRouters(),
+				publishedServices: serverConfig.GetPublishedServices(),
+			}
+			// Prepend shorthand app
+			apps = append([]AppConfig{shorthandApp}, apps...)
+		}
+
+		for _, appConfig := range apps {
+			for _, serviceName := range appConfig.GetPublishedServices() {
+				// Build full URL: base-url + addr
+				fullURL := serverConfig.GetBaseURL() + appConfig.GetAddr()
+				serviceLocations[serviceName] = fullURL
+			}
+		}
 	}
 
-	// Create instance
-	mw := factory(mwDef.Config)
-	if handlerFunc, ok := mw.(request.HandlerFunc); ok {
-		// Cache it
-		g.RegisterMiddleware(name, handlerFunc)
-		return handlerFunc
+	// Create deployment topology
+	deployTopo := &DeploymentTopology{
+		Name:            deploymentName,
+		ConfigOverrides: make(map[string]any),
+		Servers:         make(map[string]*ServerTopology),
 	}
+
+	// Copy config overrides
+	for key, value := range config.GetConfigOverrides() {
+		deployTopo.ConfigOverrides[key] = value
+	}
+
+	// Build server topologies
+	for serverName, serverConfig := range config.GetServers() {
+		serverTopo := &ServerTopology{
+			Name:           serverName,
+			DeploymentName: deploymentName,
+			BaseURL:        serverConfig.GetBaseURL(),
+			Services:       make([]string, 0),
+			RemoteServices: make(map[string]string),
+			Apps:           make([]*AppTopology, 0),
+		}
+
+		// Collect apps (from Apps slice + shorthand fields)
+		apps := serverConfig.GetApps()
+
+		// If shorthand fields are set, create an app from them
+		if serverConfig.GetAddr() != "" {
+			shorthandApp := &shorthandAppConfig{
+				addr:              serverConfig.GetAddr(),
+				routers:           serverConfig.GetRouters(),
+				publishedServices: serverConfig.GetPublishedServices(),
+			}
+			// Prepend shorthand app
+			apps = append([]AppConfig{shorthandApp}, apps...)
+		}
+
+		// Collect SERVER-LEVEL services (published services only)
+		serviceMap := make(map[string]bool)
+		for _, appConfig := range apps {
+			for _, svcName := range appConfig.GetPublishedServices() {
+				serviceMap[svcName] = true
+			}
+		}
+
+		// Convert to slice
+		for svcName := range serviceMap {
+			serverTopo.Services = append(serverTopo.Services, svcName)
+		}
+
+		// Build RemoteServices map (services published on OTHER servers)
+		for otherServerName, otherServerConfig := range config.GetServers() {
+			if otherServerName == serverName {
+				continue // Skip own server
+			}
+
+			// Collect apps from other server
+			otherApps := otherServerConfig.GetApps()
+			if otherServerConfig.GetAddr() != "" {
+				shorthandApp := &shorthandAppConfig{
+					addr:              otherServerConfig.GetAddr(),
+					routers:           otherServerConfig.GetRouters(),
+					publishedServices: otherServerConfig.GetPublishedServices(),
+				}
+				otherApps = append([]AppConfig{shorthandApp}, otherApps...)
+			}
+
+			// Add remote services
+			for _, appConfig := range otherApps {
+				for _, svcName := range appConfig.GetPublishedServices() {
+					// Build full URL: base-url + addr
+					remoteURL := otherServerConfig.GetBaseURL() + appConfig.GetAddr()
+					serverTopo.RemoteServices[svcName] = remoteURL
+				}
+			}
+		}
+
+		// Build app topologies
+		for _, appConfig := range apps {
+			appTopo := &AppTopology{
+				Addr:    appConfig.GetAddr(),
+				Routers: make([]string, 0),
+			}
+
+			// Collect routers
+			appTopo.Routers = append(appTopo.Routers, appConfig.GetRouters()...)
+
+			// Auto-generated routers from published services
+			for _, serviceName := range appConfig.GetPublishedServices() {
+				routerName := serviceName + "-router"
+				appTopo.Routers = append(appTopo.Routers, routerName)
+			}
+
+			serverTopo.Apps = append(serverTopo.Apps, appTopo)
+		}
+
+		deployTopo.Servers[serverName] = serverTopo
+	}
+
+	// Store topology in global registry
+	g.StoreDeploymentTopology(deployTopo)
 
 	return nil
 }
 
-// ===== TOPOLOGY MANAGEMENT (2-Layer Architecture) =====
+// shorthandAppConfig is a helper struct for shorthand app creation
+type shorthandAppConfig struct {
+	addr              string
+	routers           []string
+	publishedServices []string
+}
+
+func (a *shorthandAppConfig) GetAddr() string                { return a.addr }
+func (a *shorthandAppConfig) GetRouters() []string           { return a.routers }
+func (a *shorthandAppConfig) GetPublishedServices() []string { return a.publishedServices }
+
+var FirstServer string
 
 // StoreDeploymentTopology stores deployment topology in global registry
 func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
@@ -1050,6 +1434,9 @@ func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
 	for serverName, serverTopo := range topology.Servers {
 		compositeKey := topology.Name + "." + serverName
 		g.serverTopologies.Store(compositeKey, serverTopo)
+		if FirstServer == "" {
+			FirstServer = compositeKey
+		}
 	}
 }
 
@@ -1081,6 +1468,26 @@ func (g *GlobalRegistry) GetCurrentCompositeKey() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.currentCompositeKey
+}
+
+// StoreDeployConfig stores the original deploy configuration for inline definitions normalization
+func (g *GlobalRegistry) StoreDeployConfig(config *schema.DeployConfig) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.deployConfig = config
+}
+
+// GetDeployConfig returns the stored deploy configuration
+func (g *GlobalRegistry) GetDeployConfig() *schema.DeployConfig {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.deployConfig
+}
+
+// GetFirstServerCompositeKey returns the first available server composite key from server topologies
+// Returns empty string if no server topologies are found
+func (g *GlobalRegistry) GetFirstServerCompositeKey() string {
+	return FirstServer
 }
 
 // ===== SHUTDOWN =====

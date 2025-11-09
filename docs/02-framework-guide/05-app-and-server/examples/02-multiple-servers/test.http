@@ -1,0 +1,36 @@
+### API Server (Port 3080)
+
+# Home
+GET http://localhost:3080/
+
+# Users
+GET http://localhost:3080/api/users
+
+# Orders
+GET http://localhost:3080/api/orders
+
+---
+
+### Admin Server (Port 3081)
+
+# Home
+GET http://localhost:3081/
+
+# Stats
+GET http://localhost:3081/admin/stats
+
+# Config
+GET http://localhost:3081/admin/config
+
+---
+
+### Metrics Server (Port 3082)
+
+# Home
+GET http://localhost:3082/
+
+# Metrics
+GET http://localhost:3082/metrics
+
+# Health
+GET http://localhost:3082/health

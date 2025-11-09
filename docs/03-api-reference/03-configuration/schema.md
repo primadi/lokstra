@@ -1,3 +1,8 @@
+---
+layout: docs
+title: Schema
+---
+
 # Schema
 
 > YAML schema definitions and validation for deployment configurations
@@ -952,15 +957,15 @@ router-definitions:
 
 ## See Also
 
-- **[Config](./config.md)** - Configuration management
-- **[Deploy](./deploy.md)** - Deployment topology
-- **[Service Registration](../02-registry/service-registration.md)** - Service patterns
-- **[Router Registration](../02-registry/router-registration.md)** - Router patterns
+- **[Config](./config)** - Configuration management
+- **[Deploy](./deploy)** - Deployment topology
+- **[Service Registration](../02-registry/service-registration)** - Service patterns
+- **[Router Registration](../02-registry/router-registration)** - Router patterns
 
 ---
 
 ## Related Guides
 
-- **[YAML Configuration](../../01-essentials/04-configuration/)** - Configuration basics
+- **[YAML Configuration](../../02-framework-guide/04-configuration/)** - Configuration basics
 - **[Deployment Strategies](../../04-guides/deployment/)** - Deployment patterns
 - **[Schema Validation](../../04-guides/validation/)** - Validation techniques

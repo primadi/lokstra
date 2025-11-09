@@ -1,0 +1,16 @@
+### Migration Pattern Example
+
+### Home
+GET http://localhost:3000/
+
+### Get user (routed based on config)
+GET http://localhost:3000/users/1
+
+### Get order (still in monolith)
+GET http://localhost:3000/orders/1
+
+### Test multiple users
+GET http://localhost:3000/users/2
+
+###
+GET http://localhost:3000/users/3

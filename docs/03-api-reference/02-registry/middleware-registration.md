@@ -698,15 +698,15 @@ middleware-definitions:
 
 ## See Also
 
-- **[lokstra_registry](./lokstra_registry.md)** - Registry API
-- **[Service Registration](./service-registration.md)** - Service patterns
-- **[Request](../01-core-packages/request.md)** - Request Context
-- **[Router](../01-core-packages/router.md)** - Router middleware
+- **[lokstra_registry](./lokstra_registry)** - Registry API
+- **[Service Registration](./service-registration)** - Service patterns
+- **[Request](../01-core-packages/request)** - Request Context
+- **[Router](../01-core-packages/router)** - Router middleware
 
 ---
 
 ## Related Guides
 
-- **[Middleware Essentials](../../01-essentials/03-middleware/)** - Middleware basics
+- **[Middleware Essentials](../../01-router-guide/03-middleware/)** - Middleware basics
 - **[Authentication](../../04-guides/auth/)** - Auth patterns
 - **[Error Handling](../../04-guides/error-handling/)** - Error patterns

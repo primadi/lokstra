@@ -1,0 +1,8 @@
+### Test public endpoint
+GET http://localhost:3005/public
+
+### Test API endpoint (should work - GET allowed)
+GET http://localhost:3005/api/data
+
+### Test API with POST (should fail - only GET allowed)
+POST http://localhost:3005/api/data

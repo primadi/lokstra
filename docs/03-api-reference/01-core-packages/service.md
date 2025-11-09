@@ -638,14 +638,14 @@ func TestService(t *testing.T) {
 
 ## See Also
 
-- **[lokstra_registry](../02-registry/lokstra_registry.md)** - Service registration
-- **[Service Registration](../02-registry/service-registration.md)** - RegisterServiceType
-- **[Proxy](../08-advanced/proxy.md)** - Remote services
+- **[lokstra_registry](../02-registry/lokstra_registry)** - Service registration
+- **[Service Registration](../02-registry/service-registration)** - RegisterServiceType
+- **[Proxy](../08-advanced/proxy)** - Remote services
 
 ---
 
 ## Related Guides
 
-- **[Service Essentials](../../01-essentials/02-service/)** - Service basics
+- **[Service Essentials](../../02-framework-guide/02-service/)** - Service basics
 - **[Dependency Injection](../../02-deep-dive/service/)** - Advanced DI patterns
 - **[Testing](../../04-guides/testing/)** - Testing with services

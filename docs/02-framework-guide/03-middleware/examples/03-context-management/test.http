@@ -1,0 +1,6 @@
+### Test profile without user ID
+GET http://localhost:3002/profile
+
+### Test profile with user ID
+GET http://localhost:3002/profile
+X-User-ID: user-123
