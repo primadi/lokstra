@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/route"
+	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/router/convention"
 )
 
@@ -36,8 +36,8 @@ type Route struct {
 
 // NewFromService creates a router by reflecting on a service interface
 // and applying conversion rules and overrides
-func NewFromService(service any, rule ConversionRule, override RouteOverride) lokstra.Router {
-	router := lokstra.NewRouter(fmt.Sprintf("%s-auto", rule.Resource))
+func NewFromService(service any, rule ConversionRule, override RouteOverride) router.Router {
+	router := router.New(fmt.Sprintf("%s-auto", rule.Resource))
 
 	// Get service type - keep as pointer type to access methods with pointer receivers
 	serviceType := reflect.TypeOf(service)
@@ -81,7 +81,7 @@ func NewFromService(service any, rule ConversionRule, override RouteOverride) lo
 }
 
 // registerCustomRoute registers a custom route
-func registerCustomRoute(router lokstra.Router, service any, methodName string, route Route, pathPrefix string, globalMiddlewares []any) {
+func registerCustomRoute(router router.Router, service any, methodName string, route Route, pathPrefix string, globalMiddlewares []any) {
 	// Apply path prefix using path.Join to avoid double slashes
 	fullPath := route.Path
 	if pathPrefix != "" {
@@ -117,7 +117,7 @@ func registerCustomRoute(router lokstra.Router, service any, methodName string, 
 }
 
 // registerRoute registers a route by calling the appropriate router method
-func registerRoute(r lokstra.Router, httpMethod, path string, service any, methodName string, middlewares []any) {
+func registerRoute(r router.Router, httpMethod, path string, service any, methodName string, middlewares []any) {
 	// Get the method from service
 	serviceValue := reflect.ValueOf(service)
 	method := serviceValue.MethodByName(methodName)

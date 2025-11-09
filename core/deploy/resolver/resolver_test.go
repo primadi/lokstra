@@ -5,6 +5,28 @@ import (
 	"testing"
 )
 
+// StaticResolver resolves from a static map (for testing)
+type StaticResolver struct {
+	name   string
+	values map[string]string
+}
+
+func NewStaticResolver(name string, values map[string]string) *StaticResolver {
+	return &StaticResolver{
+		name:   name,
+		values: values,
+	}
+}
+
+func (s *StaticResolver) Name() string {
+	return s.name
+}
+
+func (s *StaticResolver) Resolve(key string) (string, bool) {
+	value, ok := s.values[key]
+	return value, ok
+}
+
 func TestResolveValue_Static(t *testing.T) {
 	r := NewRegistry()
 	configs := map[string]any{}
