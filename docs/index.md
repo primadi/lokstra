@@ -59,7 +59,21 @@ users := userService.MustGet().GetAll()
 
 ## Quick Start
 
-### Install
+### Install Lokstra CLI
+```bash
+go install github.com/primadi/lokstra/cmd/lokstra@latest
+```
+
+### Create New Project
+```bash
+# Interactive template selection
+lokstra new myapp
+
+# Or choose specific template
+lokstra new myapp -template 02_app_framework/01_medium_system
+```
+
+### Install Framework Library
 ```bash
 go get github.com/primadi/lokstra
 ```
@@ -270,6 +284,47 @@ func createUser(ctx *request.Context, params *CreateUserParams) error {
 
 ---
 
+## 🚀 Lokstra CLI
+
+**Create new projects from templates in seconds!**
+
+```bash
+# Install CLI
+go install github.com/primadi/lokstra/cmd/lokstra@latest
+
+# Create project (interactive)
+lokstra new myapp
+
+# Create with specific template
+lokstra new blog-api -template 02_app_framework/01_medium_system
+
+# Generate code for Enterprise templates
+lokstra autogen ./myproject
+```
+
+### Available Templates
+
+**Router Patterns** (Learning & Simple APIs):
+- `01_router/01_router_only` - Pure routing basics
+- `01_router/02_single_app` - Production single app
+- `01_router/03_multi_app` - Multiple apps server
+
+**Framework Patterns** (Production Apps):
+- `02_app_framework/01_medium_system` - Domain-driven (2-10 entities)
+- `02_app_framework/02_enterprise_modular` - DDD with bounded contexts
+- `02_app_framework/03_enterprise_router_service` - Annotation-based enterprise
+
+### What CLI Does Automatically
+✅ Downloads template from GitHub  
+✅ Fixes all import paths  
+✅ Runs `go mod init`  
+✅ Runs `go mod tidy`  
+✅ Ready to run immediately!
+
+**[📖 Full CLI Documentation →](https://github.com/primadi/lokstra/tree/dev2/cmd/lokstra)**
+
+---
+
 ## Examples
 
 ### 📚 [Introduction & Examples](./00-introduction/)
@@ -453,6 +508,12 @@ func handler() {
     <h3>🏗️ Architecture</h3>
     <p>Design principles</p>
     <a href="./00-introduction/architecture">Framework Design →</a>
+  </div>
+  
+  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
+    <h3>⚡ CLI Tool</h3>
+    <p>Project scaffolding</p>
+    <a href="https://github.com/primadi/lokstra/tree/dev2/cmd/lokstra">Lokstra CLI →</a>
   </div>
 </div>
 

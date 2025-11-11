@@ -5,11 +5,11 @@
       "filename": "user_service.go",
       "checksum": "108f03a5a900a2704073d8f064537721450be48a9ee93a6bc9a4968ffaf531c5",
       "annotations": 9,
-      "last_scan": "2025-11-11T09:05:52.2838617+07:00",
+      "last_scan": "2025-11-11T13:34:22.5674208+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ]
     }
   },
-  "updated_at": "2025-11-11T09:06:25.7626563+07:00"
+  "updated_at": "2025-11-11T13:34:22.5674208+07:00"
 }
