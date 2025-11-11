@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/primadi/lokstra/core/annotation"
 	"github.com/primadi/lokstra/core/deploy"
 )
 
@@ -26,30 +27,59 @@ var (
 // Bootstrap initializes Lokstra environment and regenerates routes if needed.
 // It must be called at the very beginning of main().
 func Bootstrap() {
-	// 1️⃣ Detect mode
+	// 1️⃣ Check for --generate-only flag
+	generateOnly := false
+	for _, arg := range os.Args {
+		if arg == "--generate-only" {
+			generateOnly = true
+			break
+		}
+	}
+
+	if generateOnly {
+		fmt.Println("[Lokstra] Running in GENERATE-ONLY mode")
+		fmt.Println("[Lokstra] Force rebuilding all generated code...")
+
+		// Force rebuild by deleting all cache files first
+		if err := deleteAllCacheFiles(); err != nil {
+			fmt.Println("[Lokstra] Warning: failed to delete cache files:", err)
+		}
+
+		// Run autogen
+		_, err := runAutoGen()
+		if err != nil {
+			fmt.Println("[Lokstra] Autogen failed:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("[Lokstra] ✅ Code generation completed successfully")
+		os.Exit(0)
+	}
+
+	// 2️⃣ Detect mode
 	Mode = detectRunMode()
 	fmt.Printf("[Lokstra] Environment detected: %s\n", strings.ToUpper(string(Mode)))
 
-	// 2️⃣ Prevent infinite loop
+	// 3️⃣ Prevent infinite loop
 	if os.Getenv(childEnvKey) == "1" {
-		fmt.Println("[Lokstra] Child process detected — skipping bootstrap autogen.")
+		// fmt.Println("[Lokstra] Child process detected — skipping bootstrap autogen.")
 		return
 	}
 
-	// 3️⃣ If prod, just continue
+	// 4️⃣ If prod, just continue
 	if Mode == RunModeProd {
-		fmt.Println("[Lokstra] Production mode — skipping autogen.")
+		// fmt.Println("[Lokstra] Production mode — skipping autogen.")
 		return
 	}
 
-	// 4️⃣ Run autogen
+	// 5️⃣ Run autogen
 	codeChanged, err := runAutoGen()
 	if err != nil {
 		fmt.Println("[Lokstra] Autogen failed:", err)
 		os.Exit(1)
 	}
 
-	// 5️⃣ Relaunch using correct method
+	// 6️⃣ Relaunch using correct method
 	switch Mode {
 	case RunModeDebug:
 		if codeChanged {
@@ -137,12 +167,39 @@ func detectRunMode() RunMode {
 
 // runAutoGen triggers the annotation scanner and route generator
 func runAutoGen() (bool, error) {
-	return true, nil
-	// fmt.Println("[Lokstra] Scanning annotations...")
-	// cmd := exec.Command("go", "run", "github.com/primadi/lokstra/autogen")
-	// cmd.Stdout = os.Stdout
-	// cmd.Stderr = os.Stderr
-	// return cmd.Run()
+	return annotation.ProcessComplexAnnotations("", 0,
+		func(ctx *annotation.RouterServiceContext) error {
+			fmt.Printf("Processing folder: %s\n", ctx.FolderPath)
+			fmt.Printf("  - Skipped: %d files\n", len(ctx.SkippedFiles))
+			fmt.Printf("  - Updated: %d files\n", len(ctx.UpdatedFiles))
+			fmt.Printf("  - Deleted: %d files\n", len(ctx.DeletedFiles))
+
+			// Generate code
+			if err := annotation.GenerateCodeForFolder(ctx); err != nil {
+				return err
+			}
+
+			return nil
+		})
+}
+
+// deleteAllCacheFiles removes all zz_cache.lokstra.json files to force rebuild
+func deleteAllCacheFiles() error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	return filepath.Walk(wd, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors, continue walking
+		}
+		if !info.IsDir() && info.Name() == "zz_cache.lokstra.json" {
+			fmt.Printf("  Deleting cache: %s\n", path)
+			os.Remove(path)
+		}
+		return nil
+	})
 }
 
 // relaunchWithGoRun restarts the current app using "go run ."

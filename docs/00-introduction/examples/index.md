@@ -37,13 +37,14 @@ Learn routing, handlers, and middleware without dependency injection complexity.
 ### Track 2: Full Framework (Like NestJS, Spring Boot)
 **Time**: 8-12 hours • **Use Lokstra as a complete application framework**
 
-Learn services, dependency injection, auto-routers, and deployment patterns.
+Learn services, dependency injection, auto-routers, annotations, and deployment patterns.
 
 👉 **[Start with Framework Examples](./full-framework/)**
 
 **What you'll learn:**
 - ✅ Service layer and dependency injection
-- ✅ Auto-generated REST routers
+- ✅ **Annotation-driven development** (`@RouterService`, `@Inject`, `@Route`)
+- ✅ Auto-generated REST routers from service methods
 - ✅ Configuration-driven deployment (YAML or Code)
 - ✅ Monolith → Microservices migrations
 - ✅ External service integration
@@ -53,6 +54,7 @@ Learn services, dependency injection, auto-routers, and deployment patterns.
 - Microservices architectures
 - Teams wanting DI and auto-router
 - Production-scale projects
+- **Developers familiar with NestJS decorators or Spring annotations**
 
 ---
 
@@ -65,6 +67,7 @@ Learn services, dependency injection, auto-routers, and deployment patterns.
 | **Middleware** | ✅ Global, per-route | ✅ Plus registry-based |
 | **Services** | ❌ Not covered | ✅ Core pattern |
 | **Dependency Injection** | ❌ Not needed | ✅ Lazy, type-safe |
+| **Annotations** | ❌ Not covered | ✅ `@RouterService`, `@Inject`, `@Route` |
 | **Auto-Router** | ❌ Manual only | ✅ From services |
 | **Configuration** | ❌ Code only | ✅ YAML or Code |
 | **Microservices** | ❌ Not covered | ✅ Multi-deployment |
