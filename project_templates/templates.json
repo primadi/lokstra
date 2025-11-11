@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "templates": [
+    {
+      "path": "01_router/01_router_only",
+      "name": "Router Only",
+      "description": "Pure router with CRUD operations - Learn Lokstra routing basics",
+      "category": "Router Patterns",
+      "complexity": 1,
+      "tags": ["beginner", "learning", "simple"],
+      "minGoVersion": "1.23"
+    },
+    {
+      "path": "01_router/02_single_app",
+      "name": "Single App",
+      "description": "App wrapper with graceful shutdown - Single application servers",
+      "category": "Router Patterns",
+      "complexity": 2,
+      "tags": ["production", "single-app", "graceful-shutdown"],
+      "minGoVersion": "1.23"
+    },
+    {
+      "path": "01_router/03_multi_app",
+      "name": "Multi App",
+      "description": "Multiple apps on different ports - Admin/API separation",
+      "category": "Router Patterns",
+      "complexity": 3,
+      "tags": ["multi-app", "microservices", "advanced"],
+      "minGoVersion": "1.23"
+    },
+    {
+      "path": "02_app_framework/01_medium_system",
+      "name": "Medium System",
+      "description": "Flat domain-driven structure - 2-10 entities, single team",
+      "category": "Framework Patterns",
+      "complexity": 3,
+      "tags": ["ddd", "clean-architecture", "medium"],
+      "minGoVersion": "1.23"
+    },
+    {
+      "path": "02_app_framework/02_enterprise_modular",
+      "name": "Enterprise Modular",
+      "description": "DDD with bounded contexts - 10+ entities, multiple teams",
+      "category": "Framework Patterns",
+      "complexity": 5,
+      "tags": ["ddd", "bounded-contexts", "enterprise", "modular"],
+      "minGoVersion": "1.23"
+    },
+    {
+      "path": "02_app_framework/03_enterprise_router_service",
+      "name": "Enterprise Router Service",
+      "description": "DDD with annotation-based router service - Enterprise scale",
+      "category": "Framework Patterns",
+      "complexity": 5,
+      "tags": ["ddd", "annotations", "enterprise", "code-generation"],
+      "minGoVersion": "1.23"
+    }
+  ]
+}

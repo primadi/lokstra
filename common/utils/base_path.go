@@ -39,3 +39,10 @@ func GetBasePath() string {
 	path, _ := os.Getwd()
 	return path
 }
+
+func NormalizeWithBasePath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(GetBasePath(), path)
+}

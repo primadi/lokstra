@@ -206,6 +206,49 @@ func WeatherServiceFactory(deps, cfg map[string]any) any {
 
 ---
 
+### [07 - Enterprise Router Service (Annotations)](./07_enterprise_router_service/) ⏱️ 2-3 hours ⭐⭐⭐
+
+**RECOMMENDED:** Annotation-driven router services with auto-generated code.
+
+```go
+// Write this:
+// @RouterService name="user-service", prefix="/api"
+type UserServiceImpl struct {
+    // @Inject "user-repository"
+    UserRepo *service.Cached[domain.UserRepository]
+}
+
+// @Route "GET /users/{id}"
+func (s *UserServiceImpl) GetByID(p *GetUserRequest) (*User, error) {
+    return s.UserRepo.MustGet().GetByID(p.ID)
+}
+
+// Get this auto-generated:
+// ✅ Service factory
+// ✅ Remote HTTP proxy
+// ✅ Router registration
+// ✅ Dependency injection
+```
+
+**What you'll learn:**
+- **Lokstra Annotations** - `@RouterService`, `@Inject`, `@Route`
+- Auto-code generation with `lokstra.Bootstrap()`
+- Zero boilerplate router services
+- Hot reload in dev mode
+- Type-safe dependency injection
+- Microservice-ready architecture
+
+**Why this is recommended:**
+- ✅ **83% less code** - No manual factory/proxy/registration
+- ✅ **Type-safe** - Compiler-enforced correctness
+- ✅ **Fast development** - Add method → auto-registered
+- ✅ **Production-ready** - Zero runtime overhead
+- ✅ **Refactoring-friendly** - Change once, update everywhere
+
+**Perfect for:** Enterprise apps, microservices, teams wanting rapid development
+
+---
+
 ## 🚀 Running Examples
 
 ### Simple Examples (01):
@@ -257,6 +300,9 @@ Example 04:  External Integration
 
 Example 05:  Quick Integration
     → proxy.Router, simple HTTP calls
+
+Example 07:  Annotation-Driven (RECOMMENDED)
+    → @RouterService, @Inject, @Route, auto-generation, zero boilerplate
 ```
 
 ---
@@ -284,6 +330,7 @@ Example 05:  Quick Integration
 - ✅ Teams wanting DI and auto-router
 - ✅ Configuration-driven deployment
 - ✅ Scalable, maintainable codebases
+- ✅ Rapid development with annotations
 
 **Framework advantages:**
 - Type-safe dependency injection
@@ -291,6 +338,7 @@ Example 05:  Quick Integration
 - Zero-code deployment changes
 - Service abstraction (local/remote)
 - Production-ready patterns
+- **83% less boilerplate with annotations**
 
 ---
 
@@ -307,6 +355,7 @@ Example 05:  Quick Integration
 - ✅ Auto-router from service methods
 - ✅ Zero-code deployment topology changes
 - ✅ Code or YAML configuration (your choice)
+- ✅ **Annotation-driven development (Example 07)** - Like NestJS decorators, but with Go code generation
 
 **📖 Detailed Framework Comparisons:**
 - **[Practical Example: Microservices in 3 Frameworks](./02-multi-deployment-yaml/framework-comparison)** - Same app, different approaches
@@ -315,6 +364,27 @@ Example 05:  Quick Integration
 
 ---
 
-**Ready to start?** → [01 - CRUD API with Services](./01-crud-api/)
+## 💡 Which Example Should I Start With?
 
-**Coming from Router Track?** This builds on routing basics with DI and services!
+### For Quick Start → **Example 07** ⭐
+**Best for most developers** - annotation-driven, minimal boilerplate
+
+```go
+// @RouterService, @Inject, @Route - that's it!
+// Everything auto-generated
+```
+
+### For Understanding Fundamentals → **Example 01**
+Learn service architecture basics before jumping to annotations
+
+### For Configuration Mastery → **Examples 02-03**
+Deep dive into YAML vs code configuration
+
+### For Real-World Integration → **Examples 04-05**
+External APIs, payment gateways, third-party services
+
+---
+
+**Ready to start?** → [07 - Enterprise Router Service (Annotations)](./07_enterprise_router_service/) ⭐ **RECOMMENDED**
+
+**Coming from Router Track?** This builds on routing basics with DI, services, and annotations!

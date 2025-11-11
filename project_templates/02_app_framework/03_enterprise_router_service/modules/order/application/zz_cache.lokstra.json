@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "files": {
+    "order_service.go": {
+      "filename": "order_service.go",
+      "checksum": "1c1d002167b481a33e16d420ceb8cddc7a0f9204f711e4cee2d6a5f1ea702ae4",
+      "annotations": 9,
+      "last_scan": "2025-11-11T13:34:22.5679587+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ]
+    }
+  },
+  "updated_at": "2025-11-11T13:34:22.5679587+07:00"
+}

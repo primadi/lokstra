@@ -259,6 +259,142 @@ deployments:
 
 ---
 
+### 5. **Annotation-Driven Development (Zero Boilerplate)**
+
+**Problem**: Setting up services with DI and routing requires tons of boilerplate
+
+**Lokstra**: Annotations like NestJS decorators, but with zero runtime cost!
+
+#### The Traditional Way (70+ Lines!)
+```go
+// 1. Define service
+type UserService struct {
+    DB *service.Cached[*Database]
+}
+
+// 2. Create factory
+func createUserServiceFactory() any {
+    return func(deps map[string]any, config map[string]any) any {
+        return &UserService{
+            DB: service.Cast[*Database](deps["db"]),
+        }
+    }
+}
+
+// 3. Register factory
+lokstra_registry.RegisterServiceFactory("user-service-factory", 
+    createUserServiceFactory())
+
+// 4. Register lazy service
+lokstra_registry.RegisterLazyService("user-service", 
+    "user-service-factory",
+    map[string]any{"depends-on": []string{"db"}})
+
+// 5. Create router
+func setupUserRouter() *lokstra.Router {
+    userService := lokstra_registry.GetService[*UserService]("user-service")
+    r := router.NewFromService(userService, "/api")
+    return r
+}
+
+// 6. Register router
+lokstra_registry.RegisterRouter("user-router", setupUserRouter())
+
+// ... and more YAML config!
+```
+
+#### The Lokstra Annotation Way (12 Lines!)
+```go
+// @RouterService name="user-service", prefix="/api"
+type UserServiceImpl struct {
+    // @Inject "database"
+    DB *service.Cached[*Database]
+}
+
+// @Route "GET /users"
+func (s *UserServiceImpl) GetAll(p *GetAllRequest) ([]User, error) {
+    return s.DB.MustGet().GetAllUsers()
+}
+
+// @Route "POST /users"
+func (s *UserServiceImpl) Create(p *CreateUserRequest) (*User, error) {
+    return s.DB.MustGet().CreateUser(p)
+}
+
+// Auto-generates: factory, DI wiring, routes, remote proxy!
+```
+
+**Results**:
+- ✅ **83% less code** (70+ lines → 12 lines)
+- ✅ Like **NestJS decorators** (familiar DX)
+- ✅ Like **Spring annotations** (proven pattern)
+- ✅ But **zero runtime cost** (compile-time generation)
+- ✅ No reflection overhead (pure Go performance)
+
+#### How It Works
+```bash
+# Run once to generate code
+go run . --generate-only
+
+# Or use build scripts (auto-generates before building)
+./build.sh           # Linux/Mac
+.\build.ps1          # Windows PowerShell
+.\build.bat          # Windows CMD
+```
+
+Generates `zz_generated.lokstra.go`:
+```go
+// ✅ Service factory
+func init() {
+    lokstra_registry.RegisterServiceFactory("user-service-factory", ...)
+    lokstra_registry.RegisterLazyService("user-service", ...)
+}
+
+// ✅ Router with routes
+func init() {
+    r := lokstra.NewRouter("user-service")
+    r.GET("/users", ...) // Auto-wired!
+    lokstra_registry.RegisterRouter("user-service", r)
+}
+
+// ✅ Remote proxy for microservices
+type UserServiceRemote struct { ... }
+```
+
+**Three Powerful Annotations**:
+
+1. **@RouterService** - Define service + router
+   ```go
+   // @RouterService name="user-service", prefix="/api", mount="/api"
+   type UserServiceImpl struct {}
+   ```
+
+2. **@Inject** - Dependency injection
+   ```go
+   // @Inject "database"
+   DB *service.Cached[*Database]
+   ```
+
+3. **@Route** - HTTP endpoints
+   ```go
+   // @Route "GET /users/{id}"
+   func (s *UserServiceImpl) GetByID(p *GetByIDRequest) (*User, error) {}
+   ```
+
+**Comparison with Other Frameworks**:
+
+| Framework | Pattern | Runtime Cost | Boilerplate |
+|-----------|---------|--------------|-------------|
+| **NestJS** | Decorators | High (reflection) | Low |
+| **Spring** | Annotations | High (reflection) | Low |
+| **Lokstra** | Annotations | **Zero** (codegen) | **Very Low** |
+
+**Lokstra advantage**: All the DX benefits, none of the runtime cost!
+
+📖 **Full guide**: [Example 07 - Enterprise Router Service](../01-router-guide/07_enterprise_router_service/)
+
+---
+
 ## 📊 Comparison Matrix
 
 | Feature | stdlib | Gin/Echo | Chi | Lokstra |
@@ -269,6 +405,7 @@ deployments:
 | **Dependency Injection** | ❌ | ❌ | ❌ | ✅ Built-in |
 | **Service Caching** | ❌ | ❌ | ❌ | ✅ Lazy Load |
 | **Service as Router** | ❌ | ❌ | ❌ | ✅ Unique |
+| **Annotations** | ❌ | ❌ | ❌ | ✅ 83% less code |
 | **Config-Driven Deploy** | ❌ | ⚠️ Limited | ❌ | ✅ Full |
 | **Multi-Deployment** | ❌ | ❌ | ❌ | ✅ 1 binary |
 | **Middleware System** | ⚠️ Basic | ✅ | ✅ | ✅ Enhanced |

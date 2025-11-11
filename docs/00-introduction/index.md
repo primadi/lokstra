@@ -44,7 +44,25 @@ Use Lokstra as a complete framework for:
 - Microservices architectures
 - Dependency injection and service layer
 - Configuration-driven deployment
+- **Annotation-driven development** (like NestJS decorators)
 
+**With Lokstra Annotations (Recommended) - Zero boilerplate!**
+```go
+// @RouterService name="user-service", prefix="/api"
+type UserServiceImpl struct {
+    // @Inject "user-repository"
+    UserRepo *service.Cached[domain.UserRepository]
+}
+
+// @Route "GET /users/{id}"
+func (s *UserServiceImpl) GetByID(p *GetUserRequest) (*User, error) {
+    return s.UserRepo.MustGet().GetByID(p.ID)
+}
+
+// Auto-generates: factory, remote proxy, routes, DI wiring!
+```
+
+**Or traditional approach (YAML/Code):**
 ```yaml
 # Define services in YAML
 service-definitions:

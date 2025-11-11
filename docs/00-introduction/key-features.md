@@ -13,6 +13,7 @@ Lokstra has several **killer features** that make building REST APIs faster, cle
 3. **One Binary, Multiple Deployments** - Monolith ↔ Microservices
 4. **Built-in Lazy DI** - No external framework needed
 5. **Flexible Configuration** - Code + YAML patterns
+6. **Annotation-Driven Development** - 83% less boilerplate
 
 Let's dive into each feature:
 
@@ -597,7 +598,257 @@ config.LoadConfigFile("dev.yaml", &cfg)  // Merges with base
 
 ---
 
-## 🎯 Feature Comparison
+## � Feature 6: Annotation-Driven Development
+
+### The Problem
+Setting up services with DI, routing, and wiring requires lots of boilerplate:
+
+```go
+// 70+ lines of manual setup for one service!
+
+// 1. Define service
+type UserService struct {
+    DB *service.Cached[*Database]
+}
+
+// 2. Create factory
+func createUserServiceFactory() any {
+    return func(deps map[string]any, config map[string]any) any {
+        return &UserService{
+            DB: service.Cast[*Database](deps["db"]),
+        }
+    }
+}
+
+// 3. Register factory
+lokstra_registry.RegisterServiceFactory("user-service-factory", 
+    createUserServiceFactory())
+
+// 4. Register lazy service
+lokstra_registry.RegisterLazyService("user-service", 
+    "user-service-factory",
+    map[string]any{"depends-on": []string{"db"}})
+
+// 5. Create router from service
+func setupUserRouter() *lokstra.Router {
+    userService := lokstra_registry.GetService[*UserService]("user-service")
+    return router.NewFromService(userService, "/api")
+}
+
+// 6. Register router
+lokstra_registry.RegisterRouter("user-router", setupUserRouter())
+
+// 7. Mount in server config
+// ... more YAML config
+```
+
+### The Lokstra Solution
+**Annotations replace 70+ lines with 12 lines** - like NestJS decorators:
+
+```go
+// @RouterService name="user-service", prefix="/api"
+type UserServiceImpl struct {
+    // @Inject "database"
+    DB *service.Cached[*Database]
+}
+
+// @Route "GET /users"
+func (s *UserServiceImpl) GetAll(p *GetAllRequest) ([]User, error) {
+    return s.DB.MustGet().GetAllUsers()
+}
+
+// @Route "GET /users/{id}"
+func (s *UserServiceImpl) GetByID(p *GetByIDRequest) (*User, error) {
+    return s.DB.MustGet().GetUserByID(p.ID)
+}
+
+// Auto-generates: factory, DI wiring, routes, remote proxy!
+```
+
+### How It Works
+
+**Step 1: Add Annotations**
+```go
+// @RouterService name="user-service", prefix="/api", mount="/api"
+type UserServiceImpl struct {
+    // @Inject "database"
+    DB *service.Cached[*Database]
+}
+
+// @Route "POST /users"
+func (s *UserServiceImpl) Create(p *CreateUserRequest) (*User, error) {
+    return s.DB.MustGet().CreateUser(p)
+}
+```
+
+**Step 2: Run to Auto-Generate**
+```bash
+# Code generation happens automatically
+go run .
+```
+
+**Step 3: Lokstra Generates Everything**
+
+Generates `zz_generated.lokstra.go`:
+```go
+// ✅ Service factory
+func init() {
+    lokstra_registry.RegisterServiceFactory("user-service-factory", ...)
+    lokstra_registry.RegisterLazyService("user-service", ...)
+}
+
+// ✅ Router with routes
+func init() {
+    r := lokstra.NewRouter("user-service")
+    r.POST("/users", ...) // Auto-wired to Create()
+    lokstra_registry.RegisterRouter("user-service", r)
+}
+
+// ✅ Remote service proxy (for microservices)
+type UserServiceRemote struct { ... }
+```
+
+### Three Powerful Annotations
+
+#### 1. @RouterService - Define Service
+```go
+// @RouterService name="user-service", prefix="/api", mount="/api"
+type UserServiceImpl struct {}
+```
+
+**Generates**:
+- Service factory
+- DI registration
+- Router with prefix
+- Remote proxy for microservices
+
+---
+
+#### 2. @Inject - Dependency Injection
+```go
+type UserServiceImpl struct {
+    // @Inject "database"
+    DB *service.Cached[*Database]
+    
+    // @Inject "email-service"
+    Email *service.Cached[*EmailService]
+}
+```
+
+**Generates**:
+- Dependency wiring in factory
+- `depends-on` configuration
+- Type-safe lazy loading
+
+---
+
+#### 3. @Route - HTTP Endpoints
+```go
+// @Route "GET /users"
+func (s *UserServiceImpl) GetAll(p *GetAllRequest) ([]User, error) {}
+
+// @Route "POST /users"
+func (s *UserServiceImpl) Create(p *CreateUserRequest) (*User, error) {}
+
+// @Route "PUT /users/{id}"
+func (s *UserServiceImpl) Update(p *UpdateUserRequest) (*User, error) {}
+```
+
+**Generates**:
+- Route registration
+- Parameter binding (path, query, body)
+- HTTP method mapping
+- Response serialization
+
+### Why This Matters
+
+**Massive Code Reduction**:
+```
+Traditional Approach: 70+ lines of boilerplate
+With Annotations:    12 lines of business logic
+Reduction:           83% less code!
+```
+
+**Developer Experience**:
+- ✅ Like NestJS decorators (familiar pattern)
+- ✅ Like Spring annotations (proven approach)
+- ✅ But in Go (compile-time safe)
+- ✅ No reflection at runtime (fast!)
+
+**Productivity Boost**:
+```go
+// Before: Write 6 separate files
+service.go          // Service implementation
+factory.go          // Factory function
+register.go         // Registration code
+router.go           // Router setup
+routes.go           // Route definitions
+config.yaml         // YAML configuration
+
+// After: Write 1 annotated file
+user_service.go     // Everything in one place!
+```
+
+**Type Safety**:
+- Annotations validated at build time
+- Generated code is type-safe
+- No runtime reflection overhead
+- Full IDE support
+
+### Comparison with Other Frameworks
+
+| Framework | Pattern | Runtime Cost |
+|-----------|---------|--------------|
+| **NestJS** | Decorators | High (reflection) |
+| **Spring** | Annotations | High (reflection) |
+| **Lokstra** | Annotations | **Zero** (code generation) |
+
+**Lokstra advantage**: All the DX benefits of annotations, none of the runtime cost!
+
+### Build Workflow Integration
+
+**Problem**: Code generation only happens during `go run`, not `go build`
+
+**Solution**: Use `--generate-only` flag:
+
+```bash
+# Force code generation without running
+go run . --generate-only
+
+# Then build normally
+go build -o myapp
+```
+
+**Or use provided build scripts**:
+```bash
+# Linux/Mac
+./build.sh
+
+# Windows (PowerShell)
+.\build.ps1
+
+# Windows (CMD)
+.\build.bat
+```
+
+Scripts automatically:
+1. Run `go run . --generate-only`
+2. Run `go mod tidy`
+3. Build for multiple platforms
+
+### Real-World Example
+
+See **Example 07: Enterprise Router Service**:
+- Complete working example
+- Full documentation
+- Before/after comparison
+- Build scripts included
+
+📖 **Full guide**: [Example 07](../01-router-guide/07_enterprise_router_service/)
+
+---
+
+##  Feature Comparison
 
 | Feature | Standard Libs | Gin/Echo | Lokstra |
 |---------|--------------|----------|---------|
@@ -609,6 +860,7 @@ config.LoadConfigFile("dev.yaml", &cfg)  // Merges with base
 | **Config-Driven** | Limited | Limited | Full (YAML) |
 | **Lazy Loading** | Manual | Manual | Built-in |
 | **Convention/Config** | Config | Config | Convention + Config |
+| **Annotations** | No | No | Yes (83% less code) |
 
 ---
 
@@ -643,6 +895,7 @@ Most frameworks focus on **one thing**:
 - ✅ Scalable (multi-deployment)
 - ✅ Clean (built-in DI)
 - ✅ Simple (convention over config)
+- ✅ Modern (annotation-driven like NestJS)
 
 **Result**: Build faster, scale easier, maintain better.
 
