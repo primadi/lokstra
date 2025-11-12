@@ -255,7 +255,14 @@ func RunCurrentServer(timeout time.Duration) error {
 						// Add middlewares if specified (route-level)
 						if len(customRoute.Middlewares) > 0 {
 							for _, mwName := range customRoute.Middlewares {
-								options = append(options, mwName)
+								// Create middleware instance from name (supports inline params)
+								mw := deploy.Global().CreateMiddleware(mwName)
+								if mw != nil {
+									options = append(options, mw)
+								} else {
+									log.Printf("⚠️  Warning: Middleware '%s' not found for route '%s'\n",
+										mwName, customRoute.Name)
+								}
 							}
 						}
 

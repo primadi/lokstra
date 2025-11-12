@@ -1,0 +1,7 @@
+{
+  "default": true,
+  "MD051": false,
+  "MD034": false,
+  "no-bare-urls": false,
+  "no-missing-link-fragments": false
+}

@@ -109,12 +109,19 @@ func BuildRouterFromDefinition(routerName string) (router.Router, error) {
 		if len(metadata.RouteOverrides) > 0 {
 			override.Custom = make(map[string]autogen.Route)
 			for methodName, routeMetadata := range metadata.RouteOverrides {
-				override.Custom[methodName] = autogen.Route{
-					Method: routeMetadata.Method,
-					Path:   routeMetadata.Path,
+				// Convert middleware names to []any
+				var routeMiddlewares []any
+				for _, mwName := range routeMetadata.Middlewares {
+					routeMiddlewares = append(routeMiddlewares, mwName)
 				}
-				logDebug("[metadata CODE] Custom route '%s': method=%s, path=%s",
-					methodName, routeMetadata.Method, routeMetadata.Path)
+
+				override.Custom[methodName] = autogen.Route{
+					Method:      routeMetadata.Method,
+					Path:        routeMetadata.Path,
+					Middlewares: routeMiddlewares,
+				}
+				logDebug("[metadata CODE] Custom route '%s': method=%s, path=%s, middlewares=%d",
+					methodName, routeMetadata.Method, routeMetadata.Path, len(routeMetadata.Middlewares))
 			}
 		}
 

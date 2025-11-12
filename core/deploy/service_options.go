@@ -101,13 +101,14 @@ func WithMiddlewares(middlewares ...string) RegisterServiceTypeOption {
 // ServiceTypeRouter defines router configuration for a service type
 // This is a cleaner alternative to functional options
 type ServiceTypeRouter struct {
-	Resource       string            // Singular resource name (e.g., "user")
-	ResourcePlural string            // Plural resource name (e.g., "users")
-	Convention     string            // Convention type (e.g., "rest", "rpc")
-	PathPrefix     string            // Path prefix for all routes (e.g., "/api")
-	Middlewares    []string          // Middleware names to apply to all routes
-	Hidden         []string          // Method names to hide from router
-	CustomRoutes   map[string]string // Custom route overrides: methodName -> pathSpec (e.g., "GET /path")
+	Resource         string              // Singular resource name (e.g., "user")
+	ResourcePlural   string              // Plural resource name (e.g., "users")
+	Convention       string              // Convention type (e.g., "rest", "rpc")
+	PathPrefix       string              // Path prefix for all routes (e.g., "/api")
+	Middlewares      []string            // Middleware names to apply to all routes
+	Hidden           []string            // Method names to hide from router
+	CustomRoutes     map[string]string   // Custom route overrides: methodName -> pathSpec (e.g., "GET /path")
+	RouteMiddlewares map[string][]string // Per-route middlewares: methodName -> []middleware
 }
 
 // WithRouter creates a RegisterServiceTypeOption from router configuration
@@ -161,9 +162,18 @@ func WithRouter(config *ServiceTypeRouter) RegisterServiceTypeOption {
 					}
 				}
 
+				// Check if this method has per-route middlewares
+				var routeMiddlewares []string
+				if config.RouteMiddlewares != nil {
+					if middlewares, ok := config.RouteMiddlewares[methodName]; ok {
+						routeMiddlewares = middlewares
+					}
+				}
+
 				m.RouteOverrides[methodName] = RouteMetadata{
-					Method: method,
-					Path:   path,
+					Method:      method,
+					Path:        path,
+					Middlewares: routeMiddlewares,
 				}
 			}
 		}

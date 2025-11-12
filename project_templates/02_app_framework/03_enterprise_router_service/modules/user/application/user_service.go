@@ -14,12 +14,12 @@ type UserServiceImpl struct {
 // Ensure implementation
 var _ domain.UserService = (*UserServiceImpl)(nil)
 
-// @Route "GET /users/{id}"
+// @Route "GET /users/{id}", ["mw-test param1=123, param2=abc"]
 func (s *UserServiceImpl) GetByID(p *domain.GetUserRequest) (*domain.User, error) {
 	return s.UserRepo.MustGet().GetByID(p.ID)
 }
 
-// @Route "GET /users"
+// @Route "GET /users", ["mw-test"]
 func (s *UserServiceImpl) List(p *domain.ListUsersRequest) ([]*domain.User, error) {
 	return s.UserRepo.MustGet().List()
 }

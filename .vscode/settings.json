@@ -1,8 +1,17 @@
 {
+  // Disable Markdown link validation for copilot-instructions.md
+  "markdownlint.config": {
+    "MD051": false,
+    "MD034": false
+  },
+  "[markdown]": {
+    "files.exclude": {}
+  }
+  // "markdown.validate.ignoredLinks": ["**/.github/copilot-instructions.md"]
   // "yaml.schemas": {
   //   "./schema/lokstra.json": [
   //     "**/configs/**/*.yaml",
-  //     "**/config/**/*.yaml", 
+  //     "**/config/**/*.yaml",
   //     "lokstra.yaml",
   //     "server.yaml",
   //     "**/lokstra/**/*.yaml"

@@ -1,0 +1,1388 @@
+---
+layout: default
+title: AI Agent Guide - Lokstra Framework
+description: Comprehensive guide for AI agents to understand and use Lokstra Framework effectively
+---
+
+# AI Agent Guide - Lokstra Framework
+
+**Version:** 1.0.0  
+**Last Updated:** November 12, 2025  
+**Target:** AI Agents (GitHub Copilot, Claude, ChatGPT, etc.)
+
+This guide helps AI agents understand how to assist programmers using the **Lokstra Framework** (`github.com/primadi/lokstra`). It provides structured patterns, complete code examples, and best practices for building Go web applications.
+
+---
+
+## Table of Contents
+
+1. [Framework Overview](#framework-overview)
+2. [Core Concepts](#core-concepts)
+3. [Quick Start Patterns](#quick-start-patterns)
+4. [Router Patterns](#router-patterns)
+5. [Service Patterns](#service-patterns)
+6. [Configuration YAML](#configuration-yaml)
+7. [Annotation System](#annotation-system)
+8. [Middleware Usage](#middleware-usage)
+9. [Dependency Injection](#dependency-injection)
+10. [Project Structure Templates](#project-structure-templates)
+11. [Common Patterns & Idioms](#common-patterns--idioms)
+12. [Troubleshooting](#troubleshooting)
+
+---
+
+## Framework Overview
+
+### What is Lokstra?
+
+Lokstra is a **versatile Go web framework** with two usage modes:
+
+1. **Router Mode** (Like Echo, Gin, Chi)
+   - Simple HTTP routing
+   - Flexible handler signatures (29+ forms)
+   - Middleware support
+   - No DI, no config files required
+
+2. **Framework Mode** (Like NestJS, Spring Boot)
+   - Lazy dependency injection (type-safe)
+   - Auto-generated REST routers
+   - YAML-driven configuration
+   - Multi-deployment support (monolith → microservices)
+
+### Key Design Principles
+
+- **Type-safe DI** with Go generics (no `interface{}` casting)
+- **Lazy loading** by default (services loaded on first access)
+- **Zero reflection** in hot path
+- **Configuration-driven** deployment (optional YAML)
+- **Flexible handler signatures** (supports many parameter combinations)
+
+---
+
+## Core Concepts
+
+### 1. Router
+
+HTTP request routing with flexible handler signatures.
+
+```go
+import "github.com/primadi/lokstra"
+
+r := lokstra.NewRouter("api")
+
+// Various handler signatures supported
+r.GET("/hello", func() string {
+    return "Hello, World!"
+})
+
+r.GET("/user/{id}", func(id string) (map[string]any, error) {
+    return map[string]any{"id": id, "name": "John"}, nil
+})
+
+r.POST("/users", func(ctx *request.Context, params *CreateUserParams) error {
+    // params automatically validated
+    return ctx.Api.Ok(params)
+})
+```
+
+### 2. App
+
+Application wrapper with graceful shutdown.
+
+```go
+app := lokstra.NewApp("myapp", ":8080", router)
+app.Run(30 * time.Second) // 30s graceful shutdown timeout
+```
+
+### 3. Service
+
+Business logic component with dependency injection.
+
+```go
+type UserService struct {
+    UserRepo *service.Cached[UserRepository]
+}
+
+func (s *UserService) GetByID(id string) (*User, error) {
+    return s.UserRepo.MustGet().GetByID(id)
+}
+```
+
+### 4. Repository
+
+Data access layer (interface pattern).
+
+```go
+type UserRepository interface {
+    GetByID(id string) (*User, error)
+    List() ([]*User, error)
+    Create(user *User) (*User, error)
+    Update(user *User) (*User, error)
+    Delete(id string) error
+}
+```
+
+### 5. Domain Models
+
+Data structures with validation tags.
+
+```go
+type User struct {
+    ID    string `json:"id"`
+    Name  string `json:"name" validate:"required,min=3,max=50"`
+    Email string `json:"email" validate:"required,email"`
+    Age   int    `json:"age" validate:"min=18,max=120"`
+}
+```
+
+---
+
+## Quick Start Patterns
+
+### Pattern 1: Simple Router (No DI, No Config)
+
+**Use Case:** Learning, simple APIs, minimal setup
+
+```go
+package main
+
+import (
+    "github.com/primadi/lokstra"
+    "github.com/primadi/lokstra/middleware/cors"
+    "github.com/primadi/lokstra/middleware/recovery"
+    "time"
+)
+
+func main() {
+    r := lokstra.NewRouter("api")
+    
+    // Middleware
+    r.Use(recovery.Middleware(nil))
+    r.Use(cors.Middleware([]string{"*"}))
+    
+    // Routes
+    r.GET("/", func() string {
+        return "Hello, Lokstra!"
+    })
+    
+    r.GET("/ping", func() string {
+        return "pong"
+    })
+    
+    r.GET("/users", func() []map[string]any {
+        return []map[string]any{
+            {"id": "1", "name": "Alice"},
+            {"id": "2", "name": "Bob"},
+        }
+    })
+    
+    // Run
+    app := lokstra.NewApp("simple", ":8080", r)
+    app.Run(30 * time.Second)
+}
+```
+
+### Pattern 2: With Services and Config
+
+**Use Case:** Production apps, team projects, scalable architecture
+
+**File: `main.go`**
+```go
+package main
+
+import (
+    "github.com/primadi/lokstra/core/deploy"
+    "github.com/primadi/lokstra/lokstra_registry"
+)
+
+func main() {
+    deploy.SetLogLevelFromEnv() // LOKSTRA_LOG_LEVEL=debug
+    
+    registerServiceTypes()
+    registerMiddlewareTypes()
+    
+    lokstra_registry.RunServerFromConfig()
+}
+```
+
+**File: `register.go`**
+```go
+package main
+
+import (
+    "github.com/primadi/lokstra/lokstra_registry"
+    "myapp/service"
+    "myapp/repository"
+)
+
+func registerServiceTypes() {
+    // Register repository
+    lokstra_registry.RegisterServiceType(
+        "user-repository-factory",
+        repository.NewUserRepositoryFactory,
+        nil,
+    )
+    
+    // Register service
+    lokstra_registry.RegisterServiceType(
+        "user-service-factory",
+        service.UserServiceFactory,
+        service.UserServiceRemoteFactory,
+    )
+}
+
+func registerMiddlewareTypes() {
+    // Built-in middleware auto-registered
+    // Custom middleware registration here
+}
+```
+
+**File: `config.yaml`**
+```yaml
+service-definitions:
+  user-repository:
+    type: user-repository-factory
+    config:
+      dsn: "memory://users"
+  
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - user-repository
+
+deployments:
+  development:
+    servers:
+      api:
+        base-url: "http://localhost:8080"
+        addr: ":8080"
+        published-services:
+          - user-service
+```
+
+---
+
+## Router Patterns
+
+### Handler Signature Variations
+
+Lokstra supports **29+ handler signatures**. Here are the most common:
+
+```go
+// 1. Simple return
+r.GET("/hello", func() string {
+    return "Hello"
+})
+
+// 2. Return with error
+r.GET("/user/{id}", func(id string) (string, error) {
+    if id == "" {
+        return "", errors.New("id required")
+    }
+    return "User: " + id, nil
+})
+
+// 3. Struct response
+r.GET("/user/{id}", func(id string) (*User, error) {
+    return &User{ID: id, Name: "John"}, nil
+})
+
+// 4. Context access
+r.GET("/header", func(ctx *request.Context) error {
+    token := ctx.Req.Header.Get("Authorization")
+    return ctx.Api.Ok(map[string]string{"token": token})
+})
+
+// 5. Path parameters
+r.GET("/posts/{postId}/comments/{commentId}", 
+    func(postId, commentId string) (string, error) {
+        return fmt.Sprintf("Post: %s, Comment: %s", postId, commentId), nil
+    })
+
+// 6. Request body binding with validation
+type CreateUserParams struct {
+    Name  string `json:"name" validate:"required,min=3"`
+    Email string `json:"email" validate:"required,email"`
+}
+
+r.POST("/users", func(ctx *request.Context, params *CreateUserParams) error {
+    // params already validated!
+    return ctx.Api.Ok(params)
+})
+
+// 7. Multiple parameters
+r.PUT("/users/{id}", func(ctx *request.Context, id string, params *UpdateUserParams) error {
+    params.ID = id
+    user := updateUser(params)
+    return ctx.Api.Ok(user)
+})
+
+// 8. Query parameters
+type SearchParams struct {
+    Query string `query:"q" validate:"required"`
+    Page  int    `query:"page" validate:"min=1"`
+    Limit int    `query:"limit" validate:"min=1,max=100"`
+}
+
+r.GET("/search", func(params *SearchParams) ([]Result, error) {
+    return searchResults(params.Query, params.Page, params.Limit), nil
+})
+```
+
+### Router Groups and Versioning
+
+```go
+r := lokstra.NewRouter("api")
+
+// Group routes
+v1 := r.Group("/v1")
+v1.GET("/users", listUsersV1)
+v1.POST("/users", createUserV1)
+
+v2 := r.Group("/v2")
+v2.GET("/users", listUsersV2)
+v2.POST("/users", createUserV2)
+
+// Nested groups
+api := r.Group("/api")
+admin := api.Group("/admin")
+admin.GET("/stats", getStats)
+```
+
+### Middleware Application
+
+```go
+import (
+    "github.com/primadi/lokstra/middleware/recovery"
+    "github.com/primadi/lokstra/middleware/request_logger"
+    "github.com/primadi/lokstra/middleware/cors"
+)
+
+r := lokstra.NewRouter("api")
+
+// Global middleware (all routes)
+r.Use(recovery.Middleware(nil))
+r.Use(request_logger.Middleware(nil))
+
+// Group middleware
+authorized := r.Group("/admin")
+authorized.Use(authMiddleware)
+authorized.GET("/users", listUsers)
+
+// Route-specific middleware
+r.GET("/public", publicHandler)
+r.GET("/private", privateHandler, authMiddleware, logMiddleware)
+```
+
+---
+
+## Service Patterns
+
+### Service Factory Pattern
+
+**Service implementation:**
+
+```go
+package service
+
+import (
+    "github.com/primadi/lokstra/core/service"
+    "myapp/domain/user"
+)
+
+type UserServiceImpl struct {
+    UserRepo *service.Cached[user.UserRepository]
+}
+
+var _ user.UserService = (*UserServiceImpl)(nil)
+
+func (s *UserServiceImpl) GetByID(p *user.GetUserParams) (*user.User, error) {
+    return s.UserRepo.MustGet().GetByID(p.ID)
+}
+
+func (s *UserServiceImpl) List(p *user.ListUsersParams) ([]*user.User, error) {
+    return s.UserRepo.MustGet().List()
+}
+
+func (s *UserServiceImpl) Create(p *user.CreateUserParams) (*user.User, error) {
+    u := &user.User{
+        Name:  p.Name,
+        Email: p.Email,
+    }
+    return s.UserRepo.MustGet().Create(u)
+}
+
+// Factory function for local deployment
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+    return &UserServiceImpl{
+        UserRepo: service.Cast[user.UserRepository](deps["user-repository"]),
+    }
+}
+
+// Factory function for remote deployment (microservices)
+func UserServiceRemoteFactory(deps map[string]any, config map[string]any) any {
+    proxyService, _ := config["remote"].(*proxy.Service)
+    return NewUserServiceRemote(proxyService)
+}
+```
+
+### Repository Factory Pattern
+
+```go
+package repository
+
+import "myapp/domain/user"
+
+type UserRepositoryInMemory struct {
+    users map[string]*user.User
+}
+
+func (r *UserRepositoryInMemory) GetByID(id string) (*user.User, error) {
+    if u, ok := r.users[id]; ok {
+        return u, nil
+    }
+    return nil, errors.New("user not found")
+}
+
+func (r *UserRepositoryInMemory) List() ([]*user.User, error) {
+    result := make([]*user.User, 0, len(r.users))
+    for _, u := range r.users {
+        result = append(result, u)
+    }
+    return result, nil
+}
+
+// Factory function
+func NewUserRepositoryFactory(deps map[string]any, config map[string]any) any {
+    return &UserRepositoryInMemory{
+        users: make(map[string]*user.User),
+    }
+}
+```
+
+### Domain Interface Pattern
+
+**File: `domain/user/repository.go`**
+```go
+package user
+
+type UserRepository interface {
+    GetByID(id string) (*User, error)
+    List() ([]*User, error)
+    Create(user *User) (*User, error)
+    Update(user *User) (*User, error)
+    Delete(id string) error
+}
+```
+
+**File: `domain/user/service.go`**
+```go
+package user
+
+type UserService interface {
+    GetByID(p *GetUserParams) (*User, error)
+    List(p *ListUsersParams) ([]*User, error)
+    Create(p *CreateUserParams) (*User, error)
+    Update(p *UpdateUserParams) (*User, error)
+    Delete(p *DeleteUserParams) error
+}
+```
+
+**File: `domain/user/models.go`**
+```go
+package user
+
+type User struct {
+    ID    string `json:"id"`
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+
+type GetUserParams struct {
+    ID string `path:"id" validate:"required"`
+}
+
+type ListUsersParams struct {
+    Page  int `query:"page" validate:"min=1"`
+    Limit int `query:"limit" validate:"min=1,max=100"`
+}
+
+type CreateUserParams struct {
+    Name  string `json:"name" validate:"required,min=3,max=50"`
+    Email string `json:"email" validate:"required,email"`
+}
+
+type UpdateUserParams struct {
+    ID    string `path:"id" validate:"required"`
+    Name  string `json:"name" validate:"required,min=3,max=50"`
+    Email string `json:"email" validate:"required,email"`
+}
+
+type DeleteUserParams struct {
+    ID string `path:"id" validate:"required"`
+}
+```
+
+---
+
+## Configuration YAML
+
+### Complete Schema Reference
+
+```yaml
+# YAML Schema: https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# Middleware definitions (optional, built-in middleware auto-registered)
+middleware-definitions:
+  recovery:
+    type: recovery
+    config:
+      enable_stack_trace: false
+      enable_logging: true
+  
+  request-logger:
+    type: request-logger
+    config:
+      prefix: "API"
+      enable_colors: true
+      skip_paths: ["/health", "/metrics"]
+  
+  cors:
+    type: cors
+    config:
+      allow_origins: ["*"]
+  
+  body-limit:
+    type: body-limit
+    config:
+      max_size: 10485760  # 10MB
+      skip_on_path: ["/upload/**"]
+
+# Service definitions
+service-definitions:
+  # Repository layer
+  user-repository:
+    type: user-repository-factory
+    config:
+      dsn: "postgres://localhost/mydb"
+  
+  # Service layer
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - user-repository
+    config:
+      cache_ttl: 300
+    router:
+      path-prefix: /api/v1
+      middlewares:
+        - recovery
+        - request-logger
+      hidden:  # Hide specific methods from auto-router
+        - InternalMethod
+        - PrivateHelper
+
+# Router definitions (advanced path rewriting)
+router-definitions:
+  user-router:
+    path-prefix: /api
+    path-rewrites:
+      - pattern: "^/api/v1/(.*)$"
+        replacement: "/api/v2/$1"
+    middlewares:
+      - cors
+      - body-limit
+    hidden:
+      - DeprecatedMethod
+
+# Deployment configurations
+deployments:
+  # Development environment (monolith)
+  development:
+    servers:
+      api-server:
+        base-url: "http://localhost:8080"
+        addr: ":8080"
+        published-services:
+          - user-service
+          - order-service
+          - payment-service
+  
+  # Staging environment
+  staging:
+    servers:
+      api-server:
+        base-url: "https://staging-api.example.com"
+        addr: ":8080"
+        published-services:
+          - user-service
+          - order-service
+  
+  # Production microservices
+  production:
+    servers:
+      user-api:
+        base-url: "https://user-api.example.com"
+        addr: ":8001"
+        published-services:
+          - user-service
+      
+      order-api:
+        base-url: "https://order-api.example.com"
+        addr: ":8002"
+        published-services:
+          - order-service
+      
+      payment-api:
+        base-url: "https://payment-api.example.com"
+        addr: ":8003"
+        published-services:
+          - payment-service
+```
+
+### Environment-Specific Config
+
+**Development:**
+```yaml
+deployments:
+  development:
+    servers:
+      api:
+        addr: ":8080"
+        published-services: [user-service, order-service]
+```
+
+**Production (Microservices):**
+```yaml
+deployments:
+  production:
+    servers:
+      user-api:
+        addr: ":8001"
+        base-url: "https://user.example.com"
+        published-services: [user-service]
+      
+      order-api:
+        addr: ":8002"
+        base-url: "https://order.example.com"
+        published-services: [order-service]
+```
+
+**Run specific deployment:**
+```bash
+LOKSTRA_DEPLOYMENT=production go run .
+```
+
+---
+
+## Annotation System
+
+### @RouterService Annotation
+
+Generate REST routers automatically from service methods.
+
+```go
+package application
+
+import (
+    "github.com/primadi/lokstra/core/service"
+    "myapp/domain"
+)
+
+// @RouterService name="user-service", prefix="/api", middlewares=["recovery", "request-logger"]
+type UserServiceImpl struct {
+    // @Inject "user-repository"
+    UserRepo *service.Cached[domain.UserRepository]
+}
+
+// @Route "GET /users/{id}"
+func (s *UserServiceImpl) GetByID(p *domain.GetUserRequest) (*domain.User, error) {
+    return s.UserRepo.MustGet().GetByID(p.ID)
+}
+
+// @Route "GET /users"
+func (s *UserServiceImpl) List(p *domain.ListUsersRequest) ([]*domain.User, error) {
+    return s.UserRepo.MustGet().List()
+}
+
+// @Route "POST /users"
+func (s *UserServiceImpl) Create(p *domain.CreateUserRequest) (*domain.User, error) {
+    u := &domain.User{
+        Name:   p.Name,
+        Email:  p.Email,
+    }
+    return s.UserRepo.MustGet().Create(u)
+}
+
+// @Route "PUT /users/{id}", middlewares=["auth", "admin"]
+func (s *UserServiceImpl) Update(p *domain.UpdateUserRequest) (*domain.User, error) {
+    u := &domain.User{
+        ID:    p.ID,
+        Name:  p.Name,
+        Email: p.Email,
+    }
+    return s.UserRepo.MustGet().Update(u)
+}
+
+// @Route "DELETE /users/{id}", middlewares=["auth", "admin"]
+func (s *UserServiceImpl) Delete(p *domain.DeleteUserRequest) error {
+    return s.UserRepo.MustGet().Delete(p.ID)
+}
+
+func Register() {
+    // Package auto-loaded by code generation
+}
+```
+
+### Generate Code from Annotations
+
+```bash
+# From project root
+lokstra autogen .
+
+# Or from specific folder
+lokstra autogen ./modules/user/application
+
+# Generated file: zz_generated.lokstra.go
+```
+
+### Annotation Reference
+
+| Annotation | Purpose | Example |
+|------------|---------|---------|
+| `@RouterService` | Define service router | `@RouterService name="user-service", prefix="/api"` |
+| `@Inject` | Dependency injection | `@Inject "user-repository"` |
+| `@Route` | HTTP route mapping | `@Route "GET /users/{id}"` |
+
+**@RouterService Parameters:**
+- `name`: Service name (required)
+- `prefix`: URL prefix (optional, default: "/")
+- `middlewares`: Middleware list (optional)
+
+**@Route Parameters:**
+- HTTP method + path pattern
+- Supports path parameters: `{id}`, `{userId}`, etc.
+- Optional `middlewares` parameter for per-route middleware: `middlewares=["mw1", "mw2"]`
+
+**Example with per-route middleware:**
+```go
+// @Route "GET /users/{id}"  // No middleware
+func (s *UserService) GetByID(p *GetUserParams) (*User, error) { ... }
+
+// @Route "POST /users", middlewares=["auth"]  // Requires auth
+func (s *UserService) Create(p *CreateUserParams) (*User, error) { ... }
+
+// @Route "DELETE /users/{id}", middlewares=["auth", "admin"]  // Requires auth + admin
+func (s *UserService) Delete(p *DeleteUserParams) error { ... }
+```
+
+---
+
+## Middleware Usage
+
+### Built-in Middleware
+
+```go
+import (
+    "github.com/primadi/lokstra/middleware/recovery"
+    "github.com/primadi/lokstra/middleware/request_logger"
+    "github.com/primadi/lokstra/middleware/slow_request_logger"
+    "github.com/primadi/lokstra/middleware/cors"
+    "github.com/primadi/lokstra/middleware/body_limit"
+    "github.com/primadi/lokstra/middleware/gzipcompression"
+)
+
+r := lokstra.NewRouter("api")
+
+// 1. Recovery - catch panics
+r.Use(recovery.Middleware(&recovery.Config{
+    EnableStackTrace: false, // Disable in production
+    EnableLogging: true,
+}))
+
+// 2. Request Logger
+r.Use(request_logger.Middleware(&request_logger.Config{
+    Prefix: "API",
+    EnableColors: true,
+    SkipPaths: []string{"/health"},
+}))
+
+// 3. Slow Request Logger
+r.Use(slow_request_logger.Middleware(&slow_request_logger.Config{
+    Threshold: 500 * time.Millisecond,
+    EnableColors: true,
+}))
+
+// 4. CORS
+r.Use(cors.Middleware([]string{"*"}))
+
+// 5. Body Limit
+r.Use(body_limit.Middleware(&body_limit.Config{
+    MaxSize: 10 * 1024 * 1024, // 10MB
+    SkipOnPath: []string{"/upload/**"},
+}))
+
+// 6. Gzip Compression
+r.Use(gzipcompression.Middleware(&gzipcompression.Config{
+    MinSize: 1024,
+    CompressionLevel: gzip.BestSpeed,
+}))
+```
+
+### Custom Middleware
+
+```go
+func CustomAuthMiddleware(cfg *AuthConfig) request.HandlerFunc {
+    return request.HandlerFunc(func(ctx *request.Context) error {
+        // Pre-processing
+        token := ctx.Req.Header.Get("Authorization")
+        
+        if !validateToken(token) {
+            return ctx.Api.Unauthorized("Invalid token")
+        }
+        
+        // Call next handler
+        err := ctx.Next()
+        
+        // Post-processing (optional)
+        
+        return err
+    })
+}
+
+// Usage
+r.Use(CustomAuthMiddleware(&AuthConfig{
+    Secret: "my-secret",
+}))
+```
+
+### Middleware in YAML
+
+```yaml
+middleware-definitions:
+  my-auth:
+    type: custom-auth
+    config:
+      secret: "my-secret"
+      skip_paths: ["/login", "/register"]
+
+service-definitions:
+  user-service:
+    router:
+      middlewares:
+        - my-auth
+```
+
+---
+
+## Dependency Injection
+
+### Lazy Loading Pattern
+
+```go
+import "github.com/primadi/lokstra/core/service"
+
+// Define lazy reference (global variable)
+var userService = service.LazyLoad[*UserService]("user-service")
+var dbPool = service.LazyLoad[*DBPool]("database")
+
+func handler() {
+    // First call loads service (thread-safe via sync.Once)
+    users := userService.MustGet().GetAll()
+    
+    // Subsequent calls return cached instance (zero overhead)
+    user := userService.MustGet().GetByID("123")
+}
+```
+
+### Service.Cached Pattern
+
+```go
+type UserServiceImpl struct {
+    // Cached wrapper for lazy loading dependency
+    UserRepo *service.Cached[user.UserRepository]
+}
+
+func (s *UserServiceImpl) GetByID(id string) (*user.User, error) {
+    // MustGet() loads on first access, cached thereafter
+    return s.UserRepo.MustGet().GetByID(id)
+}
+
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+    return &UserServiceImpl{
+        // Cast dependency to typed Cached wrapper
+        UserRepo: service.Cast[user.UserRepository](deps["user-repository"]),
+    }
+}
+```
+
+### Service Registration
+
+```go
+import "github.com/primadi/lokstra/lokstra_registry"
+
+func registerServiceTypes() {
+    // Register with factory functions
+    lokstra_registry.RegisterServiceType(
+        "user-service-factory",       // Type name (matches config.yaml)
+        UserServiceFactory,            // Local factory (monolith)
+        UserServiceRemoteFactory,      // Remote factory (microservices)
+    )
+}
+```
+
+---
+
+## Project Structure Templates
+
+### Template 1: Router Only (Simple)
+
+```
+myapp/
+├── main.go
+├── handlers.go
+├── middleware.go
+└── go.mod
+```
+
+**main.go:**
+```go
+package main
+
+import "github.com/primadi/lokstra"
+
+func main() {
+    r := lokstra.NewRouter("api")
+    r.GET("/users", listUsers)
+    r.POST("/users", createUser)
+    
+    app := lokstra.NewApp("simple", ":8080", r)
+    app.Run(30 * time.Second)
+}
+```
+
+### Template 2: Medium System (DDD)
+
+```
+myapp/
+├── main.go
+├── register.go
+├── config.yaml
+├── domain/
+│   ├── user/
+│   │   ├── models.go
+│   │   ├── repository.go
+│   │   └── service.go
+│   └── order/
+│       ├── models.go
+│       ├── repository.go
+│       └── service.go
+├── repository/
+│   ├── user_repository.go
+│   └── order_repository.go
+└── service/
+    ├── user_service.go
+    └── order_service.go
+```
+
+### Template 3: Enterprise Modular (Bounded Contexts)
+
+```
+myapp/
+├── main.go
+├── register.go
+├── config.yaml
+├── shared/
+│   ├── errors/
+│   └── types/
+└── modules/
+    ├── user/
+    │   ├── domain/
+    │   │   ├── models.go
+    │   │   ├── repository.go
+    │   │   └── service.go
+    │   ├── application/
+    │   │   └── user_service.go
+    │   └── infrastructure/
+    │       └── user_repository.go
+    └── order/
+        ├── domain/
+        ├── application/
+        └── infrastructure/
+```
+
+### Template 4: Enterprise with Annotations
+
+```
+myapp/
+├── main.go
+├── register.go
+├── config.yaml
+└── modules/
+    └── user/
+        ├── domain/
+        │   ├── models.go
+        │   ├── repository.go
+        │   └── service.go
+        ├── application/
+        │   ├── user_service.go           # Contains @RouterService, @Route
+        │   └── zz_generated.lokstra.go  # Auto-generated
+        └── infrastructure/
+            └── user_repository.go
+```
+
+**Generate code:**
+```bash
+lokstra autogen ./modules/user/application
+```
+
+---
+
+## Common Patterns & Idioms
+
+### Pattern: Request/Response DTOs
+
+```go
+// Request DTO with validation
+type CreateUserRequest struct {
+    Name  string `json:"name" validate:"required,min=3,max=50"`
+    Email string `json:"email" validate:"required,email"`
+    Age   int    `json:"age" validate:"min=18,max=120"`
+}
+
+// Response DTO
+type UserResponse struct {
+    ID        string    `json:"id"`
+    Name      string    `json:"name"`
+    Email     string    `json:"email"`
+    CreatedAt time.Time `json:"created_at"`
+}
+
+// Handler
+r.POST("/users", func(ctx *request.Context, req *CreateUserRequest) error {
+    user := createUser(req)
+    resp := &UserResponse{
+        ID:        user.ID,
+        Name:      user.Name,
+        Email:     user.Email,
+        CreatedAt: user.CreatedAt,
+    }
+    return ctx.Api.Created(resp)
+})
+```
+
+### Pattern: Error Handling
+
+```go
+import "github.com/primadi/lokstra/core/request"
+
+func handler(ctx *request.Context) error {
+    // Not found
+    return ctx.Api.NotFound("User not found")
+    
+    // Bad request
+    return ctx.Api.BadRequest("Invalid parameters")
+    
+    // Unauthorized
+    return ctx.Api.Unauthorized("Invalid token")
+    
+    // Forbidden
+    return ctx.Api.Forbidden("Access denied")
+    
+    // Internal error
+    return ctx.Api.InternalServerError("Database connection failed")
+    
+    // Custom error
+    return ctx.Api.ErrorWithCode(422, "Validation failed", validationErrors)
+}
+```
+
+### Pattern: Context Response Helpers
+
+```go
+func handler(ctx *request.Context) error {
+    // Success responses
+    ctx.Api.Ok(data)                    // 200 OK
+    ctx.Api.Created(data)               // 201 Created
+    ctx.Api.NoContent()                 // 204 No Content
+    
+    // Error responses
+    ctx.Api.BadRequest(message)         // 400
+    ctx.Api.Unauthorized(message)       // 401
+    ctx.Api.Forbidden(message)          // 403
+    ctx.Api.NotFound(message)           // 404
+    ctx.Api.InternalServerError(msg)    // 500
+    
+    // Custom response
+    ctx.Api.ErrorWithCode(code, msg, data)
+}
+```
+
+### Pattern: Database Integration
+
+```go
+import "github.com/primadi/lokstra/services/dbpool_pg"
+
+// Register database pool
+func registerServiceTypes() {
+    lokstra_registry.RegisterServiceType(
+        "database",
+        dbpool_pg.Factory,
+        nil,
+    )
+}
+```
+
+**config.yaml:**
+```yaml
+service-definitions:
+  database:
+    type: database
+    config:
+      dsn: "postgres://user:pass@localhost/mydb?sslmode=disable"
+      max_open_conns: 25
+      max_idle_conns: 5
+```
+
+**Usage in repository:**
+```go
+import "github.com/primadi/lokstra/core/service"
+
+type UserRepository struct {
+    DB *service.Cached[*pgxpool.Pool]
+}
+
+func (r *UserRepository) GetByID(id string) (*User, error) {
+    db := r.DB.MustGet()
+    
+    var user User
+    err := db.QueryRow(context.Background(),
+        "SELECT id, name, email FROM users WHERE id = $1", id,
+    ).Scan(&user.ID, &user.Name, &user.Email)
+    
+    return &user, err
+}
+```
+
+### Pattern: Multiple Deployments
+
+**config.yaml:**
+```yaml
+deployments:
+  # Development: All services in one server
+  development:
+    servers:
+      monolith:
+        addr: ":8080"
+        published-services: [user-service, order-service, payment-service]
+  
+  # Production: Separate microservices
+  production:
+    servers:
+      user-api:
+        addr: ":8001"
+        base-url: "https://user-api.example.com"
+        published-services: [user-service]
+      
+      order-api:
+        addr: ":8002"
+        base-url: "https://order-api.example.com"
+        published-services: [order-service]
+```
+
+**Run:**
+```bash
+# Development
+LOKSTRA_DEPLOYMENT=development go run .
+
+# Production (multiple processes)
+LOKSTRA_DEPLOYMENT=production LOKSTRA_SERVER=user-api go run .
+LOKSTRA_DEPLOYMENT=production LOKSTRA_SERVER=order-api go run .
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Service Not Found
+
+**Error:**
+```
+panic: service 'user-service' not found in registry
+```
+
+**Solution:**
+- Check service registered: `lokstra_registry.RegisterServiceType("user-service-factory", ...)`
+- Check config.yaml: Service name must match factory type
+- Check factory is called in `register.go`
+
+#### 2. Import Cycle
+
+**Error:**
+```
+import cycle not allowed
+```
+
+**Solution:**
+- Use domain interfaces in separate package
+- Repository/Service should depend on domain, not vice versa
+- Structure: `domain/` → `repository/` → `service/`
+
+#### 3. Handler Signature Not Recognized
+
+**Error:**
+```
+unsupported handler signature
+```
+
+**Solution:**
+- Check handler returns error or supported type
+- Use `*request.Context` for context access
+- Use struct pointers for request parameters: `*CreateUserParams`
+
+#### 4. Validation Not Working
+
+**Error:**
+```
+validation tags ignored
+```
+
+**Solution:**
+- Ensure struct has `validate` tags: `validate:"required,email"`
+- Use pointer to struct: `func handler(params *CreateUserParams)`
+- Import validator: `github.com/primadi/lokstra/common/validator`
+
+#### 5. Annotation Code Not Generated
+
+**Error:**
+```
+zz_generated.lokstra.go not created
+```
+
+**Solution:**
+```bash
+# Run code generator
+lokstra autogen ./path/to/service
+
+# Ensure annotations are correct
+# @RouterService name="service-name", prefix="/api"
+# @Route "GET /users/{id}"
+```
+
+#### 6. Middleware Not Applied
+
+**Solution:**
+- Check middleware order: `recovery` should be first
+- Check middleware registered: Built-in middleware auto-registered
+- Verify YAML config if using config-driven middleware
+
+---
+
+## Quick Reference
+
+### CLI Commands
+
+```bash
+# Install CLI
+go install github.com/primadi/lokstra/cmd/lokstra@latest
+
+# Create new project
+lokstra new myapp
+lokstra new myapp -template 02_app_framework/01_medium_system
+
+# Generate code from annotations
+lokstra autogen .
+lokstra autogen ./modules/user/application
+
+# List templates
+lokstra new --help
+```
+
+### Import Paths
+
+```go
+// Core
+import "github.com/primadi/lokstra"
+import "github.com/primadi/lokstra/core/request"
+import "github.com/primadi/lokstra/core/service"
+import "github.com/primadi/lokstra/core/deploy"
+
+// Registry
+import "github.com/primadi/lokstra/lokstra_registry"
+
+// Middleware
+import "github.com/primadi/lokstra/middleware/recovery"
+import "github.com/primadi/lokstra/middleware/request_logger"
+import "github.com/primadi/lokstra/middleware/cors"
+
+// Services
+import "github.com/primadi/lokstra/services/dbpool_pg"
+import "github.com/primadi/lokstra/services/redis"
+```
+
+### Environment Variables
+
+```bash
+# Deployment selection
+LOKSTRA_DEPLOYMENT=production
+
+# Server selection (multi-server deployment)
+LOKSTRA_SERVER=api-server
+
+# Log level
+LOKSTRA_LOG_LEVEL=debug  # silent, error, warn, info, debug
+
+# Config file path
+LOKSTRA_CONFIG=./config.yaml
+```
+
+---
+
+## Resources
+
+- **Documentation:** https://primadi.github.io/lokstra/
+- **GitHub:** https://github.com/primadi/lokstra
+- **Examples:** https://primadi.github.io/lokstra/00-introduction/examples/
+- **Templates:** https://github.com/primadi/lokstra/tree/dev2/project_templates
+- **Schema:** https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+---
+
+## AI Agent Best Practices
+
+### When Helping Programmers:
+
+1. **Ask about project scale:**
+   - Small/learning → Suggest router-only mode
+   - Medium/production → Suggest framework mode with DDD
+   - Enterprise → Suggest modular architecture with annotations
+
+2. **Suggest appropriate template:**
+   - `01_router/01_router_only` for learning
+   - `02_app_framework/01_medium_system` for production apps
+   - `02_app_framework/03_enterprise_router_service` for large systems
+
+3. **Always provide complete code:**
+   - Include imports
+   - Include error handling
+   - Include validation tags
+   - Include config.yaml if using framework mode
+
+4. **Follow project structure:**
+   - `domain/` for interfaces and models
+   - `repository/` for data access
+   - `service/` for business logic
+   - `main.go` and `register.go` for bootstrap
+
+5. **Use type-safe patterns:**
+   - `service.LazyLoad[T]` for dependencies
+   - `service.Cached[T]` in structs
+   - Generic-based DI (avoid `interface{}`)
+
+---
+
+**End of AI Agent Guide**
+
+For more details, refer to the [complete documentation](https://primadi.github.io/lokstra/).

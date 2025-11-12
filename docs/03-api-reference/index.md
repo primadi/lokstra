@@ -47,12 +47,12 @@ Ready-to-use middleware:
 
 - **[CORS](05-middleware/cors)** - Cross-Origin Resource Sharing
 - **[Request Logger](05-middleware/request-logger)** - HTTP request logging
-- **[JWT Auth](05-middleware/jwtauth)** - JWT authentication
 - **[Recovery](05-middleware/recovery)** - Panic recovery
 - **[Body Limit](05-middleware/body-limit)** - Request body size limiter
 - **[Gzip Compression](05-middleware/gzipcompression)** - Response compression
-- **[Access Control](05-middleware/accesscontrol)** - Permission-based access
 - **[Slow Request Logger](05-middleware/slow-request-logger)** - Slow request detection
+
+> **Note:** JWT Auth and Access Control middleware have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
 ### Built-in Services
 Standard services and service APIs:
@@ -61,13 +61,8 @@ Standard services and service APIs:
 - **[Redis](06-services/redis)** - Redis client service
 - **[KV Store](06-services/kvstore)** - Key-value store interface
 - **[Metrics (Prometheus)](06-services/metrics)** - Prometheus metrics
-- **[Auth Service](06-services/auth-service)** - Authentication service
-- **[Auth Flow (Password)](06-services/auth-flow-password)** - Password authentication
-- **[Auth Flow (OTP)](06-services/auth-flow-otp)** - OTP authentication
-- **[Auth Session (Redis)](06-services/auth-session-redis)** - Redis-based sessions
-- **[Auth Token (JWT)](06-services/auth-token-jwt)** - JWT token management
-- **[Auth User Repository (PostgreSQL)](06-services/auth-user-repo-pg)** - PostgreSQL user storage
-- **[Auth Validator](06-services/auth-validator)** - Auth validation utilities
+
+> **Note:** Authentication services have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
 ### Helper Packages
 Utility functions and helpers:
@@ -115,17 +110,19 @@ import "github.com/primadi/lokstra/api_client"
 // Middleware (auto-registered when imported)
 import _ "github.com/primadi/lokstra/middleware/cors"
 import _ "github.com/primadi/lokstra/middleware/request_logger"
-import _ "github.com/primadi/lokstra/middleware/jwtauth"
 // ... see 05-middleware for complete list
+// Auth middleware moved to: github.com/primadi/lokstra-auth
 
 // Services (auto-registered when imported)
 import _ "github.com/primadi/lokstra/services/dbpool_pg"
 import _ "github.com/primadi/lokstra/services/redis"
-import _ "github.com/primadi/lokstra/services/auth_service"
 // ... see 06-services for complete list
+// Auth services moved to: github.com/primadi/lokstra-auth
 
 // Service APIs
-import "github.com/primadi/lokstra/serviceapi"
+import "github.com/primadi/lokstra/serviceapi/db_pool"
+import "github.com/primadi/lokstra/serviceapi/kvstore"
+// Auth service APIs moved to: github.com/primadi/lokstra-auth
 import "github.com/primadi/lokstra/serviceapi/auth"
 
 // Helpers
@@ -222,11 +219,11 @@ router := lokstra.NewRouter("api")
 router.Use("cors") // Middleware name from config/registry
 
 // Apply to specific route
-router.GET("/users", getUsersHandler, "auth", "logger")
+router.GET("/users", getUsersHandler, "logger")
 
 // Apply to route group
 admin := router.Group("/admin")
-admin.Use("auth", "admin-only")
+admin.Use("logger")
 admin.GET("/users", listUsers)
 ```
 

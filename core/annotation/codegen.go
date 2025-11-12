@@ -171,15 +171,16 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 
 		// Create service generation entry
 		service := &ServiceGeneration{
-			ServiceName:  serviceName,
-			Prefix:       prefix,
-			Middlewares:  middlewares,
-			Routes:       make(map[string]string),
-			Methods:      make(map[string]*MethodSignature),
-			Dependencies: make(map[string]*DependencyInfo),
-			Imports:      make(map[string]string),
-			StructName:   ann.TargetName,
-			SourceFile:   file.Filename,
+			ServiceName:      serviceName,
+			Prefix:           prefix,
+			Middlewares:      middlewares,
+			Routes:           make(map[string]string),
+			RouteMiddlewares: make(map[string][]string),
+			Methods:          make(map[string]*MethodSignature),
+			Dependencies:     make(map[string]*DependencyInfo),
+			Imports:          make(map[string]string),
+			StructName:       ann.TargetName,
+			SourceFile:       file.Filename,
 		}
 
 		// Extract imports from source file
@@ -351,27 +352,36 @@ func extractRoutes(file *FileToProcess, service *ServiceGeneration) error {
 			continue
 		}
 
-		// @Route "GET /users/{id}"
-		// or @Route method="GET", path="/users/{id}"
-		args, err := ann.readArgs("route")
-		if err != nil {
-			// Try named args
-			args, err = ann.readArgs("method", "path")
-			if err != nil {
-				return fmt.Errorf("@Route on line %d: %w", ann.Line, err)
-			}
-		}
+		// Supported formats:
+		// 1. @Route "GET /users/{id}"                                  - route only
+		// 2. @Route "GET /users/{id}", ["mw1", "mw2"]                  - route + middlewares (shorthand)
+		// 3. @Route route="GET /users/{id}", middlewares=["mw1"]       - named args
 
 		var routeStr string
-		if route, ok := args["route"].(string); ok {
-			routeStr = route
-		} else if method, ok := args["method"].(string); ok {
-			path, _ := args["path"].(string)
-			routeStr = method + " " + path
+		var middlewares []string
+
+		// Try route + middlewares first
+		if args, err := ann.readArgs("route", "middlewares"); err == nil {
+			routeStr, _ = args["route"].(string)
+			middlewares = extractStringArray(args["middlewares"])
+		} else if args, err := ann.readArgs("route"); err == nil {
+			// Route only
+			routeStr, _ = args["route"].(string)
+		} else {
+			return fmt.Errorf("@Route on line %d: %w", ann.Line, err)
 		}
 
-		if routeStr != "" && ann.TargetName != "" {
+		if routeStr == "" {
+			return fmt.Errorf("@Route on line %d: route string is required", ann.Line)
+		}
+
+		if ann.TargetName != "" {
 			service.Routes[ann.TargetName] = routeStr
+
+			// Store route middlewares if present
+			if len(middlewares) > 0 {
+				service.RouteMiddlewares[ann.TargetName] = middlewares
+			}
 		}
 	}
 
@@ -704,6 +714,13 @@ func Register{{$service.StructName}}() {
 				{{quote $method}}:  {{quote $route}},
 {{- end }}
 			},
+{{- if gt (len $service.RouteMiddlewares) 0 }}
+			RouteMiddlewares: map[string][]string{
+{{- range $method, $middlewares := $service.RouteMiddlewares }}
+				{{quote $method}}: { {{range $i, $mw := $middlewares}}{{if $i}}, {{end}}{{quote $mw}}{{end}} },
+{{- end }}
+			},
+{{- end }}
 		}),
 	)
 
