@@ -16,8 +16,13 @@ Lokstra provides a comprehensive collection of built-in middleware for common HT
 | **[CORS](./cors)** | Cross-origin handling | Early |
 | **[Body Limit](./body-limit)** | Request size protection | Before parsing |
 | **[Gzip Compression](./gzip-compression)** | Response compression | Late |
-| **[JWT Auth](./jwt-auth)** | Authentication | Before handlers |
-| **[Access Control](./access-control)** | Authorization | After JWT Auth |
+
+> **Note:** JWT Auth and Access Control middleware have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
+
+## Advanced Topics
+
+- **[Inline Parameters](./inline-parameters)** - Pass parameters directly in middleware name (e.g., `"rate-limit max=100"`)
+- **[Custom Middleware](./custom)** - Create your own middleware (Coming Soon)
 
 ---
 
@@ -86,19 +91,9 @@ middlewares:
     params:
       min_size: 1024
       compression_level: -1
-  
-  - type: jwtauth
-    params:
-      validator_service_name: auth_validator
-      token_header: Authorization
-      token_prefix: "Bearer "
-      skip_paths: ["/auth/login", "/auth/register"]
-  
-  - type: accesscontrol
-    params:
-      allowed_roles: ["admin", "manager"]
-      role_field: role
 ```
+
+> **Note:** For JWT Auth and Access Control YAML configuration, see [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
 ---
 
@@ -128,22 +123,14 @@ router.Use(
         MaxSize: 10 * 1024 * 1024,
     }),
     
-    // 6. JWT Auth - authenticate requests
-    jwtauth.Middleware(&jwtauth.Config{
-        ValidatorServiceName: "auth_validator",
-    }),
-    
-    // 7. Access Control - check permissions
-    accesscontrol.Middleware(&accesscontrol.Config{
-        AllowedRoles: []string{"admin"},
-    }),
-    
-    // 8. Gzip Compression - compress responses (last)
+    // 6. Gzip Compression - compress responses (last)
     gzipcompression.Middleware(&gzipcompression.Config{
         MinSize: 1024,
     }),
 )
 ```
+
+> **Note:** For authentication middleware (JWT, Access Control), see [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
 **Why this order?**
 
@@ -151,9 +138,7 @@ router.Use(
 2. **Logging early** - Records all requests, even failed ones
 3. **CORS early** - Handles preflight before authentication
 4. **Body limit before parsing** - Prevents memory exhaustion
-5. **Auth before handlers** - Protects endpoints
-6. **Access control after auth** - Requires user info from JWT
-7. **Compression last** - Compresses final response
+5. **Compression last** - Compresses final response
 
 ---
 
@@ -176,8 +161,6 @@ func init() {
     gzipcompression.Register()
     request_logger.Register()
     slow_request_logger.Register()
-    jwtauth.Register()
-    accesscontrol.Register()
 }
 ```
 
@@ -257,31 +240,7 @@ router.Use(
 )
 ```
 
----
-
-### Selective Middleware
-
-```go
-// Global middleware
-router.Use(
-    recovery.Middleware(&recovery.Config{}),
-    request_logger.Middleware(&request_logger.Config{}),
-)
-
-// Protected group with authentication
-apiGroup := router.Group("/api")
-apiGroup.Use(
-    jwtauth.Middleware(&jwtauth.Config{
-        ValidatorServiceName: "auth_validator",
-    }),
-)
-
-// Admin-only group
-adminGroup := apiGroup.Group("/admin")
-adminGroup.Use(
-    accesscontrol.RequireAdmin(),
-)
-```
+> **Note:** For selective middleware patterns with authentication, see [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
 ---
 
@@ -293,14 +252,6 @@ router.Use(
         MaxSize:    10 * 1024 * 1024,
         Message:    "File too large. Maximum size is 10MB",
         StatusCode: http.StatusRequestEntityTooLarge,
-    }),
-    jwtauth.Middleware(&jwtauth.Config{
-        ValidatorServiceName: "auth_validator",
-        ErrorMessage:         "Invalid or expired session. Please login again",
-    }),
-    accesscontrol.Middleware(&accesscontrol.Config{
-        AllowedRoles: []string{"admin", "manager"},
-        ErrorMessage: "You don't have permission to access this resource",
     }),
 )
 ```
@@ -316,15 +267,6 @@ router.Use(
         SkipOnPath: []string{
             "/upload/**",   // Skip limit for uploads
             "/import/**",   // Skip for imports
-        },
-    }),
-    jwtauth.Middleware(&jwtauth.Config{
-        ValidatorServiceName: "auth_validator",
-        SkipPaths: []string{
-            "/auth/login",
-            "/auth/register",
-            "/health",
-            "/public/**",
         },
     }),
     request_logger.Middleware(&request_logger.Config{
@@ -350,8 +292,6 @@ router.Use(
 | CORS | ~500ns | Header checks |
 | Body Limit | ~100ns | Wrapper allocation |
 | Gzip | ~50-500μs | Depends on response size |
-| JWT Auth | ~1-10ms | Token validation + DB lookup |
-| Access Control | ~100ns | Role check only |
 
 ---
 
@@ -412,40 +352,6 @@ func TestHandlerWithMiddleware(t *testing.T) {
     
     // Test request
     req := httptest.NewRequest("GET", "/test", nil)
-    rec := httptest.NewRecorder()
-    router.ServeHTTP(rec, req)
-    
-    assert.Equal(t, 200, rec.Code)
-}
-```
-
----
-
-### Mocking JWT Auth
-
-```go
-func TestProtectedEndpoint(t *testing.T) {
-    // Create mock validator
-    mockValidator := &MockValidator{
-        ValidateFunc: func(ctx context.Context, token string) (*auth.TokenClaims, error) {
-            return &auth.TokenClaims{
-                UserID: "user123",
-            }, nil
-        },
-    }
-    
-    // Register mock
-    lokstra_registry.RegisterService("auth_validator", mockValidator)
-    
-    // Create router with JWT middleware
-    router := lokstra.NewRouter()
-    router.Use(jwtauth.Middleware(&jwtauth.Config{
-        ValidatorServiceName: "auth_validator",
-    }))
-    
-    // Test with token
-    req := httptest.NewRequest("GET", "/protected", nil)
-    req.Header.Set("Authorization", "Bearer test-token")
     rec := httptest.NewRecorder()
     router.ServeHTTP(rec, req)
     

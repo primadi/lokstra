@@ -24,9 +24,17 @@ func registerMiddlewareTypes() {
 
 	// Register custom middleware
 	lokstra_registry.RegisterMiddlewareFactory("request-logger", requestLoggerFactory)
+	lokstra_registry.RegisterMiddlewareFactory("mw-test", func(config map[string]any) request.HandlerFunc {
+		return func(ctx *request.Context) error {
+			log.Printf("→ [mw-test] Before request | Param1: %v, Param2: %v", config["param1"], config["param2"])
+			err := ctx.Next()
+			log.Println("← [mw-test] After request")
+			return err
+		}
+	})
 }
 
-func requestLoggerFactory() request.HandlerFunc {
+func requestLoggerFactory(config map[string]any) request.HandlerFunc {
 	return func(ctx *request.Context) error {
 		// Before request
 		reqID := uuid.New().String()

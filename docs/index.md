@@ -464,6 +464,8 @@ func handler() {
 ## Community & Support
 
 - 📖 **[Full Documentation](./index)** - Complete guide
+- 🤖 **[AI Agent Guide](./AI-AGENT-GUIDE)** - For AI assistants (Copilot, Claude, ChatGPT)
+- ⚡ **[Quick Reference](./QUICK-REFERENCE)** - Cheatsheet for common patterns
 - 💡 **[Examples](./00-introduction/examples/)** - Working code samples
 - 🐛 **[GitHub Issues](https://github.com/primadi/lokstra/issues)** - Bug reports & features
 - 🗺️ **[Roadmap](./ROADMAP)** - Upcoming features
@@ -473,6 +475,18 @@ func handler() {
 ## Quick Links
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 2rem 0;">
+  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
+    <h3>🤖 AI Agent Guide</h3>
+    <p>For AI assistants</p>
+    <a href="./AI-AGENT-GUIDE">Copilot, Claude, GPT →</a>
+  </div>
+  
+  <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
+    <h3>⚡ Quick Reference</h3>
+    <p>Fast lookup cheatsheet</p>
+    <a href="./QUICK-REFERENCE">Cheatsheet →</a>
+  </div>
+  
   <div style="padding: 1rem; border: 1px solid #444; border-radius: 4px; background: #1a1a1a;">
     <h3>🎯 Router Guide</h3>
     <p>Use Lokstra as a Router</p>

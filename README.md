@@ -184,6 +184,8 @@ func createUser(ctx *request.Context, params *CreateUserParams) error {
 ## Documentation
 
 - 📘 **[Full Documentation](https://primadi.github.io/lokstra/)** - Complete guide
+- 🤖 **[AI Agent Guide](https://primadi.github.io/lokstra/AI-AGENT-GUIDE)** - For AI assistants (Copilot, Claude, ChatGPT)
+- ⚡ **[Quick Reference](https://primadi.github.io/lokstra/QUICK-REFERENCE)** - Cheatsheet for common patterns
 - 🚀 **[Quick Start](https://primadi.github.io/lokstra/00-introduction/)** - Get started in 5 minutes
 - 🎯 **[Router Guide](https://primadi.github.io/lokstra/01-router-guide/)** - Use as router (like Echo/Gin)
 - 🏗️ **[Framework Guide](https://primadi.github.io/lokstra/02-framework-guide/)** - Full framework (like NestJS)

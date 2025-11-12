@@ -124,6 +124,10 @@ func RegisterUserServiceImpl() {
 				"Suspend":  "POST /users/{id}/suspend",
 				"Update":  "PUT /users/{id}",
 			},
+			RouteMiddlewares: map[string][]string{
+				"GetByID": { "mw-test param1=123, param2=\\\"abc\\\"" },
+				"List": { "mw-test" },
+			},
 		}),
 	)
 

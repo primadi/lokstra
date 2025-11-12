@@ -17,8 +17,9 @@ func main() {
     
     // Or register selectively:
     // services.RegisterCoreServices()    // Only Redis, KvStore, Metrics, DbPool
-    // services.RegisterAuthServices()    // Only auth-related services
 }
+
+> **Note:** Authentication services have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 ```
 
 ## Available Services
@@ -32,17 +33,7 @@ func main() {
 | **Metrics** | `metrics_prometheus` | `serviceapi.Metrics` | Prometheus metrics collection |
 | **DbPool** | `dbpool_pg` | `serviceapi.DbPool` | PostgreSQL connection pool |
 
-### Authentication Services
-
-| Service | Type | Contract | Description |
-|---------|------|----------|-------------|
-| **Session** | `auth_session_redis` | `auth.Session` | Session management with Redis |
-| **TokenIssuer** | `auth_token_jwt` | `auth.TokenIssuer` | JWT token generation and verification |
-| **UserRepository** | `auth_user_repo_pg` | `auth.UserRepository` | User CRUD with PostgreSQL |
-| **Flow (Password)** | `auth_flow_password` | `auth.Flow` | Username/password authentication |
-| **Flow (OTP)** | `auth_flow_otp` | `auth.Flow` | One-time password authentication |
-| **Auth Service** | `auth_service` | `auth.Service` | Main authentication orchestrator |
-| **Validator** | `auth_validator` | `auth.Validator` | Token validation for middleware |
+> **Note:** Authentication services (Session, TokenIssuer, UserRepository, Auth Flows, etc.) have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
 ## Service Pattern
 
@@ -127,102 +118,7 @@ kvStore := old_registry.NewService[any](
 )
 ```
 
-### 3. Setting Up Authentication
-
-```go
-import (
-    "context"
-    "github.com/primadi/lokstra/old_registry"
-    "github.com/primadi/lokstra/serviceapi/auth"
-    "github.com/primadi/lokstra/services"
-)
-
-// Register all auth services
-services.RegisterAuthServices()
-
-// Configure services
-old_registry.NewService[any]("my_db", "dbpool_pg", map[string]any{...})
-old_registry.NewService[any]("my_token_issuer", "auth_token_jwt", map[string]any{...})
-old_registry.NewService[any]("my_session", "auth_session_redis", map[string]any{...})
-old_registry.NewService[any]("my_user_repo", "auth_user_repo_pg", map[string]any{...})
-old_registry.NewService[any]("my_password_flow", "auth_flow_password", map[string]any{...})
-
-// Create main auth service
-authSvc := old_registry.NewService[auth.Service](
-    "my_auth", "auth_service",
-    map[string]any{
-        "token_issuer_service_name": "my_token_issuer",
-        "session_service_name":      "my_session",
-        "flow_service_names": map[string]string{
-            "password": "my_password_flow",
-        },
-    },
-)
-
-// Use the auth service
-resp, err := authSvc.Login(context.Background(), auth.LoginRequest{
-    Flow: "password",
-    Payload: map[string]any{
-        "tenant_id": "tenant-123",
-        "username":  "user@example.com",
-        "password":  "password123",
-    },
-})
-```
-
-### 4. Using Metrics
-
-```go
-import (
-    "github.com/primadi/lokstra/old_registry"
-    "github.com/primadi/lokstra/serviceapi"
-    "github.com/primadi/lokstra/services/metrics_prometheus"
-)
-
-metrics_prometheus.Register()
-
-metrics := old_registry.NewService[serviceapi.Metrics](
-    "my_metrics", "metrics_prometheus",
-    map[string]any{
-        "namespace": "myapp",
-        "subsystem": "api",
-    },
-)
-
-// Track metrics
-metrics.IncCounter("requests_total", serviceapi.Labels{
-    "method": "GET",
-    "path":   "/api/users",
-})
-
-metrics.ObserveHistogram("request_duration_seconds", 0.123, serviceapi.Labels{
-    "method": "GET",
-    "path":   "/api/users",
-})
-```
-
-## Service Dependencies
-
-Some services depend on other services. Here's the dependency graph:
-
-```
-auth_service
-├── auth_token_jwt (TokenIssuer)
-├── auth_session_redis (Session)
-│   └── redis
-└── auth_flow_* (Flows)
-    ├── auth_user_repo_pg (UserRepository)
-    │   └── dbpool_pg (DbPool)
-    └── kvstore_redis (for OTP flow)
-        └── redis
-
-auth_validator
-├── auth_token_jwt (TokenIssuer)
-└── auth_user_repo_pg (optional, UserRepository)
-    └── dbpool_pg (DbPool)
-```
-
-When creating dependent services, make sure to register and create the dependency services first.
+> **Note:** For authentication examples, see [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
 ## Configuration via YAML
 
@@ -238,15 +134,6 @@ services:
       database: myapp
       username: postgres
       password: ${DB_PASSWORD} # Environment variable
-      
-  my_auth:
-    type: auth_service
-    config:
-      token_issuer_service_name: my_token_issuer
-      session_service_name: my_session
-      flow_service_names:
-        password: my_password_flow
-        otp: my_otp_flow
 ```
 
 ## Testing

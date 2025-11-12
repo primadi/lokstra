@@ -196,17 +196,18 @@ type GeneratedCode struct {
 
 // ServiceGeneration holds generation data for one service
 type ServiceGeneration struct {
-	ServiceName    string
-	Prefix         string
-	Middlewares    []string
-	Routes         map[string]string           // methodName -> "METHOD /path"
-	Methods        map[string]*MethodSignature // methodName -> signature
-	Dependencies   map[string]*DependencyInfo  // serviceName -> field info
-	Imports        map[string]string           // alias -> import path (e.g., "domain" -> ".../.../domain")
-	StructName     string
-	InterfaceName  string
-	RemoteTypeName string
-	SourceFile     string
+	ServiceName      string
+	Prefix           string
+	Middlewares      []string
+	Routes           map[string]string           // methodName -> "METHOD /path"
+	RouteMiddlewares map[string][]string         // methodName -> []middleware (per-route middleware)
+	Methods          map[string]*MethodSignature // methodName -> signature
+	Dependencies     map[string]*DependencyInfo  // serviceName -> field info
+	Imports          map[string]string           // alias -> import path (e.g., "domain" -> ".../.../domain")
+	StructName       string
+	InterfaceName    string
+	RemoteTypeName   string
+	SourceFile       string
 }
 
 // DependencyInfo holds field injection information

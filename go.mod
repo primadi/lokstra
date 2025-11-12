@@ -3,7 +3,6 @@ module github.com/primadi/lokstra
 go 1.25
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/json-iterator/go v1.1.12
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1

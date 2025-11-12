@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+
+	"github.com/primadi/lokstra/core/annotation"
 )
 
 const version = "1.0.0"
@@ -117,11 +120,66 @@ func autogenCmd() {
 func executeAutogen(targetFolder string) error {
 	fmt.Printf("🔧 Running code generation in: %s\n\n", targetFolder)
 
-	// Check if target folder exists
-	if _, err := os.Stat(targetFolder); os.IsNotExist(err) {
-		return fmt.Errorf("folder does not exist: %s", targetFolder)
+	// Convert to absolute path first
+	absPath, err := filepath.Abs(targetFolder)
+	if err != nil {
+		return fmt.Errorf("failed to resolve path: %w", err)
 	}
 
-	// Run: go run . --generate-only
-	return runCommandInDir(targetFolder, "go", "run", ".", "--generate-only")
+	// Check if target folder exists
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		return fmt.Errorf("folder does not exist: %s", absPath)
+	}
+
+	// Import annotation processor
+	// Instead of running "go run . --generate-only", call annotation processor directly
+	return generateCodeForFolder(absPath)
+}
+
+// generateCodeForFolder calls the annotation processor to generate code
+func generateCodeForFolder(absPath string) error {
+	// Delete all cache files first to force rebuild
+	if err := deleteAllCacheFilesInFolder(absPath); err != nil {
+		return fmt.Errorf("failed to delete cache files: %w", err)
+	}
+
+	// Process the folder recursively using annotation processor
+	_, err := annotation.ProcessComplexAnnotations(
+		absPath,
+		0, // Use default worker count (CPU * 2)
+		func(ctx *annotation.RouterServiceContext) error {
+			fmt.Printf("Processing folder: %s\n", ctx.FolderPath)
+			fmt.Printf("  - Skipped: %d files\n", len(ctx.SkippedFiles))
+			fmt.Printf("  - Updated: %d files\n", len(ctx.UpdatedFiles))
+			fmt.Printf("  - Deleted: %d files\n", len(ctx.DeletedFiles))
+
+			// Generate code
+			if err := annotation.GenerateCodeForFolder(ctx); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("code generation failed: %w", err)
+	}
+
+	fmt.Println("✅ Code generation completed successfully")
+	return nil
+}
+
+// deleteAllCacheFilesInFolder removes all zz_cache.lokstra.json files in target folder
+func deleteAllCacheFilesInFolder(targetFolder string) error {
+	return filepath.Walk(targetFolder, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors, continue walking
+		}
+		if !info.IsDir() && info.Name() == "zz_cache.lokstra.json" {
+			fmt.Printf("  Deleting cache: %s\n", path)
+			os.Remove(path)
+		}
+		return nil
+	})
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -145,7 +146,8 @@ func parseAnnotationArgs(argsStr string) (map[string]interface{}, []interface{},
 		}
 
 		// Check if it's named (key=value) or positional
-		if strings.Contains(arg, "=") {
+		// Must check = outside of quotes and brackets
+		if isNamedArgument(arg) {
 			// Named argument
 			parts := strings.SplitN(arg, "=", 2)
 			key := strings.TrimSpace(parts[0])
@@ -169,6 +171,32 @@ func parseAnnotationArgs(argsStr string) (map[string]interface{}, []interface{},
 	}
 
 	return namedArgs, positionalArgs, nil
+}
+
+// isNamedArgument checks if arg is in key=value format (outside quotes/brackets)
+func isNamedArgument(arg string) bool {
+	inQuote := false
+	inBracket := 0
+	quoteChar := rune(0)
+
+	for _, ch := range arg {
+		switch {
+		case (ch == '"' || ch == '\'') && quoteChar == 0:
+			inQuote = true
+			quoteChar = ch
+		case ch == quoteChar:
+			inQuote = false
+			quoteChar = 0
+		case ch == '[' && !inQuote:
+			inBracket++
+		case ch == ']' && !inQuote:
+			inBracket--
+		case ch == '=' && !inQuote && inBracket == 0:
+			return true
+		}
+	}
+
+	return false
 }
 
 // parseArgValue parses a single value (string, array, number, bool)
@@ -314,24 +342,25 @@ func (a *ParsedAnnotation) readArgs(expectedArgs ...string) (map[string]interfac
 
 	// If we have named args, use them
 	if len(a.Args) > 0 {
-		// Validate all keys are expected
+		// Validate only top-level keys
 		for key := range a.Args {
-			found := false
-			for _, expected := range expectedArgs {
-				if key == expected {
-					found = true
-					break
-				}
+			// Clean key: remove everything after space or opening bracket
+			// This handles cases where parsing might include part of the value
+			cleanKey := key
+			if idx := strings.IndexAny(cleanKey, " (["); idx != -1 {
+				cleanKey = cleanKey[:idx]
 			}
+
+			found := slices.Contains(expectedArgs, cleanKey)
 			if !found {
-				return nil, fmt.Errorf("unexpected argument '%s' (expected: %v)", key, expectedArgs)
+				return nil, fmt.Errorf("unexpected argument '%s' (expected: %v)", cleanKey, expectedArgs)
 			}
 		}
 
 		return a.Args, nil
 	}
 
-	// Use positional args
+	// Use positional args - map to expected arg names
 	if len(a.PositionalArgs) > len(expectedArgs) {
 		return nil, fmt.Errorf("too many arguments: got %d, expected max %d", len(a.PositionalArgs), len(expectedArgs))
 	}
