@@ -54,14 +54,21 @@ Organize complex configurations:
 - Service-specific configs
 - Composition patterns
 
-### 6. Secrets Management
+### 6. Variable Resolvers System
+Extensible configuration sources:
+- Built-in resolvers (ENV, CFG)
+- Custom resolvers (AWS, Vault, K8s)
+- Two-pass expansion system
+- Multi-source resolution patterns
+
+### 7. Secrets Management
 Handle sensitive data:
 - Environment variables
 - Secret stores (Vault, AWS Secrets Manager)
 - Encryption at rest
 - Rotation strategies
 
-### 7. Production Best Practices
+### 8. Production Best Practices
 Deploy with confidence:
 - Configuration versioning
 - Rollback strategies
@@ -86,10 +93,13 @@ Validate configuration at startup.
 ### [04 - Dynamic Configuration](examples/04-dynamic-configuration/)
 Hot reload and feature flags.
 
-### [05 - Secrets Management](examples/05-secrets-management/)
+### [05 - Variable Resolvers](examples/05-variable-resolvers/)
+Custom resolvers for AWS, Vault, K8s ConfigMaps.
+
+### [06 - Secrets Management](examples/06-secrets-management/)
 Integrate with secret stores.
 
-### [06 - Production Patterns](examples/06-production-patterns/)
+### [07 - Production Patterns](examples/07-production-patterns/)
 Real-world production configurations.
 
 ---
@@ -122,8 +132,9 @@ Before diving in, make sure you understand:
 3. **Validate configuration** → Catch errors early
 4. **Enable dynamic updates** → Hot reload and feature flags
 5. **Organize configs** → Inheritance and composition
-6. **Secure secrets** → Integrate secret stores
-7. **Deploy to production** → Best practices and patterns
+6. **Extend with resolvers** → Custom config sources (AWS, Vault, K8s)
+7. **Secure secrets** → Integrate secret stores
+8. **Deploy to production** → Best practices and patterns
 
 ---
 
@@ -135,6 +146,7 @@ After completing this section:
 - ✅ You'll validate configuration at startup
 - ✅ You'll update configuration dynamically
 - ✅ You'll organize complex configurations
+- ✅ You'll create custom variable resolvers
 - ✅ You'll secure sensitive data
 - ✅ You'll deploy to production confidently
 

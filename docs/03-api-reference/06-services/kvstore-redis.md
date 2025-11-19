@@ -935,7 +935,7 @@ func (m *SessionManager) DeleteUserSessions(ctx context.Context, userID string) 
 - [Services Overview](index) - Service architecture and patterns
 - [DbPool Service](dbpool-pg) - PostgreSQL connection pooling
 - [Redis Service](redis) - Direct Redis client access
-- [Auth Session Service](auth-session-redis) - Session management
+- [Configuration](../03-configuration/config) - YAML configuration system
 
 ---
 

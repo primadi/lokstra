@@ -1,6 +1,6 @@
 # Services
 
-Lokstra provides a comprehensive collection of built-in services that handle common application needs like database connectivity, caching, authentication, and monitoring. All services follow a consistent registration and configuration pattern, making them easy to use and extend.
+Lokstra provides a comprehensive collection of built-in services that handle common application needs like database connectivity, caching, and monitoring. All services follow a consistent registration and configuration pattern, making them easy to use and extend.
 
 ## Table of Contents
 
@@ -44,17 +44,9 @@ services/
 ├── Infrastructure Services      (Redis, PostgreSQL, Metrics)
 │   ├── redis                   - Redis client wrapper
 │   ├── dbpool_pg               - PostgreSQL connection pooling
+│   ├── dbpool_manager          - Centralized pool management
 │   ├── kvstore_redis           - Key-value store with Redis
 │   └── metrics_prometheus      - Prometheus metrics
-│
-├── Authentication Services     (Complete auth system)
-│   ├── auth_service            - Main auth orchestrator
-│   ├── auth_validator          - Token validation (for middleware)
-│   ├── auth_token_jwt          - JWT token generation
-│   ├── auth_flow_password      - Username/password auth
-│   ├── auth_flow_otp           - One-time password auth
-│   ├── auth_session_redis      - Session storage
-│   └── auth_user_repo_pg       - User CRUD with PostgreSQL
 │
 └── Utilities
     └── register_all.go         - Bulk registration helper
@@ -64,17 +56,17 @@ services/
 
 ```go
 // 1. Registration Phase (startup)
-auth_service.Register()  // Registers factory function
+kvstore_redis.Register()  // Registers factory function
 
 // 2. Creation Phase (when referenced)
-authSvc := lokstra_registry.NewService[auth.Service](
-    "my_auth", "auth_service", config)
+kvStore := lokstra_registry.NewService[serviceapi.KvStore](
+    "my_cache", "kvstore_redis", config)
 
 // 3. Usage Phase (lazy loading)
-result, err := authSvc.Login(ctx, request)  // Service loads on first use
+err := kvStore.Set(ctx, "key", "value", ttl)  // Service loads on first use
 
 // 4. Shutdown Phase (application shutdown)
-authSvc.Shutdown()  // Clean up resources
+kvStore.Shutdown()  // Clean up resources
 ```
 
 ## Available Services
@@ -85,20 +77,9 @@ authSvc.Shutdown()  // Clean up resources
 |---------|------|-----------|-------------|
 | **[Redis](redis)** | `redis` | (custom) | Redis client wrapper with connection pooling |
 | **[DbPool](dbpool-pg)** | `dbpool_pg` | `serviceapi.DbPool` | PostgreSQL connection pool with pgx driver |
+| **[DbPool Manager](dbpool-manager)** | `dbpool_manager` | `serviceapi.DbPoolManager` | Centralized pool management with multi-tenancy and named pools |
 | **[KvStore](kvstore-redis)** | `kvstore_redis` | `serviceapi.KvStore` | Key-value store with Redis backend and prefix support |
 | **[Metrics](metrics-prometheus)** | `metrics_prometheus` | `serviceapi.Metrics` | Prometheus metrics (counters, histograms, gauges) |
-
-### Authentication Services
-
-| Service | Type | Interface | Description |
-|---------|------|-----------|-------------|
-| **[Auth Service](auth-service)** | `auth_service` | `auth.Service` | Main authentication orchestrator (login, refresh, logout) |
-| **[Auth Validator](auth-validator)** | `auth_validator` | `auth.Validator` | Token validation for middleware (access/refresh tokens) |
-| **[Token Issuer](auth-token-jwt)** | `auth_token_jwt` | `auth.TokenIssuer` | JWT token generation and verification |
-| **[Password Flow](auth-flow-password)** | `auth_flow_password` | `auth.Flow` | Username/password authentication flow |
-| **[OTP Flow](auth-flow-otp)** | `auth_flow_otp` | `auth.Flow` | One-time password authentication flow |
-| **[Session Store](auth-session-redis)** | `auth_session_redis` | `auth.Session` | Redis-based session management |
-| **[User Repository](auth-user-repo-pg)** | `auth_user_repo_pg` | `auth.UserRepository` | PostgreSQL user CRUD operations |
 
 ## Quick Start
 
@@ -119,7 +100,6 @@ func main() {
     
     // Option 2: Register by category
     services.RegisterCoreServices()   // Redis, KvStore, Metrics, DbPool
-    services.RegisterAuthServices()   // All auth-related services
 }
 ```
 
@@ -249,33 +229,31 @@ func Register() {
 Some services depend on other services. Dependencies are resolved through lazy loading:
 
 ```
-auth_service
-├── auth_token_jwt        (TokenIssuer)
-├── auth_session_redis    (Session)
-│   └── redis
-└── auth_flow_password    (Flow)
-    └── auth_user_repo_pg (UserRepository)
-        └── dbpool_pg     (DbPool)
+kvstore_redis
+└── redis              (Redis client)
+
+dbpool_manager
+└── dbpool_pg          (Creates pools on-demand)
 ```
 
 **Dependency Injection Example:**
 
 ```go
 // Service with dependencies
-type authService struct {
+type cacheService struct {
     cfg         *Config
-    tokenIssuer *service.Cached[auth.TokenIssuer]  // Lazy-loaded dependency
-    session     *service.Cached[auth.Session]      // Lazy-loaded dependency
+    kvStore     *service.Cached[serviceapi.KvStore]  // Lazy-loaded dependency
+    metrics     *service.Cached[serviceapi.Metrics]  // Lazy-loaded dependency
 }
 
 func ServiceFactory(params map[string]any) any {
     cfg := extractConfig(params)
     
     // Load dependencies lazily
-    tokenIssuer := service.LazyLoad[auth.TokenIssuer](cfg.TokenIssuerServiceName)
-    session := service.LazyLoad[auth.Session](cfg.SessionServiceName)
+    kvStore := service.LazyLoad[serviceapi.KvStore](cfg.KvStoreServiceName)
+    metrics := service.LazyLoad[serviceapi.Metrics](cfg.MetricsServiceName)
     
-    return Service(cfg, tokenIssuer, session)
+    return Service(cfg, kvStore, metrics)
 }
 ```
 
@@ -566,11 +544,11 @@ cfg := &Config{
 
 ```go
 ✓ DO: Use lazy loading for dependencies
-tokenIssuer := service.LazyLoad[auth.TokenIssuer]("token_issuer")
+kvStore := service.LazyLoad[serviceapi.KvStore]("cache")
 // Loads only when .MustGet() is called
 
 ✗ DON'T: Eagerly load dependencies
-tokenIssuer := lokstra_registry.GetService[auth.TokenIssuer]("token_issuer")
+kvStore := lokstra_registry.GetService[serviceapi.KvStore]("cache")
 // May fail if service not yet registered
 ```
 
@@ -605,10 +583,14 @@ func (s *myService) Shutdown() error {
 }
 
 ✓ DO: Handle shutdown errors gracefully
-func (s *authService) Shutdown() error {
+func (s *myService) Shutdown() error {
     var errs []error
     
-    if err := s.tokenIssuer.Shutdown(); err != nil {
+    if err := s.dependency1.Shutdown(); err != nil {
+        errs = append(errs, err)
+    }
+    
+    if err := s.dependency2.Shutdown(); err != nil {
         errs = append(errs, err)
     }
     
@@ -623,14 +605,14 @@ func (s *authService) Shutdown() error {
 
 ```go
 ✓ DO: Use interface assertions
-var _ auth.Service = (*authService)(nil)  // Compile-time check
+var _ serviceapi.KvStore = (*kvStoreService)(nil)  // Compile-time check
 
 ✓ DO: Use generics for type-safe access
-svc := lokstra_registry.NewService[auth.Service]("auth", "auth_service", cfg)
-// svc is typed as auth.Service
+svc := lokstra_registry.NewService[serviceapi.KvStore]("cache", "kvstore_redis", cfg)
+// svc is typed as serviceapi.KvStore
 
 ✗ DON'T: Use untyped access
-svc := lokstra_registry.NewService[any]("auth", "auth_service", cfg)
+svc := lokstra_registry.NewService[any]("cache", "kvstore_redis", cfg)
 // Loses type information
 ```
 
@@ -671,7 +653,6 @@ func TestServiceWithMock(t *testing.T) {
 
 **Service Documentation:**
 - [Infrastructure Services](#infrastructure-services) - Redis, PostgreSQL, Metrics
-- [Authentication Services](#authentication-services) - Complete auth system
 
 **Advanced Topics:**
 - [Creating Services](../../08-advanced/custom-services) - Building custom services
@@ -681,5 +662,5 @@ func TestServiceWithMock(t *testing.T) {
 
 **Next Steps:**
 - Learn about [DbPool Service](dbpool-pg) for PostgreSQL connectivity
-- Explore [Auth Service](auth-service) for complete authentication
+- Explore [DbPool Manager](dbpool-manager) for multi-tenant database management
 - Review [Service Patterns](../../08-advanced/service-patterns) for advanced usage

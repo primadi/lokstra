@@ -233,15 +233,15 @@ Lokstra understands REST conventions:
 ```go
 // All your logic in one place
 type UserService struct {
-    DB    *service.Cached[*Database]
-    Email *service.Cached[*EmailService]
-    Auth  *service.Cached[*AuthService]
+    DB      *service.Cached[*Database]
+    Email   *service.Cached[*EmailService]
+    Cache   *service.Cached[*CacheService]
 }
 
 // Pure business logic
 func (s *UserService) Create(p *CreateParams) (*User, error) {
     // Validate
-    if err := s.Auth.MustGet().CheckPermission(); err != nil {
+    if err := validateUserData(p); err != nil {
         return nil, err
     }
     
@@ -250,6 +250,9 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
     if err != nil {
         return nil, err
     }
+    
+    // Cache user data
+    s.Cache.MustGet().Set(user.ID, user)
     
     // Notify
     s.Email.MustGet().SendWelcome(user.Email)

@@ -516,15 +516,43 @@ if err != nil {
 
 ---
 
-## Variable Expansion
+## Variable Expansion System
 
-### Environment Variables
+Lokstra provides an **extensible variable expansion system** powered by **Variable Resolvers**. This allows you to:
+- Pull configuration from multiple sources (ENV, AWS Secrets, Vault, Kubernetes ConfigMaps, etc.)
+- Create custom resolvers for your own config sources
+- Reference other config values to avoid duplication
+- Use two-pass expansion for complex scenarios
+
+### Architecture
+
+**Variable Resolver Interface:**
+```go
+type VariableResolver interface {
+    Resolve(source string, key string, defaultValue string) (string, bool)
+}
+```
+
+**Built-in Resolvers:**
+- `ENV` - Environment variables (default)
+- `CFG` - Config registry references (two-pass expansion)
+
+**Custom Resolvers:**
+You can add your own resolvers for AWS Secrets Manager, HashiCorp Vault, Kubernetes ConfigMaps, etc.
+
+---
+
+## Built-in Resolvers
+
+### ENV Resolver (Environment Variables)
 Reference environment variables in YAML files.
 
 **Syntax:**
 ```yaml
 ${ENV_VAR_NAME}
 ${ENV_VAR_NAME:default_value}
+${@ENV:VAR_NAME}
+${@ENV:VAR_NAME:default_value}
 ```
 
 **Example:**
@@ -558,13 +586,16 @@ configs:
 
 ---
 
-### Config References
-Reference other config values (two-pass expansion).
+### CFG Resolver (Config References)
+Reference other config values using two-pass expansion.
 
 **Syntax:**
 ```yaml
-${@cfg:config.key}
+${@CFG:config.key}
+${@CFG:config.key:default_value}
 ```
+
+**Note:** CFG resolver uses uppercase `CFG`, not lowercase `cfg`.
 
 **Example:**
 ```yaml
@@ -576,7 +607,7 @@ configs:
   - name: db.name
     value: "myapp"
   - name: db.dsn
-    value: "postgresql://${@cfg:db.host}:${@cfg:db.port}/${@cfg:db.name}"
+    value: "postgresql://${@CFG:db.host}:${@CFG:db.port}/${@CFG:db.name}"
 ```
 
 **Result:**
@@ -586,7 +617,291 @@ configs:
     value: "postgresql://localhost:5432/myapp"
 ```
 
+**How it works:**
+1. **Pass 1:** All non-CFG resolvers (ENV, AWS, etc.) are expanded
+2. **Pass 2:** `configs` section is parsed and stored in temporary registry
+3. **Pass 3:** CFG resolver expands using temporary config values
+
+This allows `${@CFG:...}` to work even before the full config registry is built.
+
 ---
+
+## Custom Resolvers
+
+### Adding Custom Resolvers
+
+You can create custom resolvers for any configuration source:
+
+**1. Implement the `VariableResolver` interface:**
+
+```go
+import "github.com/primadi/lokstra/core/config"
+
+type AWSSecretsResolver struct {
+    client *secretsmanager.Client
+}
+
+func (r *AWSSecretsResolver) Resolve(source string, key string, defaultValue string) (string, bool) {
+    if source != "AWS" {
+        return "", false
+    }
+    
+    // Fetch from AWS Secrets Manager
+    result, err := r.client.GetSecretValue(context.Background(), &secretsmanager.GetSecretValueInput{
+        SecretId: aws.String(key),
+    })
+    
+    if err != nil {
+        return defaultValue, false
+    }
+    
+    return *result.SecretString, true
+}
+```
+
+**2. Register the resolver:**
+
+```go
+func init() {
+    // Create AWS Secrets Manager client
+    cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    client := secretsmanager.NewFromConfig(cfg)
+    
+    // Register resolver
+    config.AddVariableResolver("AWS", &AWSSecretsResolver{
+        client: client,
+    })
+}
+```
+
+**3. Use in YAML:**
+
+```yaml
+configs:
+  - name: db.password
+    value: "${@AWS:prod/db/password}"
+  
+  - name: api.key
+    value: "${@AWS:prod/api/key:fallback-key}"
+  
+  - name: jwt.secret
+    value: "${@AWS:prod/jwt/secret}"
+```
+
+---
+
+### Example: HashiCorp Vault Resolver
+
+```go
+import (
+    "github.com/hashicorp/vault/api"
+    "github.com/primadi/lokstra/core/config"
+)
+
+type VaultResolver struct {
+    client *api.Client
+}
+
+func NewVaultResolver(addr, token string) (*VaultResolver, error) {
+    cfg := api.DefaultConfig()
+    cfg.Address = addr
+    
+    client, err := api.NewClient(cfg)
+    if err != nil {
+        return nil, err
+    }
+    
+    client.SetToken(token)
+    
+    return &VaultResolver{client: client}, nil
+}
+
+func (r *VaultResolver) Resolve(source string, key string, defaultValue string) (string, bool) {
+    if source != "VAULT" {
+        return "", false
+    }
+    
+    // Read from Vault
+    secret, err := r.client.Logical().Read(key)
+    if err != nil || secret == nil {
+        return defaultValue, false
+    }
+    
+    // Get "value" field from secret data
+    if value, ok := secret.Data["value"].(string); ok {
+        return value, true
+    }
+    
+    return defaultValue, false
+}
+
+// Register in init()
+func init() {
+    vaultAddr := os.Getenv("VAULT_ADDR")
+    vaultToken := os.Getenv("VAULT_TOKEN")
+    
+    if vaultAddr != "" && vaultToken != "" {
+        resolver, err := NewVaultResolver(vaultAddr, vaultToken)
+        if err != nil {
+            log.Printf("Failed to create Vault resolver: %v", err)
+            return
+        }
+        
+        config.AddVariableResolver("VAULT", resolver)
+    }
+}
+```
+
+**Usage:**
+```yaml
+configs:
+  - name: db.password
+    value: "${@VAULT:secret/data/db/password}"
+  
+  - name: api.key
+    value: "${@VAULT:secret/data/api/key:default-key}"
+```
+
+---
+
+### Example: Kubernetes ConfigMap Resolver
+
+```go
+import (
+    "context"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/rest"
+)
+
+type K8sConfigMapResolver struct {
+    client    *kubernetes.Clientset
+    namespace string
+}
+
+func NewK8sConfigMapResolver() (*K8sConfigMapResolver, error) {
+    // Create in-cluster config
+    config, err := rest.InClusterConfig()
+    if err != nil {
+        return nil, err
+    }
+    
+    clientset, err := kubernetes.NewForConfig(config)
+    if err != nil {
+        return nil, err
+    }
+    
+    namespace := os.Getenv("POD_NAMESPACE")
+    if namespace == "" {
+        namespace = "default"
+    }
+    
+    return &K8sConfigMapResolver{
+        client:    clientset,
+        namespace: namespace,
+    }, nil
+}
+
+func (r *K8sConfigMapResolver) Resolve(source string, key string, defaultValue string) (string, bool) {
+    if source != "K8S" {
+        return "", false
+    }
+    
+    // Format: configmap-name/key-name
+    parts := strings.SplitN(key, "/", 2)
+    if len(parts) != 2 {
+        return defaultValue, false
+    }
+    
+    configMapName := parts[0]
+    keyName := parts[1]
+    
+    // Get ConfigMap
+    cm, err := r.client.CoreV1().ConfigMaps(r.namespace).Get(
+        context.Background(),
+        configMapName,
+        metav1.GetOptions{},
+    )
+    
+    if err != nil {
+        return defaultValue, false
+    }
+    
+    // Get key from ConfigMap
+    if value, ok := cm.Data[keyName]; ok {
+        return value, true
+    }
+    
+    return defaultValue, false
+}
+
+// Register
+func init() {
+    if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+        resolver, err := NewK8sConfigMapResolver()
+        if err != nil {
+            log.Printf("Failed to create K8s resolver: %v", err)
+            return
+        }
+        
+        config.AddVariableResolver("K8S", resolver)
+    }
+}
+```
+
+**Usage:**
+```yaml
+configs:
+  - name: app.config
+    value: "${@K8S:app-config/database-url}"
+  
+  - name: feature.flag
+    value: "${@K8S:feature-flags/new-ui:false}"
+```
+
+---
+
+## Resolver Resolution Order
+
+When a variable is expanded, resolvers are applied in this order:
+
+1. **Pass 1: All resolvers EXCEPT CFG**
+   - ENV resolver
+   - AWS resolver
+   - VAULT resolver
+   - K8S resolver
+   - ... (any custom resolvers)
+
+2. **Pass 2: Parse configs and build temporary registry**
+
+3. **Pass 3: CFG resolver**
+   - Expands `${@CFG:...}` using temporary config values
+
+This ensures that CFG references work even when referencing values that contain other resolver placeholders.
+
+---
+
+## Resolver Syntax Reference
+
+| Syntax | Resolver | Example |
+|--------|----------|---------|
+| `${KEY}` | ENV (default) | `${DATABASE_URL}` |
+| `${KEY:default}` | ENV with default | `${PORT:8080}` |
+| `${@ENV:KEY}` | Explicit ENV | `${@ENV:API_KEY}` |
+| `${@ENV:KEY:default}` | ENV with default | `${@ENV:PORT:8080}` |
+| `${@CFG:key}` | Config reference | `${@CFG:db.host}` |
+| `${@CFG:key:default}` | CFG with default | `${@CFG:db.port:5432}` |
+| `${@AWS:secret}` | AWS Secrets | `${@AWS:prod/db/pass}` |
+| `${@VAULT:path}` | Vault secret | `${@VAULT:secret/data/key}` |
+| `${@K8S:cm/key}` | K8s ConfigMap | `${@K8S:app-config/url}` |
+
+---
+
+## Advanced Resolver Patterns
 
 ### Combined Expansion
 Combine environment variables and config references.
@@ -601,9 +916,9 @@ configs:
   - name: log.level
     value: "${LOG_LEVEL:INFO}"
   - name: app.name
-    value: "MyApp (${@cfg:app.env})"
+    value: "MyApp (${@CFG:app.env})"
   - name: db.connection
-    value: "postgresql://${@cfg:db.host}:5432/myapp_${@cfg:app.env}"
+    value: "postgresql://${@CFG:db.host}:5432/myapp_${@CFG:app.env}"
 ```
 
 **Shell:**
@@ -620,6 +935,83 @@ configs:
   - name: db.connection
     value: "postgresql://db.example.com:5432/myapp_production"
 ```
+
+---
+
+### Multi-Source Resolution
+
+Combine multiple resolvers in one config:
+
+```yaml
+configs:
+  # From environment
+  - name: app.env
+    value: "${APP_ENV:development}"
+  
+  # From AWS Secrets Manager
+  - name: db.password
+    value: "${@AWS:${@CFG:app.env}/db/password}"
+  
+  # From Vault
+  - name: jwt.secret
+    value: "${@VAULT:secret/data/${@CFG:app.env}/jwt}"
+  
+  # From K8s ConfigMap
+  - name: api.endpoint
+    value: "${@K8S:app-config/api-endpoint:http://localhost}"
+  
+  # Composed from multiple sources
+  - name: db.dsn
+    value: "postgresql://${DB_USER}:${@AWS:prod/db/password}@${@CFG:db.host}:5432/${DB_NAME}"
+```
+
+**Expansion flow:**
+1. **Pass 1:** `${APP_ENV}` → `production`, `${DB_USER}` → `myuser`, `${DB_NAME}` → `mydb`
+2. **Pass 2:** Build config registry with `app.env=production`
+3. **Pass 3:** `${@CFG:app.env}` → `production`, `${@AWS:production/db/password}` → `secret123`
+4. **Result:** `postgresql://myuser:secret123@localhost:5432/mydb`
+
+---
+
+### Conditional Resolution by Environment
+
+```yaml
+configs:
+  - name: app.env
+    value: "${APP_ENV:development}"
+  
+  # Development: Use local values
+  - name: db.password
+    value: "${@CFG:app.env}" # Will check if dev/prod
+  
+services:
+  - name: db-service
+    type: postgres
+    config:
+      # Production: Use AWS Secrets
+      # Development: Use environment variable
+      password: "${@AWS:${@CFG:app.env}/db/password:${DB_PASSWORD:devpass}}"
+```
+
+---
+
+### Fallback Chain
+
+Create a fallback chain across multiple resolvers:
+
+```yaml
+configs:
+  # Try AWS → Vault → K8s → ENV → default
+  - name: api.key
+    value: "${@AWS:prod/api/key:${@VAULT:secret/api/key:${@K8S:secrets/api-key:${API_KEY:default-key}}}}"
+```
+
+**Resolution order:**
+1. Try AWS Secrets Manager: `prod/api/key`
+2. If not found, try Vault: `secret/api/key`
+3. If not found, try K8s ConfigMap: `secrets/api-key`
+4. If not found, try ENV: `API_KEY`
+5. If not found, use default: `default-key`
 
 ---
 
@@ -934,16 +1326,69 @@ config/
 
 ---
 
+### 5. Use Custom Resolvers for External Config Sources
+```yaml
+# ✅ Good: Use appropriate resolver for each source
+configs:
+  - name: db.password
+    value: "${@AWS:prod/db/password}"      # Secrets from AWS
+  - name: feature.flags
+    value: "${@K8S:app-config/features}"   # Config from K8s
+  - name: app.env
+    value: "${APP_ENV:development}"        # Simple env var
+
+# 🚫 Avoid: Hardcoding external configs
+configs:
+  - name: db.password
+    value: "hardcoded"
+```
+
+---
+
+### 6. Design Resolver Fallback Chains
+```yaml
+# ✅ Good: Graceful fallback
+configs:
+  - name: api.key
+    value: "${@AWS:prod/api/key:${API_KEY:default-key}}"
+
+# 🚫 Avoid: No fallback (fails in dev)
+configs:
+  - name: api.key
+    value: "${@AWS:prod/api/key}"  # Fails if AWS not configured
+```
+
+---
+
+### 7. Use Explicit Resolver Names for Clarity
+```yaml
+# ✅ Good: Explicit and clear
+configs:
+  - name: db.host
+    value: "${@ENV:DB_HOST:localhost}"
+  - name: api.prefix
+    value: "${@CFG:api.version}"
+
+# 🚫 Avoid: Ambiguous (is it ENV or something else?)
+configs:
+  - name: db.host
+    value: "${DB_HOST:localhost}"  # Works, but less clear
+```
+
+---
+
 ## See Also
 
 - **[Deploy](./deploy)** - Deployment topology management
 - **[Schema](./schema)** - YAML schema definitions
 - **[lokstra_registry](../02-registry/lokstra_registry)** - Registry API
+- **[Variable Resolvers](#custom-resolvers)** - Custom resolver implementation
 
 ---
 
 ## Related Guides
 
 - **[Configuration Essentials](../../02-framework-guide/04-configuration/)** - Configuration basics
-- **[Environment Variables](../../04-guides/environment-variables/)** - Environment management
+- **[Environment Variables](../../02-framework-guide/04-configuration/#environment)** - Environment management
 - **[Deployment Patterns](../../04-guides/deployment/)** - Deployment strategies
+- **[Secrets Management](../../04-guides/secrets-management/)** - Handling sensitive data

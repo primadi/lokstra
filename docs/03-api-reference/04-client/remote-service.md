@@ -498,92 +498,101 @@ type LoginRequest struct {
     Password string `json:"password"`
 }
 
-type ValidateTokenRequest struct {
-    Token string `json:"token"`
+type GetProductRequest struct {
+    ID int `json:"id"`
 }
 
-type RefreshTokenRequest struct {
-    RefreshToken string `json:"refresh_token"`
+type UpdateProductRequest struct {
+    ID          int     `json:"id"`
+    Name        string  `json:"name"`
+    Price       float64 `json:"price"`
+    Description string  `json:"description"`
 }
 
 // Response types
-type AuthResponse struct {
-    Token        string `json:"token"`
-    RefreshToken string `json:"refresh_token"`
-    ExpiresIn    int    `json:"expires_in"`
+type ProductResponse struct {
+    ID          int     `json:"id"`
+    Name        string  `json:"name"`
+    Price       float64 `json:"price"`
+    Description string  `json:"description"`
+    CreatedAt   string  `json:"created_at"`
 }
 
-type TokenValidation struct {
-    Valid  bool   `json:"valid"`
-    UserID int    `json:"user_id"`
-    Email  string `json:"email"`
+type Product struct {
+    ID          int     `json:"id"`
+    Name        string  `json:"name"`
+    Price       float64 `json:"price"`
 }
 
 // Service
-type AuthService struct {
+type ProductService struct {
     remote *api_client.RemoteService
 }
 
-func NewAuthService() *AuthService {
-    client := lokstra_registry.GetClientRouter("auth-service")
+func NewProductService() *ProductService {
+    client := lokstra_registry.GetClientRouter("product-service")
     
-    remote := api_client.NewRemoteService(client, "/auth").
+    remote := api_client.NewRemoteService(client, "/products").
         WithConvention("kebab-case").
-        WithRouteOverride("LoginUser", "/auth/login").
-        WithRouteOverride("ValidateToken", "/auth/validate").
-        WithRouteOverride("RefreshToken", "/auth/refresh")
+        WithRouteOverride("CreateProduct", "/products").
+        WithRouteOverride("GetProduct", "/products/:id").
+        WithRouteOverride("ListProducts", "/products")
     
-    return &AuthService{remote: remote}
+    return &ProductService{remote: remote}
 }
 
-func (s *AuthService) LoginUser(ctx *request.Context) error {
-    req := &LoginRequest{
-        Email:    ctx.Body.GetString("email"),
-        Password: ctx.Body.GetString("password"),
+func (s *ProductService) CreateProduct(ctx *request.Context) error {
+    req := &CreateProductRequest{
+        Name:        ctx.Body.GetString("name"),
+        Price:       ctx.Body.GetFloat("price"),
+        Description: ctx.Body.GetString("description"),
     }
     
-    auth, err := api_client.CallRemoteService[*AuthResponse](
-        s.remote, "LoginUser", ctx, req)
+    product, err := api_client.CallRemoteService[*ProductResponse](
+        s.remote, "CreateProduct", ctx, req)
     if err != nil {
-        return handleAuthError(ctx, err)
+        return handleProductError(ctx, err)
     }
     
-    return ctx.Api.Ok(auth)
+    return ctx.Api.Created(product)
 }
 
-func (s *AuthService) ValidateToken(token string) (*TokenValidation, error) {
-    req := &ValidateTokenRequest{Token: token}
+func (s *ProductService) GetProduct(id int) (*Product, error) {
+    req := &GetProductRequest{ID: id}
     
-    return api_client.CallRemoteService[*TokenValidation](
-        s.remote, "ValidateToken", nil, req)
+    return api_client.CallRemoteService[*Product](
+        s.remote, "GetProduct", nil, req)
 }
 
-func (s *AuthService) RefreshToken(ctx *request.Context) error {
-    req := &RefreshTokenRequest{
-        RefreshToken: ctx.Body.GetString("refresh_token"),
+func (s *ProductService) UpdateProduct(ctx *request.Context, id int) error {
+    req := &UpdateProductRequest{
+        ID:          id,
+        Name:        ctx.Body.GetString("name"),
+        Price:       ctx.Body.GetFloat("price"),
+        Description: ctx.Body.GetString("description"),
     }
     
-    auth, err := api_client.CallRemoteService[*AuthResponse](
-        s.remote, "RefreshToken", ctx, req)
+    product, err := api_client.CallRemoteService[*ProductResponse](
+        s.remote, "UpdateProduct", ctx, req)
     if err != nil {
-        return handleAuthError(ctx, err)
+        return handleProductError(ctx, err)
     }
     
-    return ctx.Api.Ok(auth)
+    return ctx.Api.Ok(product)
 }
 
-func handleAuthError(ctx *request.Context, err error) error {
+func handleProductError(ctx *request.Context, err error) error {
     if apiErr, ok := err.(*api_client.ApiError); ok {
         switch {
-        case apiErr.IsUnauthorized():
-            return ctx.Api.Unauthorized("Invalid credentials")
+        case apiErr.IsNotFound():
+            return ctx.Api.NotFound("Product not found")
         case apiErr.IsBadRequest():
             return ctx.Api.BadRequest(apiErr.Message)
         default:
             return ctx.Api.Error(apiErr.StatusCode, apiErr.Code, apiErr.Message)
         }
     }
-    return ctx.Api.InternalError("Authentication failed")
+    return ctx.Api.InternalError("Product operation failed")
 }
 ```
 

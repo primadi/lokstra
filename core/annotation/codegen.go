@@ -375,6 +375,13 @@ func extractRoutes(file *FileToProcess, service *ServiceGeneration) error {
 			return fmt.Errorf("@Route on line %d: route string is required", ann.Line)
 		}
 
+		// Remove query parameters if any
+		// Query params are not part of route mapping, only path is needed
+		idxQuestion := strings.Index(routeStr, "?")
+		if idxQuestion != -1 {
+			routeStr = routeStr[:idxQuestion]
+		}
+
 		if ann.TargetName != "" {
 			service.Routes[ann.TargetName] = routeStr
 
