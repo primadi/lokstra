@@ -15,23 +15,53 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 )
 
-// ProcessComplexAnnotations processes annotations with parallel folder processing
-func ProcessComplexAnnotations(rootPath string, maxWorkers int,
+// ProcessComplexAnnotations processes annotations with parallel folder processing.
+// rootPath is a slice of directories to scan. Each directory and its subdirectories
+// will be scanned for .go files containing @RouterService annotations.
+func ProcessComplexAnnotations(rootPath []string, maxWorkers int,
 	onProcessRouterService func(*RouterServiceContext) error) (bool, error) {
-	// Find all folders containing .go files
-	normPath := utils.NormalizeWithBasePath(rootPath)
-	folders, err := findGoFolders(normPath)
-	if err != nil {
-		return false, fmt.Errorf("failed to find folders: %w", err)
+	// Find all folders containing .go files from all root paths
+	// Use map as set to avoid duplicate folders
+	folderSet := make(map[string]bool)
+
+	for _, path := range rootPath {
+		if path == "" {
+			continue
+		}
+
+		// Normalize the path
+		normPath := utils.NormalizeWithBasePath(path)
+
+		// Find folders in this path
+		folders, err := findGoFolders(normPath)
+		if err != nil {
+			return false, fmt.Errorf("failed to find folders in %s: %w", path, err)
+		}
+
+		// Add to set (automatically deduplicates)
+		for _, folder := range folders {
+			folderSet[folder] = true
+		}
 	}
+
+	if len(folderSet) == 0 {
+		return false, nil
+	}
+
+	// Convert set to slice
+	allFolders := make([]string, 0, len(folderSet))
+	for folder := range folderSet {
+		allFolders = append(allFolders, folder)
+	}
+
 	if maxWorkers == 0 {
 		maxWorkers = runtime.NumCPU() * 2
 	}
 
 	// Create worker pool
-	folderChan := make(chan string, len(folders))
-	errChan := make(chan error, len(folders))
-	changedChan := make(chan bool, len(folders))
+	folderChan := make(chan string, len(allFolders))
+	errChan := make(chan error, len(allFolders))
+	changedChan := make(chan bool, len(allFolders))
 	var wg sync.WaitGroup
 
 	// Spawn workers
@@ -49,7 +79,7 @@ func ProcessComplexAnnotations(rootPath string, maxWorkers int,
 	}
 
 	// Send folders to workers
-	for _, folder := range folders {
+	for _, folder := range allFolders {
 		folderChan <- folder
 	}
 	close(folderChan)

@@ -26,7 +26,7 @@ var (
 
 // Bootstrap initializes Lokstra environment and regenerates routes if needed.
 // It must be called at the very beginning of main().
-func Bootstrap() {
+func Bootstrap(scanPath ...string) {
 	// 1️⃣ Check for --generate-only flag
 	generateOnly := false
 	for _, arg := range os.Args {
@@ -41,12 +41,12 @@ func Bootstrap() {
 		fmt.Println("[Lokstra] Force rebuilding all generated code...")
 
 		// Force rebuild by deleting all cache files first
-		if err := deleteAllCacheFiles(); err != nil {
+		if err := deleteAllCacheFiles(scanPath); err != nil {
 			fmt.Println("[Lokstra] Warning: failed to delete cache files:", err)
 		}
 
 		// Run autogen
-		_, err := runAutoGen()
+		_, err := runAutoGen(scanPath)
 		if err != nil {
 			fmt.Println("[Lokstra] Autogen failed:", err)
 			os.Exit(1)
@@ -73,7 +73,7 @@ func Bootstrap() {
 	}
 
 	// 5️⃣ Run autogen
-	codeChanged, err := runAutoGen()
+	codeChanged, err := runAutoGen(scanPath)
 	if err != nil {
 		fmt.Println("[Lokstra] Autogen failed:", err)
 		os.Exit(1)
@@ -165,9 +165,20 @@ func detectRunMode() RunMode {
 	return RunModeProd
 }
 
-// runAutoGen triggers the annotation scanner and route generator
-func runAutoGen() (bool, error) {
-	return annotation.ProcessComplexAnnotations("", 0,
+// runAutoGen triggers the annotation scanner and route generator.
+// It scans the current working directory plus any additional paths provided in scanPath.
+func runAutoGen(scanPath []string) (bool, error) {
+	// Get current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		return false, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Build the list of paths to scan: current directory + scanPath
+	pathsToScan := []string{wd}
+	pathsToScan = append(pathsToScan, scanPath...)
+
+	return annotation.ProcessComplexAnnotations(pathsToScan, 0,
 		func(ctx *annotation.RouterServiceContext) error {
 			fmt.Printf("Processing folder: %s\n", ctx.FolderPath)
 			fmt.Printf("  - Skipped: %d files\n", len(ctx.SkippedFiles))
@@ -183,23 +194,36 @@ func runAutoGen() (bool, error) {
 		})
 }
 
-// deleteAllCacheFiles removes all zz_cache.lokstra.json files to force rebuild
-func deleteAllCacheFiles() error {
+// deleteAllCacheFiles removes all zz_cache.lokstra.json files to force rebuild.
+// It scans the current working directory plus any additional paths provided in scanPath.
+func deleteAllCacheFiles(scanPath []string) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	return filepath.Walk(wd, func(path string, info os.FileInfo, err error) error {
+	// Build the list of paths to scan: current directory + scanPath
+	pathsToScan := []string{wd}
+	pathsToScan = append(pathsToScan, scanPath...)
+
+	// Walk through all paths
+	for _, scanDir := range pathsToScan {
+		err := filepath.Walk(scanDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil // Skip errors, continue walking
+			}
+			if !info.IsDir() && info.Name() == "zz_cache.lokstra.json" {
+				fmt.Printf("  Deleting cache: %s\n", path)
+				os.Remove(path)
+			}
+			return nil
+		})
 		if err != nil {
-			return nil // Skip errors, continue walking
+			fmt.Printf("  Warning: failed to walk directory %s: %v\n", scanDir, err)
 		}
-		if !info.IsDir() && info.Name() == "zz_cache.lokstra.json" {
-			fmt.Printf("  Deleting cache: %s\n", path)
-			os.Remove(path)
-		}
-		return nil
-	})
+	}
+
+	return nil
 }
 
 // relaunchWithGoRun restarts the current app using "go run ."

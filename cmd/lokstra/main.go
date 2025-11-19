@@ -145,7 +145,7 @@ func generateCodeForFolder(absPath string) error {
 
 	// Process the folder recursively using annotation processor
 	_, err := annotation.ProcessComplexAnnotations(
-		absPath,
+		[]string{absPath},
 		0, // Use default worker count (CPU * 2)
 		func(ctx *annotation.RouterServiceContext) error {
 			fmt.Printf("Processing folder: %s\n", ctx.FolderPath)
