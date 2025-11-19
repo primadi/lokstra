@@ -843,8 +843,8 @@ deployments:
 ```yaml
 # ✅ Good: Descriptive names
 service-definitions:
-  user-authentication-service:
-    type: auth-service-factory
+  user-management-service:
+    type: user-service-factory
   
   product-catalog-service:
     type: catalog-service-factory
@@ -852,7 +852,7 @@ service-definitions:
 # 🚫 Avoid: Cryptic names
 service-definitions:
   svc1:
-    type: auth-service-factory
+    type: user-service-factory
   svc2:
     type: catalog-service-factory
 ```

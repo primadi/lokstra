@@ -40,6 +40,12 @@ func NewPgxPostgresPool(ctx context.Context, dsn string) (*pgxPostgresPool, erro
 	}, nil
 }
 
+// Shutdown implements serviceapi.DbPool.
+func (p *pgxPostgresPool) Shutdown() error {
+	p.pool.Close()
+	return nil
+}
+
 func (p *pgxPostgresPool) Acquire(ctx context.Context, schema string) (serviceapi.DbConn, error) {
 	conn, err := p.pool.Acquire(ctx)
 	if err != nil {

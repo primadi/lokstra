@@ -66,8 +66,8 @@ client := &api_client.ClientRouter{
 // Remote client
 client := &api_client.ClientRouter{
     RouterName: "user-router",
-    ServerName: "auth-server",
-    FullURL:    "http://auth-service:8080",
+    ServerName: "user-server",
+    FullURL:    "http://user-service:8080",
     IsLocal:    false,
     Timeout:    10 * time.Second,
 }
@@ -318,9 +318,9 @@ clientRouters:
     isLocal: true
     timeout: 30s
 
-  - routerName: auth-router
-    serverName: auth-server
-    fullUrl: http://auth-service:8080
+  - routerName: order-router
+    serverName: order-server
+    fullUrl: http://order-service:8080
     isLocal: false
     timeout: 10s
 

@@ -22,6 +22,8 @@ type DbPool interface {
 	// and set Row Level Security (RLS) context to the specified tenantID.
 	// This is useful for multi-tenant applications.
 	AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (DbConn, error)
+
+	lokstra_registry.Shutdownable
 }
 
 type RowMap = map[string]any

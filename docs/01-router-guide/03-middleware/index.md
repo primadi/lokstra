@@ -352,7 +352,7 @@ r.Use("cors_all")
 import "github.com/primadi/lokstra/middleware/jwtauth"
 
 jwtConfig := map[string]any{
-    "validator_service_name": "auth_validator",
+    "secret_key": "your-secret-key",
 }
 
 // Per-route

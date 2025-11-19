@@ -592,21 +592,97 @@ func GetResolvedConfig(key string) (any, bool)
 ---
 
 ### GetConfig
-Retrieves a configuration with type assertion and default value.
+Retrieves a configuration value with type assertion and default value.
 
 **Signature:**
 ```go
 func GetConfig[T any](name string, defaultValue T) T
 ```
 
+**Parameters:**
+- `name` - Configuration key (e.g., "db.dsn", "app.max_connections")
+- `defaultValue` - Default value if configuration not found
+
 **Returns:**
 - Config value of type `T`, or `defaultValue` if not found
 
+**Type Conversion:**
+The function attempts to convert the stored value to type `T`:
+- String → String (direct)
+- Number → Number (with type conversion)
+- Bool → Bool (direct)
+- Object → Struct (via JSON unmarshaling)
+- Array → Slice (via JSON unmarshaling)
+
 **Example:**
 ```go
+// Simple types
 dsn := lokstra_registry.GetConfig("db.dsn", "postgresql://localhost/default")
 maxConn := lokstra_registry.GetConfig("app.max_connections", 10)
+debug := lokstra_registry.GetConfig("app.debug", false)
+
+// Complex types
+type Features struct {
+    EnableLogging bool   `json:"enable_logging"`
+    EnableMetrics bool   `json:"enable_metrics"`
+    MaxRetries    int    `json:"max_retries"`
+}
+
+features := lokstra_registry.GetConfig("app.features", Features{
+    EnableLogging: true,
+    EnableMetrics: false,
+    MaxRetries:    3,
+})
 ```
+
+**YAML Configuration:**
+```yaml
+configs:
+  - name: db.dsn
+    value: "${DATABASE_URL:postgresql://localhost/mydb}"
+  
+  - name: app.max_connections
+    value: 25
+  
+  - name: app.debug
+    value: true
+  
+  - name: app.features
+    value:
+      enable_logging: true
+      enable_metrics: true
+      max_retries: 5
+```
+
+**Accessing in Service Factory:**
+```go
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+    // Get from service-specific config
+    maxItems := 100
+    if val, ok := config["max_items"].(int); ok {
+        maxItems = val
+    }
+    
+    // Or get from global config registry
+    timeout := lokstra_registry.GetConfig("app.timeout", 30)
+    
+    return &UserServiceImpl{
+        MaxItems: maxItems,
+        Timeout:  time.Duration(timeout) * time.Second,
+    }
+}
+```
+
+**Best Practices:**
+- ✅ Use specific config keys: `db.dsn`, not just `dsn`
+- ✅ Always provide sensible defaults
+- ✅ Use `GetConfig` in factory functions, not in handlers
+- ✅ Cache config values in service structs for performance
+- 🚫 Don't call `GetConfig` in hot paths (per-request)
+
+**Related:**
+- See [Configuration System](../03-configuration/config.md) for YAML configuration
+- See [Variable Resolvers](../03-configuration/config.md#custom-resolvers) for dynamic config sources
 
 ---
 
