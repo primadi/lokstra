@@ -707,14 +707,7 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 //	    },
 //	    map[string]any{"addr": "localhost:6379"})
 func (g *GlobalRegistry) RegisterLazyService(name string, factory any, config map[string]any) {
-	// Type detection: string factory type name vs inline function
-	if factoryTypeName, ok := factory.(string); ok {
-		// String factory type - store definition for deferred instantiation
-		g.registerDeferredService(name, factoryTypeName, config)
-		return
-	}
-
-	// Inline function - immediate registration (no auto-detect)
+	// Delegate to RegisterLazyServiceWithDeps with nil deps
 	g.RegisterLazyServiceWithDeps(name, factory, nil, config)
 }
 
@@ -813,6 +806,13 @@ func WithRegistrationMode(mode LazyServiceRegistrationMode) LazyServiceOption {
 //	    map[string]any{"max_items": 5},
 //	)
 func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, deps map[string]string, config map[string]any, opts ...LazyServiceOption) {
+	// Type detection: string factory type name vs inline function
+	if factoryTypeName, ok := factory.(string); ok {
+		// String factory type - store definition for deferred instantiation
+		g.registerDeferredService(name, factoryTypeName, config)
+		return
+	}
+
 	// Parse options
 	options := &lazyServiceOptions{
 		mode: LazyServiceError, // Default: strict error on duplicate
