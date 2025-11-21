@@ -597,12 +597,67 @@ func (g *GlobalRegistry) resolveAnyValue(value any, tempConfigs map[string]any) 
 }
 
 // GetResolvedConfig returns a resolved config value
+// Supports both flat access ("global-db.dsn") and nested access ("global-db" returns map)
 func (g *GlobalRegistry) GetResolvedConfig(name string) (any, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	value, ok := g.resolvedConfigs[name]
-	return value, ok
+	// Try direct lookup first (flat access)
+	if value, ok := g.resolvedConfigs[name]; ok {
+		return value, true
+	}
+
+	// Try nested access: collect all keys starting with "name."
+	prefix := name + "."
+	nested := make(map[string]any)
+	hasNested := false
+
+	for key, value := range g.resolvedConfigs {
+		if strings.HasPrefix(key, prefix) {
+			// Remove prefix and reconstruct nested structure
+			subKey := strings.TrimPrefix(key, prefix)
+
+			// Handle further nesting (e.g., "global-db.connection.pool.size")
+			if strings.Contains(subKey, ".") {
+				setNestedValue(nested, subKey, value)
+			} else {
+				nested[subKey] = value
+			}
+			hasNested = true
+		}
+	}
+
+	if hasNested {
+		return nested, true
+	}
+
+	return nil, false
+}
+
+// setNestedValue sets a value in a nested map using dot notation
+// Example: setNestedValue(map, "connection.pool.size", 10) creates {"connection": {"pool": {"size": 10}}}
+func setNestedValue(target map[string]any, path string, value any) {
+	parts := strings.Split(path, ".")
+	current := target
+
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			// Last part: set value
+			current[part] = value
+		} else {
+			// Intermediate part: ensure map exists
+			if _, exists := current[part]; !exists {
+				current[part] = make(map[string]any)
+			}
+			// Navigate deeper
+			if nextMap, ok := current[part].(map[string]any); ok {
+				current = nextMap
+			} else {
+				// Type conflict: cannot navigate deeper
+				return
+			}
+		}
+	}
 }
 
 // ===== RUNTIME INSTANCE REGISTRATION =====

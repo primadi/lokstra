@@ -20,6 +20,23 @@ func main() {
 
 	deploy.SetLogLevelFromEnv()
 
+	lokstra_registry.LoadConfigFromFolder("config")
+
+	dsn := lokstra_registry.GetConfig("global-db.dsn", "")
+	schema := lokstra_registry.GetConfig("global-db.schema", "public")
+
+	// Just to show that we can access nested config values
+	fmt.Printf("Using Global DB DSN: %s, Schema: %s\n", dsn, schema)
+
+	type dbConfig struct {
+		DSN    string `json:"dsn"`
+		Schema string `json:"schema"`
+	}
+	fullDBConfig := lokstra_registry.GetConfig("global-db", dbConfig{})
+
+	// Print full nested config struct
+	fmt.Printf("Full Global DB Config: %+v\n", fullDBConfig)
+
 	// 1. Register service types from all modules
 	registerServiceTypes()
 
@@ -27,6 +44,7 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. Run server from config folder
-	// Lokstra will automatically merge all YAML files in config/ folder
-	lokstra_registry.RunServerFromConfigFolder("config")
+	if err := lokstra_registry.InitAndRunServer(); err != nil {
+		panic(err)
+	}
 }

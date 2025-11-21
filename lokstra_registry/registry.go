@@ -15,7 +15,9 @@ package lokstra_registry
 
 import (
 	"fmt"
+	"reflect"
 
+	"github.com/primadi/lokstra/common/cast"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/request"
@@ -387,15 +389,58 @@ func GetResolvedConfig(key string) (any, bool) {
 	return deploy.Global().GetResolvedConfig(key)
 }
 
-// GetConfig retrieves a configuration value with type assertion and default value
+// GetConfig retrieves a configuration value with type assertion and default value.
+// Supports automatic conversion from map[string]any to struct T.
+//
+// Usage examples:
+//
+//	// Simple types (direct type assertion)
+//	dsn := GetConfig("global-db.dsn", "")
+//	port := GetConfig("server.port", 8080)
+//
+//	// Map access
+//	dbConfig := GetConfig[map[string]any]("global-db", nil)
+//
+//	// Struct binding (automatic conversion from map)
+//	type DBConfig struct {
+//	    DSN    string `json:"dsn"`
+//	    Schema string `json:"schema"`
+//	}
+//	dbConfig := GetConfig[DBConfig]("global-db", DBConfig{})
 func GetConfig[T any](name string, defaultValue T) T {
 	value, ok := deploy.Global().GetResolvedConfig(name)
 	if !ok {
 		return defaultValue
 	}
 
+	// Direct type match - fastest path
 	if typed, ok := value.(T); ok {
 		return typed
+	}
+
+	// Try converting map[string]any to struct T
+	if mapValue, ok := value.(map[string]any); ok {
+		var zero T
+		targetType := reflect.TypeOf(zero)
+
+		// Check if T is a struct (not pointer)
+		if targetType.Kind() == reflect.Struct {
+			// Create a pointer to T for ToStruct
+			ptr := reflect.New(targetType).Interface()
+			if err := cast.ToStruct(mapValue, ptr, false); err == nil {
+				// Return dereferenced value
+				return reflect.ValueOf(ptr).Elem().Interface().(T)
+			}
+		}
+
+		// Check if T is a pointer to struct
+		if targetType.Kind() == reflect.Pointer && targetType.Elem().Kind() == reflect.Struct {
+			// Create a new instance of T
+			ptr := reflect.New(targetType.Elem()).Interface()
+			if err := cast.ToStruct(mapValue, ptr, false); err == nil {
+				return ptr.(T)
+			}
+		}
 	}
 
 	return defaultValue
