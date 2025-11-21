@@ -1,4 +1,4 @@
-package listener
+package listener_utils
 
 import (
 	"crypto/tls"
@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func createTLSConfig(certFile, keyFile, caFile string) (*tls.Config, error) {
+func CreateTLSConfig(certFile, keyFile, caFile string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load TLS cert/key: %w", err)

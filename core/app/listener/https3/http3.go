@@ -1,4 +1,4 @@
-package listener
+package listener_http3
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/app/listener"
+	listener_utils "github.com/primadi/lokstra/core/app/listener/utils"
 	"github.com/quic-go/quic-go/http3"
 )
 
@@ -42,7 +44,7 @@ func (s *Http3) ListenAndServe() error {
 		s.handler.ServeHTTP(w, r)
 	})
 
-	tlsConfig, err := createTLSConfig(s.certFile, s.keyFile, s.caFile)
+	tlsConfig, err := listener_utils.CreateTLSConfig(s.certFile, s.keyFile, s.caFile)
 	if err != nil {
 		return fmt.Errorf("failed to create TLS config: %w", err)
 	}
@@ -52,7 +54,7 @@ func (s *Http3) ListenAndServe() error {
 
 	// Start serving
 	if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
-		return wrapListenError(s.server.Addr, err)
+		return listener_utils.WrapListenError(s.server.Addr, err)
 	}
 	return nil
 }
@@ -86,15 +88,15 @@ func (s *Http3) Shutdown(timeout time.Duration) error {
 	return shutdownErr
 }
 
-var _ AppListener = (*Http3)(nil)
+var _ listener.AppListener = (*Http3)(nil)
 
-func NewHttp3(config map[string]any, handler http.Handler) AppListener {
-	idleTimeout := utils.GetValueFromMap(config, IDLE_TIMEOUT_KEY, DEFAULT_IDLE_TIMEOUT)
+func NewHttp3(config map[string]any, handler http.Handler) listener.AppListener {
+	idleTimeout := utils.GetValueFromMap(config, listener.IDLE_TIMEOUT_KEY, listener.DEFAULT_IDLE_TIMEOUT)
 	addr := utils.GetValueFromMap(config, "addr", ":8080")
 
-	certFile := utils.GetValueFromMap(config, CERT_FILE_KEY, "")
-	keyFile := utils.GetValueFromMap(config, KEY_FILE_KEY, "")
-	caFile := utils.GetValueFromMap(config, CA_FILE_KEY, "")
+	certFile := utils.GetValueFromMap(config, listener.CERT_FILE_KEY, "")
+	keyFile := utils.GetValueFromMap(config, listener.KEY_FILE_KEY, "")
+	caFile := utils.GetValueFromMap(config, listener.CA_FILE_KEY, "")
 
 	return &Http3{
 		handler:  handler,
@@ -106,4 +108,8 @@ func NewHttp3(config map[string]any, handler http.Handler) AppListener {
 			IdleTimeout: idleTimeout,
 		},
 	}
+}
+
+func init() {
+	listener.RegisterListener("http3", NewHttp3)
 }

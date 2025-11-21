@@ -1,4 +1,4 @@
-package listener
+package listener_fasthttp
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/app/listener"
+	listener_utils "github.com/primadi/lokstra/core/app/listener/utils"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
@@ -73,13 +75,13 @@ func (s *FastHttp) ListenAndServe() error {
 		var err error
 		listener, err = net.Listen("tcp", s.addr)
 		if err != nil {
-			return wrapListenError(s.addr, err)
+			return listener_utils.WrapListenError(s.addr, err)
 		}
 		// fmt.Printf("[FastHttp] Starting server on TCP %s\n", addr)
 	}
 
 	if s.secure {
-		tlsConfig, err := createTLSConfig(s.certFile, s.keyFile, s.caFile)
+		tlsConfig, err := listener_utils.CreateTLSConfig(s.certFile, s.keyFile, s.caFile)
 		if err != nil {
 			return fmt.Errorf("failed to create TLS config: %w", err)
 		}
@@ -126,20 +128,20 @@ func (s *FastHttp) Shutdown(timeout time.Duration) error {
 	return shutdownErr
 }
 
-var _ AppListener = (*FastHttp)(nil)
+var _ listener.AppListener = (*FastHttp)(nil)
 
-func NewFastHttp(config map[string]any, handler http.Handler) AppListener {
+func NewFastHttp(config map[string]any, handler http.Handler) listener.AppListener {
 	addr := utils.GetValueFromMap(config, "addr", ":8080")
-	readTimeout := utils.GetValueFromMap(config, READ_TIMEOUT_KEY, DEFAULT_READ_TIMEOUT)
-	writeTimeout := utils.GetValueFromMap(config, WRITE_TIMEOUT_KEY, DEFAULT_WRITE_TIMEOUT)
-	idleTimeout := utils.GetValueFromMap(config, IDLE_TIMEOUT_KEY, DEFAULT_IDLE_TIMEOUT)
+	readTimeout := utils.GetValueFromMap(config, listener.READ_TIMEOUT_KEY, listener.DEFAULT_READ_TIMEOUT)
+	writeTimeout := utils.GetValueFromMap(config, listener.WRITE_TIMEOUT_KEY, listener.DEFAULT_WRITE_TIMEOUT)
+	idleTimeout := utils.GetValueFromMap(config, listener.IDLE_TIMEOUT_KEY, listener.DEFAULT_IDLE_TIMEOUT)
 
 	secure := utils.GetValueFromMap(config, "secure", false)
 	var certFile, keyFile, caFile string
 	if secure {
-		certFile = utils.GetValueFromMap(config, CERT_FILE_KEY, "")
-		keyFile = utils.GetValueFromMap(config, KEY_FILE_KEY, "")
-		caFile = utils.GetValueFromMap(config, CA_FILE_KEY, "")
+		certFile = utils.GetValueFromMap(config, listener.CERT_FILE_KEY, "")
+		keyFile = utils.GetValueFromMap(config, listener.KEY_FILE_KEY, "")
+		caFile = utils.GetValueFromMap(config, listener.CA_FILE_KEY, "")
 	}
 
 	return &FastHttp{
@@ -155,4 +157,8 @@ func NewFastHttp(config map[string]any, handler http.Handler) AppListener {
 			IdleTimeout:  idleTimeout,
 		},
 	}
+}
+
+func init() {
+	listener.RegisterListener("fasthttp", NewFastHttp)
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	listener_utils "github.com/primadi/lokstra/core/app/listener/utils"
 )
 
 const READ_TIMEOUT_KEY = "read_timeout"
@@ -81,13 +82,13 @@ func (s *NetHttp) ListenAndServe() error {
 		var err error
 		listener, err = net.Listen("tcp", s.server.Addr)
 		if err != nil {
-			return wrapListenError(s.server.Addr, err)
+			return listener_utils.WrapListenError(s.server.Addr, err)
 		}
 		// fmt.Printf("[NETHTTP] Starting server on TCP %s\n", addr)
 	}
 
 	if s.secure {
-		tlsConfig, err := createTLSConfig(s.certFile, s.keyFile, s.caFile)
+		tlsConfig, err := listener_utils.CreateTLSConfig(s.certFile, s.keyFile, s.caFile)
 		if err != nil {
 			return fmt.Errorf("failed to create TLS config: %w", err)
 		}
@@ -168,4 +169,9 @@ func NewNetHttp(config map[string]any, handler http.Handler) AppListener {
 			IdleTimeout:       idleTimeout,
 		},
 	}
+}
+
+func init() {
+	RegisterListener("nethttp", NewNetHttp)
+	RegisterListener("default", NewNetHttp)
 }
