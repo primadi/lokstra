@@ -23,10 +23,3 @@ func CreateListener(config map[string]any, handler http.Handler) AppListener {
 	}
 	panic("Unsupported listener type: " + listenerType)
 }
-
-func init() {
-	RegisterListener("nethttp", NewNetHttp)
-	RegisterListener("default", NewNetHttp)
-	RegisterListener("http3", NewHttp3)
-	RegisterListener("fasthttp", NewFastHttp)
-}

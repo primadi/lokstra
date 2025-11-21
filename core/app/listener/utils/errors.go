@@ -1,4 +1,4 @@
-package listener
+package listener_utils
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 )
 
 // wrapListenError wraps network listen errors with more informative messages
-func wrapListenError(addr string, err error) error {
+func WrapListenError(addr string, err error) error {
 	if err == nil {
 		return nil
 	}
