@@ -1,8 +1,10 @@
-package utils
+package utils_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/primadi/lokstra/common/utils"
 )
 
 // assertEqual is a simple helper for testing equality
@@ -25,47 +27,47 @@ func TestGetValueFromMap(t *testing.T) {
 	}
 
 	t.Run("Get existing string value", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "string_value", "default")
+		result := utils.GetValueFromMap(testMap, "string_value", "default")
 		assertEqual(t, result, "hello")
 	})
 
 	t.Run("Get existing int value", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "int_value", 0)
+		result := utils.GetValueFromMap(testMap, "int_value", 0)
 		assertEqual(t, result, 42)
 	})
 
 	t.Run("Get existing float value", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "float_value", 0.0)
+		result := utils.GetValueFromMap(testMap, "float_value", 0.0)
 		assertEqual(t, result, 3.14)
 	})
 
 	t.Run("Get existing bool value", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "bool_value", false)
+		result := utils.GetValueFromMap(testMap, "bool_value", false)
 		assertEqual(t, result, true)
 	})
 
 	t.Run("Get non-existent key returns default", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "non_existent", "default_value")
+		result := utils.GetValueFromMap(testMap, "non_existent", "default_value")
 		assertEqual(t, result, "default_value")
 	})
 
 	t.Run("Get value with wrong type returns default", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "string_value", 123) // Expecting int but value is string
+		result := utils.GetValueFromMap(testMap, "string_value", 123) // Expecting int but value is string
 		assertEqual(t, result, 123)
 	})
 
 	t.Run("Get nil value returns default", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "nil_value", "default")
+		result := utils.GetValueFromMap(testMap, "nil_value", "default")
 		assertEqual(t, result, "default")
 	})
 
 	t.Run("Get pointer string value", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "pointer_string", "")
+		result := utils.GetValueFromMap(testMap, "pointer_string", "")
 		assertEqual(t, result, "pointer")
 	})
 
 	t.Run("Get pointer int value", func(t *testing.T) {
-		result := GetValueFromMap(testMap, "pointer_int", 0)
+		result := utils.GetValueFromMap(testMap, "pointer_int", 0)
 		assertEqual(t, result, 99)
 	})
 
@@ -79,7 +81,7 @@ func TestGetValueFromMap(t *testing.T) {
 			"custom": CustomStruct{Name: "John", Age: 30},
 		}
 
-		result := GetValueFromMap(structMap, "custom", CustomStruct{})
+		result := utils.GetValueFromMap(structMap, "custom", CustomStruct{})
 		assertEqual(t, CustomStruct{Name: "John", Age: 30}, result)
 	})
 }
@@ -89,7 +91,7 @@ func TestGetDurationFromMap(t *testing.T) {
 		testMap := map[string]any{
 			"duration": "30s",
 		}
-		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
+		result := utils.GetDurationFromMap(testMap, "duration", 5*time.Second)
 		assertEqual(t, result, 30*time.Second)
 	})
 
@@ -97,7 +99,7 @@ func TestGetDurationFromMap(t *testing.T) {
 		testMap := map[string]any{
 			"duration": "invalid_duration",
 		}
-		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
+		result := utils.GetDurationFromMap(testMap, "duration", 5*time.Second)
 		assertEqual(t, result, 5*time.Second)
 	})
 
@@ -105,7 +107,7 @@ func TestGetDurationFromMap(t *testing.T) {
 		testMap := map[string]any{
 			"duration": 30.5,
 		}
-		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
+		result := utils.GetDurationFromMap(testMap, "duration", 5*time.Second)
 		// Implementation truncates float64 to int, so 30.5 becomes 30
 		assertEqual(t, result, 30*time.Second)
 	})
@@ -114,7 +116,7 @@ func TestGetDurationFromMap(t *testing.T) {
 		testMap := map[string]any{
 			"duration": 45,
 		}
-		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
+		result := utils.GetDurationFromMap(testMap, "duration", 5*time.Second)
 		assertEqual(t, result, 45*time.Second)
 	})
 
@@ -122,7 +124,7 @@ func TestGetDurationFromMap(t *testing.T) {
 		testMap := map[string]any{
 			"duration": int64(60),
 		}
-		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
+		result := utils.GetDurationFromMap(testMap, "duration", 5*time.Second)
 		assertEqual(t, result, 60*time.Second)
 	})
 
@@ -130,7 +132,7 @@ func TestGetDurationFromMap(t *testing.T) {
 		testMap := map[string]any{
 			"duration": 2 * time.Minute,
 		}
-		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
+		result := utils.GetDurationFromMap(testMap, "duration", 5*time.Second)
 		assertEqual(t, result, 2*time.Minute)
 	})
 
@@ -138,13 +140,13 @@ func TestGetDurationFromMap(t *testing.T) {
 		testMap := map[string]any{
 			"duration": []string{"not", "a", "duration"},
 		}
-		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
+		result := utils.GetDurationFromMap(testMap, "duration", 5*time.Second)
 		assertEqual(t, result, 5*time.Second)
 	})
 
 	t.Run("Get duration from non-existent key returns default", func(t *testing.T) {
 		testMap := map[string]any{}
-		result := GetDurationFromMap(testMap, "non_existent", 10*time.Second)
+		result := utils.GetDurationFromMap(testMap, "non_existent", 10*time.Second)
 		assertEqual(t, result, 10*time.Second)
 	})
 
@@ -163,7 +165,7 @@ func TestGetDurationFromMap(t *testing.T) {
 			testMap := map[string]any{
 				"duration": tc.input,
 			}
-			result := GetDurationFromMap(testMap, "duration", 0)
+			result := utils.GetDurationFromMap(testMap, "duration", 0)
 			if result != tc.expected {
 				t.Errorf("Failed for input: %s - got %v, want %v", tc.input, result, tc.expected)
 			}
@@ -179,7 +181,7 @@ func TestCloneMap(t *testing.T) {
 			"key3": "value3",
 		}
 
-		cloned := CloneMap(original)
+		cloned := utils.CloneMap(original)
 
 		// Check all values are copied
 		if len(cloned) != len(original) {
@@ -206,7 +208,7 @@ func TestCloneMap(t *testing.T) {
 			3: 30,
 		}
 
-		cloned := CloneMap(original)
+		cloned := utils.CloneMap(original)
 
 		if len(cloned) != len(original) {
 			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
@@ -225,7 +227,7 @@ func TestCloneMap(t *testing.T) {
 
 	t.Run("Clone empty map", func(t *testing.T) {
 		original := map[string]int{}
-		cloned := CloneMap(original)
+		cloned := utils.CloneMap(original)
 
 		if len(cloned) != len(original) {
 			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
@@ -238,9 +240,9 @@ func TestCloneMap(t *testing.T) {
 
 	t.Run("Clone nil map", func(t *testing.T) {
 		var original map[string]int
-		cloned := CloneMap(original)
+		cloned := utils.CloneMap(original)
 
-		// CloneMap creates a new empty map even for nil input
+		// utils.CloneMap creates a new empty map even for nil input
 		// if original == nil && cloned == nil {
 		// 	t.Error("cloned should not be nil when original is nil")
 		// }
@@ -263,7 +265,7 @@ func TestCloneMap(t *testing.T) {
 			"jane": {Name: "Jane", Age: 25},
 		}
 
-		cloned := CloneMap(original)
+		cloned := utils.CloneMap(original)
 
 		if len(cloned) != len(original) {
 			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
@@ -286,7 +288,7 @@ func TestCloneMap(t *testing.T) {
 			original[i] = i * 2
 		}
 
-		cloned := CloneMap(original)
+		cloned := utils.CloneMap(original)
 
 		if len(cloned) != len(original) {
 			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))

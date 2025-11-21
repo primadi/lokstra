@@ -1,7 +1,9 @@
-package utils
+package utils_test
 
 import (
 	"testing"
+
+	"github.com/primadi/lokstra/common/utils"
 )
 
 func TestCamelToSnake(t *testing.T) {
@@ -209,7 +211,7 @@ func TestCamelToSnake(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := CamelToSnake(tt.input)
+			result := utils.CamelToSnake(tt.input)
 			if result != tt.expected {
 				t.Errorf("CamelToSnake(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
@@ -258,12 +260,23 @@ func TestCamelToSnake_EdgeCases(t *testing.T) {
 
 	for _, tt := range edgeCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result := CamelToSnake(tt.input)
+			result := utils.CamelToSnake(tt.input)
 			if result != tt.expected {
 				t.Errorf("CamelToSnake(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
 		})
 	}
+}
+
+func isUpper(r rune) bool {
+	return r >= 'A' && r <= 'Z'
+}
+
+func toLower(r rune) rune {
+	if r >= 'A' && r <= 'Z' {
+		return r + ('a' - 'A')
+	}
+	return r
 }
 
 func TestCamelToSnake_HelperFunctions(t *testing.T) {
@@ -322,7 +335,7 @@ func TestCamelToSnake_Performance(t *testing.T) {
 	longCamelCase := "thisIsAVeryLongCamelCaseStringWithManyWordsToTestPerformanceOfTheConversionFunction"
 	expected := "this_is_a_very_long_camel_case_string_with_many_words_to_test_performance_of_the_conversion_function"
 
-	result := CamelToSnake(longCamelCase)
+	result := utils.CamelToSnake(longCamelCase)
 	if result != expected {
 		t.Errorf("CamelToSnake(%q) = %q, want %q", longCamelCase, result, expected)
 	}
@@ -341,7 +354,7 @@ func BenchmarkCamelToSnake(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				CamelToSnake(tc)
+				utils.CamelToSnake(tc)
 			}
 		})
 	}
@@ -349,10 +362,10 @@ func BenchmarkCamelToSnake(b *testing.B) {
 
 func ExampleCamelToSnake() {
 	// Basic usage examples
-	result1 := CamelToSnake("camelCase")
-	result2 := CamelToSnake("PascalCase")
-	result3 := CamelToSnake("getUserName")
-	result4 := CamelToSnake("HTTPResponse")
+	result1 := utils.CamelToSnake("camelCase")
+	result2 := utils.CamelToSnake("PascalCase")
+	result3 := utils.CamelToSnake("getUserName")
+	result4 := utils.CamelToSnake("HTTPResponse")
 
 	println(result1) // camel_case
 	println(result2) // pascal_case
