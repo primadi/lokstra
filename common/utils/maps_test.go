@@ -3,9 +3,15 @@ package utils
 import (
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
+
+// assertEqual is a simple helper for testing equality
+func assertEqual[T comparable](t *testing.T, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
 
 func TestGetValueFromMap(t *testing.T) {
 	testMap := map[string]any{
@@ -20,47 +26,47 @@ func TestGetValueFromMap(t *testing.T) {
 
 	t.Run("Get existing string value", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "string_value", "default")
-		assert.Equal(t, "hello", result)
+		assertEqual(t, result, "hello")
 	})
 
 	t.Run("Get existing int value", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "int_value", 0)
-		assert.Equal(t, 42, result)
+		assertEqual(t, result, 42)
 	})
 
 	t.Run("Get existing float value", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "float_value", 0.0)
-		assert.Equal(t, 3.14, result)
+		assertEqual(t, result, 3.14)
 	})
 
 	t.Run("Get existing bool value", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "bool_value", false)
-		assert.Equal(t, true, result)
+		assertEqual(t, result, true)
 	})
 
 	t.Run("Get non-existent key returns default", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "non_existent", "default_value")
-		assert.Equal(t, "default_value", result)
+		assertEqual(t, result, "default_value")
 	})
 
 	t.Run("Get value with wrong type returns default", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "string_value", 123) // Expecting int but value is string
-		assert.Equal(t, 123, result)
+		assertEqual(t, result, 123)
 	})
 
 	t.Run("Get nil value returns default", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "nil_value", "default")
-		assert.Equal(t, "default", result)
+		assertEqual(t, result, "default")
 	})
 
 	t.Run("Get pointer string value", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "pointer_string", "")
-		assert.Equal(t, "pointer", result)
+		assertEqual(t, result, "pointer")
 	})
 
 	t.Run("Get pointer int value", func(t *testing.T) {
 		result := GetValueFromMap(testMap, "pointer_int", 0)
-		assert.Equal(t, 99, result)
+		assertEqual(t, result, 99)
 	})
 
 	t.Run("Generic type with custom struct", func(t *testing.T) {
@@ -74,7 +80,7 @@ func TestGetValueFromMap(t *testing.T) {
 		}
 
 		result := GetValueFromMap(structMap, "custom", CustomStruct{})
-		assert.Equal(t, CustomStruct{Name: "John", Age: 30}, result)
+		assertEqual(t, CustomStruct{Name: "John", Age: 30}, result)
 	})
 }
 
@@ -84,7 +90,7 @@ func TestGetDurationFromMap(t *testing.T) {
 			"duration": "30s",
 		}
 		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
-		assert.Equal(t, 30*time.Second, result)
+		assertEqual(t, result, 30*time.Second)
 	})
 
 	t.Run("Get duration from invalid string returns default", func(t *testing.T) {
@@ -92,7 +98,7 @@ func TestGetDurationFromMap(t *testing.T) {
 			"duration": "invalid_duration",
 		}
 		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
-		assert.Equal(t, 5*time.Second, result)
+		assertEqual(t, result, 5*time.Second)
 	})
 
 	t.Run("Get duration from float64", func(t *testing.T) {
@@ -101,7 +107,7 @@ func TestGetDurationFromMap(t *testing.T) {
 		}
 		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
 		// Implementation truncates float64 to int, so 30.5 becomes 30
-		assert.Equal(t, 30*time.Second, result)
+		assertEqual(t, result, 30*time.Second)
 	})
 
 	t.Run("Get duration from int", func(t *testing.T) {
@@ -109,7 +115,7 @@ func TestGetDurationFromMap(t *testing.T) {
 			"duration": 45,
 		}
 		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
-		assert.Equal(t, 45*time.Second, result)
+		assertEqual(t, result, 45*time.Second)
 	})
 
 	t.Run("Get duration from int64", func(t *testing.T) {
@@ -117,7 +123,7 @@ func TestGetDurationFromMap(t *testing.T) {
 			"duration": int64(60),
 		}
 		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
-		assert.Equal(t, 60*time.Second, result)
+		assertEqual(t, result, 60*time.Second)
 	})
 
 	t.Run("Get duration from time.Duration", func(t *testing.T) {
@@ -125,7 +131,7 @@ func TestGetDurationFromMap(t *testing.T) {
 			"duration": 2 * time.Minute,
 		}
 		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
-		assert.Equal(t, 2*time.Minute, result)
+		assertEqual(t, result, 2*time.Minute)
 	})
 
 	t.Run("Get duration from unsupported type returns default", func(t *testing.T) {
@@ -133,13 +139,13 @@ func TestGetDurationFromMap(t *testing.T) {
 			"duration": []string{"not", "a", "duration"},
 		}
 		result := GetDurationFromMap(testMap, "duration", 5*time.Second)
-		assert.Equal(t, 5*time.Second, result)
+		assertEqual(t, result, 5*time.Second)
 	})
 
 	t.Run("Get duration from non-existent key returns default", func(t *testing.T) {
 		testMap := map[string]any{}
 		result := GetDurationFromMap(testMap, "non_existent", 10*time.Second)
-		assert.Equal(t, 10*time.Second, result)
+		assertEqual(t, result, 10*time.Second)
 	})
 
 	t.Run("Complex duration strings", func(t *testing.T) {
@@ -158,7 +164,9 @@ func TestGetDurationFromMap(t *testing.T) {
 				"duration": tc.input,
 			}
 			result := GetDurationFromMap(testMap, "duration", 0)
-			assert.Equal(t, tc.expected, result, "Failed for input: %s", tc.input)
+			if result != tc.expected {
+				t.Errorf("Failed for input: %s - got %v, want %v", tc.input, result, tc.expected)
+			}
 		}
 	})
 }
@@ -174,15 +182,21 @@ func TestCloneMap(t *testing.T) {
 		cloned := CloneMap(original)
 
 		// Check all values are copied
-		assert.Equal(t, original, cloned)
+		if len(cloned) != len(original) {
+			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
+		}
+		for k, v := range original {
+			if cloned[k] != v {
+				t.Errorf("cloned[%q] = %v, want %v", k, cloned[k], v)
+			}
+		}
 
-		// Check they are different instances
-		assert.NotSame(t, original, cloned)
+		// Check they are different instances (NotSame check removed - maps are reference types)
 
 		// Modify original and ensure clone is unaffected
 		original["key1"] = "modified"
-		assert.Equal(t, "value1", cloned["key1"])
-		assert.Equal(t, "modified", original["key1"])
+		assertEqual(t, cloned["key1"], "value1")
+		assertEqual(t, original["key1"], "modified")
 	})
 
 	t.Run("Clone int map", func(t *testing.T) {
@@ -194,21 +208,32 @@ func TestCloneMap(t *testing.T) {
 
 		cloned := CloneMap(original)
 
-		assert.Equal(t, original, cloned)
-		assert.NotSame(t, original, cloned)
+		if len(cloned) != len(original) {
+			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
+		}
+		for k, v := range original {
+			if cloned[k] != v {
+				t.Errorf("cloned[%d] = %v, want %v", k, cloned[k], v)
+			}
+		}
+		// NotSame check removed - maps are reference types
 
 		original[1] = 999
-		assert.Equal(t, 10, cloned[1])
-		assert.Equal(t, 999, original[1])
+		assertEqual(t, cloned[1], 10)
+		assertEqual(t, original[1], 999)
 	})
 
 	t.Run("Clone empty map", func(t *testing.T) {
 		original := map[string]int{}
 		cloned := CloneMap(original)
 
-		assert.Equal(t, original, cloned)
-		assert.NotSame(t, original, cloned)
-		assert.Len(t, cloned, 0)
+		if len(cloned) != len(original) {
+			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
+		}
+		// NotSame check removed - maps are reference types
+		if len(cloned) != 0 {
+			t.Errorf("len(cloned) = %d, want 0", len(cloned))
+		}
 	})
 
 	t.Run("Clone nil map", func(t *testing.T) {
@@ -216,9 +241,15 @@ func TestCloneMap(t *testing.T) {
 		cloned := CloneMap(original)
 
 		// CloneMap creates a new empty map even for nil input
-		assert.NotEqual(t, original, cloned)
-		assert.NotNil(t, cloned)
-		assert.Len(t, cloned, 0)
+		// if original == nil && cloned == nil {
+		// 	t.Error("cloned should not be nil when original is nil")
+		// }
+		if cloned == nil {
+			t.Error("cloned should not be nil")
+		}
+		if len(cloned) != 0 {
+			t.Errorf("len(cloned) = %d, want 0", len(cloned))
+		}
 	})
 
 	t.Run("Clone complex value map", func(t *testing.T) {
@@ -234,12 +265,19 @@ func TestCloneMap(t *testing.T) {
 
 		cloned := CloneMap(original)
 
-		assert.Equal(t, original, cloned)
-		assert.NotSame(t, original, cloned)
+		if len(cloned) != len(original) {
+			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
+		}
+		for k, v := range original {
+			if cloned[k] != v {
+				t.Errorf("cloned[%q] = %v, want %v", k, cloned[k], v)
+			}
+		}
+		// NotSame check removed - maps are reference types
 
 		// Modify original
 		original["john"] = Person{Name: "Johnny", Age: 31}
-		assert.Equal(t, Person{Name: "John", Age: 30}, cloned["john"])
+		assertEqual(t, Person{Name: "John", Age: 30}, cloned["john"])
 	})
 
 	t.Run("Clone map performance with large map", func(t *testing.T) {
@@ -250,7 +288,9 @@ func TestCloneMap(t *testing.T) {
 
 		cloned := CloneMap(original)
 
-		assert.Equal(t, len(original), len(cloned))
-		assert.Equal(t, original[500], cloned[500])
+		if len(cloned) != len(original) {
+			t.Errorf("len(cloned) = %d, want %d", len(cloned), len(original))
+		}
+		assertEqual(t, cloned[500], original[500])
 	})
 }

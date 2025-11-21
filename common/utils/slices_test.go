@@ -2,8 +2,6 @@ package utils
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestToAnySlice(t *testing.T) {
@@ -11,19 +9,31 @@ func TestToAnySlice(t *testing.T) {
 		input := []string{"hello", "world", "test"}
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 3)
-		assert.Equal(t, "hello", result[0])
-		assert.Equal(t, "world", result[1])
-		assert.Equal(t, "test", result[2])
+		if len(result) != 3 {
+			t.Errorf("len(result) = %d, want 3", len(result))
+		}
+		if result[0] != "hello" {
+			t.Errorf("result[0] = %v, want 'hello'", result[0])
+		}
+		if result[1] != "world" {
+			t.Errorf("result[1] = %v, want 'world'", result[1])
+		}
+		if result[2] != "test" {
+			t.Errorf("result[2] = %v, want 'test'", result[2])
+		}
 	})
 
 	t.Run("Convert int slice to any slice", func(t *testing.T) {
 		input := []int{1, 2, 3, 4, 5}
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 5)
+		if len(result) != 5 {
+			t.Errorf("len(result) = %d, want 5", len(result))
+		}
 		for i, v := range input {
-			assert.Equal(t, v, result[i])
+			if result[i] != v {
+				t.Errorf("result[%d] = %v, want %v", i, result[i], v)
+			}
 		}
 	})
 
@@ -31,36 +41,60 @@ func TestToAnySlice(t *testing.T) {
 		input := []string{}
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 0)
-		assert.NotNil(t, result)
+		if len(result) != 0 {
+			t.Errorf("len(result) = %d, want 0", len(result))
+		}
+		if result == nil {
+			t.Error("result should not be nil")
+		}
 	})
 
 	t.Run("Convert nil slice", func(t *testing.T) {
 		var input []string
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 0)
-		assert.NotNil(t, result)
+		if len(result) != 0 {
+			t.Errorf("len(result) = %d, want 0", len(result))
+		}
+		if result == nil {
+			t.Error("result should not be nil")
+		}
 	})
 
 	t.Run("Convert bool slice", func(t *testing.T) {
 		input := []bool{true, false, true}
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 3)
-		assert.Equal(t, true, result[0])
-		assert.Equal(t, false, result[1])
-		assert.Equal(t, true, result[2])
+		if len(result) != 3 {
+			t.Errorf("len(result) = %d, want 3", len(result))
+		}
+		if result[0] != true {
+			t.Errorf("result[0] = %v, want true", result[0])
+		}
+		if result[1] != false {
+			t.Errorf("result[1] = %v, want false", result[1])
+		}
+		if result[2] != true {
+			t.Errorf("result[2] = %v, want true", result[2])
+		}
 	})
 
 	t.Run("Convert float slice", func(t *testing.T) {
 		input := []float64{1.1, 2.2, 3.3}
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 3)
-		assert.Equal(t, 1.1, result[0])
-		assert.Equal(t, 2.2, result[1])
-		assert.Equal(t, 3.3, result[2])
+		if len(result) != 3 {
+			t.Errorf("len(result) = %d, want 3", len(result))
+		}
+		if result[0] != 1.1 {
+			t.Errorf("result[0] = %v, want 1.1", result[0])
+		}
+		if result[1] != 2.2 {
+			t.Errorf("result[1] = %v, want 2.2", result[1])
+		}
+		if result[2] != 3.3 {
+			t.Errorf("result[2] = %v, want 3.3", result[2])
+		}
 	})
 
 	t.Run("Convert custom struct slice", func(t *testing.T) {
@@ -75,19 +109,33 @@ func TestToAnySlice(t *testing.T) {
 		}
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 2)
-		assert.Equal(t, Person{Name: "John", Age: 30}, result[0])
-		assert.Equal(t, Person{Name: "Jane", Age: 25}, result[1])
+		if len(result) != 2 {
+			t.Errorf("len(result) = %d, want 2", len(result))
+		}
+		if result[0] != (Person{Name: "John", Age: 30}) {
+			t.Errorf("result[0] = %v, want %v", result[0], Person{Name: "John", Age: 30})
+		}
+		if result[1] != (Person{Name: "Jane", Age: 25}) {
+			t.Errorf("result[1] = %v, want %v", result[1], Person{Name: "Jane", Age: 25})
+		}
 	})
 
 	t.Run("Convert interface slice", func(t *testing.T) {
 		input := []any{"string", 42, true}
 		result := ToAnySlice(input)
 
-		assert.Len(t, result, 3)
-		assert.Equal(t, "string", result[0])
-		assert.Equal(t, 42, result[1])
-		assert.Equal(t, true, result[2])
+		if len(result) != 3 {
+			t.Errorf("len(result) = %d, want 3", len(result))
+		}
+		if result[0] != "string" {
+			t.Errorf("result[0] = %v, want 'string'", result[0])
+		}
+		if result[1] != 42 {
+			t.Errorf("result[1] = %v, want 42", result[1])
+		}
+		if result[2] != true {
+			t.Errorf("result[2] = %v, want true", result[2])
+		}
 	})
 }
 
@@ -100,7 +148,14 @@ func TestSlicesConcat(t *testing.T) {
 		result := SlicesConcat(slice1, slice2, slice3)
 
 		expected := []string{"a", "b", "c", "d", "e"}
-		assert.Equal(t, expected, result)
+		if len(result) != len(expected) {
+			t.Errorf("len(result) = %d, want %d", len(result), len(expected))
+		}
+		for i, v := range expected {
+			if result[i] != v {
+				t.Errorf("result[%d] = %v, want %v", i, result[i], v)
+			}
+		}
 	})
 
 	t.Run("Concatenate int slices", func(t *testing.T) {
@@ -111,7 +166,14 @@ func TestSlicesConcat(t *testing.T) {
 		result := SlicesConcat(slice1, slice2, slice3)
 
 		expected := []int{1, 2, 3, 4, 5, 6}
-		assert.Equal(t, expected, result)
+		if len(result) != len(expected) {
+			t.Errorf("len(result) = %d, want %d", len(result), len(expected))
+		}
+		for i, v := range expected {
+			if result[i] != v {
+				t.Errorf("result[%d] = %v, want %v", i, result[i], v)
+			}
+		}
 	})
 
 	t.Run("Concatenate with empty slice", func(t *testing.T) {
@@ -122,7 +184,14 @@ func TestSlicesConcat(t *testing.T) {
 		result := SlicesConcat(slice1, slice2, slice3)
 
 		expected := []string{"a", "b", "c"}
-		assert.Equal(t, expected, result)
+		if len(result) != len(expected) {
+			t.Errorf("len(result) = %d, want %d", len(result), len(expected))
+		}
+		for i, v := range expected {
+			if result[i] != v {
+				t.Errorf("result[%d] = %v, want %v", i, result[i], v)
+			}
+		}
 	})
 
 	t.Run("Concatenate all empty slices", func(t *testing.T) {
@@ -132,8 +201,12 @@ func TestSlicesConcat(t *testing.T) {
 
 		result := SlicesConcat(slice1, slice2, slice3)
 
-		assert.NotNil(t, result)
-		assert.Len(t, result, 0)
+		if result == nil {
+			t.Error("result should not be nil")
+		}
+		if len(result) != 0 {
+			t.Errorf("len(result) = %d, want 0", len(result))
+		}
 	})
 
 	t.Run("Concatenate single slice", func(t *testing.T) {
@@ -142,13 +215,22 @@ func TestSlicesConcat(t *testing.T) {
 		result := SlicesConcat(slice1)
 
 		expected := []string{"single", "slice"}
-		assert.Equal(t, expected, result)
+		if len(result) != len(expected) {
+			t.Errorf("len(result) = %d, want %d", len(result), len(expected))
+		}
+		for i, v := range expected {
+			if result[i] != v {
+				t.Errorf("result[%d] = %v, want %v", i, result[i], v)
+			}
+		}
 	})
 
 	t.Run("Concatenate no slices", func(t *testing.T) {
 		result := SlicesConcat[string]()
 
-		assert.Nil(t, result)
+		if result != nil {
+			t.Error("result should be nil")
+		}
 	})
 
 	t.Run("Concatenate with nil slice", func(t *testing.T) {
@@ -159,7 +241,14 @@ func TestSlicesConcat(t *testing.T) {
 		result := SlicesConcat(slice1, slice2, slice3)
 
 		expected := []string{"a", "b", "c"}
-		assert.Equal(t, expected, result)
+		if len(result) != len(expected) {
+			t.Errorf("len(result) = %d, want %d", len(result), len(expected))
+		}
+		for i, v := range expected {
+			if result[i] != v {
+				t.Errorf("result[%d] = %v, want %v", i, result[i], v)
+			}
+		}
 	})
 
 	t.Run("Concatenate large slices", func(t *testing.T) {
@@ -174,11 +263,21 @@ func TestSlicesConcat(t *testing.T) {
 
 		result := SlicesConcat(slice1, slice2)
 
-		assert.Len(t, result, 2000)
-		assert.Equal(t, 0, result[0])
-		assert.Equal(t, 999, result[999])
-		assert.Equal(t, 1000, result[1000])
-		assert.Equal(t, 1999, result[1999])
+		if len(result) != 2000 {
+			t.Errorf("len(result) = %d, want 2000", len(result))
+		}
+		if result[0] != 0 {
+			t.Errorf("result[0] = %d, want 0", result[0])
+		}
+		if result[999] != 999 {
+			t.Errorf("result[999] = %d, want 999", result[999])
+		}
+		if result[1000] != 1000 {
+			t.Errorf("result[1000] = %d, want 1000", result[1000])
+		}
+		if result[1999] != 1999 {
+			t.Errorf("result[1999] = %d, want 1999", result[1999])
+		}
 	})
 
 	t.Run("Concatenate custom struct slices", func(t *testing.T) {
@@ -197,7 +296,14 @@ func TestSlicesConcat(t *testing.T) {
 			{Name: "Jane", Age: 25},
 			{Name: "Bob", Age: 35},
 		}
-		assert.Equal(t, expected, result)
+		if len(result) != len(expected) {
+			t.Errorf("len(result) = %d, want %d", len(result), len(expected))
+		}
+		for i, v := range expected {
+			if result[i] != v {
+				t.Errorf("result[%d] = %v, want %v", i, result[i], v)
+			}
+		}
 	})
 
 	t.Run("Concatenate many slices", func(t *testing.T) {
@@ -211,11 +317,21 @@ func TestSlicesConcat(t *testing.T) {
 
 		result := SlicesConcat(slices...)
 
-		assert.Len(t, result, expectedTotal)
-		assert.Equal(t, 0, result[0])
-		assert.Equal(t, 10, result[1])
-		assert.Equal(t, 1, result[2])
-		assert.Equal(t, 11, result[3])
+		if len(result) != expectedTotal {
+			t.Errorf("len(result) = %d, want %d", len(result), expectedTotal)
+		}
+		if result[0] != 0 {
+			t.Errorf("result[0] = %d, want 0", result[0])
+		}
+		if result[1] != 10 {
+			t.Errorf("result[1] = %d, want 10", result[1])
+		}
+		if result[2] != 1 {
+			t.Errorf("result[2] = %d, want 1", result[2])
+		}
+		if result[3] != 11 {
+			t.Errorf("result[3] = %d, want 11", result[3])
+		}
 	})
 }
 
