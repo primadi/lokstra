@@ -30,17 +30,38 @@ app.Run(30 * time.Second)
 
 ### 2. Framework Mode (With DI)
 
-**Service:**
+**NEW RECOMMENDED FLOW (Config First):**
 
 ```go
-type UserService struct {
-    UserRepo *service.Cached[UserRepository]
-}
+// main.go
+func main() {
+    lokstra.Bootstrap()
 
+    // 1. Load config FIRST
+    if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+        log.Fatal(err)
+    }
+
+    // 2. Register services (config available!)
+    registerServiceTypes()
+    registerMiddlewareTypes()
+
+    // 3. Run server
+    if err := lokstra_registry.InitAndRunServer(); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+**Service Factory (can access config):**
+
+```go
 func UserServiceFactory(deps map[string]any, config map[string]any) any {
-    // Get user repository from dependencies
+    // Access global config from YAML
+    dbDSN := lokstra_registry.GetConfig("database.dsn", "postgres://localhost/mydb")
+
     return &UserService{
-        UserRepo: service.Cast[UserRepository]\(deps["user-repository"]),
+        UserRepo: service.Cast[UserRepository](deps["user-repository"]),
     }
 }
 ```
@@ -58,6 +79,11 @@ lokstra_registry.RegisterServiceType(
 **config.yaml:**
 
 ```yaml
+# Global config (optional)
+configs:
+  database:
+    dsn: "postgres://localhost:5432/mydb"
+
 service-definitions:
   user-service:
     type: user-service-factory
@@ -69,6 +95,21 @@ deployments:
       api:
         addr: ":8080"
         published-services: [user-service]
+```
+
+**OLD FLOW (Still Supported):**
+
+```go
+// main.go
+func main() {
+    lokstra.Bootstrap()
+
+    registerServiceTypes()
+    registerMiddlewareTypes()
+
+    // Config loaded + server started together
+    lokstra_registry.RunServerFromConfigFolder("config")
+}
 ```
 
 ### 3. Handler Signatures (29+ supported)

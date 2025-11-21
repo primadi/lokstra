@@ -2,8 +2,6 @@ package utils
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCamelToSnake(t *testing.T) {
@@ -212,7 +210,9 @@ func TestCamelToSnake(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := CamelToSnake(tt.input)
-			assert.Equal(t, tt.expected, result)
+			if result != tt.expected {
+				t.Errorf("CamelToSnake(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
 		})
 	}
 }
@@ -259,7 +259,9 @@ func TestCamelToSnake_EdgeCases(t *testing.T) {
 	for _, tt := range edgeCases {
 		t.Run(tt.name, func(t *testing.T) {
 			result := CamelToSnake(tt.input)
-			assert.Equal(t, tt.expected, result)
+			if result != tt.expected {
+				t.Errorf("CamelToSnake(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
 		})
 	}
 }
@@ -267,23 +269,51 @@ func TestCamelToSnake_EdgeCases(t *testing.T) {
 func TestCamelToSnake_HelperFunctions(t *testing.T) {
 	// Test helper functions individually
 	t.Run("isUpper function", func(t *testing.T) {
-		assert.True(t, isUpper('A'))
-		assert.True(t, isUpper('Z'))
-		assert.False(t, isUpper('a'))
-		assert.False(t, isUpper('z'))
-		assert.False(t, isUpper('1'))
-		assert.False(t, isUpper(' '))
-		assert.False(t, isUpper('_'))
+		if !isUpper('A') {
+			t.Error("isUpper('A') should be true")
+		}
+		if !isUpper('Z') {
+			t.Error("isUpper('Z') should be true")
+		}
+		if isUpper('a') {
+			t.Error("isUpper('a') should be false")
+		}
+		if isUpper('z') {
+			t.Error("isUpper('z') should be false")
+		}
+		if isUpper('1') {
+			t.Error("isUpper('1') should be false")
+		}
+		if isUpper(' ') {
+			t.Error("isUpper(' ') should be false")
+		}
+		if isUpper('_') {
+			t.Error("isUpper('_') should be false")
+		}
 	})
 
 	t.Run("toLower function", func(t *testing.T) {
-		assert.Equal(t, 'a', toLower('A'))
-		assert.Equal(t, 'z', toLower('Z'))
-		assert.Equal(t, 'a', toLower('a'))
-		assert.Equal(t, 'z', toLower('z'))
-		assert.Equal(t, '1', toLower('1'))
-		assert.Equal(t, ' ', toLower(' '))
-		assert.Equal(t, '_', toLower('_'))
+		if toLower('A') != 'a' {
+			t.Errorf("toLower('A') = %q, want 'a'", toLower('A'))
+		}
+		if toLower('Z') != 'z' {
+			t.Errorf("toLower('Z') = %q, want 'z'", toLower('Z'))
+		}
+		if toLower('a') != 'a' {
+			t.Errorf("toLower('a') = %q, want 'a'", toLower('a'))
+		}
+		if toLower('z') != 'z' {
+			t.Errorf("toLower('z') = %q, want 'z'", toLower('z'))
+		}
+		if toLower('1') != '1' {
+			t.Errorf("toLower('1') = %q, want '1'", toLower('1'))
+		}
+		if toLower(' ') != ' ' {
+			t.Errorf("toLower(' ') = %q, want ' '", toLower(' '))
+		}
+		if toLower('_') != '_' {
+			t.Errorf("toLower('_') = %q, want '_'", toLower('_'))
+		}
 	})
 }
 
@@ -293,7 +323,9 @@ func TestCamelToSnake_Performance(t *testing.T) {
 	expected := "this_is_a_very_long_camel_case_string_with_many_words_to_test_performance_of_the_conversion_function"
 
 	result := CamelToSnake(longCamelCase)
-	assert.Equal(t, expected, result)
+	if result != expected {
+		t.Errorf("CamelToSnake(%q) = %q, want %q", longCamelCase, result, expected)
+	}
 }
 
 func BenchmarkCamelToSnake(b *testing.B) {

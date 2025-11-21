@@ -8,7 +8,7 @@ import (
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
-func main() {
+func AltMain() {
 	lokstra.Bootstrap()
 
 	fmt.Println("")
