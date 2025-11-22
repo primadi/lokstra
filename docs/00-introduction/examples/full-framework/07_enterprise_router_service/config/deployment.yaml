@@ -2,8 +2,9 @@
 
 configs:
   server: ${SERVER:}
+  db_dsn: ${DB_DSN:postgres://localhost/enterprise_router_service}
   global-db:
-    dsn: "postgres://user:password@localhost:5432/lokstra_auth_db"
+    dsn: ${@cfg:db_dsn}
     schema: "public"
 
 deployments:

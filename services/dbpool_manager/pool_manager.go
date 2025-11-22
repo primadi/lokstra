@@ -78,12 +78,19 @@ func (m *PoolManager) GetNamedDsn(name string) (string, string, error) {
 }
 
 // GetNamedPool implements serviceapi.DbPoolManager.
-func (m *PoolManager) GetNamedPool(name string) (serviceapi.DbPool, error) {
-	dsn, _, err := m.GetNamedDsn(name)
+func (m *PoolManager) GetNamedPool(name string) (serviceapi.DbPoolWithSchema, error) {
+	dsn, schema, err := m.GetNamedDsn(name)
 	if err != nil {
 		return nil, err
 	}
-	return m.GetDsnPool(dsn)
+	dbPool, err := m.GetDsnPool(dsn)
+	if err != nil {
+		return nil, err
+	}
+	return &pgxDbPoolWithSchema{
+		pool:   dbPool,
+		schema: schema,
+	}, nil
 }
 
 // GetTenantDsn implements serviceapi.DbPoolManager.
@@ -97,12 +104,20 @@ func (m *PoolManager) GetTenantDsn(tenant string) (string, string, error) {
 }
 
 // GetTenantPool implements serviceapi.DbPoolManager.
-func (m *PoolManager) GetTenantPool(tenant string) (serviceapi.DbPool, error) {
-	dsn, _, err := m.GetTenantDsn(tenant)
+func (m *PoolManager) GetTenantPool(tenant string) (serviceapi.DbPoolWithTenant, error) {
+	dsn, schema, err := m.GetTenantDsn(tenant)
 	if err != nil {
 		return nil, err
 	}
-	return m.GetDsnPool(dsn)
+	dbPool, err := m.GetDsnPool(dsn)
+	if err != nil {
+		return nil, err
+	}
+	return &pgxDbPoolWithTenant{
+		pool:     dbPool,
+		schema:   schema,
+		tenantID: tenant,
+	}, nil
 }
 
 // RemoveNamed implements serviceapi.DbPoolManager.
