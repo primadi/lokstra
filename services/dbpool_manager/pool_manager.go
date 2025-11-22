@@ -152,11 +152,8 @@ func (m *PoolManager) GetDsnPool(dsn string) (serviceapi.DbPool, error) {
 		return nil, err
 	}
 
-	pool, loaded := m.pools.LoadOrStore(dsn, newPool)
-	if loaded {
-		return pool.(serviceapi.DbPool), nil
-	}
-	return nil, fmt.Errorf("failed to create db pool for dsn: %s", dsn)
+	pool, _ := m.pools.LoadOrStore(dsn, newPool)
+	return pool.(serviceapi.DbPool), nil
 }
 
 func (m *PoolManager) Shutdown() error {
