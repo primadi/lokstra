@@ -469,6 +469,27 @@ func (g *GlobalRegistry) GetRouterDef(name string) *schema.RouterDef {
 
 // ===== CONFIG RESOLUTION =====
 
+// flattenNestedConfig flattens nested config maps using dot notation
+// Example: flattenNestedConfig("global-db", {"dsn": "...", "schema": "..."}, result)
+//
+//	=> result["global-db.dsn"] = "...", result["global-db.schema"] = "..."
+func flattenNestedConfig(prefix string, config map[string]any, result map[string]any) {
+	for key, value := range config {
+		fullKey := key
+		if prefix != "" {
+			fullKey = prefix + "." + key
+		}
+
+		// If value is a map, recurse
+		if nestedMap, ok := value.(map[string]any); ok {
+			flattenNestedConfig(fullKey, nestedMap, result)
+		} else {
+			// Store leaf value
+			result[fullKey] = value
+		}
+	}
+}
+
 // ResolveConfigs resolves ALL values throughout the entire configuration using the resolver
 // This performs 2-step resolution globally across all sections:
 //  1. Resolve all ${...} except ${@cfg:...} in configs, deployments, service configs, etc.
@@ -485,8 +506,14 @@ func (g *GlobalRegistry) ResolveConfigs() error {
 		tempConfigs[name] = def.Value
 	}
 
-	// STEP 1: Resolve configs section first (needed for @cfg references)
+	// STEP 1: Resolve configs section in multiple passes to handle dependencies
+	// Pass 1: Resolve non-nested configs (these might be referenced by nested configs)
 	for name, def := range g.configs {
+		// Skip nested maps in first pass
+		if _, isMap := def.Value.(map[string]any); isMap {
+			continue
+		}
+
 		resolved, err := g.resolveAnyValue(def.Value, tempConfigs)
 		if err != nil {
 			return fmt.Errorf("failed to resolve config %s: %w", name, err)
@@ -494,6 +521,35 @@ func (g *GlobalRegistry) ResolveConfigs() error {
 		g.resolvedConfigs[name] = resolved
 		tempConfigs[name] = resolved // Update for subsequent @cfg references
 	}
+
+	// Pass 2: Resolve nested configs (can now reference Pass 1 results)
+	for name, def := range g.configs {
+		// Only process nested maps in second pass
+		if _, isMap := def.Value.(map[string]any); !isMap {
+			continue
+		}
+
+		resolved, err := g.resolveAnyValue(def.Value, tempConfigs)
+		if err != nil {
+			return fmt.Errorf("failed to resolve config %s: %w", name, err)
+		}
+		g.resolvedConfigs[name] = resolved
+		tempConfigs[name] = resolved // Update for subsequent @cfg references
+	}
+
+	// STEP 1.5: Flatten nested configs AFTER resolution
+	// This ensures ${cfg:...} references are resolved before flattening
+	flattenedConfigs := make(map[string]any)
+	for name, value := range g.resolvedConfigs {
+		if nestedMap, ok := value.(map[string]any); ok {
+			// Flatten nested map
+			flattenNestedConfig(name, nestedMap, flattenedConfigs)
+		} else {
+			// Keep non-map values as-is
+			flattenedConfigs[name] = value
+		}
+	}
+	g.resolvedConfigs = flattenedConfigs
 
 	// STEP 2: Resolve ALL deployment topology values in-place
 	g.deploymentTopologies.Range(func(key, value any) bool {
@@ -581,19 +637,43 @@ func (g *GlobalRegistry) ResolveConfigs() error {
 // resolveAnyValue resolves a value of any type using the resolver
 // Only string values containing ${...} are processed, others are returned as-is
 func (g *GlobalRegistry) resolveAnyValue(value any, tempConfigs map[string]any) (any, error) {
-	// Only process string values
-	valueStr, ok := value.(string)
-	if !ok {
-		return value, nil // Non-string values are used as-is
-	}
-
-	// Only resolve if contains resolver syntax
-	if !strings.Contains(valueStr, "${") {
+	// Handle string values
+	if valueStr, ok := value.(string); ok {
+		// Only resolve if contains resolver syntax
+		if strings.Contains(valueStr, "${") {
+			return g.resolver.ResolveValue(valueStr, tempConfigs)
+		}
 		return value, nil // No resolver syntax, return as-is
 	}
 
-	// Resolve the value using 2-step process
-	return g.resolver.ResolveValue(valueStr, tempConfigs)
+	// Handle nested maps (recursive resolution)
+	if valueMap, ok := value.(map[string]any); ok {
+		resolvedMap := make(map[string]any)
+		for k, v := range valueMap {
+			resolved, err := g.resolveAnyValue(v, tempConfigs)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve map key %s: %w", k, err)
+			}
+			resolvedMap[k] = resolved
+		}
+		return resolvedMap, nil
+	}
+
+	// Handle slices (recursive resolution)
+	if valueSlice, ok := value.([]any); ok {
+		resolvedSlice := make([]any, len(valueSlice))
+		for i, v := range valueSlice {
+			resolved, err := g.resolveAnyValue(v, tempConfigs)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve slice index %d: %w", i, err)
+			}
+			resolvedSlice[i] = resolved
+		}
+		return resolvedSlice, nil
+	}
+
+	// Non-string, non-map, non-slice values are used as-is
+	return value, nil
 }
 
 // GetResolvedConfig returns a resolved config value

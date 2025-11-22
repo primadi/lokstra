@@ -47,24 +47,21 @@ func (p *pgxPostgresPool) Shutdown() error {
 }
 
 func (p *pgxPostgresPool) Acquire(ctx context.Context, schema string) (serviceapi.DbConn, error) {
+	return p.AcquireMultiTenant(ctx, schema, "")
+}
+
+func (p *pgxPostgresPool) AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (serviceapi.DbConn, error) {
 	conn, err := p.pool.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	stmt := "SET search_path TO " + pgx.Identifier{schema}.Sanitize()
-	if _, err := conn.Exec(ctx, stmt); err != nil {
-		conn.Release()
-		return nil, err
-	}
-
-	return &pgxConnWrapper{conn: conn}, nil
-}
-
-func (p *pgxPostgresPool) AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (serviceapi.DbConn, error) {
-	conn, err := p.Acquire(ctx, schema)
-	if err != nil {
-		return nil, err
+	if len(schema) > 0 {
+		stmt := "SET search_path TO " + pgx.Identifier{schema}.Sanitize()
+		if _, err := conn.Exec(ctx, stmt); err != nil {
+			conn.Release()
+			return nil, err
+		}
 	}
 
 	if tenantID != "" {
@@ -76,7 +73,7 @@ func (p *pgxPostgresPool) AcquireMultiTenant(ctx context.Context, schema string,
 		}
 	}
 
-	return conn, nil
+	return &pgxConnWrapper{conn: conn}, nil
 }
 
 type pgxConnWrapper struct {

@@ -14,28 +14,28 @@ import (
 
 // flattenConfigs flattens nested config maps using dot notation
 // Example: {"db": {"host": "localhost"}} => {"db.host": "localhost"}
-func flattenConfigs(configs map[string]any) map[string]any {
-	result := make(map[string]any)
-	flattenConfigsRecursive("", configs, result)
-	return result
-}
+// func flattenConfigs(configs map[string]any) map[string]any {
+// 	result := make(map[string]any)
+// 	flattenConfigsRecursive("", configs, result)
+// 	return result
+// }
 
-func flattenConfigsRecursive(prefix string, configs map[string]any, result map[string]any) {
-	for key, value := range configs {
-		fullKey := key
-		if prefix != "" {
-			fullKey = prefix + "." + key
-		}
+// func flattenConfigsRecursive(prefix string, configs map[string]any, result map[string]any) {
+// 	for key, value := range configs {
+// 		fullKey := key
+// 		if prefix != "" {
+// 			fullKey = prefix + "." + key
+// 		}
 
-		// If value is a map, recurse
-		if nestedMap, ok := value.(map[string]any); ok {
-			flattenConfigsRecursive(fullKey, nestedMap, result)
-		} else {
-			// Store leaf value
-			result[fullKey] = value
-		}
-	}
-}
+// 		// If value is a map, recurse
+// 		if nestedMap, ok := value.(map[string]any); ok {
+// 			flattenConfigsRecursive(fullKey, nestedMap, result)
+// 		} else {
+// 			// Store leaf value
+// 			result[fullKey] = value
+// 		}
+// 	}
+// }
 
 // normalizeServerDefinitions converts server-level helper fields to a new app
 // This allows shorthand syntax: addr/routers/published-services at server level
@@ -397,9 +397,8 @@ func NormalizeInlineDefinitionsForServer(
 // This is called during LoadAndBuild to prepare definitions for later lazy registration
 // Runtime registration happens in RunCurrentServer after normalization
 func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
-	// Store configs as definitions (flattened for nested support)
-	flatConfigs := flattenConfigs(config.Configs)
-	for name, value := range flatConfigs {
+	// Store configs as definitions (keep original nested structure - will be flattened after resolve)
+	for name, value := range config.Configs {
 		registry.DefineConfig(&schema.ConfigDef{
 			Name:  name,
 			Value: value,

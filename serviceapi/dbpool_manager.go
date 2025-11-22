@@ -19,7 +19,7 @@ type DbPoolManager interface {
 	// get dsn and schema for the given tenant
 	GetTenantDsn(tenant string) (string, string, error)
 	// get DbPool for the given tenant
-	GetTenantPool(tenant string) (DbPool, error)
+	GetTenantPool(tenant string) (DbPoolWithTenant, error)
 	// remove tenant mapping
 	RemoveTenant(tenant string)
 	// acquire connection for the given tenant
@@ -34,7 +34,7 @@ type DbPoolManager interface {
 	// get dsn and schema for the given name
 	GetNamedDsn(name string) (string, string, error)
 	// get DbPool for the given name
-	GetNamedPool(name string) (DbPool, error)
+	GetNamedPool(name string) (DbPoolWithSchema, error)
 	// remove name mapping
 	RemoveNamed(name string)
 	// acquire connection for the given name
