@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/annotation/internal"
 )
 
 // ProcessComplexAnnotations processes annotations with parallel folder processing.
@@ -107,7 +108,8 @@ func ProcessComplexAnnotations(rootPath []string, maxWorkers int,
 
 // ProcessPerFolder processes a single folder
 func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServiceContext) error) (bool, error) {
-	cachePath := filepath.Join(folderPath, cacheFileName)
+	cachePath := filepath.Join(folderPath, internal.CacheFileName)
+	genPath := filepath.Join(folderPath, internal.GeneratedFileName)
 
 	// Step 1: Load cache if exists
 	cache, err := loadCache(cachePath)
@@ -121,10 +123,41 @@ func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServ
 		}
 	}
 
+	// Step 1.5: Check if generated file was manually altered or deleted (checksum mismatch)
+	forceRegenerate := false
+	if data, err := os.ReadFile(genPath); err == nil {
+		// Generated file exists, check if checksum matches cache
+		genChecksum := calculateChecksumFromBytes(data)
+		if cache.GeneratedChecksum != "" && cache.GeneratedChecksum != genChecksum {
+			// Checksum mismatch - file was manually altered
+			forceRegenerate = true
+		}
+	} else if os.IsNotExist(err) && len(cache.Files) > 0 {
+		// Generated file deleted but cache exists - force regenerate
+		forceRegenerate = true
+	}
+
 	// Step 2: Scan .go files containing @RouterService
 	skipped, updated, deleted, err := scanFolderFiles(folderPath, cache)
 	if err != nil {
 		return false, fmt.Errorf("failed to scan files: %w", err)
+	}
+	// If generated file was altered, force regenerate all files
+	if forceRegenerate {
+		// Move all skipped files to updated, but need to parse their annotations first
+		for _, file := range skipped {
+			// Parse annotations for skipped files
+			annotations, err := ParseFileAnnotations(file.FullPath)
+			if err != nil {
+				return false, fmt.Errorf("failed to parse annotations from %s: %w", file.Filename, err)
+			}
+			file.Annotations = annotations
+			file.AnnotationCount = len(annotations)
+			updated = append(updated, file)
+		}
+		skipped = nil
+		// Clear cache to force full regeneration
+		cache.Files = make(map[string]*FileCacheEntry)
 	}
 
 	// If no RouterService annotations found and no cache, skip
@@ -153,14 +186,27 @@ func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServ
 	}
 
 	// Step 4: Update cache in memory (if no errors)
-	for _, file := range updated {
-		cache.Files[file.Filename] = &FileCacheEntry{
-			Filename:    file.Filename,
-			Checksum:    file.Checksum,
-			Annotations: file.AnnotationCount,
-			LastScan:    time.Now(),
-			Generated:   []string{generatedFileName},
+	// Only update cache if there were actual changes
+	if len(updated) > 0 || len(deleted) > 0 {
+		// Get generated file checksum
+		genChecksum := ""
+		if data, err := os.ReadFile(genPath); err == nil {
+			genChecksum = calculateChecksumFromBytes(data)
 		}
+		cache.GeneratedChecksum = genChecksum
+
+		for _, file := range updated {
+			cache.Files[file.Filename] = &FileCacheEntry{
+				Filename:         file.Filename,
+				Checksum:         file.Checksum,
+				Annotations:      file.AnnotationCount,
+				LastScan:         time.Now(),
+				Generated:        []string{internal.GeneratedFileName},
+				GeneratedModTime: time.Now(), // Keep for backward compatibility
+			}
+		}
+
+		cache.UpdatedAt = time.Now()
 	}
 
 	// Remove deleted files from cache
@@ -185,18 +231,20 @@ func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServ
 
 // FolderCache represents the cache json structure
 type FolderCache struct {
-	Version   int                        `json:"version"`
-	Files     map[string]*FileCacheEntry `json:"files"`
-	UpdatedAt time.Time                  `json:"updated_at"`
+	Version           int                        `json:"version"`
+	Files             map[string]*FileCacheEntry `json:"files"`
+	UpdatedAt         time.Time                  `json:"updated_at"`
+	GeneratedChecksum string                     `json:"generated_checksum"` // Checksum of zz_generated.lokstra.go
 }
 
 // FileCacheEntry represents a single file in cache
 type FileCacheEntry struct {
-	Filename    string    `json:"filename"`
-	Checksum    string    `json:"checksum"`
-	Annotations int       `json:"annotations"`
-	LastScan    time.Time `json:"last_scan"`
-	Generated   []string  `json:"generated"`
+	Filename         string    `json:"filename"`
+	Checksum         string    `json:"checksum"`
+	Annotations      int       `json:"annotations"`
+	LastScan         time.Time `json:"last_scan"`
+	Generated        []string  `json:"generated"`
+	GeneratedModTime time.Time `json:"generated_mod_time"` // Timestamp of zz_generated.lokstra.go
 }
 
 // FileToProcess represents a file that needs processing
@@ -259,8 +307,8 @@ type MethodSignature struct {
 // ParsedAnnotation represents a parsed annotation with arguments
 type ParsedAnnotation struct {
 	Name           string
-	Args           map[string]interface{}
-	PositionalArgs []interface{}
+	Args           map[string]any
+	PositionalArgs []any
 	Line           int
 	TargetName     string
 	TargetType     string
@@ -308,7 +356,7 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 		}
 
 		// Skip generated files
-		if file.Name() == generatedFileName || strings.HasSuffix(file.Name(), "_test.go") {
+		if file.Name() == internal.GeneratedFileName || strings.HasSuffix(file.Name(), "_test.go") {
 			continue
 		}
 
@@ -334,17 +382,18 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 		// Check cache
 		cached, exists := cache.Files[file.Name()]
 		if exists && cached.Checksum == checksum {
-			// File unchanged, skip
+			// File unchanged, skip but preserve annotation count from cache
 			skipped = append(skipped, &FileToProcess{
-				Filename: file.Name(),
-				FullPath: fullPath,
-				Checksum: checksum,
+				Filename:        file.Name(),
+				FullPath:        fullPath,
+				Checksum:        checksum,
+				AnnotationCount: cached.Annotations, // Preserve from cache!
 			})
 			continue
 		}
 
 		// File changed or new, parse annotations
-		annotations, err := parseFileAnnotations(fullPath)
+		annotations, err := ParseFileAnnotations(fullPath)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -392,6 +441,13 @@ func calculateChecksum(path string) (string, error) {
 	}
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+// calculateChecksumFromBytes calculates checksum from byte slice
+func calculateChecksumFromBytes(data []byte) string {
+	hash := sha256.New()
+	hash.Write(data)
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 // loadCache loads cache from JSON file

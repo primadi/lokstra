@@ -1,7 +1,9 @@
-package annotation
+package annotation_test
 
 import (
 	"testing"
+
+	"github.com/primadi/lokstra/core/annotation"
 )
 
 func TestParseArrayWithCommaInString(t *testing.T) {
@@ -29,19 +31,19 @@ func TestParseArrayWithCommaInString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseArrayValue(tt.input)
+			result, err := annotation.ParseArrayValue(tt.input)
 			if err != nil {
-				t.Fatalf("parseArrayValue() error = %v", err)
+				t.Fatalf("ParseArrayValue() error = %v", err)
 			}
 
 			if len(result) != len(tt.expected) {
-				t.Fatalf("parseArrayValue() got %d items, want %d items\nGot: %v\nWant: %v",
+				t.Fatalf("ParseArrayValue() got %d items, want %d items\nGot: %v\nWant: %v",
 					len(result), len(tt.expected), result, tt.expected)
 			}
 
 			for i, val := range result {
 				if val != tt.expected[i] {
-					t.Errorf("parseArrayValue()[%d] = %q, want %q", i, val, tt.expected[i])
+					t.Errorf("ParseArrayValue()[%d] = %q, want %q", i, val, tt.expected[i])
 				}
 			}
 		})
@@ -52,7 +54,7 @@ func TestSmartSplitDebug(t *testing.T) {
 	input := `"GET /users/{id}", ["mw-test param1=123, param2=abc"]`
 
 	t.Logf("Input: %q", input)
-	result := smartSplit(input, ',')
+	result := annotation.SmartSplit(input, ',')
 
 	t.Logf("Got %d parts:", len(result))
 	for i, part := range result {
@@ -97,9 +99,9 @@ func TestParseAnnotationArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, positional, err := parseAnnotationArgs(tt.input)
+			_, positional, err := annotation.ParseAnnotationArgs(tt.input)
 			if err != nil {
-				t.Fatalf("parseAnnotationArgs() error = %v", err)
+				t.Fatalf("ParseAnnotationArgs() error = %v", err)
 			}
 
 			t.Logf("Input: %q", tt.input)

@@ -1,20 +1,22 @@
-package annotation
+package annotation_test
 
 import (
 	"testing"
+
+	"github.com/primadi/lokstra/core/annotation"
 )
 
 func TestReadArgsValidation(t *testing.T) {
 	tests := []struct {
 		name          string
-		annotation    *ParsedAnnotation
+		annotation    *annotation.ParsedAnnotation
 		expectedArgs  []string
 		shouldError   bool
 		errorContains string
 	}{
 		{
 			name: "valid named args",
-			annotation: &ParsedAnnotation{
+			annotation: &annotation.ParsedAnnotation{
 				Args: map[string]interface{}{
 					"route":       "GET /users",
 					"middlewares": []string{"auth"},
@@ -25,7 +27,7 @@ func TestReadArgsValidation(t *testing.T) {
 		},
 		{
 			name: "invalid named arg",
-			annotation: &ParsedAnnotation{
+			annotation: &annotation.ParsedAnnotation{
 				Args: map[string]interface{}{
 					"invalid": "value",
 				},
@@ -36,7 +38,7 @@ func TestReadArgsValidation(t *testing.T) {
 		},
 		{
 			name: "valid positional args",
-			annotation: &ParsedAnnotation{
+			annotation: &annotation.ParsedAnnotation{
 				PositionalArgs: []interface{}{"GET /users", []string{"auth"}},
 			},
 			expectedArgs: []string{"route", "middlewares"},
@@ -44,7 +46,7 @@ func TestReadArgsValidation(t *testing.T) {
 		},
 		{
 			name: "too many positional args",
-			annotation: &ParsedAnnotation{
+			annotation: &annotation.ParsedAnnotation{
 				PositionalArgs: []interface{}{"GET /users", []string{"auth"}, "extra"},
 			},
 			expectedArgs:  []string{"route", "middlewares"},
@@ -55,7 +57,7 @@ func TestReadArgsValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := tt.annotation.readArgs(tt.expectedArgs...)
+			result, err := tt.annotation.ReadArgs(tt.expectedArgs...)
 
 			if tt.shouldError {
 				if err == nil {
