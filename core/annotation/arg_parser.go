@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// parseFileAnnotations parses all annotations in a file
-func parseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
+// ParseFileAnnotations parses all annotations in a file
+func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func parseAnnotationLine(line string, lineNum int) (*ParsedAnnotation, error) {
 		name := strings.TrimPrefix(nameAndArgs[:spaceIdx], "@")
 		argsStr := strings.TrimSpace(nameAndArgs[spaceIdx+1:])
 
-		args, positional, err := parseAnnotationArgs(argsStr)
+		args, positional, err := ParseAnnotationArgs(argsStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse args: %w", err)
 		}
@@ -110,7 +110,7 @@ func parseAnnotationLine(line string, lineNum int) (*ParsedAnnotation, error) {
 		argsStr = argsStr[:idx]
 	}
 
-	args, positional, err := parseAnnotationArgs(argsStr)
+	args, positional, err := ParseAnnotationArgs(argsStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse args: %w", err)
 	}
@@ -123,12 +123,12 @@ func parseAnnotationLine(line string, lineNum int) (*ParsedAnnotation, error) {
 	}, nil
 }
 
-// parseAnnotationArgs parses argument string and returns both named and positional args
+// ParseAnnotationArgs parses argument string and returns both named and positional args
 // Examples:
 //
 //	name="user-service", prefix="/api"
 //	"user-service", "/api", ["recovery", "logger"]
-func parseAnnotationArgs(argsStr string) (map[string]interface{}, []interface{}, error) {
+func ParseAnnotationArgs(argsStr string) (map[string]interface{}, []interface{}, error) {
 	if strings.TrimSpace(argsStr) == "" {
 		return make(map[string]interface{}), nil, nil
 	}
@@ -137,7 +137,7 @@ func parseAnnotationArgs(argsStr string) (map[string]interface{}, []interface{},
 	var positionalArgs []interface{}
 
 	// Split by comma, but respect quoted strings and arrays
-	args := smartSplit(argsStr, ',')
+	args := SmartSplit(argsStr, ',')
 
 	for i, arg := range args {
 		arg = strings.TrimSpace(arg)
@@ -205,7 +205,7 @@ func parseArgValue(valueStr string) (interface{}, error) {
 
 	// Array: ["item1", "item2"]
 	if strings.HasPrefix(valueStr, "[") && strings.HasSuffix(valueStr, "]") {
-		return parseArrayValue(valueStr)
+		return ParseArrayValue(valueStr)
 	}
 
 	// String: "value" or 'value'
@@ -234,8 +234,8 @@ func parseArgValue(valueStr string) (interface{}, error) {
 	return valueStr, nil
 }
 
-// parseArrayValue parses array syntax: ["item1", "item2"]
-func parseArrayValue(arrayStr string) ([]string, error) {
+// ParseArrayValue parses array syntax: ["item1", "item2"]
+func ParseArrayValue(arrayStr string) ([]string, error) {
 	// Remove brackets
 	arrayStr = strings.TrimSpace(arrayStr)
 	if !strings.HasPrefix(arrayStr, "[") || !strings.HasSuffix(arrayStr, "]") {
@@ -247,7 +247,7 @@ func parseArrayValue(arrayStr string) ([]string, error) {
 		return []string{}, nil
 	}
 
-	items := smartSplit(content, ',')
+	items := SmartSplit(content, ',')
 	result := make([]string, 0, len(items))
 
 	for _, item := range items {
@@ -265,8 +265,8 @@ func parseArrayValue(arrayStr string) ([]string, error) {
 	return result, nil
 }
 
-// smartSplit splits string by delimiter but respects quotes and brackets
-func smartSplit(s string, delim rune) []string {
+// SmartSplit splits string by delimiter but respects quotes and brackets
+func SmartSplit(s string, delim rune) []string {
 	var result []string
 	var current strings.Builder
 	inQuote := false
@@ -335,9 +335,9 @@ func extractTargetNameFromLine(line string) string {
 	return ""
 }
 
-// readArgs reads arguments from ParsedAnnotation
+// ReadArgs reads arguments from ParsedAnnotation
 // Supports both named and positional arguments
-func (a *ParsedAnnotation) readArgs(expectedArgs ...string) (map[string]interface{}, error) {
+func (a *ParsedAnnotation) ReadArgs(expectedArgs ...string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	// If we have named args, use them

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "files": {
+    "auth_service.go": {
+      "filename": "auth_service.go",
+      "checksum": "4fd5bcfcdb6e2cca1b6b239a6b1bc6c1d472944a9cebde979e085519bd8ce229",
+      "annotations": 4,
+      "last_scan": "2025-11-23T22:22:33.8039741+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-23T22:22:33.8039741+07:00"
+    },
+    "config_service.go": {
+      "filename": "config_service.go",
+      "checksum": "499ca7a40e2e72a32fd8b326d4dacfbc04d284a06ed6e08ce0b08fe08338fee7",
+      "annotations": 5,
+      "last_scan": "2025-11-23T22:22:33.8039741+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-23T22:22:33.8039741+07:00"
+    },
+    "profile_service.go": {
+      "filename": "profile_service.go",
+      "checksum": "ffc58ee2f3269b35627f0656294c76636c3cfb7c0d4e8fa806c625dd76497b68",
+      "annotations": 4,
+      "last_scan": "2025-11-23T22:22:33.8039741+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-23T22:22:33.8039741+07:00"
+    },
+    "user_service.go": {
+      "filename": "user_service.go",
+      "checksum": "e28413bcb5adb55a94b88c90bb8774e48d35ed70da0f6be3777230db8552086a",
+      "annotations": 4,
+      "last_scan": "2025-11-23T22:22:33.8039741+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-23T22:22:33.8039741+07:00"
+    }
+  },
+  "updated_at": "2025-11-23T22:22:33.8039741+07:00",
+  "generated_checksum": "ac3f54f55e2506dea2fa7bfdebf24eebe9be2ff4eca3a435173b7cb7a04c6c7e"
+}

@@ -8,12 +8,12 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
-)
 
-const generatedFileName = "zz_generated.lokstra.go"
-const cacheFileName = "zz_cache.lokstra.json"
+	"github.com/primadi/lokstra/core/annotation/internal"
+)
 
 // GenerateCodeForFolder generates zz_generated.lokstra.go based on RouterServiceContext
 func GenerateCodeForFolder(ctx *RouterServiceContext) error {
@@ -24,7 +24,7 @@ func GenerateCodeForFolder(ctx *RouterServiceContext) error {
 	}
 
 	// Read existing zz_generated.lokstra.go to preserve code for skipped files
-	genPath := filepath.Join(ctx.FolderPath, generatedFileName)
+	genPath := filepath.Join(ctx.FolderPath, internal.GeneratedFileName)
 	existingGenCode := readExistingGenCode(genPath)
 
 	// Process all updated files
@@ -156,7 +156,7 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 		}
 
 		// Read RouterService args
-		args, err := ann.readArgs("name", "prefix", "middlewares")
+		args, err := ann.ReadArgs("name", "prefix", "middlewares")
 		if err != nil {
 			return fmt.Errorf("@RouterService on line %d: %w", ann.Line, err)
 		}
@@ -292,11 +292,15 @@ func extractMethodSignatures(astFile *ast.File, structName string, service *Serv
 		}
 
 		// Extract parameter type (assume single param)
+		// Skip if no parameters or only receiver
 		if funcDecl.Type.Params != nil && len(funcDecl.Type.Params.List) > 0 {
-			sig.ParamType = exprToString(funcDecl.Type.Params.List[0].Type)
-		}
+			firstParam := funcDecl.Type.Params.List[0]
 
-		// Extract return type
+			// Only set ParamType if there are actual named parameters with types
+			if len(firstParam.Names) > 0 && firstParam.Type != nil {
+				sig.ParamType = exprToString(firstParam.Type)
+			}
+		}
 		if funcDecl.Type.Results != nil && len(funcDecl.Type.Results.List) > 0 {
 			numResults := len(funcDecl.Type.Results.List)
 
@@ -329,7 +333,7 @@ func exprToString(expr ast.Expr) string {
 	case *ast.SelectorExpr:
 		return exprToString(t.X) + "." + t.Sel.Name
 	case *ast.InterfaceType:
-		return "interface{}"
+		return "any"
 	case *ast.IndexExpr:
 		// Generic type: Type[T]
 		return exprToString(t.X) + "[" + exprToString(t.Index) + "]"
@@ -341,7 +345,7 @@ func exprToString(expr ast.Expr) string {
 		}
 		return exprToString(t.X) + "[" + strings.Join(typeArgs, ", ") + "]"
 	default:
-		return "interface{}"
+		return "any"
 	}
 }
 
@@ -361,10 +365,10 @@ func extractRoutes(file *FileToProcess, service *ServiceGeneration) error {
 		var middlewares []string
 
 		// Try route + middlewares first
-		if args, err := ann.readArgs("route", "middlewares"); err == nil {
+		if args, err := ann.ReadArgs("route", "middlewares"); err == nil {
 			routeStr, _ = args["route"].(string)
 			middlewares = extractStringArray(args["middlewares"])
-		} else if args, err := ann.readArgs("route"); err == nil {
+		} else if args, err := ann.ReadArgs("route"); err == nil {
 			// Route only
 			routeStr, _ = args["route"].(string)
 		} else {
@@ -443,7 +447,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 
 		// @Inject "user-repository"
 		// or @Inject service="user-repository"
-		args, err := ann.readArgs("service")
+		args, err := ann.ReadArgs("service")
 		if err != nil {
 			return fmt.Errorf("@Inject on line %d: %w", ann.Line, err)
 		}
@@ -494,6 +498,32 @@ func writeGenFile(path string, ctx *RouterServiceContext) error {
 		return err
 	}
 
+	// Collect ALL struct names for init() registration (from both updated and skipped files)
+	allStructNames := make([]string, 0)
+	for _, service := range ctx.GeneratedCode.Services {
+		allStructNames = append(allStructNames, service.StructName)
+	}
+	// Also extract struct names from preserved sections
+	for _, code := range ctx.GeneratedCode.PreservedSections {
+		// Extract Register<StructName>() calls to get struct names
+		if structName := extractStructNameFromPreservedCode(code); structName != "" {
+			// Only add if not already in list
+			found := false
+			for _, existing := range allStructNames {
+				if existing == structName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allStructNames = append(allStructNames, structName)
+			}
+		}
+	}
+
+	// Sort struct names for deterministic order in init()
+	sort.Strings(allStructNames)
+
 	// Collect used packages from method signatures and dependencies
 	usedPackages := make(map[string]bool)
 	for _, service := range ctx.GeneratedCode.Services {
@@ -528,16 +558,30 @@ func writeGenFile(path string, ctx *RouterServiceContext) error {
 
 	// Generate code
 	var buf bytes.Buffer
-	if err := genTemplate.Execute(&buf, map[string]interface{}{
+	if err := genTemplate.Execute(&buf, map[string]any{
 		"Package":           pkgName,
 		"Services":          ctx.GeneratedCode.Services,
 		"PreservedSections": ctx.GeneratedCode.PreservedSections,
 		"AllImports":        allImports,
+		"AllStructNames":    allStructNames,
 	}); err != nil {
 		return err
 	}
 
 	return os.WriteFile(path, buf.Bytes(), 0644)
+}
+
+// extractStructNameFromPreservedCode extracts struct name from Register<StructName>() function
+func extractStructNameFromPreservedCode(code string) string {
+	// Look for pattern: func Register<StructName>()
+	if idx := strings.Index(code, "func Register"); idx != -1 {
+		start := idx + len("func Register")
+		end := strings.Index(code[start:], "()")
+		if end != -1 {
+			return code[start : start+end]
+		}
+	}
+	return ""
 }
 
 // collectPackagesFromType extracts package prefixes from type string
@@ -579,7 +623,7 @@ func getPackageName(folderPath string) (string, error) {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".go") {
 			continue
 		}
-		if strings.HasSuffix(file.Name(), "_test.go") || file.Name() == generatedFileName {
+		if strings.HasSuffix(file.Name(), "_test.go") || file.Name() == internal.GeneratedFileName {
 			continue
 		}
 
@@ -596,8 +640,8 @@ func getPackageName(folderPath string) (string, error) {
 	return "application", nil
 }
 
-// extractStringArray extracts string array from interface{}
-func extractStringArray(val interface{}) []string {
+// extractStringArray extracts string array from any
+func extractStringArray(val any) []string {
 	if val == nil {
 		return []string{}
 	}
@@ -629,6 +673,22 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 	"join":              strings.Join,
 	"trimPrefix":        strings.TrimPrefix,
 	"trimSuffix":        strings.TrimSuffix,
+	"notEmpty":          func(s string) bool { return strings.TrimSpace(s) != "" },
+	"sortedKeys": func(m any) []string {
+		keys := make([]string, 0)
+		switch v := m.(type) {
+		case map[string]string:
+			for k := range v {
+				keys = append(keys, k)
+			}
+		case map[string][]string:
+			for k := range v {
+				keys = append(keys, k)
+			}
+		}
+		sort.Strings(keys)
+		return keys
+	},
 }).Parse(`// AUTO-GENERATED CODE - DO NOT EDIT
 // Generated by lokstra-annotation from annotations in this folder
 // Annotations: @RouterService, @Inject, @Route
@@ -638,8 +698,8 @@ package {{.Package}}
 import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/proxy"
-	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/core/service"
+	"github.com/primadi/lokstra/lokstra_registry"
 {{- range $path, $alias := .AllImports }}
 	{{$alias}} "{{$path}}"
 {{- end }}
@@ -647,11 +707,10 @@ import (
 
 // Auto-register on package import
 func init() {
-{{- range $name, $service := .Services }}
-	Register{{$service.StructName}}()
+{{- range $structName := .AllStructNames }}
+	Register{{$structName}}()
 {{- end }}
 }
-
 {{range $name, $service := .Services}}
 // ============================================================
 // FILE: {{$service.SourceFile}}
@@ -670,21 +729,25 @@ func New{{$service.RemoteTypeName}}(proxyService *proxy.Service) *{{$service.Rem
 	}
 }
 
-{{range $method, $route := $service.Routes}}
+{{range $method := sortedKeys $service.Routes}}
+{{- $route := index $service.Routes $method}}
 {{- $sig := index $service.Methods $method}}
-{{- if $sig}}
-// {{$method}} via HTTP
+{{- if $sig}}// {{$method}} via HTTP
 // Generated from: @Route {{quote $route}}
-{{if $sig.HasData}}func (s *{{$service.RemoteTypeName}}) {{$method}}(p {{$sig.ParamType}}) ({{$sig.ReturnType}}, error) {
+{{if $sig.HasData}}{{if notEmpty $sig.ParamType}}func (s *{{$service.RemoteTypeName}}) {{$method}}(p {{$sig.ParamType}}) ({{$sig.ReturnType}}, error) {
 	return proxy.CallWithData[{{$sig.ReturnType}}](s.proxyService, {{quote $method}}, p)
 }
-{{else}}func (s *{{$service.RemoteTypeName}}) {{$method}}(p {{$sig.ParamType}}) error {
+{{else}}func (s *{{$service.RemoteTypeName}}) {{$method}}() ({{$sig.ReturnType}}, error) {
+	return proxy.CallWithData[{{$sig.ReturnType}}](s.proxyService, {{quote $method}}, nil)
+}
+{{end}}{{else}}{{if notEmpty $sig.ParamType}}func (s *{{$service.RemoteTypeName}}) {{$method}}(p {{$sig.ParamType}}) error {
 	return proxy.Call(s.proxyService, {{quote $method}}, p)
 }
-{{end}}
+{{else}}func (s *{{$service.RemoteTypeName}}) {{$method}}() error {
+	return proxy.Call(s.proxyService, {{quote $method}}, nil)
+}{{end}}{{end}}
 {{- end}}
 {{end}}
-
 func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) any {
 	return &{{$service.StructName}}{
 {{- range $svcName, $dep := $service.Dependencies }}
@@ -717,13 +780,15 @@ func Register{{$service.StructName}}() {
 			PathPrefix:  {{quote $service.Prefix}},
 			Middlewares: []string{ {{range $i, $mw := $service.Middlewares}}{{if $i}}, {{end}}{{quote $mw}}{{end}} },
 			CustomRoutes: map[string]string{
-{{- range $method, $route := $service.Routes }}
+{{- range $method := sortedKeys $service.Routes }}
+{{- $route := index $service.Routes $method }}
 				{{quote $method}}:  {{quote $route}},
 {{- end }}
 			},
 {{- if gt (len $service.RouteMiddlewares) 0 }}
 			RouteMiddlewares: map[string][]string{
-{{- range $method, $middlewares := $service.RouteMiddlewares }}
+{{- range $method := sortedKeys $service.RouteMiddlewares }}
+{{- $middlewares := index $service.RouteMiddlewares $method }}
 				{{quote $method}}: { {{range $i, $mw := $middlewares}}{{if $i}}, {{end}}{{quote $mw}}{{end}} },
 {{- end }}
 			},
@@ -739,10 +804,7 @@ func Register{{$service.StructName}}() {
 		})
 }
 {{end}}
-{{range $filename, $code := .PreservedSections}}
-{{$code}}
-{{end}}
-`))
+{{range $filename, $code := .PreservedSections}}{{$code}}{{end}}`))
 
 func hasReturnValue(route string) bool {
 	return !strings.Contains(route, "error")

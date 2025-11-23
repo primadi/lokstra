@@ -1,13 +1,15 @@
-package annotation
+package annotation_test
 
 import (
 	"testing"
+
+	"github.com/primadi/lokstra/core/annotation"
 )
 
 func TestParseUserServiceFile(t *testing.T) {
 	filePath := "../../project_templates/02_app_framework/03_enterprise_router_service/modules/user/application/user_service.go"
 
-	annotations, err := parseFileAnnotations(filePath)
+	annotations, err := annotation.ParseFileAnnotations(filePath)
 	if err != nil {
 		t.Fatalf("parseFileAnnotations() error = %v", err)
 	}
@@ -20,7 +22,7 @@ func TestParseUserServiceFile(t *testing.T) {
 
 		if ann.Name == "Route" {
 			// Test readArgs
-			if args, err := ann.readArgs("route", "middlewares"); err == nil {
+			if args, err := ann.ReadArgs("route", "middlewares"); err == nil {
 				t.Logf("    readArgs result: %#v", args)
 			} else {
 				t.Logf("    readArgs error: %v", err)

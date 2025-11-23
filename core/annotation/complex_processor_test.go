@@ -1,4 +1,4 @@
-package annotation
+package annotation_test
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/primadi/lokstra/core/annotation"
 )
 
 // TestProcessComplexAnnotations_NoDuplicateFolders tests that duplicate folders
@@ -44,8 +46,8 @@ func TestProcessComplexAnnotations_NoDuplicateFolders(t *testing.T) {
 	}
 
 	// Process with tracking
-	_, err := ProcessComplexAnnotations(scanPaths, 1,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations(scanPaths, 1,
+		func(ctx *annotation.RouterServiceContext) error {
 			mu.Lock()
 			processedFolders[ctx.FolderPath]++
 			mu.Unlock()
@@ -76,8 +78,8 @@ func TestProcessComplexAnnotations_EmptyPaths(t *testing.T) {
 	processedCount := 0
 
 	// Process with empty and nil paths
-	_, err := ProcessComplexAnnotations([]string{"", "", ""}, 1,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations([]string{"", "", ""}, 1,
+		func(ctx *annotation.RouterServiceContext) error {
 			processedCount++
 			return nil
 		})
@@ -112,8 +114,8 @@ func TestProcessComplexAnnotations_DifferentPathFormats(t *testing.T) {
 		filepath.Clean(tmpDir),              // Cleaned path
 	}
 
-	_, err := ProcessComplexAnnotations(scanPaths, 1,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations(scanPaths, 1,
+		func(ctx *annotation.RouterServiceContext) error {
 			mu.Lock()
 			processedFolders[ctx.FolderPath]++
 			mu.Unlock()
@@ -150,8 +152,8 @@ func TestProcessComplexAnnotations_NoGoFiles(t *testing.T) {
 
 	processedCount := 0
 
-	_, err := ProcessComplexAnnotations([]string{tmpDir}, 1,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations([]string{tmpDir}, 1,
+		func(ctx *annotation.RouterServiceContext) error {
 			processedCount++
 			return nil
 		})
@@ -195,8 +197,8 @@ func TestProcessComplexAnnotations_ParallelProcessing(t *testing.T) {
 	}
 
 	// Use multiple workers
-	_, err := ProcessComplexAnnotations(scanPaths, 4,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations(scanPaths, 4,
+		func(ctx *annotation.RouterServiceContext) error {
 			mu.Lock()
 			processedFolders[ctx.FolderPath]++
 			mu.Unlock()
@@ -252,8 +254,8 @@ func TestScenario1_OverlappingPaths(t *testing.T) {
 		filepath.Join(tmpDir, "modules"), // Equivalent to "./modules"
 	}
 
-	_, err := ProcessComplexAnnotations(scanPaths, 1,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations(scanPaths, 1,
+		func(ctx *annotation.RouterServiceContext) error {
 			mu.Lock()
 			processedFolders[ctx.FolderPath]++
 			mu.Unlock()
@@ -310,8 +312,8 @@ func TestScenario2_SamePathDifferentForms(t *testing.T) {
 		filepath.Join(tmpDir, "modules"), // Absolute path
 	}
 
-	_, err := ProcessComplexAnnotations(scanPaths, 1,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations(scanPaths, 1,
+		func(ctx *annotation.RouterServiceContext) error {
 			mu.Lock()
 			processedFolders[ctx.FolderPath]++
 			mu.Unlock()
@@ -373,8 +375,8 @@ func TestScenario3_MultipleNestedPaths(t *testing.T) {
 		filepath.Join(tmpDir, "modules", "order"), // Specific module (overlaps with ".")
 	}
 
-	_, err := ProcessComplexAnnotations(scanPaths, 1,
-		func(ctx *RouterServiceContext) error {
+	_, err := annotation.ProcessComplexAnnotations(scanPaths, 1,
+		func(ctx *annotation.RouterServiceContext) error {
 			mu.Lock()
 			processedFolders[ctx.FolderPath]++
 			mu.Unlock()
