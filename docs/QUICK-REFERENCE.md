@@ -24,7 +24,10 @@ lokstra new myapp
 lokstra new myapp -template 02_app_framework/01_medium_system
 
 # Generate code from annotations
-lokstra autogen .
+lokstra autogen .           # Manual generation
+go run . --generate-only    # Force rebuild all
+
+# Recommended: Use lokstra.Bootstrap() in main() for auto-generation
 ```
 
 ---
@@ -113,23 +116,47 @@ func(params *SearchParams) ([]Result, error) { return results, nil }
 
 ---
 
-## Service Patterns
+## Service Patterns (Recommended: Use Annotations)
 
-### Service Factory
+### Annotation-Based Service (Recommended)
+
+```go
+// @RouterService name="user-service", prefix="/api/users"
+type UserService struct {
+    // @Inject "user-repository"
+    UserRepo UserRepository
+}
+
+// @Route "GET /{id}"
+func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
+    return s.UserRepo.GetByID(p.ID)
+}
+
+// @Route "POST /"
+func (s *UserService) Create(p *CreateUserParams) (*User, error) {
+    u := &User{Name: p.Name, Email: p.Email}
+    return s.UserRepo.Create(u)
+}
+
+// Generate code
+// lokstra autogen .
+```
+
+### Manual Service Factory (Advanced)
 
 ```go
 type UserService struct {
-    UserRepo *service.Cached[UserRepository]
+    UserRepo UserRepository
 }
 
 func (s *UserService) GetByID(id string) (*User, error) {
-    return s.UserRepo.MustGet().GetByID(id)
+    return s.UserRepo.GetByID(id)
 }
 
 // Local factory
 func UserServiceFactory(deps map[string]any, config map[string]any) any {
     return &UserService{
-        UserRepo: service.Cast[UserRepository](deps["user-repository"]),
+        UserRepo: deps["user-repository"].(UserRepository),
     }
 }
 
@@ -155,6 +182,8 @@ func registerServiceTypes() {
 ```
 
 ### Lazy Loading
+
+Services are loaded lazily (created on first access), but their dependencies are eagerly resolved when the service is created:
 
 ```go
 import "github.com/primadi/lokstra/core/service"
@@ -300,17 +329,17 @@ deployments:
 // @RouterService name="user-service", prefix="/api", middlewares=["recovery"]
 type UserService struct {
     // @Inject "user-repository"
-    UserRepo *service.Cached[UserRepository]
+    UserRepo UserRepository
 }
 
 // @Route "GET /users/{id}"
 func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
-    return s.UserRepo.MustGet().GetByID(p.ID)
+    return s.UserRepo.GetByID(p.ID)
 }
 
 // @Route "GET /users"
 func (s *UserService) List(p *ListUsersParams) ([]*User, error) {
-    return s.UserRepo.MustGet().List()
+    return s.UserRepo.List()
 }
 
 // @Route "POST /users", middlewares=["auth"]
@@ -330,8 +359,18 @@ func (s *UserService) Delete(p *DeleteUserParams) error {
 ```
 
 **Generate code:**
+```go
+// Recommended: Auto-generation in main()
+func main() {
+    lokstra.Bootstrap() // Detects changes and regenerates
+    // ...
+}
+```
+
 ```bash
+# Manual generation (before build/deploy)
 lokstra autogen ./path/to/service
+go run . --generate-only
 ```
 
 **Per-route middleware:**

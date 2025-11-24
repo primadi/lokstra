@@ -94,14 +94,13 @@ type LazyServiceEntry struct {
 // ServiceMetadata holds metadata for a service type registration
 // Can be populated from ServiceTypeConfig or legacy functional options
 type ServiceMetadata struct {
-	Resource         string                   // Singular resource name (e.g., "user")
-	ResourcePlural   string                   // Plural resource name (e.g., "users")
-	Convention       string                   // Convention type (e.g., "rest", "rpc")
-	PathPrefix       string                   // Path prefix for all routes
-	MiddlewareNames  []string                 // Router-level middleware names
-	HiddenMethods    []string                 // Methods to hide from router
-	RouteOverrides   map[string]RouteMetadata // Method name -> full route metadata (NEW: supports route-level middlewares)
-	DependencyIsLazy map[string]bool          // Dependency name -> is lazy flag (e.g., "user-repository" -> true)
+	Resource        string                   // Singular resource name (e.g., "user")
+	ResourcePlural  string                   // Plural resource name (e.g., "users")
+	Convention      string                   // Convention type (e.g., "rest", "rpc")
+	PathPrefix      string                   // Path prefix for all routes
+	MiddlewareNames []string                 // Router-level middleware names
+	HiddenMethods   []string                 // Methods to hide from router
+	RouteOverrides  map[string]RouteMetadata // Method name -> full route metadata (NEW: supports route-level middlewares)
 }
 
 // RouteMetadata holds full metadata for a custom route
@@ -999,10 +998,27 @@ func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, d
 // If not found in eager registry, checks lazy registry and instantiates
 // If still not found, checks service-definitions and auto-creates lazy service
 func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
+	return g.getServiceAnyWithStack(name, []string{})
+}
+
+// getServiceAnyWithStack is internal version with circular dependency detection
+func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []string) (any, bool) {
+	// Check for circular dependency
+	for _, svcName := range resolutionStack {
+		if svcName == name {
+			// Build dependency chain for error message
+			chain := append(resolutionStack, name)
+			panic(fmt.Sprintf("circular dependency detected: %s", strings.Join(chain, " → ")))
+		}
+	}
+
 	// Check eager registry first
 	if svc, ok := g.serviceInstances.Load(name); ok {
 		return svc, true
 	}
+
+	// Add to resolution stack
+	newStack := append(resolutionStack, name)
 
 	// Check lazy registry and create if needed
 	onceAny, hasOnce := g.lazyServiceOnce.Load(name)
@@ -1050,8 +1066,8 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 		if len(entry.Deps) > 0 {
 			resolvedDeps = make(map[string]any, len(entry.Deps))
 			for key, serviceName := range entry.Deps {
-				// Recursively resolve dependency
-				depSvc, ok := g.GetServiceAny(serviceName)
+				// Recursively resolve dependency with circular detection
+				depSvc, ok := g.getServiceAnyWithStack(serviceName, newStack)
 				if !ok {
 					panic(fmt.Sprintf("lazy service %s: dependency %s (service %s) not found", name, key, serviceName))
 				}

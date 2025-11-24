@@ -8,7 +8,6 @@ import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/lokstra_registry"
-	"github.com/primadi/lokstra/core/service"
 	domain "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/order/domain"
 	userDomain "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/user/domain"
 )
@@ -17,7 +16,6 @@ import (
 func init() {
 	RegisterOrderServiceImpl()
 }
-
 
 // ============================================================
 // FILE: order_service.go
@@ -36,13 +34,11 @@ func NewOrderServiceImplRemote(proxyService *proxy.Service) *OrderServiceImplRem
 	}
 }
 
-
 // Cancel via HTTP
 // Generated from: @Route "POST /orders/{id}/cancel"
 func (s *OrderServiceImplRemote) Cancel(p *domain.CancelOrderRequest) error {
 	return proxy.Call(s.proxyService, "Cancel", p)
 }
-
 
 // Create via HTTP
 // Generated from: @Route "POST /orders"
@@ -50,13 +46,11 @@ func (s *OrderServiceImplRemote) Create(p *domain.CreateOrderRequest) (*domain.O
 	return proxy.CallWithData[*domain.Order](s.proxyService, "Create", p)
 }
 
-
 // Delete via HTTP
 // Generated from: @Route "DELETE /orders/{id}"
 func (s *OrderServiceImplRemote) Delete(p *domain.DeleteOrderRequest) error {
 	return proxy.Call(s.proxyService, "Delete", p)
 }
-
 
 // GetByID via HTTP
 // Generated from: @Route "GET /orders/{id}"
@@ -64,13 +58,11 @@ func (s *OrderServiceImplRemote) GetByID(p *domain.GetOrderRequest) (*domain.Ord
 	return proxy.CallWithData[*domain.Order](s.proxyService, "GetByID", p)
 }
 
-
 // List via HTTP
 // Generated from: @Route "GET /orders"
 func (s *OrderServiceImplRemote) List(p *domain.ListOrdersRequest) ([]*domain.Order, error) {
 	return proxy.CallWithData[[]*domain.Order](s.proxyService, "List", p)
 }
-
 
 // UpdateStatus via HTTP
 // Generated from: @Route "PUT /orders/{id}/status"
@@ -79,11 +71,10 @@ func (s *OrderServiceImplRemote) UpdateStatus(p *domain.UpdateOrderStatusRequest
 }
 
 
-
 func OrderServiceImplFactory(deps map[string]any, config map[string]any) any {
 	return &OrderServiceImpl{
-		OrderRepo: service.Cast[domain.OrderRepository](deps["order-repository"]),
-		UserService: service.Cast[userDomain.UserService](deps["user-service"]),
+		OrderRepo: deps["order-repository"].(domain.OrderRepository),
+		UserService: deps["user-service"].(userDomain.UserService),
 	}
 }
 
@@ -128,5 +119,4 @@ func RegisterOrderServiceImpl() {
 			"depends-on": []string{ "order-repository", "user-service",  },
 		})
 }
-
 

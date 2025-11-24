@@ -33,23 +33,23 @@ Both Lokstra and Spring Boot are enterprise-grade frameworks that emphasize **de
 ```go
 // 1. Define Service
 type UserService struct {
-    userRepo *service.Cached[*UserRepository]
-    emailSvc *service.Cached[*EmailService]
+    userRepo *UserRepository
+    emailSvc *EmailService
 }
 
 func (s *UserService) GetAll() ([]User, error) {
-    return s.userRepo.MustGet().FindAll()
+    return s.userRepo.FindAll()
 }
 
 func (s *UserService) Create(p *CreateUserParams) (*User, error) {
     user := &User{Name: p.Name, Email: p.Email}
-    savedUser, err := s.userRepo.MustGet().Save(user)
+    savedUser, err := s.userRepo.Save(user)
     if err != nil {
         return nil, err
     }
     
     // Send welcome email
-    go s.emailSvc.MustGet().SendWelcome(user.Email)
+    go s.emailSvc.SendWelcome(user.Email)
     return savedUser, nil
 }
 
@@ -137,15 +137,15 @@ var userRepo = service.LazyLoad[*UserRepository]("user-repository")
 var emailService = service.LazyLoad[*EmailService]("email-service")
 
 func handler() {
-    // Loaded on first access, cached forever, thread-safe
+    // Service loaded on first access, cached forever, thread-safe
     users := userService.MustGet().GetAll()
 }
 
-// Factory with dependencies
-func NewUserService() *UserService {
+// Factory with dependencies resolved eagerly when service created
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
     return &UserService{
-        userRepo: service.LazyLoad[*UserRepository]("user-repository"),
-        emailSvc: service.LazyLoad[*EmailService]("email-service"),
+        userRepo: deps["user-repository"].(*UserRepository),
+        emailSvc: deps["email-service"].(*EmailService),
     }
 }
 
@@ -749,17 +749,17 @@ public class UserController {
 **Equivalent Lokstra Service:**
 ```go
 type UserService struct {
-    userRepo *service.Cached[*UserRepository]
+    userRepo *UserRepository
 }
 
 // No controller needed - auto-generates REST API!
 func (s *UserService) GetAll(p *GetAllParams) ([]User, error) {
-    return s.userRepo.MustGet().FindAll()
+    return s.userRepo.FindAll()
 }
 
 func (s *UserService) Create(p *CreateParams) (*User, error) {
     user := &User{Name: p.Name, Email: p.Email}
-    return s.userRepo.MustGet().Save(user)
+    return s.userRepo.Save(user)
 }
 
 // Register with auto-router
@@ -807,15 +807,15 @@ public class OrderController { /* ... */ }
 // Single service file with auto-generated REST API
 
 type ProductService struct {
-    repo *service.Cached[*ProductRepository]
+    repo *ProductRepository
 }
 
 func (s *ProductService) GetAll(p *GetAllParams) ([]Product, error) { /* ... */ }
 func (s *ProductService) Create(p *CreateParams) (*Product, error) { /* ... */ }
 
 type OrderService struct {
-    productSvc *service.Cached[*ProductService]
-    repo       *service.Cached[*OrderRepository] 
+    productSvc *ProductService
+    repo       *OrderRepository
 }
 
 func (s *OrderService) GetAll(p *GetAllParams) ([]Order, error) { /* ... */ }

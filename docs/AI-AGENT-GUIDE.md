@@ -51,8 +51,9 @@ Lokstra is a **versatile Go web framework** with two usage modes:
 
 ### Key Design Principles
 
-- **Type-safe DI** with Go generics (no `any` casting)
-- **Lazy loading** by default (services loaded on first access)
+- **Type-safe DI** with direct type assertions
+- **Service-level lazy loading** (services created on first access)
+- **Eager dependency resolution** (dependencies loaded when service created)
 - **Zero reflection** in hot path
 - **Configuration-driven** deployment (optional YAML)
 - **Flexible handler signatures** (supports many parameter combinations)
@@ -100,11 +101,11 @@ Business logic component with dependency injection.
 
 ```go
 type UserService struct {
-    UserRepo *service.Cached[UserRepository]
+    UserRepo UserRepository
 }
 
 func (s *UserService) GetByID(id string) (*User, error) {
-    return s.UserRepo.MustGet().GetByID(id)
+    return s.UserRepo.GetByID(id)
 }
 ```
 
@@ -182,9 +183,128 @@ func main() {
 }
 ```
 
-### Pattern 2: With Services and Config
+### Pattern 2: With Annotation-Based Services (Recommended)
 
 **Use Case:** Production apps, team projects, scalable architecture
+
+**File: `main.go`**
+```go
+package main
+
+import (
+    "github.com/primadi/lokstra"
+    "github.com/primadi/lokstra/core/deploy"
+    "github.com/primadi/lokstra/lokstra_registry"
+    
+    // Import packages with @RouterService annotations
+    _ "myapp/modules/user/application"
+    _ "myapp/modules/order/application"
+)
+
+func main() {
+    // Auto-generates code when @RouterService changes detected
+    lokstra.Bootstrap()
+    
+    deploy.SetLogLevelFromEnv() // LOKSTRA_LOG_LEVEL=debug
+    
+    // Services auto-registered via annotations!
+    lokstra_registry.RunServerFromConfig()
+}
+```
+
+**File: `modules/user/application/user_service.go`**
+```go
+package application
+
+import (
+    "myapp/modules/user/domain"
+    "myapp/modules/user/infrastructure"
+)
+
+// @RouterService name="user-service", prefix="/api/users"
+type UserServiceImpl struct {
+    // @Inject "user-repository"
+    UserRepo domain.UserRepository
+}
+
+// @Route "GET /"
+func (s *UserServiceImpl) List(p *domain.ListUsersParams) ([]*domain.User, error) {
+    return s.UserRepo.List()
+}
+
+// @Route "GET /{id}"
+func (s *UserServiceImpl) GetByID(p *domain.GetUserParams) (*domain.User, error) {
+    return s.UserRepo.GetByID(p.ID)
+}
+
+// @Route "POST /"
+func (s *UserServiceImpl) Create(p *domain.CreateUserParams) (*domain.User, error) {
+    u := &domain.User{
+        Name:  p.Name,
+        Email: p.Email,
+    }
+    return s.UserRepo.Create(u)
+}
+
+// @Route "PUT /{id}"
+func (s *UserServiceImpl) Update(p *domain.UpdateUserParams) (*domain.User, error) {
+    u := &domain.User{
+        ID:    p.ID,
+        Name:  p.Name,
+        Email: p.Email,
+    }
+    return s.UserRepo.Update(u)
+}
+
+// @Route "DELETE /{id}"
+func (s *UserServiceImpl) Delete(p *domain.DeleteUserParams) error {
+    return s.UserRepo.Delete(p.ID)
+}
+```
+
+**Generate code (automatic with Bootstrap):**
+```go
+func main() {
+    lokstra.Bootstrap() // Auto-generates on every run when changes detected
+    // ...
+}
+```
+
+**Manual generation (optional):**
+```bash
+# Before build/deploy to ensure latest code
+lokstra autogen .
+
+# Or force rebuild all
+go run . --generate-only
+```
+
+**File: `config.yaml`**
+```yaml
+service-definitions:
+  user-repository:
+    type: user-repository-factory
+    config:
+      dsn: "memory://users"
+  
+  user-service:
+    # Type auto-registered via @RouterService annotation
+    depends-on:
+      - user-repository
+
+deployments:
+  development:
+    servers:
+      api:
+        base-url: "http://localhost:8080"
+        addr: ":8080"
+        published-services:
+          - user-service
+```
+
+### Pattern 3: Manual Service Registration (Legacy/Advanced)
+
+**Use Case:** Complex custom factories, special initialization logic
 
 **File: `main.go`**
 ```go
@@ -391,17 +511,17 @@ import (
 )
 
 type UserServiceImpl struct {
-    UserRepo *service.Cached[user.UserRepository]
+    UserRepo user.UserRepository
 }
 
 var _ user.UserService = (*UserServiceImpl)(nil)
 
 func (s *UserServiceImpl) GetByID(p *user.GetUserParams) (*user.User, error) {
-    return s.UserRepo.MustGet().GetByID(p.ID)
+    return s.UserRepo.GetByID(p.ID)
 }
 
 func (s *UserServiceImpl) List(p *user.ListUsersParams) ([]*user.User, error) {
-    return s.UserRepo.MustGet().List()
+    return s.UserRepo.List()
 }
 
 func (s *UserServiceImpl) Create(p *user.CreateUserParams) (*user.User, error) {
@@ -409,13 +529,13 @@ func (s *UserServiceImpl) Create(p *user.CreateUserParams) (*user.User, error) {
         Name:  p.Name,
         Email: p.Email,
     }
-    return s.UserRepo.MustGet().Create(u)
+    return s.UserRepo.Create(u)
 }
 
 // Factory function for local deployment
 func UserServiceFactory(deps map[string]any, config map[string]any) any {
     return &UserServiceImpl{
-        UserRepo: service.Cast[user.UserRepository](deps["user-repository"]),
+        UserRepo: deps["user-repository"].(user.UserRepository),
     }
 }
 
@@ -692,17 +812,17 @@ import (
 // @RouterService name="user-service", prefix="/api", middlewares=["recovery", "request-logger"]
 type UserServiceImpl struct {
     // @Inject "user-repository"
-    UserRepo *service.Cached[domain.UserRepository]
+    UserRepo domain.UserRepository
 }
 
 // @Route "GET /users/{id}"
 func (s *UserServiceImpl) GetByID(p *domain.GetUserRequest) (*domain.User, error) {
-    return s.UserRepo.MustGet().GetByID(p.ID)
+    return s.UserRepo.GetByID(p.ID)
 }
 
 // @Route "GET /users"
 func (s *UserServiceImpl) List(p *domain.ListUsersRequest) ([]*domain.User, error) {
-    return s.UserRepo.MustGet().List()
+    return s.UserRepo.List()
 }
 
 // @Route "POST /users"
@@ -711,7 +831,7 @@ func (s *UserServiceImpl) Create(p *domain.CreateUserRequest) (*domain.User, err
         Name:   p.Name,
         Email:  p.Email,
     }
-    return s.UserRepo.MustGet().Create(u)
+    return s.UserRepo.Create(u)
 }
 
 // @Route "PUT /users/{id}", middlewares=["auth", "admin"]
@@ -721,12 +841,12 @@ func (s *UserServiceImpl) Update(p *domain.UpdateUserRequest) (*domain.User, err
         Name:  p.Name,
         Email: p.Email,
     }
-    return s.UserRepo.MustGet().Update(u)
+    return s.UserRepo.Update(u)
 }
 
 // @Route "DELETE /users/{id}", middlewares=["auth", "admin"]
 func (s *UserServiceImpl) Delete(p *domain.DeleteUserRequest) error {
-    return s.UserRepo.MustGet().Delete(p.ID)
+    return s.UserRepo.Delete(p.ID)
 }
 
 func Register() {
@@ -736,12 +856,24 @@ func Register() {
 
 ### Generate Code from Annotations
 
+**Recommended: Automatic with Bootstrap**
+```go
+func main() {
+    lokstra.Bootstrap() // Auto-generates when @RouterService changes detected
+    // App code...
+}
+```
+
+**Manual generation (before build/deploy):**
 ```bash
 # From project root
 lokstra autogen .
 
 # Or from specific folder
-lokstra autogen ./modules/user/application
+lokstra autegen ./modules/user/application
+
+# Force rebuild all (useful before deployment)
+go run . --generate-only
 
 # Generated file: zz_generated.lokstra.go
 ```
@@ -879,6 +1011,8 @@ service-definitions:
 
 ### Lazy Loading Pattern
 
+**Service-level lazy loading** (services created on first access):
+
 ```go
 import "github.com/primadi/lokstra/core/service"
 
@@ -895,23 +1029,25 @@ func handler() {
 }
 ```
 
-### Service.Cached Pattern
+### Dependency Injection Pattern
+
+**Important**: Dependencies are **always resolved eagerly** when the service is created.
 
 ```go
 type UserServiceImpl struct {
-    // Cached wrapper for lazy loading dependency
-    UserRepo *service.Cached[user.UserRepository]
+    // Direct dependency injection (resolved when service created)
+    UserRepo user.UserRepository
 }
 
 func (s *UserServiceImpl) GetByID(id string) (*user.User, error) {
-    // MustGet() loads on first access, cached thereafter
-    return s.UserRepo.MustGet().GetByID(id)
+    // Direct access - dependency already loaded during service creation
+    return s.UserRepo.GetByID(id)
 }
 
 func UserServiceFactory(deps map[string]any, config map[string]any) any {
     return &UserServiceImpl{
-        // Cast dependency to typed Cached wrapper
-        UserRepo: service.Cast[user.UserRepository](deps["user-repository"]),
+        // Direct type assertion - dependency already resolved
+        UserRepo: deps["user-repository"].(user.UserRepository),
     }
 }
 ```
@@ -1146,17 +1282,13 @@ service-definitions:
 
 **Usage in repository:**
 ```go
-import "github.com/primadi/lokstra/core/service"
-
 type UserRepository struct {
-    DB *service.Cached[*pgxpool.Pool]
+    DB *pgxpool.Pool
 }
 
 func (r *UserRepository) GetByID(id string) (*User, error) {
-    db := r.DB.MustGet()
-    
     var user User
-    err := db.QueryRow(context.Background(),
+    err := r.DB.QueryRow(context.Background(),
         "SELECT id, name, email FROM users WHERE id = $1", id,
     ).Scan(&user.ID, &user.Name, &user.Email)
     
@@ -1214,9 +1346,10 @@ panic: service 'user-service' not found in registry
 ```
 
 **Solution:**
-- Check service registered: `lokstra_registry.RegisterServiceType("user-service-factory", ...)`
+- **For business services**: Use `@RouterService` annotation + `lokstra autogen .`
+- **For infrastructure services**: Check service registered: `lokstra_registry.RegisterServiceType("user-service-factory", ...)`
 - Check config.yaml: Service name must match factory type
-- Check factory is called in `register.go`
+- Check annotation-generated file: `zz_generated.lokstra.go` exists
 
 #### 2. Import Cycle
 
@@ -1292,12 +1425,17 @@ go install github.com/primadi/lokstra/cmd/lokstra@latest
 lokstra new myapp
 lokstra new myapp -template 02_app_framework/01_medium_system
 
-# Generate code from annotations
-lokstra autogen .
-lokstra autogen ./modules/user/application
+# Generate code from annotations (manual)
+lokstra autogen .                      # Current directory
+lokstra autogen ./modules/user/app     # Specific folder
+
+# Force regenerate all (before deployment)
+go run . --generate-only               # Uses lokstra.Bootstrap()
 
 # List templates
 lokstra new --help
+
+# Note: Use lokstra.Bootstrap() in main() for automatic generation
 ```
 
 ### Import Paths
@@ -1356,30 +1494,37 @@ LOKSTRA_CONFIG=./config.yaml
 
 1. **Ask about project scale:**
    - Small/learning → Suggest router-only mode
-   - Medium/production → Suggest framework mode with DDD
+   - Medium/production → Suggest framework mode with annotations
    - Enterprise → Suggest modular architecture with annotations
 
 2. **Suggest appropriate template:**
    - `01_router/01_router_only` for learning
-   - `02_app_framework/01_medium_system` for production apps
-   - `02_app_framework/03_enterprise_router_service` for large systems
+   - `02_app_framework/01_medium_system` for production apps (2-10 entities)
+   - `02_app_framework/03_enterprise_router_service` for enterprise with annotations
 
 3. **Always provide complete code:**
    - Include imports
    - Include error handling
    - Include validation tags
    - Include config.yaml if using framework mode
+   - **Use `@RouterService` annotations for business services**
 
 4. **Follow project structure:**
    - `domain/` for interfaces and models
-   - `repository/` for data access
-   - `service/` for business logic
-   - `main.go` and `register.go` for bootstrap
+   - `infrastructure/` for data access (repositories)
+   - `application/` for business logic (services with `@RouterService`)
+   - `main.go` for bootstrap (import annotation packages)
 
 5. **Use type-safe patterns:**
-   - `service.LazyLoad[T]` for dependencies
-   - `service.Cached[T]` in structs
-   - Generic-based DI (avoid `any`)
+   - Direct type assertions in factory functions
+   - `service.LazyLoad[T]` for lazy service loading
+   - **Prefer annotations over manual registration for business services**
+
+6. **Recommend annotation workflow:**
+   - Define service with `@RouterService` annotation
+   - Add routes with `@Route` annotation
+   - Run `lokstra autogen .` to generate code
+   - Manual registration only for infrastructure/custom factories
 
 ---
 

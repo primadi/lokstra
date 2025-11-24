@@ -526,7 +526,7 @@ deployments:
 ```go
 // UserService methods:
 type UserService struct {
-    DB *service.Cached[*Database]
+    DB *Database
 }
 
 // Optional: Implement ServiceMeta for custom routing
@@ -548,7 +548,7 @@ func (s *UserService) GetRouteOverride() autogen.RouteOverride {
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-    return s.DB.MustGet().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
+    return s.DB.QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
 }
 
 // Usage in same deployment
@@ -755,12 +755,12 @@ func (s *UserServiceRemote) GetByID(...) (*User, error) { /* HTTP call */ }
 
 // OrderService doesn't know which one!
 type OrderService struct {
-    Users *service.Cached[IUserService]  // Could be local OR remote!
+    Users IUserService  // Could be local OR remote!
 }
 
 func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
     // This works for BOTH local and remote!
-    user, err := s.Users.MustGet().GetByID(&GetByIDParams{ID: p.UserID})
+    user, err := s.Users.GetByID(&GetByIDParams{ID: p.UserID})
     // ...
 }
 ```
@@ -851,38 +851,46 @@ deployments:
 | **Code** | Business logic | HTTP proxy | Business logic + router |
 | **Suffix** | `-service` | `-service-remote` | `-service` |
 
-### Core Pattern: Lazy Loading
+### Core Pattern: Service-Level Lazy Loading
 
 ```go
 type UserService struct {
-    DB    *service.Cached[*Database]
-    Cache *service.Cached[*CacheService]
-    Email *service.Cached[*EmailService]
+    DB    *Database
+    Cache *CacheService
+    Email *EmailService
+}
+
+// Factory function - dependencies resolved eagerly when service created
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+    return &UserService{
+        DB:    deps["db"].(*Database),
+        Cache: deps["cache"].(*CacheService),
+        Email: deps["email"].(*EmailService),
+    }
 }
 
 // Registered in registry
-lokstra_registry.RegisterServiceFactory("user-service", func() any {
-    return &UserService{
-        DB:    service.LazyLoad[*Database]("db"),
-        Cache: service.LazyLoad[*CacheService]("cache"),
-        Email: service.LazyLoad[*EmailService]("email"),
-    }
-})
+lokstra_registry.RegisterServiceType("user-service-factory", UserServiceFactory, nil)
 ```
 
-**Lazy = Created only when first accessed**:
+**Service-level lazy = Service created only when first accessed, dependencies eager**:
 ```go
+var userService = service.LazyLoad[*UserService]("user-service")
+
+func handler() {
+    // UserService created here on first call (dependencies already loaded)
+    user, err := userService.MustGet().CreateUser(p)
+}
+
 func (s *UserService) CreateUser(p *CreateParams) (*User, error) {
-    // DB created here (first call)
-    db := s.DB.Get()
-    
-    user, err := db.Insert("INSERT INTO users ...")
+    // Direct access - dependencies already resolved when service was created
+    user, err := s.DB.Insert("INSERT INTO users ...")
     if err != nil {
         return nil, err
     }
     
-    // Email created here (first call)
-    s.Email.MustGet().SendWelcome(user.Email)
+    // Direct access to email service
+    s.Email.SendWelcome(user.Email)
     
     return user, nil
 }
@@ -923,7 +931,7 @@ type GetByIDParams struct {
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-    return s.DB.MustGet().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
+    return s.DB.QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
 }
 
 // ❌ WRONG: Primitive parameter
@@ -985,13 +993,13 @@ deployments:
 
 ```go
 type OrderService struct {
-    Users *service.Cached[IUserService]
+    Users IUserService
 }
 
 func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
     // In monolith: direct method call
     // In microservice: HTTP call
-    user, err := s.Users.MustGet().GetByID(&GetByIDParams{ID: p.UserID})
+    user, err := s.Users.GetByID(&GetByIDParams{ID: p.UserID})
 }
 ```
 
@@ -1332,13 +1340,13 @@ go run . -server=order-service
 ```go
 // OrderService code (unchanged)
 type OrderService struct {
-    Users *service.Cached[IUserService]  // Interface!
+    Users IUserService  // Interface!
 }
 
 func (s *OrderService) CreateOrder(p *CreateParams) (*Order, error) {
     // In monolith: direct method call
     // In microservice: HTTP call
-    user, err := s.Users.MustGet().GetByID(&GetByIDParams{ID: p.UserID})
+    user, err := s.Users.GetByID(&GetByIDParams{ID: p.UserID})
 }
 ```
 
@@ -1528,8 +1536,8 @@ lokstra_registry.RegisterServiceFactory("users", createUserService)
 
 // Service with dependencies
 type UserService struct {
-    DB    *service.Cached[*Database]
-    Email *service.Cached[*EmailService]
+    DB    *Database
+    Email *EmailService
 }
 
 // Handler uses service

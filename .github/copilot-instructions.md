@@ -13,8 +13,8 @@ Lokstra is a Go web framework with two modes:
 
 When helping with Lokstra:
 
-- **Complete AI Guide:** [AI-AGENT-GUIDE.md](../docs/AI-AGENT-GUIDE.md)
-- **Quick Reference:** [QUICK-REFERENCE.md](../docs/QUICK-REFERENCE.md)
+- **Complete AI Guide:** [AI-AGENT-GUIDE.md](https://primadi.github.io/lokstra/AI-AGENT-GUIDE)
+- **Quick Reference:** [QUICK-REFERENCE.md](https://primadi.github.io/lokstra/QUICK-REFERENCE)
 - **Full Documentation:** https://primadi.github.io/lokstra/
 
 ## Common Patterns
@@ -28,32 +28,70 @@ app := lokstra.NewApp("myapp", ":8080", r)
 app.Run(30 * time.Second)
 ```
 
-### 2. Framework Mode (With DI)
+### 2. Framework Mode with Annotations (Recommended)
 
-**NEW RECOMMENDED FLOW (Config First):**
+**Use annotations for business services - minimal boilerplate:**
 
 ```go
 // main.go
 func main() {
+    // Auto-generates code when @RouterService changes detected
     lokstra.Bootstrap()
 
-    // 1. Load config FIRST
-    if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
-        log.Fatal(err)
-    }
+    // Import packages with @RouterService annotations
+    _ "myapp/modules/user/application"
 
-    // 2. Register services (config available!)
-    registerServiceTypes()
-    registerMiddlewareTypes()
-
-    // 3. Run server
-    if err := lokstra_registry.InitAndRunServer(); err != nil {
-        log.Fatal(err)
-    }
+    // Services auto-registered via annotations!
+    lokstra_registry.RunServerFromConfig()
 }
 ```
 
-**Service Factory (can access config):**
+**Service with annotations:**
+
+```go
+// @RouterService name="user-service", prefix="/api/users"
+type UserService struct {
+    // @Inject "user-repository"
+    UserRepo UserRepository
+}
+
+// @Route "GET /{id}"
+func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
+    return s.UserRepo.GetByID(p.ID)
+}
+
+// @Route "POST /", middlewares=["auth"]
+func (s *UserService) Create(p *CreateUserParams) (*User, error) {
+    // ...
+}
+
+// @Route "DELETE /{id}", middlewares=["auth", "admin"]
+func (s *UserService) Delete(p *DeleteUserParams) error {
+    // ...
+}
+```
+
+**Code generation (automatic):**
+
+```go
+func main() {
+    lokstra.Bootstrap() // Auto-generates when changes detected
+    // ...
+}
+```
+
+**Manual generation (before build/deploy):**
+
+```bash
+lokstra autogen .        # Manual generation
+go run . --generate-only # Force rebuild all
+```
+
+**Per-route middleware:** Add `middlewares=["mw1", "mw2"]` to `@Route`
+
+### 3. Manual Registration (Advanced/Infrastructure Services)
+
+**For infrastructure services or custom factories:**
 
 ```go
 func UserServiceFactory(deps map[string]any, config map[string]any) any {
@@ -61,7 +99,7 @@ func UserServiceFactory(deps map[string]any, config map[string]any) any {
     dbDSN := lokstra_registry.GetConfig("database.dsn", "postgres://localhost/mydb")
 
     return &UserService{
-        UserRepo: service.Cast[UserRepository](deps["user-repository"]),
+        UserRepo: deps["user-repository"].(UserRepository),
     }
 }
 ```
@@ -97,22 +135,7 @@ deployments:
         published-services: [user-service]
 ```
 
-**OLD FLOW (Still Supported):**
-
-```go
-// main.go
-func main() {
-    lokstra.Bootstrap()
-
-    registerServiceTypes()
-    registerMiddlewareTypes()
-
-    // Config loaded + server started together
-    lokstra_registry.RunServerFromConfigFolder("config")
-}
-```
-
-### 3. Handler Signatures (29+ supported)
+### 4. Handler Signatures (29+ supported)
 
 ```go
 // Simple
@@ -141,38 +164,14 @@ type CreateUserParams struct {
 }
 ```
 
-### 5. Annotations (Enterprise)
+### 5. Domain Models
 
 ```go
-// @RouterService name="user-service", prefix="/api"
-type UserService struct {
-    // @Inject "user-repository"
-    UserRepo *service.Cached[UserRepository]
-}
-
-// @Route "GET /users/{id}"
-func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
-    return s.UserRepo.MustGet().GetByID(p.ID)
-}
-
-// @Route "POST /users", middlewares=["auth"]
-func (s *UserService) Create(p *CreateUserParams) (*User, error) {
-    // ...
-}
-
-// @Route "DELETE /users/{id}", middlewares=["auth", "admin"]
-func (s *UserService) Delete(p *DeleteUserParams) error {
-    // ...
+type CreateUserParams struct {
+    Name  string `json:"name" validate:"required,min=3,max=50"`
+    Email string `json:"email" validate:"required,email"`
 }
 ```
-
-Generate code:
-
-```bash
-lokstra autogen .
-```
-
-**Per-route middleware:** Add `middlewares=["mw1", "mw2"]` to `@Route`
 
 ## Project Structure
 
@@ -184,22 +183,22 @@ myapp/
 └── handlers.go
 ```
 
-### Medium (DDD)
+### Medium (DDD with Annotations)
 
 ```
 myapp/
 ├── main.go
-├── register.go
 ├── config.yaml
 ├── domain/
 │   └── user/
 │       ├── models.go
 │       ├── repository.go
 │       └── service.go
-├── repository/
+├── infrastructure/
 │   └── user_repository.go
-└── service/
-    └── user_service.go
+└── application/
+    ├── user_service.go              # Contains @RouterService
+    └── zz_generated.lokstra.go      # Auto-generated
 ```
 
 ### Enterprise (Modular)
@@ -259,7 +258,10 @@ lokstra new myapp
 lokstra new myapp -template 02_app_framework/01_medium_system
 
 # Generate code from annotations
-lokstra autogen .
+lokstra autogen .        # Manual generation
+go run . --generate-only # Force rebuild all
+
+# Recommended: Use lokstra.Bootstrap() in main() for auto-generation
 ```
 
 ## Templates
@@ -274,15 +276,16 @@ lokstra autogen .
 2. **Use validation tags** on request structs: `validate:"required,email"`
 3. **Use pointer parameters** for request binding: `*CreateUserParams`
 4. **Follow domain-driven design**: domain → repository → service
-5. **Type-safe DI**: Use `service.Cached[T]` and `service.LazyLoad[T]`
+5. **Type-safe DI**: Use direct type assertions and `service.LazyLoad[T]` for lazy service loading
+6. **Prefer annotations** for business services: Use `@RouterService` + `@Route` instead of manual registration
 
 ## When Suggesting Code
 
 1. **Ask about scale first:**
 
    - Small → Router mode
-   - Medium → Framework mode with DDD
-   - Large → Enterprise modular
+   - Medium → Framework mode with annotations
+   - Large → Enterprise modular with annotations
 
 2. **Provide complete code:**
 
@@ -290,16 +293,18 @@ lokstra autogen .
    - Include error handling
    - Include validation tags
    - Include config.yaml if using framework mode
+   - Use `@RouterService` annotations for business services
 
 3. **Follow project structure:**
-   - Separate domain/repository/service
+   - Separate domain/application/infrastructure
    - Use interfaces in domain layer
-   - Implement in repository/service layers
+   - Business logic in application layer with `@RouterService`
+   - Data access in infrastructure layer
 
 ## Resources
 
-- AI Agent Guide: [AI-AGENT-GUIDE.md](../docs/AI-AGENT-GUIDE.md) - **READ THIS FIRST**
-- Quick Reference: [QUICK-REFERENCE.md](../docs/QUICK-REFERENCE.md)
+- AI Agent Guide: [AI-AGENT-GUIDE.md](https://primadi.github.io/lokstra/AI-AGENT-GUIDE) - **READ THIS FIRST**
+- Quick Reference: [QUICK-REFERENCE.md](https://primadi.github.io/lokstra/QUICK-REFERENCE)
 - Full Docs: https://primadi.github.io/lokstra/
 - Examples: https://primadi.github.io/lokstra/00-introduction/examples/
-- Templates: [project_templates/](../project_templates/)
+- Templates: [project_templates/](https://github.com/primadi/lokstra/tree/main/project_templates)

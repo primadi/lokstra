@@ -6,56 +6,69 @@ title: Full Framework Examples
 # Track 2: Full Framework Examples
 
 > **Use Lokstra as a complete application framework (like NestJS, Spring Boot)**  
-> **Time**: 8-12 hours • **Level**: Intermediate to Advanced
+> **Time**: 6-10 hours • **Level**: Intermediate to Advanced
 
 ---
 
 ## 📚 What You'll Learn
 
-This track covers the **complete Lokstra framework** with dependency injection, services, and deployment patterns:
+This track covers the **complete Lokstra framework** with dependency injection, auto-generated routers, and deployment patterns:
 
-- ✅ Service layer and dependency injection
-- ✅ Auto-generated REST routers from services
+- ✅ Annotation-based service development (`@RouterService`, `@Inject`, `@Route`)
+- ✅ Auto-generated REST routers from service methods
+- ✅ Type-safe dependency injection (eager loading)
 - ✅ Configuration-driven deployment (YAML or Code)
-- ✅ Monolith → Microservices migration
+- ✅ Monolith → Microservices migration (zero code changes)
 - ✅ External service integration
 - ✅ Production-ready patterns
 
-**Full enterprise features** - DI, auto-router, multi-deployment!
+**Full enterprise features** - Annotations, DI, auto-router, multi-deployment!
 
 ---
 
 ## 🎯 Learning Path
 
-### [01 - CRUD API with Services](./01-crud-api/) ⏱️ 1 hour
+### [01 - Enterprise Router Service (Annotations)](./01_enterprise_router_service/) ⏱️ 2-3 hours ⭐⭐⭐
 
-Service-based architecture with dependency injection.
+**START HERE - RECOMMENDED:** Annotation-driven router services with auto-generated code.
 
 ```go
-type UserService struct {
-    DB *service.Cached[*Database]
+// Write this:
+// @RouterService name="user-service", prefix="/api"
+type UserServiceImpl struct {
+    // @Inject "user-repository"
+    UserRepo domain.UserRepository
 }
 
-func (s *UserService) GetAll() ([]User, error) {
-    return s.DB.MustGet().Query("SELECT * FROM users")
+// @Route "GET /users/{id}"
+func (s *UserServiceImpl) GetByID(p *GetUserRequest) (*User, error) {
+    return s.UserRepo.GetByID(p.ID)
 }
 
-// Register service
-lokstra_registry.RegisterServiceFactory("users", NewUserService)
-
-// Use in handlers
-var userService = service.LazyLoad[*UserService]("users")
-
-r.GET("/users", func() ([]User, error) {
-    return userService.MustGet().GetAll()
-})
+// Get this auto-generated:
+// ✅ Service factory with eager dependency injection
+// ✅ Remote HTTP proxy for microservices
+// ✅ Router registration with path conventions
+// ✅ Direct dependency access (no wrappers)
 ```
 
 **What you'll learn:**
-- Service factory pattern
-- Lazy dependency injection
-- Service registration and access
-- Manual routing with services
+- **Lokstra Annotations** - `@RouterService`, `@Inject`, `@Route`
+- Auto-code generation with `lokstra.Bootstrap()`
+- Zero boilerplate router services
+- Hot reload in dev mode (auto-regenerates on changes)
+- Type-safe eager dependency injection
+- Microservice-ready architecture
+
+**Why this is the best starting point:**
+- ✅ **83% less code** - No manual factory/proxy/registration
+- ✅ **Type-safe** - Compiler-enforced correctness
+- ✅ **Fast development** - Add method → auto-registered
+- ✅ **Production-ready** - Zero runtime overhead
+- ✅ **Refactoring-friendly** - Change once, update everywhere
+- ✅ **Modern Go** - Embraces code generation best practices
+
+**Perfect for:** Enterprise apps, microservices, teams wanting rapid development
 
 ---
 
@@ -206,59 +219,7 @@ func WeatherServiceFactory(deps, cfg map[string]any) any {
 
 ---
 
-### [07 - Enterprise Router Service (Annotations)](./07_enterprise_router_service/) ⏱️ 2-3 hours ⭐⭐⭐
-
-**RECOMMENDED:** Annotation-driven router services with auto-generated code.
-
-```go
-// Write this:
-// @RouterService name="user-service", prefix="/api"
-type UserServiceImpl struct {
-    // @Inject "user-repository"
-    UserRepo *service.Cached[domain.UserRepository]
-}
-
-// @Route "GET /users/{id}"
-func (s *UserServiceImpl) GetByID(p *GetUserRequest) (*User, error) {
-    return s.UserRepo.MustGet().GetByID(p.ID)
-}
-
-// Get this auto-generated:
-// ✅ Service factory
-// ✅ Remote HTTP proxy
-// ✅ Router registration
-// ✅ Dependency injection
-```
-
-**What you'll learn:**
-- **Lokstra Annotations** - `@RouterService`, `@Inject`, `@Route`
-- Auto-code generation with `lokstra.Bootstrap()`
-- Zero boilerplate router services
-- Hot reload in dev mode
-- Type-safe dependency injection
-- Microservice-ready architecture
-
-**Why this is recommended:**
-- ✅ **83% less code** - No manual factory/proxy/registration
-- ✅ **Type-safe** - Compiler-enforced correctness
-- ✅ **Fast development** - Add method → auto-registered
-- ✅ **Production-ready** - Zero runtime overhead
-- ✅ **Refactoring-friendly** - Change once, update everywhere
-
-**Perfect for:** Enterprise apps, microservices, teams wanting rapid development
-
----
-
 ## 🚀 Running Examples
-
-### Simple Examples (01):
-```bash
-cd 01-crud-api
-go run main.go
-curl http://localhost:3000/users
-```
-
-### Multi-Server Examples (02-03):
 ```bash
 cd 02-multi-deployment-yaml  # or 03
 
@@ -355,7 +316,7 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 - ✅ Auto-router from service methods
 - ✅ Zero-code deployment topology changes
 - ✅ Code or YAML configuration (your choice)
-- ✅ **Annotation-driven development (Example 07)** - Like NestJS decorators, but with Go code generation
+- ✅ **Annotation-driven development (Example 01)** - Like NestJS decorators, but with Go code generation
 
 **📖 Detailed Framework Comparisons:**
 - **[Practical Example: Microservices in 3 Frameworks](./02-multi-deployment-yaml/framework-comparison)** - Same app, different approaches
@@ -366,25 +327,24 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 
 ## 💡 Which Example Should I Start With?
 
-### For Quick Start → **Example 07** ⭐
-**Best for most developers** - annotation-driven, minimal boilerplate
+### For Quick Start → **Example 01 (01_enterprise_router_service)** ⭐⭐⭐
+**STRONGLY RECOMMENDED for all developers** - annotation-driven, minimal boilerplate
 
 ```go
 // @RouterService, @Inject, @Route - that's it!
-// Everything auto-generated
+// Everything auto-generated with lokstra.Bootstrap()
 ```
 
-### For Understanding Fundamentals → **Example 01**
-Learn service architecture basics before jumping to annotations
+**This is the modern way to build Lokstra apps!**
 
-### For Configuration Mastery → **Examples 02-03**
-Deep dive into YAML vs code configuration
+### For Configuration Deep Dive → **Examples 02-03**
+After mastering annotations, explore YAML vs code configuration
 
 ### For Real-World Integration → **Examples 04-05**
 External APIs, payment gateways, third-party services
 
 ---
 
-**Ready to start?** → [07 - Enterprise Router Service (Annotations)](./07_enterprise_router_service/) ⭐ **RECOMMENDED**
+**Ready to start?** → [01 - Enterprise Router Service (Annotations)](./01_enterprise_router_service/) ⭐⭐⭐ **START HERE**
 
-**Coming from Router Track?** This builds on routing basics with DI, services, and annotations!
+**Coming from Router Track?** Full Framework eliminates manual routing with `@RouterService` annotations!

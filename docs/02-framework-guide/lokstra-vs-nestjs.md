@@ -32,15 +32,15 @@ Both Lokstra and NestJS are enterprise-grade frameworks that emphasize **depende
 ```go
 // 1. Define Service
 type UserService struct {
-    db *service.Cached[*Database]
+    db *Database
 }
 
 func (s *UserService) GetAll() ([]User, error) {
-    return s.db.MustGet().Query("SELECT * FROM users")
+    return s.db.Query("SELECT * FROM users")
 }
 
 func (s *UserService) GetByID(id string) (*User, error) {
-    return s.db.MustGet().QueryOne("SELECT * FROM users WHERE id = ?", id)
+    return s.db.QueryOne("SELECT * FROM users WHERE id = ?", id)
 }
 
 // 2. Register Service Factory
