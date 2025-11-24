@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/primadi/lokstra/core/deploy"
@@ -617,13 +618,24 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			// Register as lazy service with wrapper factory
 			// Use Skip mode to allow idempotent calls
 			registry.RegisterLazyServiceWithDeps(serviceName, func(resolvedDeps, cfg map[string]any) any {
-				// Factory expects lazy loaders (service.Cached), so wrap resolved deps
+				// Prepare deps for factory - wrap with LazyLoadWith only if Cached type
 				lazyDeps := make(map[string]any)
 				for key, depSvc := range resolvedDeps {
 					depSvcCopy := depSvc // Capture for closure
-					lazyDeps[key] = service.LazyLoadWith(func() any {
-						return depSvcCopy
-					})
+
+					// Check if dependency is *service.Cached[T] using reflection
+					// Cached types need to be wrapped with LazyLoadWith
+					// Eager types (like *DBPool, *RedisClient) should be passed as-is
+					typeName := reflect.TypeOf(depSvcCopy).String()
+					if strings.Contains(typeName, "service.Cached[") {
+						// Lazy dependency - wrap with LazyLoadWith
+						lazyDeps[key] = service.LazyLoadWith(func() any {
+							return depSvcCopy
+						})
+					} else {
+						// Eager dependency - pass as-is
+						lazyDeps[key] = depSvcCopy
+					}
 				}
 
 				// Call original factory
