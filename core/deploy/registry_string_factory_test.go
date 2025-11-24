@@ -214,7 +214,7 @@ func TestRegisterLazyService_YAMLEquivalence(t *testing.T) {
 }
 
 // TestRegisterLazyService_DependsOnParsing tests depends-on parsing
-// from both []string and []interface{} (YAML unmarshaling)
+// from both []string and []any (YAML unmarshaling)
 func TestRegisterLazyService_DependsOnParsing(t *testing.T) {
 	reg := NewGlobalRegistry()
 
@@ -228,14 +228,14 @@ func TestRegisterLazyService_DependsOnParsing(t *testing.T) {
 		t.Error("service-a depends-on not parsed correctly from []string")
 	}
 
-	// Test with []interface{} (YAML unmarshaling)
+	// Test with []any (YAML unmarshaling)
 	reg.RegisterLazyService("service-b", "factory-b", map[string]any{
-		"depends-on": []interface{}{"dep3", "dep4"},
+		"depends-on": []any{"dep3", "dep4"},
 	})
 
 	defB := reg.GetDeferredServiceDef("service-b")
 	if defB == nil || len(defB.DependsOn) != 2 {
-		t.Error("service-b depends-on not parsed correctly from []interface{}")
+		t.Error("service-b depends-on not parsed correctly from []any")
 	}
 
 	if defB.DependsOn[0] != "dep3" || defB.DependsOn[1] != "dep4" {

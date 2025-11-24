@@ -351,7 +351,7 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 - **Buffalo** (Go) - Full-stack web framework
 
 **Lokstra advantages:**
-- ✅ Type-safe generics (no `interface{}`)
+- ✅ Type-safe generics (no `any`)
 - ✅ Auto-router from service methods
 - ✅ Zero-code deployment topology changes
 - ✅ Code or YAML configuration (your choice)

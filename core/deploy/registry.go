@@ -856,8 +856,8 @@ func (g *GlobalRegistry) registerDeferredService(name, factoryType string, confi
 		switch deps := depsRaw.(type) {
 		case []string:
 			dependsOn = deps
-		case []interface{}:
-			// Handle YAML unmarshaling []interface{}
+		case []any:
+			// Handle YAML unmarshaling []any
 			dependsOn = make([]string, len(deps))
 			for i, d := range deps {
 				dependsOn[i] = d.(string)

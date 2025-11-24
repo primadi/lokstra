@@ -51,7 +51,7 @@ Lokstra is a **versatile Go web framework** with two usage modes:
 
 ### Key Design Principles
 
-- **Type-safe DI** with Go generics (no `interface{}` casting)
+- **Type-safe DI** with Go generics (no `any` casting)
 - **Lazy loading** by default (services loaded on first access)
 - **Zero reflection** in hot path
 - **Configuration-driven** deployment (optional YAML)
@@ -1379,7 +1379,7 @@ LOKSTRA_CONFIG=./config.yaml
 5. **Use type-safe patterns:**
    - `service.LazyLoad[T]` for dependencies
    - `service.Cached[T]` in structs
-   - Generic-based DI (avoid `interface{}`)
+   - Generic-based DI (avoid `any`)
 
 ---
 

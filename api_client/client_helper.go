@@ -151,12 +151,12 @@ func FetchAndCast[T any](client *ClientRouter, path string, opts ...FetchOption)
 
 	var result T
 
-	// Check if T is interface{} or any - if so, return data directly
+	// Check if T is any or any - if so, return data directly
 	resultType := reflect.TypeOf((*T)(nil)).Elem()
 
-	// Special case: if T is interface{} or any, return clientResp.Data directly
+	// Special case: if T is any or any, return clientResp.Data directly
 	if resultType.Kind() == reflect.Interface && resultType.NumMethod() == 0 {
-		// T is any/interface{}, return data as-is
+		// T is any/any, return data as-is
 		if data, ok := any(clientResp.Data).(T); ok {
 			return data, nil
 		}

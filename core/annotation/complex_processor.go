@@ -297,8 +297,9 @@ type ServiceGeneration struct {
 type DependencyInfo struct {
 	ServiceName string // e.g., "user-repository"
 	FieldName   string // e.g., "UserRepo"
-	FieldType   string // e.g., "*service.Cached[domain.UserRepository]"
-	InnerType   string // e.g., "domain.UserRepository" (extracted from generic)
+	FieldType   string // e.g., "*service.Cached[domain.UserRepository]" or "*pgxpool.Pool"
+	InnerType   string // e.g., "domain.UserRepository" (extracted from generic) or same as FieldType for eager
+	IsLazy      bool   // true if *service.Cached[T], false for direct injection
 }
 
 // MethodSignature holds method signature information

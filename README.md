@@ -204,7 +204,7 @@ func createUser(ctx *request.Context, params *CreateUserParams) error {
 ✅ **Auto-generated routes** - From services  
 
 ### vs DI Frameworks (Fx, Wire, Dig)
-✅ **Type-safe** - No `interface{}` casting  
+✅ **Type-safe** - No `any` casting  
 ✅ **Zero reflection** - In hot path  
 ✅ **Lazy loading** - Memory efficient  
 ✅ **Optional config** - Start with code, scale with YAML  
