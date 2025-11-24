@@ -94,15 +94,15 @@ type UserService interface {
 
 // service/user_service.go
 type UserServiceImpl struct {
-    userRepo *service.Cached[repository.UserRepository]
+    userRepo repository.UserRepository
 }
 
 func (s *UserServiceImpl) GetByID(p *GetUserParams) (*model.User, error) {
-    return s.userRepo.MustGet().GetByID(p.ID)
+    return s.userRepo.GetByID(p.ID)
 }
 
 func (s *UserServiceImpl) List(p *ListUsersParams) ([]*model.User, error) {
-    return s.userRepo.MustGet().List()
+    return s.userRepo.List()
 }
 
 // repository/user_repository.go - PostgreSQL implementation
@@ -149,18 +149,18 @@ func (r *UserRepositoryPostgres) List() ([]*model.User, error) {
 **Order Service with Cross-Service Call:**
 ```go
 type OrderServiceImpl struct {
-    orderRepo *service.Cached[repository.OrderRepository] 
-    userSvc   *service.Cached[contract.UserService] // Interface! Auto-resolves local/remote
+    orderRepo repository.OrderRepository 
+    userSvc   contract.UserService // Interface! Auto-resolves local/remote
 }
 
 func (s *OrderServiceImpl) GetByID(p *GetOrderParams) (*model.OrderWithUser, error) {
-    order, err := s.orderRepo.MustGet().GetByID(p.ID)
+    order, err := s.orderRepo.GetByID(p.ID)
     if err != nil {
         return nil, err
     }
     
     // Cross-service call - automatically local or HTTP based on deployment!
-    user, err := s.userSvc.MustGet().GetByID(&GetUserParams{ID: order.UserID})
+    user, err := s.userSvc.GetByID(&GetUserParams{ID: order.UserID})
     if err != nil {
         return nil, err
     }

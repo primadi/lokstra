@@ -9,7 +9,6 @@ import (
 
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
-	"github.com/primadi/lokstra/core/service"
 )
 
 // flattenConfigs flattens nested config maps using dot notation
@@ -614,40 +613,11 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 				return fmt.Errorf("service factory %s (local) not registered for service %s", serviceType, serviceName)
 			}
 
-			// Get metadata to check dependency lazy/eager flags
-			metadata := registry.GetServiceMetadata(serviceType)
-
 			// Register as lazy service with wrapper factory
 			// Use Skip mode to allow idempotent calls
 			registry.RegisterLazyServiceWithDeps(serviceName, func(resolvedDeps, cfg map[string]any) any {
-				// Prepare deps for factory - wrap with LazyLoadWith only if IsLazy=true
-				lazyDeps := make(map[string]any)
-				for key, depSvc := range resolvedDeps {
-					depSvcCopy := depSvc // Capture for closure
-
-					// Check if dependency is lazy using metadata flag
-					// Lazy deps need to be wrapped with LazyLoadWith
-					// Eager deps (like *DBPool, *RedisClient) should be passed as-is
-					isLazy := false
-					if metadata != nil && metadata.DependencyIsLazy != nil {
-						if flag, exists := metadata.DependencyIsLazy[key]; exists {
-							isLazy = flag
-						}
-					}
-
-					if isLazy {
-						// Lazy dependency - wrap with LazyLoadWith
-						lazyDeps[key] = service.LazyLoadWith(func() any {
-							return depSvcCopy
-						})
-					} else {
-						// Eager dependency - pass as-is
-						lazyDeps[key] = depSvcCopy
-					}
-				}
-
-				// Call original factory
-				return factory(lazyDeps, cfg)
+				// Call original factory with resolved dependencies (eager injection)
+				return factory(resolvedDeps, cfg)
 			}, deps, svc.Config, deploy.WithRegistrationMode(deploy.LazyServiceSkip))
 		}
 	}

@@ -120,12 +120,12 @@ r.GET("/complex", func(ctx *request.Context) (*response.Response, error) {
 ```go
 // Define service
 type UserService struct {
-    DB *service.Cached[*Database]
+    DB *Database
 }
 
 // Business logic in service
 func (s *UserService) GetAll() ([]*User, error) {
-    return s.DB.MustGet().FindAll()
+    return s.DB.FindAll()
 }
 
 // ❌ Not optimal - looks up service in map on EVERY request
@@ -134,13 +134,13 @@ r.GET("/users", func() ([]*User, error) {
     return users.GetAll()
 })
 
-// ✅ Optimal - cached service resolution (recommended)
+// ✅ Optimal - service-level lazy loading (recommended)
 var userService = service.LazyLoad[*UserService]("users")
 
 r.GET("/users", func() ([]*User, error) {
     return userService.MustGet().GetAll()
 })
-// First call: Creates & caches service instance
+// First call: Creates service & resolves dependencies
 // Subsequent calls: Returns cached instance (fast!)
 
 // OR: Auto-generate router from service!
@@ -269,15 +269,13 @@ deployments:
 ```go
 // 1. Define service
 type UserService struct {
-    DB *service.Cached[*Database]
+    DB *Database
 }
 
 // 2. Create factory
-func createUserServiceFactory() any {
-    return func(deps map[string]any, config map[string]any) any {
-        return &UserService{
-            DB: service.Cast[*Database](deps["db"]),
-        }
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+    return &UserService{
+        DB: deps["db"].(*Database),
     }
 }
 
@@ -308,17 +306,17 @@ lokstra_registry.RegisterRouter("user-router", setupUserRouter())
 // @RouterService name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "database"
-    DB *service.Cached[*Database]
+    DB *Database
 }
 
 // @Route "GET /users"
 func (s *UserServiceImpl) GetAll(p *GetAllRequest) ([]User, error) {
-    return s.DB.MustGet().GetAllUsers()
+    return s.DB.GetAllUsers()
 }
 
 // @Route "POST /users"
 func (s *UserServiceImpl) Create(p *CreateUserRequest) (*User, error) {
-    return s.DB.MustGet().CreateUser(p)
+    return s.DB.CreateUser(p)
 }
 
 // Auto-generates: factory, DI wiring, routes, remote proxy!
@@ -470,9 +468,9 @@ deployments:
 ```go
 // Rich business logic in services
 type OrderService struct {
-    Users     *service.Cached[*UserService]
-    Payments  *service.Cached[*PaymentService]
-    Inventory *service.Cached[*InventoryService]
+    Users     *UserService
+    Payments  *PaymentService
+    Inventory *InventoryService
 }
 ```
 

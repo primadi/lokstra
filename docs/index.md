@@ -45,7 +45,7 @@ service-definitions:
     type: user-service-factory
     depends-on: [database]
 
-// Access with type-safe lazy loading
+// Service-level lazy loading - service created on first access
 userService := service.LazyLoad[*UserService]("user-service")
 users := userService.MustGet().GetAll()
 ```
@@ -140,15 +140,15 @@ func handler() {
 
 ## Key Features
 
-### 🎯 Lazy Dependency Injection
-Type-safe service loading with zero overhead. Services created only when needed.
+### 🎯 Service-Level Lazy Loading
+Type-safe service loading with zero overhead. Services created only when needed, dependencies eagerly resolved.
 
 ```go
 // Define once, use everywhere
 var db = service.LazyLoad[*Database]("database")
 var cache = service.LazyLoad[*Cache]("cache")
 
-// Loaded on first access, cached forever
+// Service loaded on first access, cached forever
 users := db.MustGet().GetAll()
 ```
 

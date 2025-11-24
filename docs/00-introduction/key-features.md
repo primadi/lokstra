@@ -156,7 +156,7 @@ func getUser(req *GetUserReq) (*User, error) {
 ```go
 // 1. Define service with methods
 type UserService struct {
-    DB *service.Cached[*Database]
+    DB *Database
 }
 
 type GetAllParams struct {}
@@ -169,27 +169,25 @@ type CreateParams struct {
 }
 
 func (s *UserService) GetAll(p *GetAllParams) ([]User, error) {
-    return s.DB.MustGet().Query("SELECT * FROM users")
+    return s.DB.Query("SELECT * FROM users")
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-    return s.DB.MustGet().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
+    return s.DB.QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
 }
 
 func (s *UserService) Create(p *CreateParams) (*User, error) {
-    return s.DB.MustGet().Insert("INSERT INTO users ...", p.Name, p.Email)
+    return s.DB.Insert("INSERT INTO users ...", p.Name, p.Email)
 }
 
 // 2. Register service factory
-lokstra_registry.RegisterServiceFactory("users-factory", 
-    func(deps map[string]any, config map[string]any) any {
-        return &UserService{
-            DB: service.Cast[*Database](deps["db"]),
-        }
-    })
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+    return &UserService{
+        DB: deps["db"].(*Database),
+    }
+}
 
-lokstra_registry.RegisterLazyService("users", "users-factory", 
-    map[string]any{"depends-on": []string{"db"}})
+lokstra_registry.RegisterServiceType("users-factory", UserServiceFactory, nil)
 
 // 3. Auto-generate router from service
 userRouter := router.NewFromService(
@@ -233,9 +231,9 @@ Lokstra understands REST conventions:
 ```go
 // All your logic in one place
 type UserService struct {
-    DB      *service.Cached[*Database]
-    Email   *service.Cached[*EmailService]
-    Cache   *service.Cached[*CacheService]
+    DB      *Database
+    Email   *EmailService
+    Cache   *CacheService
 }
 
 // Pure business logic
@@ -245,17 +243,17 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
         return nil, err
     }
     
-    // Create
-    user, err := s.DB.MustGet().Insert(...)
+    // Create - direct access, dependencies already injected
+    user, err := s.DB.Insert(...)
     if err != nil {
         return nil, err
     }
     
     // Cache user data
-    s.Cache.MustGet().Set(user.ID, user)
+    s.Cache.Set(user.ID, user)
     
     // Notify
-    s.Email.MustGet().SendWelcome(user.Email)
+    s.Email.SendWelcome(user.Email)
     
     return user, nil
 }
@@ -336,12 +334,12 @@ go build -o myapp
 ```go
 // In OrderService
 type OrderService struct {
-    Users *service.Cached[*UserService]  // May be local or remote!
+    Users *UserService  // May be local or remote!
 }
 
 func (s *OrderService) CreateOrder(p *CreateOrderParams) (*Order, error) {
     // This works in BOTH deployments!
-    user, err := s.Users.MustGet().GetByID(p.UserID)
+    user, err := s.Users.GetByID(p.UserID)
     // Monolith: Direct call
     // Microservices: HTTP call to user-service
     

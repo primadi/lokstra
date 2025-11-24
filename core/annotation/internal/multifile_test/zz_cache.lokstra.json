@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "files": {
+    "auth_service.go": {
+      "filename": "auth_service.go",
+      "checksum": "e7839641e59465cf4b1f186cce08964d11d3c21460f9cef043220143b241216c",
+      "annotations": 4,
+      "last_scan": "2025-11-24T19:49:22.0334536+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-24T19:49:22.0334536+07:00"
+    },
+    "config_eager_service.go": {
+      "filename": "config_eager_service.go",
+      "checksum": "db492351453b46e8134ae7e62f60b72bca75f6b4f306011f199bfb648f683ce9",
+      "annotations": 5,
+      "last_scan": "2025-11-24T19:49:22.0334536+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-24T19:49:22.0334536+07:00"
+    },
+    "config_service.go": {
+      "filename": "config_service.go",
+      "checksum": "de6b5b1438bb816180a48a497a6f364394f1255a309c74dce6dc522b0e1c12c0",
+      "annotations": 5,
+      "last_scan": "2025-11-24T19:49:22.0334536+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-24T19:49:22.0334536+07:00"
+    },
+    "profile_service.go": {
+      "filename": "profile_service.go",
+      "checksum": "246f5665be966856666563c4fb87a7debfce15a1480f546b312d257319b506e4",
+      "annotations": 4,
+      "last_scan": "2025-11-24T19:49:22.0334536+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-24T19:49:22.0334536+07:00"
+    },
+    "user_service.go": {
+      "filename": "user_service.go",
+      "checksum": "b2321853c7d2dc2e620b80f9b0413669e093c6f51e2a8b705547b8ec3f069e73",
+      "annotations": 4,
+      "last_scan": "2025-11-24T19:49:22.0334536+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-11-24T19:49:22.0334536+07:00"
+    }
+  },
+  "updated_at": "2025-11-24T19:49:22.0334536+07:00",
+  "generated_checksum": "70894b2fe4daed765a245e35dc68143b3c16e25276d8f93931c2ad6cfc0c5b57"
+}

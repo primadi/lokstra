@@ -44,25 +44,25 @@ Welcome to **Track 2** of Lokstra! Here you'll learn to use Lokstra as a **compl
 **1. Define Service** (`user_service.go`):
 ```go
 type UserService struct {
-    db *service.Cached[*Database]
+    db *Database
 }
 
 func (s *UserService) GetAll(p *GetAllParams) ([]User, error) {
-    return s.db.MustGet().Query("SELECT * FROM users")
+    return s.db.Query("SELECT * FROM users")
 }
 
 func (s *UserService) GetByID(p *GetByIDParams) (*User, error) {
-    return s.db.MustGet().QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
+    return s.db.QueryOne("SELECT * FROM users WHERE id = ?", p.ID)
 }
 
 func (s *UserService) Create(p *CreateParams) (*User, error) {
     user := &User{Name: p.Name, Email: p.Email}
-    return s.db.MustGet().Insert(user)
+    return s.db.Insert(user)
 }
 
-func NewUserService() *UserService {
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
     return &UserService{
-        db: service.LazyLoad[*Database]("database"),
+        db: deps["database"].(*Database),
     }
 }
 ```
@@ -71,7 +71,7 @@ func NewUserService() *UserService {
 ```go
 lokstra_registry.RegisterServiceType(
     "user-service-factory",
-    NewUserService,
+    UserServiceFactory,
     nil,
     deploy.WithResource("user", "users"),
     deploy.WithConvention("rest"),
@@ -129,12 +129,12 @@ Learn the heart of Lokstra Framework - lazy dependency injection and service arc
 
 **Key concepts:**
 ```go
-// Lazy loading - loaded once, cached forever
+// Service-level lazy loading - services created on first access
 var userService = service.LazyLoad[*UserService]("user-service")
 var database = service.LazyLoad[*Database]("database")
 
 func handler() {
-    // Thread-safe, no initialization order issues
+    // Thread-safe, dependencies eagerly loaded when service created
     users := userService.MustGet().GetAll()
 }
 ```

@@ -462,42 +462,15 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 			// ann.TargetName is field name
 			fieldType := fieldTypes[ann.TargetName]
 
-			// Auto-detect: lazy if *service.Cached[T], eager otherwise
-			isLazy := strings.Contains(fieldType, "service.Cached[")
-
-			// Extract inner type from *service.Cached[T] or use fieldType as-is for eager
-			var innerType string
-			if isLazy {
-				innerType = extractInnerGenericType(fieldType)
-			} else {
-				innerType = fieldType
-			}
-
 			service.Dependencies[serviceName] = &DependencyInfo{
 				ServiceName: serviceName,
 				FieldName:   ann.TargetName,
 				FieldType:   fieldType,
-				InnerType:   innerType,
-				IsLazy:      isLazy,
 			}
 		}
 	}
 
 	return nil
-}
-
-// extractInnerGenericType extracts T from *service.Cached[T]
-func extractInnerGenericType(fieldType string) string {
-	// Find [ and ]
-	start := strings.Index(fieldType, "[")
-	end := strings.LastIndex(fieldType, "]")
-
-	if start != -1 && end != -1 && end > start {
-		return fieldType[start+1 : end]
-	}
-
-	// If not generic, return as-is
-	return fieldType
 }
 
 // writeGenFile writes the zz_generated.lokstra.go file
@@ -544,7 +517,7 @@ func writeGenFile(path string, ctx *RouterServiceContext) error {
 		}
 		// From dependencies
 		for _, dep := range service.Dependencies {
-			collectPackagesFromType(dep.InnerType, usedPackages)
+			collectPackagesFromType(dep.FieldType, usedPackages)
 		}
 	}
 
@@ -708,7 +681,6 @@ package {{.Package}}
 import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/proxy"
-	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 {{- range $path, $alias := .AllImports }}
 	{{$alias}} "{{$path}}"
@@ -761,11 +733,7 @@ func New{{$service.RemoteTypeName}}(proxyService *proxy.Service) *{{$service.Rem
 func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) any {
 	return &{{$service.StructName}}{
 {{- range $svcName, $dep := $service.Dependencies }}
-{{- if $dep.IsLazy }}
-		{{$dep.FieldName}}: service.Cast[{{$dep.InnerType}}](deps[{{quote $dep.ServiceName}}]),
-{{- else }}
 		{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
-{{- end }}
 {{- end }}
 	}
 }
@@ -806,11 +774,6 @@ func Register{{$service.StructName}}() {
 				{{quote $method}}: { {{range $i, $mw := $middlewares}}{{if $i}}, {{end}}{{quote $mw}}{{end}} },
 {{- end }}
 			},
-{{- end }}
-		}),
-		deploy.WithLazyFlags(map[string]bool{
-{{- range $svcName, $dep := $service.Dependencies }}
-			{{quote $dep.ServiceName}}: {{$dep.IsLazy}},
 {{- end }}
 		}),
 	)

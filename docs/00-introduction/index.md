@@ -51,12 +51,12 @@ Use Lokstra as a complete framework for:
 // @RouterService name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "user-repository"
-    UserRepo *service.Cached[domain.UserRepository]
+    UserRepo domain.UserRepository
 }
 
 // @Route "GET /users/{id}"
 func (s *UserServiceImpl) GetByID(p *GetUserRequest) (*User, error) {
-    return s.UserRepo.MustGet().GetByID(p.ID)
+    return s.UserRepo.GetByID(p.ID)
 }
 
 // Auto-generates: factory, remote proxy, routes, DI wiring!
@@ -347,33 +347,29 @@ No external DI framework needed:
 import "github.com/primadi/lokstra/core/service"
 
 type UserService struct {
-    DB *service.Cached[*Database]
+    DB *Database
 }
 
 // Register factories
-lokstra_registry.RegisterServiceType("db", createDB, nil)
+lokstra_registry.RegisterServiceType("db-factory", createDBFactory, nil)
 
-lokstra_registry.RegisterServiceFactory("users-factory", 
+lokstra_registry.RegisterServiceType("users-factory", 
     func(deps map[string]any, config map[string]any) any {
         return &UserService{
-            DB: service.Cast[*Database](deps["db"]),
+            DB: deps["db"].(*Database),
         }
-    })
+    }, nil)
 
-lokstra_registry.RegisterLazyService("users", "users-factory", 
-    map[string]any{"depends-on": []string{"db"}})
-
-// Use anywhere
+// Service-level lazy loading - service created on first access
 users := lokstra_registry.GetService[*UserService]("users")
 
-// Inside service method - DB injected, accessed lazily
+// Inside service method - dependencies already injected
 func (u *UserService) GetUsers() ([]User, error) {
-    db := u.DB.MustGet()  // Injected dependency, accessed on first call
-    return db.Query("SELECT * FROM users")
+    return u.DB.Query("SELECT * FROM users")
 }
 ```
 
-**Key Feature**: Lazy loading - services created only when needed!
+**Key Feature**: Service-level lazy loading - services created only when needed, dependencies eagerly resolved!
 
 ---
 

@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"maps"
 	"strings"
 )
 
@@ -180,21 +179,5 @@ func WithRouter(config *ServiceTypeRouter) RegisterServiceTypeOption {
 				}
 			}
 		}
-	}
-}
-
-// WithLazyFlags sets dependency lazy/eager flags
-// Example:
-//
-//	deploy.WithLazyFlags(map[string]bool{
-//	    "user-repository": true,   // Lazy
-//	    "database":        false,  // Eager
-//	})
-func WithLazyFlags(flags map[string]bool) RegisterServiceTypeOption {
-	return func(m *ServiceMetadata) {
-		if m.DependencyIsLazy == nil {
-			m.DependencyIsLazy = make(map[string]bool)
-		}
-		maps.Copy(m.DependencyIsLazy, flags)
 	}
 }

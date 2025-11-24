@@ -7,7 +7,6 @@ package application
 import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/proxy"
-	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 	domain "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/user/domain"
 )
@@ -79,7 +78,7 @@ func (s *UserServiceImplRemote) Update(p *domain.UpdateUserRequest) (*domain.Use
 
 func UserServiceImplFactory(deps map[string]any, config map[string]any) any {
 	return &UserServiceImpl{
-		UserRepo: service.Cast[domain.UserRepository](deps["user-repository"]),
+		UserRepo: deps["user-repository"].(domain.UserRepository),
 	}
 }
 
