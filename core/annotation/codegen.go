@@ -808,6 +808,11 @@ func Register{{$service.StructName}}() {
 			},
 {{- end }}
 		}),
+		deploy.WithLazyFlags(map[string]bool{
+{{- range $svcName, $dep := $service.Dependencies }}
+			{{quote $dep.ServiceName}}: {{$dep.IsLazy}},
+{{- end }}
+		}),
 	)
 
 	// Register lazy service with auto-detected dependencies
