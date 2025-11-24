@@ -16,10 +16,10 @@ func runCodegen(folderPath string) error {
 	return err
 }
 
-// TestMultiFileCodegen tests multi-file code generation in testdata/multifile_test
+// TestMultiFileCodegen tests multi-file code generation in multifile_test
 // You can inspect the generated files in that folder
 func TestMultiFileCodegen(t *testing.T) {
-	testDir := filepath.Join("testdata", "multifile_test")
+	testDir := "multifile_test"
 
 	// Clean up generated files from previous runs
 	genPath := filepath.Join(testDir, internal.GeneratedFileName)
