@@ -28,8 +28,8 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 		line := strings.TrimSpace(scanner.Text())
 
 		// Check for annotation
-		if strings.HasPrefix(line, "//") {
-			line = strings.TrimSpace(strings.TrimPrefix(line, "//"))
+		if after, ok := strings.CutPrefix(line, "//"); ok {
+			line = strings.TrimSpace(after)
 			if strings.HasPrefix(line, "@") {
 				ann, err := parseAnnotationLine(line, lineNum)
 				if err != nil {

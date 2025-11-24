@@ -1,6 +1,8 @@
 package annotation
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -192,6 +194,9 @@ func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServ
 		genChecksum := ""
 		if data, err := os.ReadFile(genPath); err == nil {
 			genChecksum = calculateChecksumFromBytes(data)
+		}
+		if genChecksum == "" {
+			return false, nil
 		}
 		cache.GeneratedChecksum = genChecksum
 
@@ -418,13 +423,37 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 	return skipped, updated, deleted, nil
 }
 
-// fileContainsRouterService quickly checks if file contains @RouterService
+// fileContainsRouterService quickly checks if file contains @RouterService annotation.
+// Uses same parsing logic as ParseFileAnnotations for consistency.
+// Only matches when @RouterService is at the start of comment content (after // and spaces).
 func fileContainsRouterService(path string) (bool, error) {
-	content, err := os.ReadFile(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return false, err
 	}
-	return strings.Contains(string(content), "@RouterService"), nil
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := bytes.TrimSpace(scanner.Bytes())
+		// Check for // comment
+		if after, ok := bytes.CutPrefix(line, []byte("//")); ok {
+			// Trim space after // (same as parser)
+			after = bytes.TrimSpace(after)
+			// Check if line STARTS with @RouterService (not just contains)
+			if bytes.HasPrefix(after, []byte("@RouterService")) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, scanner.Err()
+}
+
+// TestFileContainsRouterService is exported for testing purposes only.
+// It wraps the internal fileContainsRouterService function.
+func TestFileContainsRouterService(path string) (bool, error) {
+	return fileContainsRouterService(path)
 }
 
 // calculateChecksum calculates SHA256 checksum of a file

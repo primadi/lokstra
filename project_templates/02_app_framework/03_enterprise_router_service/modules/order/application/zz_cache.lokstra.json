@@ -8,8 +8,10 @@
       "last_scan": "2025-11-11T13:34:22.5679587+07:00",
       "generated": [
         "zz_generated.lokstra.go"
-      ]
+      ],
+      "generated_mod_time": "0001-01-01T00:00:00Z"
     }
   },
-  "updated_at": "2025-11-12T11:00:17.1982894+07:00"
+  "updated_at": "2025-11-24T11:02:06.9017375+07:00",
+  "generated_checksum": ""
 }

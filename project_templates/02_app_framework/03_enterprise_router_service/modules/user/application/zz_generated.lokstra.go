@@ -7,8 +7,8 @@ package application
 import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/proxy"
-	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/core/service"
+	"github.com/primadi/lokstra/lokstra_registry"
 	domain "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/user/domain"
 )
 
@@ -16,7 +16,6 @@ import (
 func init() {
 	RegisterUserServiceImpl()
 }
-
 
 // ============================================================
 // FILE: user_service.go
@@ -35,13 +34,11 @@ func NewUserServiceImplRemote(proxyService *proxy.Service) *UserServiceImplRemot
 	}
 }
 
-
 // Activate via HTTP
 // Generated from: @Route "POST /users/{id}/activate"
 func (s *UserServiceImplRemote) Activate(p *domain.ActivateUserRequest) error {
 	return proxy.Call(s.proxyService, "Activate", p)
 }
-
 
 // Create via HTTP
 // Generated from: @Route "POST /users"
@@ -49,13 +46,11 @@ func (s *UserServiceImplRemote) Create(p *domain.CreateUserRequest) (*domain.Use
 	return proxy.CallWithData[*domain.User](s.proxyService, "Create", p)
 }
 
-
 // Delete via HTTP
 // Generated from: @Route "DELETE /users/{id}"
 func (s *UserServiceImplRemote) Delete(p *domain.DeleteUserRequest) error {
 	return proxy.Call(s.proxyService, "Delete", p)
 }
-
 
 // GetByID via HTTP
 // Generated from: @Route "GET /users/{id}"
@@ -63,13 +58,11 @@ func (s *UserServiceImplRemote) GetByID(p *domain.GetUserRequest) (*domain.User,
 	return proxy.CallWithData[*domain.User](s.proxyService, "GetByID", p)
 }
 
-
 // List via HTTP
 // Generated from: @Route "GET /users"
 func (s *UserServiceImplRemote) List(p *domain.ListUsersRequest) ([]*domain.User, error) {
 	return proxy.CallWithData[[]*domain.User](s.proxyService, "List", p)
 }
-
 
 // Suspend via HTTP
 // Generated from: @Route "POST /users/{id}/suspend"
@@ -77,13 +70,11 @@ func (s *UserServiceImplRemote) Suspend(p *domain.SuspendUserRequest) error {
 	return proxy.Call(s.proxyService, "Suspend", p)
 }
 
-
 // Update via HTTP
 // Generated from: @Route "PUT /users/{id}"
 func (s *UserServiceImplRemote) Update(p *domain.UpdateUserRequest) (*domain.User, error) {
 	return proxy.CallWithData[*domain.User](s.proxyService, "Update", p)
 }
-
 
 
 func UserServiceImplFactory(deps map[string]any, config map[string]any) any {
@@ -125,7 +116,7 @@ func RegisterUserServiceImpl() {
 				"Update":  "PUT /users/{id}",
 			},
 			RouteMiddlewares: map[string][]string{
-				"GetByID": { "mw-test param1=123, param2=\\\"abc\\\"" },
+				"GetByID": { "mw-test param1=123, param2=abc" },
 				"List": { "mw-test" },
 			},
 		}),
@@ -138,5 +129,4 @@ func RegisterUserServiceImpl() {
 			"depends-on": []string{ "user-repository",  },
 		})
 }
-
 

@@ -402,3 +402,134 @@ func TestScenario3_MultipleNestedPaths(t *testing.T) {
 		t.Logf("Processed folders: %v", processedFolders)
 	}
 }
+
+// TestFileContainsRouterService tests the quick check function for @RouterService annotation
+func TestFileContainsRouterService(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		expected bool
+	}{
+		{
+			name: "standard format",
+			content: `package app
+
+// @RouterService name="user-service"
+type UserService struct {}
+`,
+			expected: true,
+		},
+		{
+			name: "with spaces after //",
+			content: `package app
+
+//   @RouterService name="user-service"
+type UserService struct {}
+`,
+			expected: true,
+		},
+		{
+			name: "no space after //",
+			content: `package app
+
+//@RouterService name="user-service"
+type UserService struct {}
+`,
+			expected: true,
+		},
+		{
+			name: "in string (should not match - no comment)",
+			content: `package app
+
+const x = "@RouterService name=\"test\""
+`,
+			expected: false,
+		},
+		{
+			name: "in descriptive comment (should NOT match - not at start)",
+			content: `package app
+
+// This is about @RouterService annotation
+type UserService struct {}
+`,
+			expected: false, // Should NOT match - @RouterService is not at the start of comment
+		},
+		{
+			name: "block comment (should not match)",
+			content: `package app
+
+/* @RouterService name="test" */
+type UserService struct {}
+`,
+			expected: false,
+		},
+		{
+			name: "no annotation",
+			content: `package app
+
+type UserService struct {}
+`,
+			expected: false,
+		},
+		{
+			name: "different annotation only",
+			content: `package app
+
+// @Route "GET /users"
+func GetUsers() {}
+`,
+			expected: false,
+		},
+		{
+			name: "tab before comment",
+			content: `package app
+
+	// @RouterService name="test"
+type Service struct {}
+`,
+			expected: true,
+		},
+		{
+			name: "multiple annotations including RouterService",
+			content: `package app
+
+// @Route "GET /test"
+// @RouterService name="test"
+type Service struct {}
+`,
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create temp file
+			tmpDir := t.TempDir()
+			tmpFile := filepath.Join(tmpDir, "test.go")
+
+			if err := os.WriteFile(tmpFile, []byte(tt.content), 0644); err != nil {
+				t.Fatalf("failed to create temp file: %v", err)
+			}
+
+			// Test (access internal function via annotation package)
+			result, err := annotation.TestFileContainsRouterService(tmpFile)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if result != tt.expected {
+				t.Errorf("fileContainsRouterService() = %v, want %v", result, tt.expected)
+				t.Logf("File content:\n%s", tt.content)
+			}
+		})
+	}
+}
+
+// TestFileContainsRouterService_Error tests error handling
+func TestFileContainsRouterService_Error(t *testing.T) {
+	// Test with non-existent file
+	_, err := annotation.TestFileContainsRouterService("/nonexistent/file.go")
+	if err == nil {
+		t.Error("expected error for non-existent file, got nil")
+	}
+}
