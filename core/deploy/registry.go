@@ -94,13 +94,14 @@ type LazyServiceEntry struct {
 // ServiceMetadata holds metadata for a service type registration
 // Can be populated from ServiceTypeConfig or legacy functional options
 type ServiceMetadata struct {
-	Resource        string                   // Singular resource name (e.g., "user")
-	ResourcePlural  string                   // Plural resource name (e.g., "users")
-	Convention      string                   // Convention type (e.g., "rest", "rpc")
-	PathPrefix      string                   // Path prefix for all routes
-	MiddlewareNames []string                 // Router-level middleware names
-	HiddenMethods   []string                 // Methods to hide from router
-	RouteOverrides  map[string]RouteMetadata // Method name -> full route metadata (NEW: supports route-level middlewares)
+	Resource         string                   // Singular resource name (e.g., "user")
+	ResourcePlural   string                   // Plural resource name (e.g., "users")
+	Convention       string                   // Convention type (e.g., "rest", "rpc")
+	PathPrefix       string                   // Path prefix for all routes
+	MiddlewareNames  []string                 // Router-level middleware names
+	HiddenMethods    []string                 // Methods to hide from router
+	RouteOverrides   map[string]RouteMetadata // Method name -> full route metadata (NEW: supports route-level middlewares)
+	DependencyIsLazy map[string]bool          // Dependency name -> is lazy flag (e.g., "user-repository" -> true)
 }
 
 // RouteMetadata holds full metadata for a custom route
