@@ -442,7 +442,7 @@ func handler() {
 ---
 
 ### vs Traditional DI Frameworks
-- ✅ **Type-safe** with generics (no `interface{}` casting)
+- ✅ **Type-safe** with generics (no `any` casting)
 - ✅ **Zero reflection** overhead in hot path
 - ✅ **Optional YAML** (start with code, scale with config)
 - ✅ **No code generation** required

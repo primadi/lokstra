@@ -5,7 +5,7 @@ import "github.com/primadi/lokstra/core/service"
 // @RouterService name="profile-service", prefix="/api/profiles"
 type ProfileService struct {
 	// @Inject "profile-repo"
-	ProfileRepo *service.Cached[interface{}]
+	ProfileRepo *service.Cached[any]
 }
 
 // @Route "GET /profiles/{id}"

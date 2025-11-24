@@ -1,6 +1,6 @@
 # Cast Package
 
-The `cast` package provides type-safe conversion utilities with error handling for converting between Go types, especially useful when working with `any` (interface{}) values from JSON, maps, or dynamic data sources.
+The `cast` package provides type-safe conversion utilities with error handling for converting between Go types, especially useful when working with `any` (any) values from JSON, maps, or dynamic data sources.
 
 ## Table of Contents
 

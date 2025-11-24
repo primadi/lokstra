@@ -5,7 +5,7 @@ import "github.com/primadi/lokstra/core/service"
 // @RouterService name="config-service", prefix="/api/config"
 type ConfigService struct {
 	// @Inject "config-repo"
-	ConfigRepo *service.Cached[interface{}]
+	ConfigRepo *service.Cached[any]
 }
 
 // @Route "GET /version"

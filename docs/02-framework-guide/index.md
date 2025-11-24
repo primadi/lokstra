@@ -224,7 +224,7 @@ Deploy and manage your application across different environments.
 - ✅ **Easy testing** - mock services via registry
 
 ### vs Other Go DI Frameworks
-- ✅ **Zero reflection overhead** - uses generics, not `interface{}`
+- ✅ **Zero reflection overhead** - uses generics, not `any`
 - ✅ **Lazy by default** - memory efficient, fast startup
 - ✅ **Auto-generated routers** - no controller boilerplate
 - ✅ **Configuration flexibility** - works with or without YAML

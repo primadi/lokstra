@@ -244,7 +244,7 @@ import "encoding/json"
 router.Use(request_logger.Middleware(&request_logger.Config{
     EnableColors: false,
     CustomLogger: func(format string, args ...any) {
-        logEntry := map[string]interface{}{
+        logEntry := map[string]any{
             "message":   fmt.Sprintf(format, args...),
             "timestamp": time.Now().Format(time.RFC3339),
             "level":     "info",

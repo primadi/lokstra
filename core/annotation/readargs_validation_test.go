@@ -17,7 +17,7 @@ func TestReadArgsValidation(t *testing.T) {
 		{
 			name: "valid named args",
 			annotation: &annotation.ParsedAnnotation{
-				Args: map[string]interface{}{
+				Args: map[string]any{
 					"route":       "GET /users",
 					"middlewares": []string{"auth"},
 				},
@@ -28,7 +28,7 @@ func TestReadArgsValidation(t *testing.T) {
 		{
 			name: "invalid named arg",
 			annotation: &annotation.ParsedAnnotation{
-				Args: map[string]interface{}{
+				Args: map[string]any{
 					"invalid": "value",
 				},
 			},
@@ -39,7 +39,7 @@ func TestReadArgsValidation(t *testing.T) {
 		{
 			name: "valid positional args",
 			annotation: &annotation.ParsedAnnotation{
-				PositionalArgs: []interface{}{"GET /users", []string{"auth"}},
+				PositionalArgs: []any{"GET /users", []string{"auth"}},
 			},
 			expectedArgs: []string{"route", "middlewares"},
 			shouldError:  false,
@@ -47,7 +47,7 @@ func TestReadArgsValidation(t *testing.T) {
 		{
 			name: "too many positional args",
 			annotation: &annotation.ParsedAnnotation{
-				PositionalArgs: []interface{}{"GET /users", []string{"auth"}, "extra"},
+				PositionalArgs: []any{"GET /users", []string{"auth"}, "extra"},
 			},
 			expectedArgs:  []string{"route", "middlewares"},
 			shouldError:   true,

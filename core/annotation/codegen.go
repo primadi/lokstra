@@ -401,7 +401,8 @@ func extractRoutes(file *FileToProcess, service *ServiceGeneration) error {
 
 // extractDependencies finds all @Inject annotations and field info
 func extractDependencies(file *FileToProcess, service *ServiceGeneration) error {
-	// Parse AST to get field types
+
+	// Parse file to get field types
 	fset := token.NewFileSet()
 	astFile, err := parser.ParseFile(fset, file.FullPath, nil, parser.ParseComments)
 	if err != nil {
@@ -461,14 +462,23 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 			// ann.TargetName is field name
 			fieldType := fieldTypes[ann.TargetName]
 
-			// Extract inner type from *service.Cached[T] or similar
-			innerType := extractInnerGenericType(fieldType)
+			// Auto-detect: lazy if *service.Cached[T], eager otherwise
+			isLazy := strings.Contains(fieldType, "service.Cached[")
+
+			// Extract inner type from *service.Cached[T] or use fieldType as-is for eager
+			var innerType string
+			if isLazy {
+				innerType = extractInnerGenericType(fieldType)
+			} else {
+				innerType = fieldType
+			}
 
 			service.Dependencies[serviceName] = &DependencyInfo{
 				ServiceName: serviceName,
 				FieldName:   ann.TargetName,
 				FieldType:   fieldType,
 				InnerType:   innerType,
+				IsLazy:      isLazy,
 			}
 		}
 	}
@@ -751,7 +761,11 @@ func New{{$service.RemoteTypeName}}(proxyService *proxy.Service) *{{$service.Rem
 func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) any {
 	return &{{$service.StructName}}{
 {{- range $svcName, $dep := $service.Dependencies }}
+{{- if $dep.IsLazy }}
 		{{$dep.FieldName}}: service.Cast[{{$dep.InnerType}}](deps[{{quote $dep.ServiceName}}]),
+{{- else }}
+		{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
+{{- end }}
 {{- end }}
 	}
 }

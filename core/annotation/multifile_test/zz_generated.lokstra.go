@@ -14,9 +14,91 @@ import (
 // Auto-register on package import
 func init() {
 	RegisterAuthService()
+	RegisterConfigEagerService()
 	RegisterConfigService()
 	RegisterProfileService()
 	RegisterUserService()
+}
+
+// ============================================================
+// FILE: user_service.go
+// ============================================================
+
+// UserServiceRemote implements UserServiceInterface with HTTP proxy
+// Auto-generated from UserService interface methods
+type UserServiceRemote struct {
+	proxyService *proxy.Service
+}
+
+// NewUserServiceRemote creates a new remote user-service proxy
+func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
+	return &UserServiceRemote{
+		proxyService: proxyService,
+	}
+}
+
+// Create via HTTP
+// Generated from: @Route "POST /users"
+func (s *UserServiceRemote) Create(p string) (string, error) {
+	return proxy.CallWithData[string](s.proxyService, "Create", p)
+}
+
+// Delete via HTTP
+// Generated from: @Route "DELETE /users/{id}"
+func (s *UserServiceRemote) Delete(p string) error {
+	return proxy.Call(s.proxyService, "Delete", p)
+}
+
+// GetByID via HTTP
+// Generated from: @Route "GET /users/{id}"
+func (s *UserServiceRemote) GetByID(p string) (string, error) {
+	return proxy.CallWithData[string](s.proxyService, "GetByID", p)
+}
+
+
+func UserServiceFactory(deps map[string]any, config map[string]any) any {
+	return &UserService{
+		UserRepo: service.Cast[any](deps["user-repo"]),
+	}
+}
+
+// UserServiceRemoteFactory creates a remote HTTP client for UserServiceInterface
+// Auto-generated from @RouterService annotation
+func UserServiceRemoteFactory(deps, config map[string]any) any {
+	proxyService, ok := config["remote"].(*proxy.Service)
+	if !ok {
+		panic("remote factory requires 'remote' (proxy.Service) in config")
+	}
+	return NewUserServiceRemote(proxyService)
+}
+
+// RegisterUserService registers the user-service with the registry
+// Auto-generated from annotations:
+//   - @RouterService name="user-service", prefix="/api/v1/users"
+//   - @Inject annotations
+//   - @Route annotations on methods
+func RegisterUserService() {
+	// Register service type with router configuration
+	lokstra_registry.RegisterServiceType("user-service-factory",
+		UserServiceFactory,
+		UserServiceRemoteFactory,
+		deploy.WithRouter(&deploy.ServiceTypeRouter{
+			PathPrefix:  "/api/v1/users",
+			Middlewares: []string{  },
+			CustomRoutes: map[string]string{
+				"Create":  "POST /users",
+				"Delete":  "DELETE /users/{id}",
+				"GetByID":  "GET /users/{id}",
+			},
+		}),
+	)
+
+	// Register lazy service with auto-detected dependencies
+	lokstra_registry.RegisterLazyService("user-service",
+		"user-service-factory",
+		map[string]any{
+			"depends-on": []string{ "user-repo",  },
+		})
 }
 
 // ============================================================
@@ -89,6 +171,75 @@ func RegisterAuthService() {
 		"auth-service-factory",
 		map[string]any{
 			"depends-on": []string{ "auth-repo",  },
+		})
+}
+
+// ============================================================
+// FILE: config_eager_service.go
+// ============================================================
+
+// ConfigEagerServiceRemote implements ConfigEagerServiceInterface with HTTP proxy
+// Auto-generated from ConfigEagerService interface methods
+type ConfigEagerServiceRemote struct {
+	proxyService *proxy.Service
+}
+
+// NewConfigEagerServiceRemote creates a new remote config-eager-service proxy
+func NewConfigEagerServiceRemote(proxyService *proxy.Service) *ConfigEagerServiceRemote {
+	return &ConfigEagerServiceRemote{
+		proxyService: proxyService,
+	}
+}
+
+// GetStatus via HTTP
+// Generated from: @Route "GET /status"
+func (s *ConfigEagerServiceRemote) GetStatus() (any, error) {
+	return proxy.CallWithData[any](s.proxyService, "GetStatus", nil)
+}
+
+
+func ConfigEagerServiceFactory(deps map[string]any, config map[string]any) any {
+	return &ConfigEagerService{
+		DB: deps["database"].(*DBPool),
+		Redis: deps["redis"].(*RedisClient),
+		UserRepo: service.Cast[any](deps["user-repository"]),
+	}
+}
+
+// ConfigEagerServiceRemoteFactory creates a remote HTTP client for ConfigEagerServiceInterface
+// Auto-generated from @RouterService annotation
+func ConfigEagerServiceRemoteFactory(deps, config map[string]any) any {
+	proxyService, ok := config["remote"].(*proxy.Service)
+	if !ok {
+		panic("remote factory requires 'remote' (proxy.Service) in config")
+	}
+	return NewConfigEagerServiceRemote(proxyService)
+}
+
+// RegisterConfigEagerService registers the config-eager-service with the registry
+// Auto-generated from annotations:
+//   - @RouterService name="config-eager-service", prefix="/api/v1/config"
+//   - @Inject annotations
+//   - @Route annotations on methods
+func RegisterConfigEagerService() {
+	// Register service type with router configuration
+	lokstra_registry.RegisterServiceType("config-eager-service-factory",
+		ConfigEagerServiceFactory,
+		ConfigEagerServiceRemoteFactory,
+		deploy.WithRouter(&deploy.ServiceTypeRouter{
+			PathPrefix:  "/api/v1/config",
+			Middlewares: []string{  },
+			CustomRoutes: map[string]string{
+				"GetStatus":  "GET /status",
+			},
+		}),
+	)
+
+	// Register lazy service with auto-detected dependencies
+	lokstra_registry.RegisterLazyService("config-eager-service",
+		"config-eager-service-factory",
+		map[string]any{
+			"depends-on": []string{ "database", "redis", "user-repository",  },
 		})
 }
 
@@ -243,80 +394,6 @@ func RegisterProfileService() {
 		"profile-service-factory",
 		map[string]any{
 			"depends-on": []string{ "profile-repo",  },
-		})
-}
-
-// ============================================================
-// FILE: user_service.go
-// ============================================================
-
-// UserServiceRemote implements UserServiceInterface with HTTP proxy
-// Auto-generated from UserService interface methods
-type UserServiceRemote struct {
-	proxyService *proxy.Service
-}
-
-// NewUserServiceRemote creates a new remote user-service proxy
-func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
-	return &UserServiceRemote{
-		proxyService: proxyService,
-	}
-}
-
-// Create via HTTP
-// Generated from: @Route "POST /users"
-func (s *UserServiceRemote) Create(p string) (string, error) {
-	return proxy.CallWithData[string](s.proxyService, "Create", p)
-}
-
-// GetByID via HTTP
-// Generated from: @Route "GET /users/{id}"
-func (s *UserServiceRemote) GetByID(p string) (string, error) {
-	return proxy.CallWithData[string](s.proxyService, "GetByID", p)
-}
-
-
-func UserServiceFactory(deps map[string]any, config map[string]any) any {
-	return &UserService{
-		UserRepo: service.Cast[any](deps["user-repo"]),
-	}
-}
-
-// UserServiceRemoteFactory creates a remote HTTP client for UserServiceInterface
-// Auto-generated from @RouterService annotation
-func UserServiceRemoteFactory(deps, config map[string]any) any {
-	proxyService, ok := config["remote"].(*proxy.Service)
-	if !ok {
-		panic("remote factory requires 'remote' (proxy.Service) in config")
-	}
-	return NewUserServiceRemote(proxyService)
-}
-
-// RegisterUserService registers the user-service with the registry
-// Auto-generated from annotations:
-//   - @RouterService name="user-service", prefix="/api/v1/users"
-//   - @Inject annotations
-//   - @Route annotations on methods
-func RegisterUserService() {
-	// Register service type with router configuration
-	lokstra_registry.RegisterServiceType("user-service-factory",
-		UserServiceFactory,
-		UserServiceRemoteFactory,
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
-			PathPrefix:  "/api/v1/users",
-			Middlewares: []string{  },
-			CustomRoutes: map[string]string{
-				"Create":  "POST /users",
-				"GetByID":  "GET /users/{id}",
-			},
-		}),
-	)
-
-	// Register lazy service with auto-detected dependencies
-	lokstra_registry.RegisterLazyService("user-service",
-		"user-service-factory",
-		map[string]any{
-			"depends-on": []string{ "user-repo",  },
 		})
 }
 

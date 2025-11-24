@@ -74,14 +74,14 @@ func TestParseAnnotationArgs(t *testing.T) {
 	tests := []struct {
 		name               string
 		input              string
-		expectedNamed      map[string]interface{}
-		expectedPositional []interface{}
+		expectedNamed      map[string]any
+		expectedPositional []any
 	}{
 		{
 			name:          "route with middleware array containing comma",
 			input:         `"GET /users/{id}", ["mw-test param1=123, param2=abc"]`,
-			expectedNamed: map[string]interface{}{},
-			expectedPositional: []interface{}{
+			expectedNamed: map[string]any{},
+			expectedPositional: []any{
 				"GET /users/{id}",
 				[]string{"mw-test param1=123, param2=abc"},
 			},
@@ -89,8 +89,8 @@ func TestParseAnnotationArgs(t *testing.T) {
 		{
 			name:          "route with multiple middlewares",
 			input:         `"GET /users", ["mw1", "mw2"]`,
-			expectedNamed: map[string]interface{}{},
-			expectedPositional: []interface{}{
+			expectedNamed: map[string]any{},
+			expectedPositional: []any{
 				"GET /users",
 				[]string{"mw1", "mw2"},
 			},

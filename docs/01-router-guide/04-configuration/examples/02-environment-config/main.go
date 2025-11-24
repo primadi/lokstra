@@ -16,13 +16,13 @@ func HealthCheckHandler() map[string]string {
 }
 
 // InfoHandler returns environment information
-func InfoHandler() map[string]interface{} {
+func InfoHandler() map[string]any {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "development"
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"environment": env,
 		"app_name":    os.Getenv("APP_NAME"),
 		"app_port":    os.Getenv("APP_PORT"),

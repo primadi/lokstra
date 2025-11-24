@@ -79,7 +79,7 @@ func parseAnnotationLine(line string, lineNum int) (*ParsedAnnotation, error) {
 			// Just annotation name, no args
 			return &ParsedAnnotation{
 				Name: strings.TrimPrefix(nameAndArgs, "@"),
-				Args: make(map[string]interface{}),
+				Args: make(map[string]any),
 				Line: lineNum,
 			}, nil
 		}
@@ -128,13 +128,13 @@ func parseAnnotationLine(line string, lineNum int) (*ParsedAnnotation, error) {
 //
 //	name="user-service", prefix="/api"
 //	"user-service", "/api", ["recovery", "logger"]
-func ParseAnnotationArgs(argsStr string) (map[string]interface{}, []interface{}, error) {
+func ParseAnnotationArgs(argsStr string) (map[string]any, []any, error) {
 	if strings.TrimSpace(argsStr) == "" {
-		return make(map[string]interface{}), nil, nil
+		return make(map[string]any), nil, nil
 	}
 
-	namedArgs := make(map[string]interface{})
-	var positionalArgs []interface{}
+	namedArgs := make(map[string]any)
+	var positionalArgs []any
 
 	// Split by comma, but respect quoted strings and arrays
 	args := SmartSplit(argsStr, ',')
@@ -200,7 +200,7 @@ func isNamedArgument(arg string) bool {
 }
 
 // parseArgValue parses a single value (string, array, number, bool)
-func parseArgValue(valueStr string) (interface{}, error) {
+func parseArgValue(valueStr string) (any, error) {
 	valueStr = strings.TrimSpace(valueStr)
 
 	// Array: ["item1", "item2"]
@@ -337,8 +337,8 @@ func extractTargetNameFromLine(line string) string {
 
 // ReadArgs reads arguments from ParsedAnnotation
 // Supports both named and positional arguments
-func (a *ParsedAnnotation) ReadArgs(expectedArgs ...string) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
+func (a *ParsedAnnotation) ReadArgs(expectedArgs ...string) (map[string]any, error) {
+	result := make(map[string]any)
 
 	// If we have named args, use them
 	if len(a.Args) > 0 {

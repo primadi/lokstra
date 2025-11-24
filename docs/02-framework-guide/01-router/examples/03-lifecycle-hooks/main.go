@@ -85,45 +85,45 @@ func requestIDMiddleware(ctx *request.Context) error {
 }
 
 // Simple handlers
-func handler1(ctx *request.Context) (map[string]interface{}, error) {
-	return map[string]interface{}{
+func handler1(ctx *request.Context) (map[string]any, error) {
+	return map[string]any{
 		"message":    "Handler 1 - No middleware",
 		"request_id": ctx.Get("request_id"),
 	}, nil
 }
 
-func handler2(ctx *request.Context) (map[string]interface{}, error) {
-	return map[string]interface{}{
+func handler2(ctx *request.Context) (map[string]any, error) {
+	return map[string]any{
 		"message":    "Handler 2 - With before/after middleware",
 		"request_id": ctx.Get("request_id"),
 	}, nil
 }
 
-func handler3(ctx *request.Context) (map[string]interface{}, error) {
+func handler3(ctx *request.Context) (map[string]any, error) {
 	// Simulate some work
 	time.Sleep(50 * time.Millisecond)
 
-	return map[string]interface{}{
+	return map[string]any{
 		"message":    "Handler 3 - With logging middleware",
 		"request_id": ctx.Get("request_id"),
 	}, nil
 }
 
-func handler4(ctx *request.Context) (map[string]interface{}, error) {
+func handler4(ctx *request.Context) (map[string]any, error) {
 	apiKey := ctx.Get("api_key")
 
-	return map[string]interface{}{
+	return map[string]any{
 		"message":    "Handler 4 - Protected with auth",
 		"api_key":    apiKey,
 		"request_id": ctx.Get("request_id"),
 	}, nil
 }
 
-func handler5(ctx *request.Context) (map[string]interface{}, error) {
+func handler5(ctx *request.Context) (map[string]any, error) {
 	// Simulate slow operation
 	time.Sleep(100 * time.Millisecond)
 
-	return map[string]interface{}{
+	return map[string]any{
 		"message":    "Handler 5 - Multiple middleware chain",
 		"api_key":    ctx.Get("api_key"),
 		"request_id": ctx.Get("request_id"),
@@ -160,15 +160,15 @@ func main() {
 	apiGroup := router.AddGroup("/api")
 	apiGroup.Use(authMiddleware, loggingMiddleware)
 
-	apiGroup.GET("/users", func(ctx *request.Context) (map[string]interface{}, error) {
-		return map[string]interface{}{
+	apiGroup.GET("/users", func(ctx *request.Context) (map[string]any, error) {
+		return map[string]any{
 			"message": "Users API - auto-protected by group middleware",
 			"users":   []string{"Alice", "Bob", "Charlie"},
 		}, nil
 	})
 
-	apiGroup.GET("/posts", func(ctx *request.Context) (map[string]interface{}, error) {
-		return map[string]interface{}{
+	apiGroup.GET("/posts", func(ctx *request.Context) (map[string]any, error) {
+		return map[string]any{
 			"message": "Posts API - auto-protected by group middleware",
 			"posts":   []string{"Post 1", "Post 2", "Post 3"},
 		}, nil

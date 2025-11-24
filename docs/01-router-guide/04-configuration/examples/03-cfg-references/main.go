@@ -15,9 +15,9 @@ func HealthCheckHandler() map[string]string {
 }
 
 // GetUsersHandler returns sample users
-func GetUsersHandler() map[string]interface{} {
-	return map[string]interface{}{
-		"users": []map[string]interface{}{
+func GetUsersHandler() map[string]any {
+	return map[string]any{
+		"users": []map[string]any{
 			{"id": 1, "name": "Alice"},
 			{"id": 2, "name": "Bob"},
 		},
@@ -26,8 +26,8 @@ func GetUsersHandler() map[string]interface{} {
 }
 
 // GetConfigHandler returns configuration info
-func GetConfigHandler() map[string]interface{} {
-	return map[string]interface{}{
+func GetConfigHandler() map[string]any {
+	return map[string]any{
 		"message":     "Configuration loaded successfully",
 		"api_version": "v1",
 		"base_path":   "/api",
