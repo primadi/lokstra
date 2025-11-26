@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -736,6 +737,61 @@ func setNestedValue(target map[string]any, path string, value any) {
 			}
 		}
 	}
+}
+
+// SimpleResolver resolves variables in the format ${key} or ${key:default}
+// by looking up values from the resolved config registry via GetResolvedConfig().
+//
+// This is designed for annotations where config values are managed centrally:
+//   - Annotation prefix: prefix="${auth-prefix}"
+//   - Route paths: @Route "GET ${api-version}/users/{id}"
+//
+// The config registry values can use any provider (ENV, AWS, VAULT, etc.)
+// as defined in config.yaml, providing full flexibility while keeping
+// annotation syntax simple.
+//
+// Examples:
+//
+//	SimpleResolver("${auth-prefix}")              -> GetResolvedConfig("auth-prefix")
+//	SimpleResolver("${auth-prefix:/api/auth}")    -> GetResolvedConfig("auth-prefix") with default "/api/auth"
+//	SimpleResolver("/api/${version:v1}/users")    -> "/api/" + GetResolvedConfig("version") + "/users"
+//	SimpleResolver("GET ${api-version}/users/{id}") -> "GET /api/users/{id}" (if api-version=/api)
+//
+// YAML Config Example:
+//
+//	configs:
+//	  - name: auth-prefix
+//	    value: ${AUTH_PREFIX:/api/auth}  # ENV variable with default
+//	  - name: api-version
+//	    value: /api                      # Static value
+//	  - name: db-host
+//	    value: ${@VAULT:database/host:localhost}  # Vault with default
+//
+// Note: This function requires config to be resolved first via ResolveConfigs().
+func (g *GlobalRegistry) SimpleResolver(input string) string {
+	return os.Expand(input, func(placeholder string) string {
+		// Parse placeholder: "key" or "key:default"
+		parts := strings.SplitN(placeholder, ":", 2)
+		key := parts[0]
+		defaultValue := ""
+
+		if len(parts) == 2 {
+			defaultValue = parts[1]
+		}
+
+		// Look up from resolved config registry
+		value, ok := g.GetResolvedConfig(key)
+		if !ok {
+			return defaultValue
+		}
+
+		// Convert value to string
+		if strValue, ok := value.(string); ok {
+			return strValue
+		}
+
+		return defaultValue
+	})
 }
 
 // ===== RUNTIME INSTANCE REGISTRATION =====
