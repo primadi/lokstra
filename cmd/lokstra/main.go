@@ -9,7 +9,7 @@ import (
 	"github.com/primadi/lokstra/core/annotation"
 )
 
-const version = "1.0.0"
+const version = "1.0.1"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -22,7 +22,7 @@ func main() {
 	switch command {
 	case "new":
 		newCmd()
-	case "autogen":
+	case "autogen", "generate":
 		autogenCmd()
 	case "version":
 		fmt.Printf("Lokstra CLI v%s\n", version)
@@ -40,7 +40,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  lokstra new <project-name> [flags]")
-	fmt.Println("  lokstra autogen [folder]")
+	fmt.Println("  lokstra autogen|generate [folder]")
 	fmt.Println("  lokstra version")
 	fmt.Println("  lokstra help")
 	fmt.Println()
@@ -54,7 +54,9 @@ func printUsage() {
 	fmt.Println("  lokstra new myapp -template 01_router/01_router_only -branch main")
 	fmt.Println()
 	fmt.Println("  lokstra autogen                 # Generate code in current directory")
+	fmt.Println("  lokstra generate                # Generate code in current directory")
 	fmt.Println("  lokstra autogen ./myproject     # Generate code in specific folder")
+	fmt.Println("  lokstra generate ./myproject    # Generate code in specific folder")
 }
 
 func newCmd() {

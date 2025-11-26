@@ -59,27 +59,12 @@ type RouteMeta struct {
 
 // ServiceRouterOptions configures service-to-router conversion
 type ServiceRouterOptions struct {
-	// ConventionName specifies which convention to use (e.g., "rest", "rpc")
-	// If empty, uses the default convention (typically "rest")
-	// Convention must be registered in lokstra_registry
-	ConventionName string
-
 	// Prefix for all routes (e.g., "/api/v1")
 	Prefix string
 
-	// ResourceName override (auto-detected from service name if empty)
-	// Example: "UserService" → "user"
-	ResourceName string
-
-	// PluralResourceName for list endpoints (auto-pluralized if empty)
-	// Example: "user" → "users"
-	PluralResourceName string
-
-	// DisableConventions uses only explicit RouteMeta
-	DisableConventions bool
-
-	// RouteOverrides allows overriding specific method routes
+	// RouteOverrides defines explicit routes for methods
 	// Key: method name, Value: RouteMeta
+	// Each method MUST have a route override to be registered
 	RouteOverrides map[string]RouteMeta
 
 	// Middlewares to apply to all routes
@@ -102,34 +87,14 @@ type ServiceMethodInfo struct {
 // DefaultServiceRouterOptions returns default options
 func DefaultServiceRouterOptions() *ServiceRouterOptions {
 	return &ServiceRouterOptions{
-		ConventionName:     "", // Empty means use default convention
-		Prefix:             "",
-		DisableConventions: false,
-		RouteOverrides:     make(map[string]RouteMeta),
+		Prefix:         "",
+		RouteOverrides: make(map[string]RouteMeta),
 	}
-}
-
-// WithConvention sets the convention name
-func (o *ServiceRouterOptions) WithConvention(conventionName string) *ServiceRouterOptions {
-	o.ConventionName = conventionName
-	return o
 }
 
 // WithPrefix sets the route prefix
 func (o *ServiceRouterOptions) WithPrefix(prefix string) *ServiceRouterOptions {
 	o.Prefix = prefix
-	return o
-}
-
-// WithResourceName sets the resource name
-func (o *ServiceRouterOptions) WithResourceName(name string) *ServiceRouterOptions {
-	o.ResourceName = name
-	return o
-}
-
-// WithPluralResourceName sets the plural resource name
-func (o *ServiceRouterOptions) WithPluralResourceName(name string) *ServiceRouterOptions {
-	o.PluralResourceName = name
 	return o
 }
 
@@ -166,11 +131,5 @@ func (o *ServiceRouterOptions) WithMethodMiddleware(methodName string, middlewar
 // WithMiddlewares sets middlewares for all routes
 func (o *ServiceRouterOptions) WithMiddlewares(mws ...string) *ServiceRouterOptions {
 	o.Middlewares = mws
-	return o
-}
-
-// WithoutConventions disables convention-based route generation
-func (o *ServiceRouterOptions) WithoutConventions() *ServiceRouterOptions {
-	o.DisableConventions = true
 	return o
 }

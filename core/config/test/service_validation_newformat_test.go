@@ -1,14 +1,16 @@
-package config
+package config_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/primadi/lokstra/core/config"
 )
 
 // Test new format: local_key:service-name
 func TestValidateServices_NewFormat_LocalKey(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "user-service",
 				Type: "user",
@@ -22,7 +24,7 @@ func TestValidateServices_NewFormat_LocalKey(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Fatalf("Expected no error with new format, got: %v", err)
 	}
@@ -30,8 +32,8 @@ func TestValidateServices_NewFormat_LocalKey(t *testing.T) {
 
 // Test backward compatibility: simple format still works
 func TestValidateServices_OldFormat_BackwardCompatible(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "user-service",
 				Type: "user",
@@ -47,7 +49,7 @@ func TestValidateServices_OldFormat_BackwardCompatible(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Fatalf("Expected backward compatibility, got: %v", err)
 	}
@@ -55,8 +57,8 @@ func TestValidateServices_OldFormat_BackwardCompatible(t *testing.T) {
 
 // Test multiple dependencies with different local keys
 func TestValidateServices_MultipleDepsWithLocalKeys(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "user-service",
 				Type: "user",
@@ -79,7 +81,7 @@ func TestValidateServices_MultipleDepsWithLocalKeys(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Fatalf("Expected no error with multiple deps, got: %v", err)
 	}
@@ -87,8 +89,8 @@ func TestValidateServices_MultipleDepsWithLocalKeys(t *testing.T) {
 
 // Test error: dependency service doesn't exist
 func TestValidateServices_NonExistentService(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name:      "auth-service",
 				Type:      "auth",
@@ -97,7 +99,7 @@ func TestValidateServices_NonExistentService(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err == nil {
 		t.Fatal("Expected error for non-existent service")
 	}
@@ -109,8 +111,8 @@ func TestValidateServices_NonExistentService(t *testing.T) {
 
 // Test: literal string in config no longer causes false positive
 func TestValidateServices_LiteralStringNoFalsePositive(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "user-service",
 				Type: "user",
@@ -129,7 +131,7 @@ func TestValidateServices_LiteralStringNoFalsePositive(t *testing.T) {
 	}
 
 	// Should NOT error - Rule 3 removed!
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Fatalf("Expected no error for literal strings (false positive), got: %v", err)
 	}
@@ -137,8 +139,8 @@ func TestValidateServices_LiteralStringNoFalsePositive(t *testing.T) {
 
 // Test layered mode with new format
 func TestValidateServices_LayeredMode_NewFormat(t *testing.T) {
-	services := &ServicesConfig{
-		Layered: map[string][]*Service{
+	services := &config.ServicesConfig{
+		Layered: map[string][]*config.Service{
 			"infrastructure": {
 				{
 					Name: "db-service",
@@ -157,7 +159,7 @@ func TestValidateServices_LayeredMode_NewFormat(t *testing.T) {
 		Order: []string{"infrastructure", "repository"},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Fatalf("Expected no error in layered mode with new format, got: %v", err)
 	}
@@ -165,8 +167,10 @@ func TestValidateServices_LayeredMode_NewFormat(t *testing.T) {
 
 // Test dependency not used (still required to have value in config or auto-inject)
 func TestValidateServices_DependencyNotUsed(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	// NOTE: This test is now expected to PASS
+	// With auto-injection enabled, dependencies don't need to be in config
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "db-service",
 				Type: "db",
@@ -176,21 +180,17 @@ func TestValidateServices_DependencyNotUsed(t *testing.T) {
 				Type:      "user",
 				DependsOn: []string{"db_service:db-service"},
 				Config: map[string]any{
-					// Config doesn't reference db-service at all
+					// Dependencies will be auto-injected, no need in config
 					"password_min_length": 8,
 				},
 			},
 		},
 	}
 
-	// Should error - dependency declared but not used
-	err := ValidateServices(services)
-	if err == nil {
-		t.Fatal("Expected error when dependency not used in config")
-	}
-
-	if !strings.Contains(err.Error(), "db_service:db-service") {
-		t.Errorf("Expected error to mention dependency, got: %v", err)
+	// Should NOT error - auto-injection handles this
+	err := config.ValidateServices(services)
+	if err != nil {
+		t.Fatalf("Unexpected error (auto-injection should handle this): %v", err)
 	}
 }
 
@@ -220,4 +220,13 @@ func TestParseDependencyEntry(t *testing.T) {
 			}
 		})
 	}
+}
+
+// extractServiceNameFromDep extracts the actual service name from depends-on entry
+// Supports both "service-name" and "local_key:service-name" formats
+func extractServiceNameFromDep(dep string) string {
+	if idx := strings.Index(dep, ":"); idx > 0 {
+		return dep[idx+1:]
+	}
+	return dep
 }

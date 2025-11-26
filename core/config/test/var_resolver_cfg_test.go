@@ -1,8 +1,10 @@
-package config
+package config_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/primadi/lokstra/core/config"
 )
 
 func TestExpandVariablesWithCFG(t *testing.T) {
@@ -119,7 +121,7 @@ services:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := expandVariables(tt.input)
+			result := config.ExpandVariables(tt.input)
 
 			// For debugging
 			if result != tt.expected {
@@ -153,7 +155,7 @@ services:
       url: ${@CFG:redis.url}
 `
 
-	result := expandVariables(input)
+	result := config.ExpandVariables(input)
 
 	if !contains(result, "postgresql://user:pass@localhost:5432/db") {
 		t.Errorf("Expected expanded DSN with colons, got:\n%s", result)

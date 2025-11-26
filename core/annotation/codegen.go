@@ -507,7 +507,7 @@ func writeGenFile(path string, ctx *RouterServiceContext) error {
 	// Sort struct names for deterministic order in init()
 	sort.Strings(allStructNames)
 
-	// Collect used packages from method signatures and dependencies
+	// Collect used packages from method signatures, dependencies, and struct name
 	usedPackages := make(map[string]bool)
 	for _, service := range ctx.GeneratedCode.Services {
 		// From method signatures
@@ -525,11 +525,7 @@ func writeGenFile(path string, ctx *RouterServiceContext) error {
 	allImports := make(map[string]string) // path -> alias
 	for _, service := range ctx.GeneratedCode.Services {
 		for alias, importPath := range service.Imports {
-			// Skip if import path is "github.com/primadi/lokstra/core/service" (already added)
-			if importPath == "github.com/primadi/lokstra/core/service" {
-				continue
-			}
-			// Only include if package is actually used
+			// Only include if package is actually used in generated code
 			if usedPackages[alias] {
 				// Use path as key to deduplicate, prefer shorter alias
 				if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
@@ -574,24 +570,35 @@ func collectPackagesFromType(typeStr string, packages map[string]bool) {
 		return
 	}
 
+	// Handle generics first: Type[Param1, Param2]
+	if start := strings.Index(typeStr, "["); start != -1 {
+		if end := strings.LastIndex(typeStr, "]"); end > start {
+			// Process the base type (before '[')
+			baseType := typeStr[:start]
+			collectPackagesFromType(baseType, packages)
+
+			// Process inner type parameters
+			innerTypes := typeStr[start+1 : end]
+			// Split by comma for multiple type params
+			for _, inner := range strings.Split(innerTypes, ",") {
+				collectPackagesFromType(strings.TrimSpace(inner), packages)
+			}
+			return
+		}
+	}
+
 	// Remove pointer and array prefixes
 	typeStr = strings.TrimLeft(typeStr, "*[]")
 
 	// Extract package prefix (everything before last dot)
 	if idx := strings.LastIndex(typeStr, "."); idx != -1 {
 		pkg := typeStr[:idx]
-		packages[pkg] = true
-	}
-
-	// Handle generics: Type[Param]
-	if start := strings.Index(typeStr, "["); start != -1 {
-		if end := strings.LastIndex(typeStr, "]"); end > start {
-			innerTypes := typeStr[start+1 : end]
-			// Split by comma for multiple type params
-			for _, inner := range strings.Split(innerTypes, ",") {
-				collectPackagesFromType(strings.TrimSpace(inner), packages)
-			}
+		// Handle nested packages (e.g., "github.com/user/repo.Type" -> "repo")
+		// Only take the last segment as the alias
+		if lastSlash := strings.LastIndex(pkg, "/"); lastSlash != -1 {
+			pkg = pkg[lastSlash+1:]
 		}
+		packages[pkg] = true
 	}
 }
 

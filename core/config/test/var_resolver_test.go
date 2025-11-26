@@ -1,8 +1,10 @@
-package config
+package config_test
 
 import (
 	"os"
 	"testing"
+
+	"github.com/primadi/lokstra/core/config"
 )
 
 func TestExpandVariables(t *testing.T) {
@@ -106,7 +108,7 @@ func TestExpandVariables(t *testing.T) {
 				os.Setenv(k, v)
 			}
 
-			result := expandVariables(tt.input)
+			result := config.ExpandVariables(tt.input)
 			if result != tt.expected {
 				t.Errorf("expandVariables(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
@@ -164,7 +166,7 @@ func TestExpandVariables_RealWorldExamples(t *testing.T) {
 				os.Setenv(k, v)
 			}
 
-			result := expandVariables(tt.input)
+			result := config.ExpandVariables(tt.input)
 			if result != tt.expected {
 				t.Errorf("expandVariables(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
@@ -174,7 +176,7 @@ func TestExpandVariables_RealWorldExamples(t *testing.T) {
 
 func TestExpandVariables_CustomResolvers(t *testing.T) {
 	// Register a test resolver
-	AddVariableResolver("TEST", &testResolver{
+	config.AddVariableResolver("TEST", &testResolver{
 		values: map[string]string{
 			"key1": "value1",
 			"key2": "value2",
@@ -210,7 +212,7 @@ func TestExpandVariables_CustomResolvers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := expandVariables(tt.input)
+			result := config.ExpandVariables(tt.input)
 			if result != tt.expected {
 				t.Errorf("expandVariables(%q) = %q, want %q", tt.input, result, tt.expected)
 			}

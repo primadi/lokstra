@@ -25,7 +25,7 @@ func LoadConfigFs(fsys fs.FS, fileName string, config *Config) error {
 	}
 
 	// Expand all variables (two-pass expansion for CFG is automatic)
-	expanded := expandVariables(string(data))
+	expanded := ExpandVariables(string(data))
 
 	// Parse YAML
 	var tempConfig Config
@@ -98,7 +98,7 @@ func LoadConfigDirFs(fsys fs.FS, dirName string, config *Config) error {
 		}
 
 		// Expand all variables (two-pass expansion for CFG is automatic)
-		expanded := expandVariables(string(data))
+		expanded := ExpandVariables(string(data))
 
 		// Parse YAML
 		var tempConfig Config

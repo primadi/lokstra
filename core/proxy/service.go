@@ -9,35 +9,54 @@ import (
 
 	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/request"
-	"github.com/primadi/lokstra/core/router/autogen"
-	"github.com/primadi/lokstra/core/router/convention"
 )
 
-// Service represents a remote service proxy
-type Service struct {
-	client         *api_client.ClientRouter
-	baseURL        string
-	conversionRule autogen.ConversionRule
-	routeOverride  autogen.RouteOverride
+// RouteMapping defines explicit route mapping for a method
+type RouteMapping struct {
+	HTTPMethod string // GET, POST, PUT, DELETE, PATCH
+	Path       string // e.g., "/users/{id}"
 }
 
-// NewService creates a new proxy service
-func NewService(baseURL string, rule autogen.ConversionRule, override autogen.RouteOverride) *Service {
+// Service represents a remote service proxy with explicit route mappings
+type Service struct {
+	client        *api_client.ClientRouter
+	baseURL       string
+	routeMap      map[string]RouteMapping // methodName -> route mapping
+	hiddenMethods map[string]bool         // methods to hide
+}
+
+// NewService creates a new proxy service with explicit route mappings
+// routeMap: map of method names to RouteMapping (HTTPMethod + Path)
+// Example:
+//
+//	routeMap := map[string]proxy.RouteMapping{
+//	    "GetUser":    {HTTPMethod: "GET", Path: "/users/{id}"},
+//	    "ListUsers":  {HTTPMethod: "GET", Path: "/users"},
+//	    "CreateUser": {HTTPMethod: "POST", Path: "/users"},
+//	}
+func NewService(baseURL string, routeMap map[string]RouteMapping) *Service {
 	client := &api_client.ClientRouter{
 		FullURL: baseURL,
 		IsLocal: false,
 		Timeout: 30 * time.Second,
 	}
 
-	// Log remote service creation
-	log.Printf("🌐 Created remote service proxy: %s (resource: %s)", baseURL, rule.Resource)
+	log.Printf("🌐 Created remote service proxy: %s with %d routes", baseURL, len(routeMap))
 
 	return &Service{
-		client:         client,
-		baseURL:        baseURL,
-		conversionRule: rule,
-		routeOverride:  override,
+		client:        client,
+		baseURL:       baseURL,
+		routeMap:      routeMap,
+		hiddenMethods: make(map[string]bool),
 	}
+}
+
+// WithHiddenMethods marks methods as hidden (will return error if called)
+func (s *Service) WithHiddenMethods(methods ...string) *Service {
+	for _, method := range methods {
+		s.hiddenMethods[method] = true
+	}
+	return s
 }
 
 // Call invokes a remote service method with automatic HTTP request building
@@ -49,7 +68,7 @@ func NewService(baseURL string, rule autogen.ConversionRule, override autogen.Ro
 //
 // Returns error
 func Call(s *Service, methodName string, params ...any) error {
-	// Build HTTP request based on method name and conversion rule
+	// Build HTTP request based on method name and route mapping
 	httpMethod, pathTemplate, err := s.resolveMethodToHTTP(methodName)
 	if err != nil {
 		return err
@@ -92,24 +111,13 @@ func Call(s *Service, methodName string, params ...any) error {
 //   - func(*Context) (T, error) or func(*Context) any
 //   - func(*Struct) (T, error) or func(*Struct) any
 //   - func(*Context, *Struct) (T, error) or func(*Context, *Struct) any
-//   - func() (*Response, error) or func() *Response
-//   - func(*Context) (*Response, error) or func(*Context) *Response
-//   - func(*Struct) (*Response, error) or func(*Struct) *Response
-//   - func(*Context, *Struct) (*Response, error) or func(*Context, *Struct) *Response
-//   - func() (*ApiHelper, error) or func() *ApiHelper
-//   - func(*Context) (*ApiHelper, error) or func(*Context) *ApiHelper
-//   - func(*Struct) (*ApiHelper, error) or func(*Struct) *ApiHelper
-//   - func(*Context, *Struct) (*ApiHelper, error) or func(*Context, *Struct) *ApiHelper
 //
 // Returns (T, error)
-// T will be extracted from:
-//   - response.Data field for standard API responses
-//   - Full Response struct for *Response returns
-//   - Full ApiHelper for *ApiHelper returns
+// T will be extracted from response.Data field for standard API responses
 func CallWithData[T any](s *Service, methodName string, params ...any) (T, error) {
 	var zero T
 
-	// Build HTTP request based on method name and conversion rule
+	// Build HTTP request based on method name and route mapping
 	httpMethod, pathTemplate, err := s.resolveMethodToHTTP(methodName)
 	if err != nil {
 		return zero, err
@@ -136,7 +144,6 @@ func CallWithData[T any](s *Service, methodName string, params ...any) (T, error
 	opts := s.buildRequestOptions(httpMethod, structParam, ctx)
 
 	// Make HTTP call and get typed response
-	// FetchAndCast will automatically extract the Data field from standard API responses
 	data, err := api_client.FetchAndCast[T](s.client, path, opts...)
 	if err != nil {
 		log.Printf("❌ proxy.CallWithData error: %v", err)
@@ -148,58 +155,21 @@ func CallWithData[T any](s *Service, methodName string, params ...any) (T, error
 }
 
 // resolveMethodToHTTP converts a method name to HTTP method and path
-// using the conversion rule and route override
+// using explicit route mappings
 // Returns (httpMethod, path, error)
-//
-// Resolution order (same as autogen.NewFromService):
-//  1. Check if method is hidden → return error
-//  2. Check for custom route override → use custom route
-//  3. Resolve using convention → use convention-based route
-//  4. Method not found → return error
 func (s *Service) resolveMethodToHTTP(methodName string) (httpMethod string, path string, err error) {
-	// Step 1: Check if hidden
-	for _, hiddenMethod := range s.routeOverride.Hidden {
-		if hiddenMethod == methodName {
-			return "", "", fmt.Errorf("method %s is hidden", methodName)
-		}
+	// Check if hidden
+	if s.hiddenMethods[methodName] {
+		return "", "", fmt.Errorf("method %s is hidden", methodName)
 	}
 
-	// Step 2: Check for custom route override
-	if customRoute, ok := s.routeOverride.Custom[methodName]; ok {
-		path = customRoute.Path
-		if s.routeOverride.PathPrefix != "" {
-			path = s.routeOverride.PathPrefix + path
-		}
-		return customRoute.Method, path, nil
+	// Check explicit route mapping
+	mapping, ok := s.routeMap[methodName]
+	if !ok {
+		return "", "", fmt.Errorf("method %s has no route mapping", methodName)
 	}
 
-	// Step 3: Use convention registry to resolve method
-	conv := convention.MustGet(s.conversionRule.Convention)
-
-	// Calculate resource plural
-	resourcePlural := s.conversionRule.ResourcePlural
-	if resourcePlural == "" {
-		resourcePlural = s.conversionRule.Resource + "s"
-	}
-
-	// Resolve method to HTTP method and path template
-	httpMethod, pathTemplate, found := conv.ResolveMethod(
-		methodName,
-		s.conversionRule.Resource,
-		resourcePlural,
-	)
-
-	if !found {
-		return "", "", fmt.Errorf("method %s not found in convention %s", methodName, s.conversionRule.Convention)
-	}
-
-	// Apply path prefix if specified
-	path = pathTemplate
-	if s.routeOverride.PathPrefix != "" {
-		path = s.routeOverride.PathPrefix + path
-	}
-
-	return httpMethod, path, nil
+	return mapping.HTTPMethod, mapping.Path, nil
 }
 
 // replacePathParameters replaces path parameter placeholders with actual values
