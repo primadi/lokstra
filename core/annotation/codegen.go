@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -521,6 +522,11 @@ func writeGenFile(path string, ctx *RouterServiceContext) error {
 		}
 	}
 
+	// Also collect packages from preserved sections (unchanged files)
+	for _, code := range ctx.GeneratedCode.PreservedSections {
+		extractPackagesFromCode(code, usedPackages)
+	}
+
 	// Filter imports to only used packages
 	allImports := make(map[string]string) // path -> alias
 	for _, service := range ctx.GeneratedCode.Services {
@@ -561,6 +567,26 @@ func extractStructNameFromPreservedCode(code string) string {
 		}
 	}
 	return ""
+}
+
+// extractPackagesFromCode scans preserved code for package usages
+// This finds patterns like: domain.User, *domain.User, []domain.User, pkg.Type, etc.
+func extractPackagesFromCode(code string, packages map[string]bool) {
+	// Regular expression to match package.Type patterns
+	// Matches: pkg.Type, *pkg.Type, []pkg.Type, map[pkg.Type]pkg.Type, etc.
+	// Pattern: word boundary + identifier + dot + identifier
+	re := regexp.MustCompile(`\b([a-zA-Z_][a-zA-Z0-9_]*)\.[A-Z][a-zA-Z0-9_]*`)
+
+	matches := re.FindAllStringSubmatch(code, -1)
+	for _, match := range matches {
+		if len(match) > 1 {
+			pkg := match[1]
+			// Exclude built-in packages and common keywords
+			if pkg != "http" && pkg != "fmt" && pkg != "strings" && pkg != "errors" {
+				packages[pkg] = true
+			}
+		}
+	}
 }
 
 // collectPackagesFromType extracts package prefixes from type string
