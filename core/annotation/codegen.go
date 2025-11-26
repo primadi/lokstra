@@ -27,6 +27,7 @@ func GenerateCodeForFolder(ctx *RouterServiceContext) error {
 	// Read existing zz_generated.lokstra.go to preserve code for skipped files
 	genPath := filepath.Join(ctx.FolderPath, internal.GeneratedFileName)
 	existingGenCode := readExistingGenCode(genPath)
+	existingImports := extractImportsFromExistingGenCode(genPath)
 
 	// Process all updated files
 	for _, file := range ctx.UpdatedFiles {
@@ -43,9 +44,9 @@ func GenerateCodeForFolder(ctx *RouterServiceContext) error {
 		}
 	}
 
-	// Generate zz_generated.lokstra.go
+	// Generate zz_generated.lokstra.go (pass existing imports for preservation)
 	if len(ctx.GeneratedCode.Services) > 0 || len(ctx.GeneratedCode.PreservedSections) > 0 {
-		if err := writeGenFile(genPath, ctx); err != nil {
+		if err := writeGenFile(genPath, ctx, existingImports); err != nil {
 			return fmt.Errorf("failed to write zz_generated.lokstra.go: %w", err)
 		}
 	} else {
@@ -118,6 +119,43 @@ func readExistingGenCode(genPath string) map[string]string {
 	}
 
 	return sections
+}
+
+// extractImportsFromExistingGenCode extracts imports from existing zz_generated.lokstra.go
+// Returns map[alias]importPath for all imports that were previously used
+func extractImportsFromExistingGenCode(genPath string) map[string]string {
+	imports := make(map[string]string)
+
+	content, err := os.ReadFile(genPath)
+	if err != nil {
+		return imports
+	}
+
+	// Parse the existing generated file
+	fset := token.NewFileSet()
+	astFile, err := parser.ParseFile(fset, genPath, content, parser.ImportsOnly)
+	if err != nil {
+		return imports
+	}
+
+	// Extract imports
+	for _, imp := range astFile.Imports {
+		importPath := strings.Trim(imp.Path.Value, `"`)
+
+		var alias string
+		if imp.Name != nil {
+			// Named import: import foo "path/to/foo"
+			alias = imp.Name.Name
+		} else {
+			// Default import: extract last part of path
+			parts := strings.Split(importPath, "/")
+			alias = parts[len(parts)-1]
+		}
+
+		imports[alias] = importPath
+	}
+
+	return imports
 }
 
 // extractImports extracts import statements from source file
@@ -475,7 +513,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 }
 
 // writeGenFile writes the zz_generated.lokstra.go file
-func writeGenFile(path string, ctx *RouterServiceContext) error {
+func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[string]string) error {
 	// Get package name from existing files
 	pkgName, err := getPackageName(ctx.FolderPath)
 	if err != nil {
@@ -529,14 +567,41 @@ func writeGenFile(path string, ctx *RouterServiceContext) error {
 
 	// Filter imports to only used packages
 	allImports := make(map[string]string) // path -> alias
+
+	// Hardcoded imports that are always included in template
+	hardcodedImports := map[string]bool{
+		"github.com/primadi/lokstra/core/deploy":      true,
+		"github.com/primadi/lokstra/core/proxy":       true,
+		"github.com/primadi/lokstra/lokstra_registry": true,
+	}
+
+	// First, add imports from updated services
 	for _, service := range ctx.GeneratedCode.Services {
 		for alias, importPath := range service.Imports {
+			// Skip hardcoded imports
+			if hardcodedImports[importPath] {
+				continue
+			}
 			// Only include if package is actually used in generated code
 			if usedPackages[alias] {
 				// Use path as key to deduplicate, prefer shorter alias
 				if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
 					allImports[importPath] = alias
 				}
+			}
+		}
+	}
+
+	// Second, add imports from existing generated file if package is still used
+	for alias, importPath := range existingImports {
+		// Skip hardcoded imports
+		if hardcodedImports[importPath] {
+			continue
+		}
+		if usedPackages[alias] {
+			// Use path as key to deduplicate, prefer shorter alias
+			if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
+				allImports[importPath] = alias
 			}
 		}
 	}
@@ -572,17 +637,19 @@ func extractStructNameFromPreservedCode(code string) string {
 // extractPackagesFromCode scans preserved code for package usages
 // This finds patterns like: domain.User, *domain.User, []domain.User, pkg.Type, etc.
 func extractPackagesFromCode(code string, packages map[string]bool) {
-	// Regular expression to match package.Type patterns
-	// Matches: pkg.Type, *pkg.Type, []pkg.Type, map[pkg.Type]pkg.Type, etc.
-	// Pattern: word boundary + identifier + dot + identifier
-	re := regexp.MustCompile(`\b([a-zA-Z_][a-zA-Z0-9_]*)\.[A-Z][a-zA-Z0-9_]*`)
+	// Split code into lines and scan for type references
+	// Look for patterns: pkg.Type where pkg starts with lowercase and Type starts with uppercase
+	lines := strings.Split(code, "\n")
 
-	matches := re.FindAllStringSubmatch(code, -1)
-	for _, match := range matches {
-		if len(match) > 1 {
-			pkg := match[1]
-			// Exclude built-in packages and common keywords
-			if pkg != "http" && pkg != "fmt" && pkg != "strings" && pkg != "errors" {
+	// Regex to match package.Type patterns
+	// Matches qualified identifiers like: authdomain.LoginRequest, *userdomain.UserDTO, etc.
+	re := regexp.MustCompile(`([a-z][a-zA-Z0-9_]*)\.([A-Z][a-zA-Z0-9_]*)`)
+
+	for _, line := range lines {
+		matches := re.FindAllStringSubmatch(line, -1)
+		for _, match := range matches {
+			if len(match) > 1 {
+				pkg := match[1]
 				packages[pkg] = true
 			}
 		}

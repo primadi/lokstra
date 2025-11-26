@@ -7,8 +7,10 @@ package main
 import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/proxy"
-	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/lokstra_registry"
+	authdomain "github.com/primadi/lokstra/core/annotation/internal/multifile_test/authdomain"
+	userdomain "github.com/primadi/lokstra/core/annotation/internal/multifile_test/userdomain"
+	service "github.com/primadi/lokstra/core/service"
 )
 
 // Auto-register on package import
@@ -39,15 +41,16 @@ func NewAuthServiceRemote(proxyService *proxy.Service) *AuthServiceRemote {
 
 // Login via HTTP
 // Generated from: @Route "POST /login"
-func (s *AuthServiceRemote) Login(p string) (string, error) {
-	return proxy.CallWithData[string](s.proxyService, "Login", p)
+func (s *AuthServiceRemote) Login(p *authdomain.LoginRequest) (*authdomain.AuthResponse, error) {
+	return proxy.CallWithData[*authdomain.AuthResponse](s.proxyService, "Login", p)
 }
 
 // Logout via HTTP
 // Generated from: @Route "POST /logout"
-func (s *AuthServiceRemote) Logout() error {
-	return proxy.Call(s.proxyService, "Logout", nil)
+func (s *AuthServiceRemote) Logout(p *authdomain.LogoutRequest) (*authdomain.AuthResponse, error) {
+	return proxy.CallWithData[*authdomain.AuthResponse](s.proxyService, "Logout", p)
 }
+
 
 func AuthServiceFactory(deps map[string]any, config map[string]any) any {
 	return &AuthService{
@@ -316,6 +319,7 @@ func RegisterProfileService() {
 		})
 }
 
+
 // ============================================================
 // FILE: user_service.go
 // ============================================================
@@ -335,14 +339,14 @@ func NewUserServiceRemote(proxyService *proxy.Service) *UserServiceRemote {
 
 // Create via HTTP
 // Generated from: @Route "POST /users"
-func (s *UserServiceRemote) Create(p string) (string, error) {
-	return proxy.CallWithData[string](s.proxyService, "Create", p)
+func (s *UserServiceRemote) Create(p *userdomain.CreateUserRequest) (*userdomain.UserDTO, error) {
+	return proxy.CallWithData[*userdomain.UserDTO](s.proxyService, "Create", p)
 }
 
 // GetByID via HTTP
 // Generated from: @Route "GET /users/{id}"
-func (s *UserServiceRemote) GetByID(p string) (string, error) {
-	return proxy.CallWithData[string](s.proxyService, "GetByID", p)
+func (s *UserServiceRemote) GetByID(p string) (*userdomain.UserDTO, error) {
+	return proxy.CallWithData[*userdomain.UserDTO](s.proxyService, "GetByID", p)
 }
 
 
