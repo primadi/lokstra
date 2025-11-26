@@ -24,7 +24,7 @@ func AddVariableResolver(name string, resolver VariableResolver) {
 	variableResolvers[name] = resolver
 }
 
-// expandVariables replaces placeholders in the form:
+// ExpandVariables replaces placeholders in the form:
 // - ${KEY}              -> ENV:KEY (no default)
 // - ${KEY:DEFAULT}      -> ENV:KEY with default (DEFAULT can contain :)
 // - ${@RESOLVER:KEY}    -> Custom resolver (ENV, AWS, VAULT, etc.)
@@ -52,7 +52,7 @@ func AddVariableResolver(name string, resolver VariableResolver) {
 //	${@AWS:secret-name:local-secret}     -> AWS with fallback
 //	${@VAULT:path/to/secret}             -> HashiCorp Vault
 //	${@CFG:database.host}                -> From config registry (two-pass expansion)
-func expandVariables(input string) string {
+func ExpandVariables(input string) string {
 	// PHASE 1: Expand all resolvers EXCEPT CFG
 	phase1Result := expandVariablesExcept(input, []string{"CFG"})
 
@@ -60,6 +60,53 @@ func expandVariables(input string) string {
 	phase2Result := expandCFGWithTempRegistry(phase1Result)
 
 	return phase2Result
+}
+
+// SimpleResolver resolves variables in the format ${key} or ${key:default}
+// by looking up values from lokstra_registry.GetConfig().
+//
+// This is designed for annotations where config values are managed centrally:
+//   - Annotation prefix: prefix="${auth-prefix}"
+//   - Route paths: @Route "GET ${api-version}/users/{id}"
+//
+// The config registry values can use any provider (ENV, AWS, VAULT, etc.)
+// as defined in config.yaml, providing full flexibility while keeping
+// annotation syntax simple.
+//
+// Examples:
+//
+//	SimpleResolver("${auth-prefix}")                -> GetConfig("auth-prefix", "")
+//	SimpleResolver("${auth-prefix:/api/auth}")      -> GetConfig("auth-prefix", "/api/auth")
+//	SimpleResolver("/api/${version:v1}/users")      -> "/api/" + GetConfig("version", "v1") + "/users"
+//	SimpleResolver("GET ${api-version}/users/{id}") -> "GET /api/users/{id}" (if api-version=/api)
+//
+// YAML Config Example:
+//
+//	configs:
+//	  - name: auth-prefix
+//	    value: ${AUTH_PREFIX:/api/auth}  # ENV variable with default
+//	  - name: api-version
+//	    value: /api                      # Static value
+//	  - name: db-host
+//	    value: ${@VAULT:database/host:localhost}  # Vault with default
+//
+// Note: This function requires lokstra_registry to be initialized with loaded config.
+// Implementation is provided by lokstra_registry via RegisterSimpleResolverFunc().
+func SimpleResolver(input string) string {
+	if simpleResolverFunc != nil {
+		return simpleResolverFunc(input)
+	}
+	// Fallback: return unchanged if not initialized
+	return input
+}
+
+// simpleResolverFunc is the callback registered by lokstra_registry
+var simpleResolverFunc func(string) string
+
+// RegisterSimpleResolverFunc registers the implementation for SimpleResolver
+// This is called by lokstra_registry during package initialization
+func RegisterSimpleResolverFunc(fn func(string) string) {
+	simpleResolverFunc = fn
 }
 
 // expandVariablesOnly expands ONLY the specified resolvers

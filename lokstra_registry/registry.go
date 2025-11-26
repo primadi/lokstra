@@ -15,15 +15,40 @@ package lokstra_registry
 
 import (
 	"fmt"
+	"os"
 	"reflect"
+	"strings"
 
 	"github.com/primadi/lokstra/common/cast"
+	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
 )
+
+// Register SimpleResolver implementation on package init
+func init() {
+	config.RegisterSimpleResolverFunc(simpleResolverImpl)
+}
+
+// simpleResolverImpl is the implementation registered to config.SimpleResolver
+func simpleResolverImpl(input string) string {
+	return os.Expand(input, func(placeholder string) string {
+		// Parse placeholder: "key" or "key:default"
+		parts := strings.SplitN(placeholder, ":", 2)
+		key := parts[0]
+		defaultValue := ""
+
+		if len(parts) == 2 {
+			defaultValue = parts[1]
+		}
+
+		// Look up from config registry
+		return GetConfig(key, defaultValue)
+	})
+}
 
 // ===== TYPE ALIASES FOR CLEANER API =====
 
@@ -444,6 +469,51 @@ func GetConfig[T any](name string, defaultValue T) T {
 	}
 
 	return defaultValue
+}
+
+// SimpleResolver resolves variables in the format ${key} or ${key:default}
+// by looking up values from config registry via GetConfig().
+//
+// This is designed for annotations where config values are managed centrally:
+//   - Annotation prefix: prefix="${auth-prefix}"
+//   - Route paths: @Route "GET ${api-version}/users/{id}"
+//
+// The config registry values can use any provider (ENV, AWS, VAULT, etc.)
+// as defined in config.yaml, providing full flexibility while keeping
+// annotation syntax simple.
+//
+// Examples:
+//
+//	SimpleResolver("${auth-prefix}")              -> GetConfig("auth-prefix", "")
+//	SimpleResolver("${auth-prefix:/api/auth}")    -> GetConfig("auth-prefix", "/api/auth")
+//	SimpleResolver("/api/${version:v1}/users")    -> "/api/" + GetConfig("version", "v1") + "/users"
+//	SimpleResolver("GET ${api-version}/users/{id}") -> "GET /api/users/{id}" (if api-version=/api)
+//
+// YAML Config Example:
+//
+//	configs:
+//	  - name: auth-prefix
+//	    value: ${AUTH_PREFIX:/api/auth}  # ENV variable with default
+//	  - name: api-version
+//	    value: /api                      # Static value
+//	  - name: db-host
+//	    value: ${@VAULT:database/host:localhost}  # Vault with default
+//
+// Note: This function requires lokstra_registry to be initialized with loaded config.
+func SimpleResolver(input string) string {
+	return os.Expand(input, func(placeholder string) string {
+		// Parse placeholder: "key" or "key:default"
+		parts := strings.SplitN(placeholder, ":", 2)
+		key := parts[0]
+		defaultValue := ""
+
+		if len(parts) == 2 {
+			defaultValue = parts[1]
+		}
+
+		// Look up from config registry
+		return GetConfig(key, defaultValue)
+	})
 }
 
 // ===== SHUTDOWN =====

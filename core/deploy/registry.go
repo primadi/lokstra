@@ -11,8 +11,6 @@ import (
 	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
-	"github.com/primadi/lokstra/core/router/autogen"
-	"github.com/primadi/lokstra/core/router/convention"
 	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/internal/registry"
 )
@@ -1244,55 +1242,35 @@ func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.Serv
 	// Get service metadata for proxy.Service creation
 	metadata := g.GetServiceMetadata(def.Type)
 
-	// Create proxy.Service for HTTP calls
+	// Create proxy.Service for HTTP calls with explicit route mappings
 	var proxyService *proxy.Service
-	if metadata != nil && metadata.Resource != "" {
-		// Use metadata from RegisterServiceType
-		override := autogen.RouteOverride{
-			PathPrefix: metadata.PathPrefix,
-			Hidden:     metadata.HiddenMethods,
-		}
+	if metadata != nil && len(metadata.RouteOverrides) > 0 {
+		// Use explicit route mappings from RegisterServiceType
+		routeMap := make(map[string]proxy.RouteMapping)
+		for methodName, routeMeta := range metadata.RouteOverrides {
+			// Build full path with prefix
+			path := routeMeta.Path
+			if metadata.PathPrefix != "" {
+				path = strings.TrimSuffix(metadata.PathPrefix, "/") + "/" + strings.TrimPrefix(path, "/")
+			}
 
-		// Convert RouteOverrides map to Custom routes
-		if len(metadata.RouteOverrides) > 0 {
-			override.Custom = make(map[string]autogen.Route)
-			for methodName, routeMeta := range metadata.RouteOverrides {
-				// RouteMetadata now has Method and Path directly
-				override.Custom[methodName] = autogen.Route{
-					Method:      routeMeta.Method,
-					Path:        routeMeta.Path,
-					Middlewares: convertMiddlewareNames(g, routeMeta.Middlewares), // Convert middleware names to instances
-				}
+			routeMap[methodName] = proxy.RouteMapping{
+				HTTPMethod: routeMeta.Method,
+				Path:       path,
 			}
 		}
 
-		// Convert router-level middlewares
-		if len(metadata.MiddlewareNames) > 0 {
-			override.Middlewares = convertMiddlewareNames(g, metadata.MiddlewareNames)
-		}
+		proxyService = proxy.NewService(remoteBaseURL, routeMap)
 
-		proxyService = proxy.NewService(
-			remoteBaseURL,
-			autogen.ConversionRule{
-				Convention:     convention.ConventionType(metadata.Convention),
-				Resource:       metadata.Resource,
-				ResourcePlural: metadata.ResourcePlural,
-			},
-			override,
-		)
+		// Apply hidden methods if specified
+		if len(metadata.HiddenMethods) > 0 {
+			proxyService = proxyService.WithHiddenMethods(metadata.HiddenMethods...)
+		}
 	} else {
-		// Fallback: auto-generate from service name
-		resourceName := strings.TrimSuffix(name, "-service")
-		resourcePlural := resourceName + "s" // Simple pluralization
-		proxyService = proxy.NewService(
-			remoteBaseURL,
-			autogen.ConversionRule{
-				Convention:     convention.REST,
-				Resource:       resourceName,
-				ResourcePlural: resourcePlural,
-			},
-			autogen.RouteOverride{},
-		)
+		// No metadata - service must have explicit route mappings
+		// Create empty proxy (routes must be added manually)
+		LogInfo("⚠️  Remote service '%s' has no route metadata - proxy created with empty routes", name)
+		proxyService = proxy.NewService(remoteBaseURL, make(map[string]proxy.RouteMapping))
 	}
 
 	// Build config with proxy.Service
@@ -1694,26 +1672,4 @@ func (g *GlobalRegistry) ShutdownServices() {
 		}
 	}
 	fmt.Println("[ShutdownServices] Gracefully shutdown all services.")
-}
-
-// ===== HELPER FUNCTIONS =====
-
-// convertMiddlewareNames converts middleware names to middleware instances
-// Returns []any containing middleware functions resolved from registry
-func convertMiddlewareNames(g *GlobalRegistry, names []string) []any {
-	if len(names) == 0 {
-		return nil
-	}
-
-	middlewares := make([]any, 0, len(names))
-	for _, name := range names {
-		// Get middleware instance from registry
-		if mw, ok := g.GetMiddleware(name); ok {
-			middlewares = append(middlewares, mw)
-		} else {
-			// If middleware not found, add name as string (will be resolved at runtime)
-			middlewares = append(middlewares, name)
-		}
-	}
-	return middlewares
 }

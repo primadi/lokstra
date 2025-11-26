@@ -202,26 +202,15 @@ func RunCurrentServer(timeout time.Duration) error {
 
 		var routers []router.Router
 		for _, routerName := range appTopo.Routers {
-			// Try to get manually registered router first
+			// Get router from registry (must be explicitly registered)
 			r := GetRouter(routerName)
-
-			// If not found, try to build from router definition (auto-generated)
 			if r == nil {
-				autoRouter, err := BuildRouterFromDefinition(routerName)
-				if err != nil {
-					return fmt.Errorf("router '%s' not found in registry and failed to auto-build: %w", routerName, err)
-				}
-				r = autoRouter
-				// Derive service name from router name: "{service-name}-router" -> "{service-name}"
-				serviceName := strings.TrimSuffix(routerName, "-router")
-				log.Printf("✨ Auto-generated router '%s' from service '%s'\n", routerName, serviceName)
+				return fmt.Errorf("router '%s' not found in registry - routers must be explicitly registered via code or annotation", routerName)
 			}
 
-			// Apply overrides from router-definitions (works for both manual and auto-generated routers)
+			// Apply overrides from router-definitions (if exists)
 			routerDef := deploy.Global().GetRouterDef(routerName)
 			if routerDef != nil {
-				// NOTE: PathPrefix is already applied in BuildRouterFromDefinition via override.PathPrefix
-				// No need to apply again here to avoid double prefix
 
 				// Apply path rewrites if specified
 				if len(routerDef.PathRewrites) > 0 {

@@ -1,8 +1,10 @@
-package config
+package config_test
 
 import (
 	"os"
 	"testing"
+
+	"github.com/primadi/lokstra/core/config"
 )
 
 // TestLoadConfigWithCFGResolver tests full config loading with CFG resolver
@@ -23,7 +25,7 @@ configs:
 
 servers:
   - name: "${@CFG:database.host}"
-    baseUrl: "http://${@CFG:database.host}:${@CFG:database.port}"
+    base-url: "http://${@CFG:database.host}:${@CFG:database.port}"
     apps:
       - name: api
         addr: /api
@@ -51,29 +53,29 @@ services:
 	tmpFile.Close()
 
 	// Load config
-	config := &Config{}
-	err = LoadConfigFile(filePath, config)
+	cfg := &config.Config{}
+	err = config.LoadConfigFile(filePath, cfg)
 	if err != nil {
 		t.Fatalf("LoadConfigFile failed: %v", err)
 	}
 
 	// Verify server name expanded correctly
-	if len(config.Servers) != 1 {
-		t.Fatalf("Expected 1 server, got %d", len(config.Servers))
+	if len(cfg.Servers) != 1 {
+		t.Fatalf("Expected 1 server, got %d", len(cfg.Servers))
 	}
 	expectedName := "postgres.example.com"
-	if config.Servers[0].Name != expectedName {
-		t.Errorf("Server name: expected %q, got %q", expectedName, config.Servers[0].Name)
+	if cfg.Servers[0].Name != expectedName {
+		t.Errorf("Server name: expected %q, got %q", expectedName, cfg.Servers[0].Name)
 	}
 
 	// Verify baseUrl expanded correctly
 	expectedBaseUrl := "http://postgres.example.com:5432"
-	if config.Servers[0].BaseUrl != expectedBaseUrl {
-		t.Errorf("Server baseUrl: expected %q, got %q", expectedBaseUrl, config.Servers[0].BaseUrl)
+	if cfg.Servers[0].BaseUrl != expectedBaseUrl {
+		t.Errorf("Server baseUrl: expected %q, got %q", expectedBaseUrl, cfg.Servers[0].BaseUrl)
 	}
 
 	// Verify service config expanded correctly
-	allServices := config.Services.GetAllServices()
+	allServices := cfg.Services.GetAllServices()
 	if len(allServices) != 1 {
 		t.Fatalf("Expected 1 service, got %d", len(allServices))
 	}
@@ -147,22 +149,22 @@ middlewares:
 	filePath := tmpFile.Name()
 	tmpFile.Close()
 
-	config := &Config{}
-	err = LoadConfigFile(filePath, config)
+	cfg := &config.Config{}
+	err = config.LoadConfigFile(filePath, cfg)
 	if err != nil {
 		t.Fatalf("LoadConfigFile failed: %v", err)
 	}
 
 	// Verify ENV variable expanded
-	if config.Servers[0].Name != "production-server" {
-		t.Errorf("Server name: expected %q, got %q", "production-server", config.Servers[0].Name)
+	if cfg.Servers[0].Name != "production-server" {
+		t.Errorf("Server name: expected %q, got %q", "production-server", cfg.Servers[0].Name)
 	}
 
 	// Verify CFG variables expanded in middleware
-	if len(config.Middlewares) != 1 {
-		t.Fatalf("Expected 1 middleware, got %d", len(config.Middlewares))
+	if len(cfg.Middlewares) != 1 {
+		t.Fatalf("Expected 1 middleware, got %d", len(cfg.Middlewares))
 	}
-	mwConfig := config.Middlewares[0].Config
+	mwConfig := cfg.Middlewares[0].Config
 
 	env, ok := mwConfig["environment"].(string)
 	if !ok {
@@ -240,19 +242,19 @@ services:
 	filePath := tmpFile.Name()
 	tmpFile.Close()
 
-	config := &Config{}
-	err = LoadConfigFile(filePath, config)
+	cfg := &config.Config{}
+	err = config.LoadConfigFile(filePath, cfg)
 	if err != nil {
 		t.Fatalf("LoadConfigFile failed: %v", err)
 	}
 
 	// Verify server name
-	if config.Servers[0].Name != "MyApp" {
-		t.Errorf("Server name: expected %q, got %q", "MyApp", config.Servers[0].Name)
+	if cfg.Servers[0].Name != "MyApp" {
+		t.Errorf("Server name: expected %q, got %q", "MyApp", cfg.Servers[0].Name)
 	}
 
 	// Verify nested CFG paths in service config
-	allServices := config.Services.GetAllServices()
+	allServices := cfg.Services.GetAllServices()
 	if len(allServices) != 1 {
 		t.Fatalf("Expected 1 service, got %d", len(allServices))
 	}
@@ -293,7 +295,7 @@ configs:
 
 servers:
   - name: api-server
-    baseUrl: "http://${@CFG:database.host}:${@CFG:database.port:5432}"
+    base-url: "http://${@CFG:database.host}:${@CFG:database.port:5432}"
     apps:
       - name: api
         addr: /
@@ -320,20 +322,20 @@ services:
 	filePath := tmpFile.Name()
 	tmpFile.Close()
 
-	config := &Config{}
-	err = LoadConfigFile(filePath, config)
+	cfg := &config.Config{}
+	err = config.LoadConfigFile(filePath, cfg)
 	if err != nil {
 		t.Fatalf("LoadConfigFile failed: %v", err)
 	}
 
 	// Verify server baseUrl uses default for missing port
 	expectedBaseUrl := "http://postgres.example.com:5432"
-	if config.Servers[0].BaseUrl != expectedBaseUrl {
-		t.Errorf("Server baseUrl: expected %q, got %q", expectedBaseUrl, config.Servers[0].BaseUrl)
+	if cfg.Servers[0].BaseUrl != expectedBaseUrl {
+		t.Errorf("Server baseUrl: expected %q, got %q", expectedBaseUrl, cfg.Servers[0].BaseUrl)
 	}
 
 	// Verify service config
-	allServices := config.Services.GetAllServices()
+	allServices := cfg.Services.GetAllServices()
 	if len(allServices) != 1 {
 		t.Fatalf("Expected 1 service, got %d", len(allServices))
 	}
@@ -378,7 +380,7 @@ func TestLoadConfigWithoutCFGSection(t *testing.T) {
 	configYAML := `
 servers:
   - name: test-server
-    baseUrl: "http://localhost:${TEST_PORT:8080}"
+    base-url: "http://localhost:${TEST_PORT:8080}"
     apps:
       - name: api
         addr: /
@@ -397,15 +399,15 @@ servers:
 	filePath := tmpFile.Name()
 	tmpFile.Close()
 
-	config := &Config{}
-	err = LoadConfigFile(filePath, config)
+	cfg := &config.Config{}
+	err = config.LoadConfigFile(filePath, cfg)
 	if err != nil {
 		t.Fatalf("LoadConfigFile failed: %v", err)
 	}
 
 	// Verify ENV variable expanded
-	if config.Servers[0].BaseUrl != "http://localhost:9090" {
-		t.Errorf("Server baseUrl: expected %q, got %q", "http://localhost:9090", config.Servers[0].BaseUrl)
+	if cfg.Servers[0].BaseUrl != "http://localhost:9090" {
+		t.Errorf("Server baseUrl: expected %q, got %q", "http://localhost:9090", cfg.Servers[0].BaseUrl)
 	}
 }
 
@@ -418,7 +420,7 @@ configs:
 
 servers:
   - name: "${@CFG:database.nonexistent:default-server}"
-    baseUrl: "http://localhost:8080"
+    base-url: "http://localhost:8080"
     apps:
       - name: api
         addr: /
@@ -437,15 +439,15 @@ servers:
 	filePath := tmpFile.Name()
 	tmpFile.Close()
 
-	config := &Config{}
-	err = LoadConfigFile(filePath, config)
+	cfg := &config.Config{}
+	err = config.LoadConfigFile(filePath, cfg)
 	if err != nil {
 		t.Fatalf("LoadConfigFile failed: %v", err)
 	}
 
 	// Invalid CFG key should use default value
-	if config.Servers[0].Name != "default-server" {
-		t.Errorf("Server name: expected %q for invalid CFG key with default, got %q", "default-server", config.Servers[0].Name)
+	if cfg.Servers[0].Name != "default-server" {
+		t.Errorf("Server name: expected %q for invalid CFG key with default, got %q", "default-server", cfg.Servers[0].Name)
 	}
 }
 
@@ -482,17 +484,17 @@ middlewares:
 	filePath := tmpFile.Name()
 	tmpFile.Close()
 
-	config := &Config{}
-	err = LoadConfigFile(filePath, config)
+	cfg := &config.Config{}
+	err = config.LoadConfigFile(filePath, cfg)
 	if err != nil {
 		t.Fatalf("LoadConfigFile failed: %v", err)
 	}
 
-	if len(config.Middlewares) == 0 {
+	if len(cfg.Middlewares) == 0 {
 		t.Fatalf("Expected middleware config")
 	}
 
-	mwConfig := config.Middlewares[0].Config
+	mwConfig := cfg.Middlewares[0].Config
 	if mwConfig == nil {
 		t.Fatalf("Middleware config is nil")
 	}

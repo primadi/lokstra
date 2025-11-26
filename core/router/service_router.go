@@ -5,25 +5,13 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/route"
 )
 
-var (
-	// typeOfContext is used to detect *request.Context parameters
-	// Works with type aliases like: type RequestContext = request.Context
-	typeOfContextPtr = reflect.TypeOf((*request.Context)(nil))
-)
-
-// NewFromService creates a Router by auto-generating routes from service methods using conventions.
-// It uses the default engine and applies convention-based method name parsing.
-//
-// Convention rules:
-//   - Get{Resource} -> GET /{resources}/{id}
-//   - List{Resources} -> GET /{resources}
-//   - Create{Resource} -> POST /{resources}
-//   - Update{Resource} -> PUT /{resources}/{id}
-//   - Delete{Resource} -> DELETE /{resources}/{id}
+// NewFromService creates a Router by registering service methods with explicit route definitions.
+// Each method MUST have a route override in opts.RouteOverrides to be registered.
+// Methods without explicit routes will be skipped.
 //
 // Example:
 //
@@ -31,7 +19,13 @@ var (
 //	func (s *UserService) GetUser(ctx *request.Context, id string) (*User, error) { ... }
 //	func (s *UserService) ListUsers(ctx *request.Context) ([]*User, error) { ... }
 //
-//	router := router.NewFromService(&UserService{}, router.DefaultServiceRouterOptions())
+//	opts := &router.ServiceRouterOptions{
+//	    RouteOverrides: map[string]router.RouteMeta{
+//	        "GetUser":   {HTTPMethod: "GET", Path: "/users/{id}"},
+//	        "ListUsers": {HTTPMethod: "GET", Path: "/users"},
+//	    },
+//	}
+//	router := router.NewFromService(&UserService{}, opts)
 func NewFromService(service any, opts *ServiceRouterOptions) Router {
 	return NewFromServiceWithEngine(service, "default", opts)
 }
@@ -52,20 +46,6 @@ func NewFromServiceWithEngine(service any, engineType string, opts *ServiceRoute
 	// Create router
 	r := NewWithEngine(routerName, engineType)
 
-	// Determine resource names
-	resourceName := opts.ResourceName
-	if resourceName == "" {
-		resourceName = extractResourceNameFromType(structType.Name())
-	}
-
-	pluralResourceName := opts.PluralResourceName
-	if pluralResourceName == "" {
-		pluralResourceName = pluralizeName(resourceName)
-	}
-
-	// Create convention parser
-	parser := NewConventionParser(resourceName, pluralResourceName)
-
 	// Scan all methods and register routes
 	// IMPORTANT: Use the original serviceType (pointer) to get all methods
 	// because methods with pointer receivers are only visible on the pointer type
@@ -78,112 +58,48 @@ func NewFromServiceWithEngine(service any, engineType string, opts *ServiceRoute
 			continue
 		}
 
-		// Check for route override
-		if override, exists := opts.RouteOverrides[method.Name]; exists {
-			handler := createServiceMethodHandler(service, method)
-			path := override.Path
-			httpMethod := override.HTTPMethod
-
-			if path == "" {
-				// Use convention to generate path
-				genMethod, genPath, err := parser.ParseMethodName(method.Name)
-				if err != nil {
-					continue
-				}
-				path = genPath
-				if httpMethod == "" {
-					httpMethod = genMethod
-				}
-			}
-
-			// Apply prefix
-			if opts.Prefix != "" {
-				path = strings.TrimSuffix(opts.Prefix, "/") + "/" + strings.TrimPrefix(path, "/")
-			}
-
-			// Ensure MethodName is set for route naming
-			if override.MethodName == "" {
-				override.MethodName = method.Name
-			}
-
-			// Register route with override meta
-			registerRouteByMethod(r, httpMethod, path, handler, override)
+		// Only process methods with explicit route overrides
+		override, exists := opts.RouteOverrides[method.Name]
+		if !exists {
+			// Skip methods without explicit route definition
 			continue
 		}
 
-		// Parse method name using conventions
-		if opts.DisableConventions {
+		// Path is required
+		if override.Path == "" {
 			continue
-		}
-
-		// Extract action from method name
-		action := parser.extractAction(method.Name)
-		if action == "" {
-			continue
-		}
-
-		// Detect struct parameter with path tags
-		structType := detectStructParameter(method.Type)
-		var path string
-		var httpMethod string
-
-		if structType != nil {
-			// Generate path from struct tags
-			httpMethod = parser.actionToHTTPMethod(action)
-			path = parser.GeneratePathFromStruct(action, structType)
-		} else {
-			// No struct parameter - use default convention (simple case)
-			var err error
-			httpMethod, path, err = parser.ParseMethodName(method.Name)
-			if err != nil {
-				continue
-			}
-		}
-
-		// Apply prefix
-		if opts.Prefix != "" {
-			path = strings.TrimSuffix(opts.Prefix, "/") + "/" + strings.TrimPrefix(path, "/")
 		}
 
 		// Create handler
 		handler := createServiceMethodHandler(service, method)
 
-		// Create basic RouteMeta for convention-based routes
-		meta := RouteMeta{
-			MethodName: method.Name,
+		// Build path (apply prefix first, then resolve variables)
+		path := override.Path
+		if opts.Prefix != "" {
+			path = strings.TrimSuffix(opts.Prefix, "/") + "/" + strings.TrimPrefix(path, "/")
 		}
 
-		// Register route with method name
-		registerRouteByMethod(r, httpMethod, path, handler, meta)
+		// Expand variables in final path at runtime
+		// Resolves ${key} or ${key:default} via lokstra_registry.GetConfig()
+		path = config.SimpleResolver(path)
+
+		// HTTP method is required
+		httpMethod := override.HTTPMethod
+		if httpMethod == "" {
+			// Default to GET if not specified
+			httpMethod = "GET"
+		}
+
+		// Ensure MethodName is set for route naming
+		if override.MethodName == "" {
+			override.MethodName = method.Name
+		}
+
+		// Register route with override meta
+		registerRouteByMethod(r, httpMethod, path, handler, override)
 	}
 
 	return r
-}
-
-// extractResourceNameFromType extracts resource name from service type name
-// Example: "UserService" -> "user", "ProductService" -> "product"
-func extractResourceNameFromType(typeName string) string {
-	// Remove "Service" suffix
-	name := strings.TrimSuffix(typeName, "Service")
-	if name == "" {
-		name = typeName
-	}
-
-	// Convert to lowercase
-	return strings.ToLower(name)
-}
-
-// pluralizeName simple pluralization
-func pluralizeName(name string) string {
-	if strings.HasSuffix(name, "s") || strings.HasSuffix(name, "x") ||
-		strings.HasSuffix(name, "z") || strings.HasSuffix(name, "ch") ||
-		strings.HasSuffix(name, "sh") {
-		return name + "es"
-	}
-	if strings.HasSuffix(name, "y") {
-		return name[:len(name)-1] + "ies"
-	}
-	return name + "s"
 }
 
 // registers a route based on HTTP method with route options
@@ -238,46 +154,4 @@ func createServiceMethodHandler(service any, method reflect.Method) any {
 
 	// Return the method as-is! Router's adaptSmart will detect and adapt it
 	return methodValue.Interface()
-}
-
-// detectStructParameter checks if method has a struct parameter (excluding context)
-// Returns the struct type if found, nil otherwise
-//
-// Uses type comparison to detect *request.Context, which works correctly with type aliases:
-//   - type RequestContext = request.Context
-//   - type MyContext = request.Context
-//
-// Supported signatures:
-//   - func(req *Struct) error
-//   - func(req *Struct) (data, error)
-//   - func(ctx *Context, req *Struct) error
-//   - func(ctx *Context, req *Struct) (data, error)
-func detectStructParameter(methodType reflect.Type) reflect.Type {
-	numIn := methodType.NumIn()
-
-	// Skip receiver (index 0)
-	for i := 1; i < numIn; i++ {
-		paramType := methodType.In(i)
-
-		// Skip *request.Context using type comparison (not name comparison!)
-		// This works with type aliases: type MyContext = request.Context
-		if paramType == typeOfContextPtr {
-			continue
-		}
-
-		// Check if it's a struct pointer (our request struct)
-		if paramType.Kind() == reflect.Pointer {
-			elemType := paramType.Elem()
-			if elemType.Kind() == reflect.Struct {
-				return paramType
-			}
-		}
-
-		// Check for non-pointer struct
-		if paramType.Kind() == reflect.Struct {
-			return paramType
-		}
-	}
-
-	return nil
 }

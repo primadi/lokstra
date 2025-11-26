@@ -1,13 +1,15 @@
-package config
+package config_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/primadi/lokstra/core/config"
 )
 
 func TestValidateServices_SimpleMode_Success(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "db-service",
 				Type: "db",
@@ -26,15 +28,18 @@ func TestValidateServices_SimpleMode_Success(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
 }
 
 func TestValidateServices_SimpleMode_DependencyNotInConfig(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	// NOTE: This test is now expected to PASS
+	// With auto-injection enabled, dependencies don't need to be in config
+	// They will be auto-injected by injectDependencies()
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "db-service",
 				Type: "db",
@@ -44,27 +49,22 @@ func TestValidateServices_SimpleMode_DependencyNotInConfig(t *testing.T) {
 				Type:      "user",
 				DependsOn: []string{"db-service"}, // ← In depends-on
 				Config: map[string]any{
-					// ❌ NOT in config - should error!
+					// Dependencies will be auto-injected, no need in config
 					"password_min_length": 8,
 				},
 			},
 		},
 	}
 
-	err := ValidateServices(services)
-	if err == nil {
-		t.Fatal("Expected error for dependency in depends-on but not used in config")
-	}
-
-	expectedMsg := "dependency 'db-service' in depends-on but not used in config"
-	if !strings.Contains(err.Error(), expectedMsg) {
-		t.Errorf("Expected error message to contain '%s', got: %v", expectedMsg, err)
+	err := config.ValidateServices(services)
+	if err != nil {
+		t.Fatalf("Unexpected error (auto-injection should handle this): %v", err)
 	}
 }
 
 func TestValidateServices_SimpleMode_DependencyNotExists(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name:      "user-service",
 				Type:      "user",
@@ -76,7 +76,7 @@ func TestValidateServices_SimpleMode_DependencyNotExists(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err == nil {
 		t.Fatal("Expected error for non-existent dependency")
 	}
@@ -88,8 +88,11 @@ func TestValidateServices_SimpleMode_DependencyNotExists(t *testing.T) {
 }
 
 func TestValidateServices_SimpleMode_ConfigReferenceNotInDependsOn(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	// NOTE: This validation rule has been REMOVED
+	// With new format (local_key:service-name), we no longer validate config references
+	// This prevents false positives from literal strings matching service names
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "db-service",
 				Type: "db",
@@ -99,26 +102,21 @@ func TestValidateServices_SimpleMode_ConfigReferenceNotInDependsOn(t *testing.T)
 				Type:      "user",
 				DependsOn: []string{}, // ← Empty depends-on
 				Config: map[string]any{
-					"db_service": "db-service", // ❌ References service but not in depends-on
+					"db_service": "db-service", // This is OK now (could be a literal string)
 				},
 			},
 		},
 	}
 
-	err := ValidateServices(services)
-	if err == nil {
-		t.Fatal("Expected error for config reference not in depends-on")
-	}
-
-	expectedMsg := "references service 'db-service' which is not in depends-on"
-	if !strings.Contains(err.Error(), expectedMsg) {
-		t.Errorf("Expected error message to contain '%s', got: %v", expectedMsg, err)
+	err := config.ValidateServices(services)
+	if err != nil {
+		t.Fatalf("Unexpected error (validation rule removed): %v", err)
 	}
 }
 
 func TestValidateServices_SimpleMode_MultipleDependencies(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "db-service",
 				Type: "db",
@@ -139,15 +137,15 @@ func TestValidateServices_SimpleMode_MultipleDependencies(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
 }
 
 func TestValidateServices_LayeredMode_Success(t *testing.T) {
-	services := &ServicesConfig{
-		Layered: map[string][]*Service{
+	services := &config.ServicesConfig{
+		Layered: map[string][]*config.Service{
 			"infrastructure": {
 				{
 					Name: "db-service",
@@ -168,15 +166,15 @@ func TestValidateServices_LayeredMode_Success(t *testing.T) {
 		Order: []string{"infrastructure", "repository"},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
 }
 
 func TestValidateServices_LayeredMode_DependencyNotInConfig(t *testing.T) {
-	services := &ServicesConfig{
-		Layered: map[string][]*Service{
+	services := &config.ServicesConfig{
+		Layered: map[string][]*config.Service{
 			"infrastructure": {
 				{
 					Name: "db-service",
@@ -198,20 +196,15 @@ func TestValidateServices_LayeredMode_DependencyNotInConfig(t *testing.T) {
 		Order: []string{"infrastructure", "repository"},
 	}
 
-	err := ValidateServices(services)
-	if err == nil {
-		t.Fatal("Expected error for dependency in depends-on but not used in config")
-	}
-
-	expectedMsg := "dependency 'db-service' in depends-on but not used in config"
-	if !strings.Contains(err.Error(), expectedMsg) {
-		t.Errorf("Expected error message to contain '%s', got: %v", expectedMsg, err)
+	err := config.ValidateServices(services)
+	if err != nil {
+		t.Fatalf("Unexpected error (auto-injection should handle this): %v", err)
 	}
 }
 
 func TestValidateServices_LayeredMode_DependencyNotExists(t *testing.T) {
-	services := &ServicesConfig{
-		Layered: map[string][]*Service{
+	services := &config.ServicesConfig{
+		Layered: map[string][]*config.Service{
 			"repository": {
 				{
 					Name:      "user-repo",
@@ -226,7 +219,7 @@ func TestValidateServices_LayeredMode_DependencyNotExists(t *testing.T) {
 		Order: []string{"repository"},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err == nil {
 		t.Fatal("Expected error for non-existent dependency")
 	}
@@ -238,8 +231,8 @@ func TestValidateServices_LayeredMode_DependencyNotExists(t *testing.T) {
 }
 
 func TestValidateServices_LayeredMode_ConfigReferenceNotInDependsOn(t *testing.T) {
-	services := &ServicesConfig{
-		Layered: map[string][]*Service{
+	services := &config.ServicesConfig{
+		Layered: map[string][]*config.Service{
 			"infrastructure": {
 				{
 					Name: "db-service",
@@ -260,29 +253,24 @@ func TestValidateServices_LayeredMode_ConfigReferenceNotInDependsOn(t *testing.T
 		Order: []string{"infrastructure", "repository"},
 	}
 
-	err := ValidateServices(services)
-	if err == nil {
-		t.Fatal("Expected error for config reference not in depends-on")
-	}
-
-	expectedMsg := "references service 'db-service' which is not in depends-on"
-	if !strings.Contains(err.Error(), expectedMsg) {
-		t.Errorf("Expected error message to contain '%s', got: %v", expectedMsg, err)
+	err := config.ValidateServices(services)
+	if err != nil {
+		t.Fatalf("Unexpected error (validation rule removed): %v", err)
 	}
 }
 
 func TestValidateServices_EmptyConfig(t *testing.T) {
-	services := &ServicesConfig{}
+	services := &config.ServicesConfig{}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Errorf("Expected no error for empty config, got: %v", err)
 	}
 }
 
 func TestValidateServices_NoDependencies(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "standalone-service",
 				Type: "standalone",
@@ -293,7 +281,7 @@ func TestValidateServices_NoDependencies(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Errorf("Expected no error for service with no dependencies, got: %v", err)
 	}
@@ -301,8 +289,8 @@ func TestValidateServices_NoDependencies(t *testing.T) {
 
 // Test case from auth_service example in the codebase
 func TestValidateServices_AuthServiceExample(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "user-service",
 				Type: "user_service",
@@ -323,7 +311,7 @@ func TestValidateServices_AuthServiceExample(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
+	err := config.ValidateServices(services)
 	if err != nil {
 		t.Errorf("Expected no error for auth service example, got: %v", err)
 	}
@@ -331,8 +319,8 @@ func TestValidateServices_AuthServiceExample(t *testing.T) {
 
 // Test case: depends-on without usage should fail
 func TestValidateServices_AuthServiceExample_MissingInConfig(t *testing.T) {
-	services := &ServicesConfig{
-		Simple: []*Service{
+	services := &config.ServicesConfig{
+		Simple: []*config.Service{
 			{
 				Name: "user-service",
 				Type: "user_service",
@@ -350,13 +338,8 @@ func TestValidateServices_AuthServiceExample_MissingInConfig(t *testing.T) {
 		},
 	}
 
-	err := ValidateServices(services)
-	if err == nil {
-		t.Fatal("Expected error when dependency in depends-on is not used in config")
-	}
-
-	expectedMsg := "dependency 'user-service' in depends-on but not used in config"
-	if !strings.Contains(err.Error(), expectedMsg) {
-		t.Errorf("Expected error message to contain '%s', got: %v", expectedMsg, err)
+	err := config.ValidateServices(services)
+	if err != nil {
+		t.Fatalf("Unexpected error (auto-injection should handle this): %v", err)
 	}
 }

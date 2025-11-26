@@ -1,8 +1,10 @@
-package config
+package config_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/primadi/lokstra/core/config"
 )
 
 func TestValidateConfig(t *testing.T) {
@@ -71,7 +73,7 @@ servers:
 			errorMsg:  "addr",
 		},
 		{
-			name: "invalid baseUrl format",
+			name: "baseUrl can be any string (no format validation)",
 			yamlInput: `
 servers:
   - name: test-server
@@ -79,8 +81,7 @@ servers:
     apps:
       - addr: :8080
 `,
-			wantError: true,
-			errorMsg:  "baseUrl",
+			wantError: false, // baseUrl format is not validated by schema
 		},
 		{
 			name: "service without type (valid - defaults to name)",
@@ -123,7 +124,7 @@ servers:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateYAMLString(tt.yamlInput)
+			err := config.ValidateYAMLString(tt.yamlInput)
 
 			if tt.wantError {
 				if err == nil {
@@ -143,17 +144,17 @@ servers:
 func TestValidateConfigStruct(t *testing.T) {
 	tests := []struct {
 		name      string
-		config    *Config
+		config    *config.Config
 		wantError bool
 	}{
 		{
 			name: "valid config struct",
-			config: &Config{
-				Servers: []*Server{
+			config: &config.Config{
+				Servers: []*config.Server{
 					{
 						Name:    "test-server",
 						BaseUrl: "http://localhost",
-						Apps: []*App{
+						Apps: []*config.App{
 							{
 								Name: "api",
 								Addr: ":8080",
@@ -171,14 +172,14 @@ func TestValidateConfigStruct(t *testing.T) {
 		},
 		{
 			name:      "empty config struct",
-			config:    &Config{},
+			config:    &config.Config{},
 			wantError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateConfig(tt.config)
+			err := config.ValidateConfig(tt.config)
 
 			if tt.wantError && err == nil {
 				t.Errorf("ValidateConfig() expected error but got nil")
