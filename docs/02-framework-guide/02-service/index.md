@@ -10,7 +10,7 @@
 - Advanced dependency injection patterns
 - Service factories and lazy loading internals
 - Remote service communication
-- Service-as-router (auto-generation)
+- Annotation-driven service development
 - Layered service architecture
 - Service composition patterns
 - Performance considerations
@@ -33,13 +33,13 @@ Service-to-service communication:
 - Retry and timeout strategies
 - Circuit breakers
 
-### 3. Auto-Router Deep Dive
-Generate routes from services:
-- Convention rules
-- Method naming patterns
-- Parameter mapping
-- Response handling
-- Custom conventions
+### 3. Annotation-Driven Development
+Build services with annotations:
+- `@RouterService` for service definition
+- `@Route` for explicit route mapping
+- `@Inject` for dependency injection
+- Variable support in routes and prefixes
+- Per-route middleware configuration
 
 ### 4. Service Composition
 Build complex services:
@@ -88,22 +88,19 @@ Custom service initialization patterns.
 ### [02 - Remote Services](examples/02-remote-services/)
 HTTP-based service communication.
 
-### [03 - Auto-Router Advanced](examples/03-auto-router-advanced/)
-Complex auto-router scenarios.
-
-### [04 - Service Composition](examples/04-service-composition/)
+### [03 - Service Composition](examples/04-service-composition/)
 Layered and composed services.
 
-### [05 - Service Architecture](examples/05-service-architecture/)
+### [04 - Service Architecture](examples/05-service-architecture/)
 DDD and clean architecture patterns.
 
-### [06 - Testing](examples/06-testing/)
+### [05 - Testing](examples/06-testing/)
 Mock and integration testing.
 
-### [07 - Performance](examples/07-performance/)
+### [06 - Performance](examples/07-performance/)
 Benchmarks and optimization.
 
-### [08 - Migration Pattern](examples/08-migration-pattern/)
+### [07 - Migration Pattern](examples/08-migration-pattern/)
 Monolith to microservices.
 
 ---
@@ -133,7 +130,7 @@ Before diving in, make sure you understand:
 
 1. **Master DI patterns** → Understand service lifecycle
 2. **Learn remote services** → Enable microservices
-3. **Explore auto-router** → Reduce boilerplate
+3. **Use annotations** → Explicit route definitions
 4. **Study composition** → Build complex services
 5. **Design architecture** → Scale your application
 6. **Test effectively** → Ensure quality
@@ -147,7 +144,7 @@ Before diving in, make sure you understand:
 After completing this section:
 - ✅ You'll design scalable service architectures
 - ✅ You'll build services that work locally and remotely
-- ✅ You'll use auto-router effectively
+- ✅ You'll use annotations effectively for explicit routes
 - ✅ You'll compose complex services
 - ✅ You'll test services thoroughly
 - ✅ You'll optimize service access

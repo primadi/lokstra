@@ -37,7 +37,7 @@ app.Run(30 * time.Second)
 ---
 
 ### �️ Track 2: As a Business Application Framework (Like NestJS, Spring Boot)
-**Enterprise features with DI, auto-router, and configuration-driven deployment**
+**Enterprise features with DI, annotations, and configuration-driven deployment**
 
 Use Lokstra as a complete framework for:
 - Enterprise applications
@@ -79,7 +79,7 @@ func handler() {
     users := userService.MustGet().GetAll()
 }
 
-// Auto-router generates REST endpoints from service methods!
+// Annotations generate REST endpoints from service methods!
 ```
 
 **Compare with:** NestJS, Spring Boot, Uber Fx, Buffalo  
@@ -92,7 +92,7 @@ func handler() {
 **Start simple, scale when needed:**
 1. Start with routing (Track 1) for quick results
 2. Add services and DI when complexity grows (Track 2)
-3. Enable auto-router to reduce boilerplate
+3. Enable annotations for explicit routes
 4. Switch deployment topology without code changes
 
 **Lokstra grows with your needs!**
@@ -495,7 +495,7 @@ Choose your learning path:
 #### Track 2: Full Framework  
 **For: Enterprise apps, microservices, DI architecture**
 1. [Examples - Framework Track](examples/full-framework/) - Hands-on learning (8-12 hours)
-2. [Framework Guide](../02-framework-guide/) - Services, DI, auto-router
+2. [Framework Guide](../02-framework-guide/) - Services, DI, annotations
 3. [Configuration Reference](../03-api-reference/03-configuration/) - YAML schema
 
 ### Not Sure Which Track?
@@ -550,12 +550,12 @@ We provide **two example tracks** based on how you want to use Lokstra:
 ⏱️ **8-12 hours total** • For enterprise apps
 
 - [01: CRUD with Services](examples/full-framework/01-crud-api/) - Service layer, DI (1 hour)
-- [02: Multi-Deployment YAML](examples/full-framework/02-multi-deployment-yaml/) - Auto-router, microservices (2-3 hours)
+- [02: Multi-Deployment YAML](examples/full-framework/02-multi-deployment-yaml/) - Annotations, microservices (2-3 hours)
 - [03: Multi-Deployment Code](examples/full-framework/03-multi-deployment-pure-code/) - Type-safe config (30 min)
 - [04: External Services](examples/full-framework/04-external-services/) - proxy.Service patterns (1-2 hours)
 - [05: Remote Router](examples/full-framework/05-remote-router/) - Quick HTTP integration (30 min)
 
-**What you'll build:** Enterprise apps with DI, auto-router, and microservices
+**What you'll build:** Enterprise apps with DI, annotations, and microservices
 
 👉 **[Start Framework Examples](examples/full-framework/)**
 
@@ -567,7 +567,7 @@ We provide **two example tracks** based on how you want to use Lokstra:
 |---|---|---|
 | **Time** | 2-3 hours | 8-12 hours |
 | **Use Case** | Quick APIs, prototypes | Enterprise, microservices |
-| **Features** | Routing, middleware | + DI, auto-router, config |
+| **Features** | Routing, middleware | + DI, annotations, config |
 | **Compare With** | Echo, Gin, Chi | NestJS, Spring Boot |
 
 **Not sure?** Start with Router Track (it's compatible with Framework features!)

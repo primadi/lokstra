@@ -889,12 +889,38 @@ go run . --generate-only
 **@RouterService Parameters:**
 - `name`: Service name (required)
 - `prefix`: URL prefix (optional, default: "/")
+  - **Supports variables**: `prefix="${api-prefix}"` resolves from config
 - `middlewares`: Middleware list (optional)
 
 **@Route Parameters:**
 - HTTP method + path pattern
 - Supports path parameters: `{id}`, `{userId}`, etc.
+- **Supports variables in path**: `"GET ${api-version}/users/{id}"` resolves from config
 - Optional `middlewares` parameter for per-route middleware: `middlewares=["mw1", "mw2"]`
+
+**Variable Resolution:**
+Variables in `${key}` or `${key:default}` format are resolved from config registry:
+
+```yaml
+# config.yaml
+configs:
+  - name: api-prefix
+    value: /api/v1  # Can also use ${ENV_VAR:default}
+  - name: api-version
+    value: v2
+```
+
+```go
+// Usage in annotations
+// @RouterService name="user-service", prefix="${api-prefix}"
+// Resolves to: prefix="/api/v1"
+
+// @Route "GET ${api-version}/users/{id}"
+// Resolves to: "GET v2/users/{id}"
+
+// @Route "POST /${api-version:v1}/users"
+// With default: if api-version not in config, uses "v1"
+```
 
 **Example with per-route middleware:**
 ```go
