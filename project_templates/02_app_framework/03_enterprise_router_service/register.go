@@ -18,6 +18,13 @@ func registerServiceTypes() {
 	order.Register()
 }
 
+func registerRouters() {
+	// Register manual routers (not generated from @RouterService)
+	healthRouter := NewHealthRouter()
+	lokstra_registry.RegisterRouter("health-router", healthRouter)
+	log.Println("✅ Registered manual router: health-router")
+}
+
 func registerMiddlewareTypes() {
 	// Register recovery middleware (built-in)
 	recovery.Register()

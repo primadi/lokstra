@@ -230,7 +230,13 @@ func deleteAllCacheFiles(scanPath []string) error {
 func relaunchWithGoRun() {
 	fmt.Println("[Lokstra] Relaunching with go run...")
 
-	cmd := exec.Command("go", "run", ".")
+	// Build command args: "go run ." + original program args (skip os.Args[0])
+	args := []string{"run", "."}
+	if len(os.Args) > 1 {
+		args = append(args, os.Args[1:]...)
+	}
+
+	cmd := exec.Command("go", args...)
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=1", childEnvKey))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

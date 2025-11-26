@@ -8,6 +8,22 @@
 @contentType = application/json
 
 ################################################################################
+# HEALTH CHECK - Manual Router Example
+################################################################################
+
+### Health check - User Server
+GET {{baseUrl}}/health
+
+### Readiness check - User Server
+GET {{baseUrl}}/ready
+
+### Health check - Order Server
+GET {{baseUrl2}}/health
+
+### Readiness check - Order Server
+GET {{baseUrl2}}/ready
+
+################################################################################
 # USER MODULE - User Management Operations
 ################################################################################
 
