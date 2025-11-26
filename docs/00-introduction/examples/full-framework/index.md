@@ -22,7 +22,7 @@ This track covers the **complete Lokstra framework** with dependency injection, 
 - ✅ External service integration
 - ✅ Production-ready patterns
 
-**Full enterprise features** - Annotations, DI, auto-router, multi-deployment!
+**Full enterprise features** - Annotations, DI, explicit routes, multi-deployment!
 
 ---
 
@@ -108,7 +108,7 @@ go run . -server=microservices.user-server
 
 **What you'll learn:**
 - YAML-based configuration
-- Auto-router generation from services
+- Annotation-driven development with @RouterService
 - Service interfaces (local vs remote)
 - Proxy pattern for remote calls
 - Monolith vs microservices topology
@@ -251,7 +251,7 @@ Example 01:  Service Architecture
     → Services, DI, factory pattern
 
 Example 02:  YAML Configuration
-    → Auto-router, multi-deployment, YAML config
+    → Annotations, multi-deployment, YAML config
 
 Example 03:  Code Configuration
     → Pure code config, type safety
@@ -279,7 +279,7 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 - Apply multi-deployment patterns
 - Integrate external services
 - Build microservices architectures
-- Use auto-router for rapid development
+- Use annotations for explicit routes
 
 ---
 
@@ -288,7 +288,7 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 **Perfect for:**
 - ✅ Enterprise applications
 - ✅ Microservices architectures
-- ✅ Teams wanting DI and auto-router
+- ✅ Teams wanting DI and annotation-driven development
 - ✅ Configuration-driven deployment
 - ✅ Scalable, maintainable codebases
 - ✅ Rapid development with annotations
@@ -313,7 +313,7 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 
 **Lokstra advantages:**
 - ✅ Type-safe generics (no `any`)
-- ✅ Auto-router from service methods
+- ✅ Annotation-driven routes with @RouterService
 - ✅ Zero-code deployment topology changes
 - ✅ Code or YAML configuration (your choice)
 - ✅ **Annotation-driven development (Example 01)** - Like NestJS decorators, but with Go code generation

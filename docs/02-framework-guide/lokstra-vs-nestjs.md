@@ -168,22 +168,37 @@ export class AppModule {}
 ### Lokstra: Convention-based from Service Methods
 
 ```go
-// Service method signatures determine routes
-func (s *UserService) GetAll(p *GetAllParams) ([]User, error)     // GET /users
-func (s *UserService) GetByID(p *GetByIDParams) (*User, error)    // GET /users/{id}
-func (s *UserService) Create(p *CreateParams) (*User, error)      // POST /users
-func (s *UserService) Update(p *UpdateParams) (*User, error)      // PUT /users/{id}
-func (s *UserService) Delete(p *DeleteParams) error              // DELETE /users/{id}
+// Lokstra - Annotation-driven routes (explicit)
+// @RouterService name="user-service", prefix="/api/users"
+type UserService struct {
+    // @Inject "user-repository"
+    UserRepo UserRepository
+}
 
-// Auto-router generation
-router := lokstra_registry.NewRouterFromServiceType("user-service-factory")
+// @Route "GET /"
+func (s *UserService) GetAll(p *GetAllParams) ([]User, error) { ... }
+
+// @Route "GET /{id}"
+func (s *UserService) GetByID(p *GetByIDParams) (*User, error) { ... }
+
+// @Route "POST /"
+func (s *UserService) Create(p *CreateParams) (*User, error) { ... }
+
+// @Route "PUT /{id}"
+func (s *UserService) Update(p *UpdateParams) (*User, error) { ... }
+
+// @Route "DELETE /{id}"
+func (s *UserService) Delete(p *DeleteParams) error { ... }
+
+// Code generation via lokstra.Bootstrap() or `lokstra autogen .`
 ```
 
 **Lokstra Approach:**
-- ✅ **Zero boilerplate**: No controller layer needed
-- ✅ **Convention over configuration**: Method names → HTTP routes
+- ✅ **Explicit routes**: Every route defined with `@Route` annotation
 - ✅ **Type-safe parameters**: Struct-based parameter binding
-- ✅ **Flexible**: Can override routes if needed
+- ✅ **Auto-generation**: Code generated from annotations
+- ✅ **Flexible**: Can add middleware per-route
+- ✅ **Variable support**: Routes can use `${config-vars}`
 
 ### NestJS: Decorator-driven Routes
 
@@ -374,7 +389,7 @@ describe('UserService', () => {
 - ✅ **Type safety**: Prefer compile-time safety over runtime flexibility  
 - ✅ **Simple deployment**: Want single binary deployment
 - ✅ **Go ecosystem**: Team familiar with Go
-- ✅ **Zero boilerplate**: Want auto-router without controller layer
+- ✅ **Zero boilerplate**: Want annotation-driven routes without controller layer
 
 ### Choose NestJS When:
 - ✅ **Rich ecosystem**: Need extensive package ecosystem
@@ -395,7 +410,7 @@ describe('UserService', () => {
 | **Ecosystem** | Growing Go ecosystem | Mature Node.js ecosystem | 🏆 NestJS |
 | **Learning Curve** | Simple, less magic | More concepts, more magic | 🏆 Lokstra |
 | **Deployment** | Zero-code topology change | Requires code changes | 🏆 Lokstra |
-| **Development Speed** | Good with auto-router | Very fast with decorators | 🏆 NestJS |
+| **Development Speed** | Fast with annotations | Very fast with decorators | 🤝 Tie |
 | **Enterprise Features** | Service-oriented, DI, config | Modules, guards, pipes, interceptors | 🤝 Tie |
 | **Community** | Growing | Very mature | 🏆 NestJS |
 

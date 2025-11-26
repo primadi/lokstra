@@ -170,25 +170,35 @@ deployments:
 
 ---
 
-### 🚦 3. [Auto Router Generation](./01-router/)
-Generate REST APIs automatically from service method signatures.
+### 🚦 3. [Annotation-Driven Development](./02-service/)
+Build REST APIs with explicit annotations.
 
 **What you'll learn:**
-- ✅ Convention-based routing from method names
-- ✅ Parameter binding and validation
-- ✅ Route customization and overrides
-- ✅ Middleware integration
+- ✅ `@RouterService` for service definition
+- ✅ `@Route` for explicit route mapping
+- ✅ `@Inject` for dependency injection
+- ✅ Variable support in routes (`${config-vars}`)
+- ✅ Per-route middleware configuration
 
 **Key concepts:**
 ```go
-// Method signature determines HTTP route
-func (s *UserService) GetAll(p *GetAllParams) ([]User, error)     // GET /users
-func (s *UserService) GetByID(p *GetByIDParams) (*User, error)    // GET /users/{id}
-func (s *UserService) Create(p *CreateParams) (*User, error)      // POST /users
+// Explicit route definitions with annotations
+// @RouterService name="user-service", prefix="/api/users"
+type UserService struct {
+    // @Inject "user-repository"
+    UserRepo UserRepository
+}
 
-// Register with auto-router
-lokstra_registry.RegisterServiceType("user-service-factory", NewUserService, nil,
-    deploy.WithResource("user", "users"))
+// @Route "GET /"
+func (s *UserService) GetAll(p *GetAllParams) ([]User, error) { ... }
+
+// @Route "GET /{id}"
+func (s *UserService) GetByID(p *GetByIDParams) (*User, error) { ... }
+
+// @Route "POST /", middlewares=["auth"]
+func (s *UserService) Create(p *CreateParams) (*User, error) { ... }
+
+// Generate code: lokstra autogen . or use lokstra.Bootstrap()
 ```
 
 ---
@@ -226,7 +236,7 @@ Deploy and manage your application across different environments.
 ### vs Other Go DI Frameworks
 - ✅ **Zero reflection overhead** - uses generics, not `any`
 - ✅ **Lazy by default** - memory efficient, fast startup
-- ✅ **Auto-generated routers** - no controller boilerplate
+- ✅ **Annotation-driven** - explicit routes with code generation
 - ✅ **Configuration flexibility** - works with or without YAML
 
 ### vs Traditional Frameworks (NestJS/Spring)
@@ -255,7 +265,7 @@ If you just need simple routing, consider **[Router Track](../01-router-guide/)*
 
 1. **[Start with Service Management](./02-service/)** - Core framework concepts
 2. **[Learn Configuration](./04-configuration/)** - YAML-driven setup
-3. **[Explore Auto Routers](./01-router/)** - Generate REST APIs
+3. **[Use Annotations](./02-service/)** - Explicit route definitions
 4. **[Add Middleware](./03-middleware/)** - Cross-cutting concerns
 5. **[Deploy Applications](./05-app-and-server/)** - Production patterns
 

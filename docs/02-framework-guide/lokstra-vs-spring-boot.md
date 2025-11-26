@@ -217,35 +217,42 @@ public class AppConfig {
 ```go
 // Service method signatures determine routes
 func (s *UserService) GetAll(p *GetAllParams) ([]User, error)       // GET /users
-func (s *UserService) GetByID(p *GetByIDParams) (*User, error)      // GET /users/{id}
-func (s *UserService) Create(p *CreateParams) (*User, error)        // POST /users
-func (s *UserService) Update(p *UpdateParams) (*User, error)        // PUT /users/{id}
-func (s *UserService) Delete(p *DeleteParams) error                // DELETE /users/{id}
+// Lokstra - Annotation-driven routes (explicit)
+// @RouterService name="user-service", prefix="/api/users"
+type UserService struct {
+    // @Inject "user-repository"
+    UserRepo UserRepository
+}
 
-// Advanced routing with custom names
-func (s *UserService) SearchUsers(p *SearchParams) ([]User, error)  // GET /users/search
-func (s *UserService) GetUserOrders(p *GetUserOrdersParams) ([]Order, error) // GET /users/{id}/orders
+// @Route "GET /"
+func (s *UserService) GetAll(p *GetAllParams) ([]User, error) { ... }
 
-// Auto-router registration
-lokstra_registry.RegisterServiceType("user-service-factory", NewUserService, nil,
-    deploy.WithResource("user", "users"),
-    deploy.WithConvention("rest"))
+// @Route "GET /{id}"
+func (s *UserService) GetByID(p *GetByIDParams) (*User, error) { ... }
 
-// Generated routes with parameter binding:
-// GET    /users              → GetAll()
-// GET    /users/{id}         → GetByID()  
-// POST   /users              → Create()
-// PUT    /users/{id}         → Update()
-// DELETE /users/{id}         → Delete()
-// GET    /users/search       → SearchUsers()
-// GET    /users/{id}/orders  → GetUserOrders()
+// @Route "POST /"
+func (s *UserService) Create(p *CreateParams) (*User, error) { ... }
+
+// @Route "PUT /{id}"
+func (s *UserService) Update(p *UpdateParams) (*User, error) { ... }
+
+// @Route "DELETE /{id}"
+func (s *UserService) Delete(p *DeleteParams) error { ... }
+
+// @Route "GET /search"
+func (s *UserService) SearchUsers(p *SearchParams) ([]User, error) { ... }
+
+// @Route "GET /{id}/orders"
+func (s *UserService) GetUserOrders(p *GetUserOrdersParams) ([]Order, error) { ... }
+
+// Code generation via lokstra.Bootstrap() or `lokstra autogen .`
 ```
 
 **Lokstra Approach:**
-- ✅ **Zero boilerplate**: No controller layer needed
-- ✅ **Convention over configuration**: Method names → HTTP routes
+- ✅ **Explicit routes**: Every route defined with `@Route` annotation
 - ✅ **Type-safe parameters**: Struct-based parameter binding with validation
-- ✅ **Flexible**: Can override routes via YAML if needed
+- ✅ **Auto-generation**: Code generated from annotations
+- ✅ **Flexible**: Per-route middleware and variable support
 
 ### Spring Boot: Annotation-driven Routes
 
@@ -699,7 +706,7 @@ public class UserService {
 | **Ecosystem** | Growing | Very mature | 🏆 Spring Boot |
 | **Learning Curve** | Moderate | Steep | 🏆 Lokstra |
 | **Deployment Flexibility** | Topology changes without code | Profile/build changes needed | 🏆 Lokstra |
-| **Development Speed** | Fast (auto-router) | Fast (mature tooling) | 🤝 Tie |
+| **Development Speed** | Fast (annotations) | Fast (mature tooling) | 🤝 Tie |
 | **Enterprise Features** | Growing | Comprehensive | 🏆 Spring Boot |
 | **Type Safety** | Compile-time | Runtime (reflection) | 🏆 Lokstra |
 | **Community** | Growing | Very large | 🏆 Spring Boot |
@@ -762,7 +769,7 @@ func (s *UserService) Create(p *CreateParams) (*User, error) {
     return s.userRepo.Save(user)
 }
 
-// Register with auto-router
+// Register service type
 lokstra_registry.RegisterServiceType("user-service-factory", NewUserService, nil,
     deploy.WithResource("user", "users"))
 ```
@@ -821,7 +828,7 @@ type OrderService struct {
 func (s *OrderService) GetAll(p *GetAllParams) ([]Order, error) { /* ... */ }
 func (s *OrderService) Create(p *CreateParams) (*Order, error) { /* ... */ }
 
-// Registration + Auto-router
+// Service Registration
 lokstra_registry.RegisterServiceType("product-service", NewProductService, nil,
     deploy.WithResource("product", "products"))
 lokstra_registry.RegisterServiceType("order-service", NewOrderService, nil, 

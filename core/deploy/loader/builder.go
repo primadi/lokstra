@@ -2,6 +2,7 @@ package loader
 
 import (
 	"fmt"
+	"log"
 	"maps"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
+	"github.com/primadi/lokstra/core/router"
 )
 
 // flattenConfigs flattens nested config maps using dot notation
@@ -760,6 +762,70 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			continue
 		}
 		registry.DefineRouter(routerName, routerDef)
+	}
+
+	// Auto-create and register router instances from published services
+	// This creates actual router instances from services that have router metadata
+	for serviceName := range publishedServicesMap {
+		routerName := serviceName + "-router"
+
+		// Check if router instance already registered (manual override)
+		if registry.GetRouter(routerName) != nil {
+			continue
+		}
+
+		// Get service definition to find its type
+		serviceDef, exists := config.ServiceDefinitions[serviceName]
+		if !exists {
+			continue
+		}
+
+		// Get service type metadata (has router config from @RouterService annotation)
+		metadata := registry.GetServiceMetadata(serviceDef.Type)
+		if metadata == nil {
+			// Skip services without metadata
+			continue
+		}
+
+		// Check if metadata has router configuration
+		hasRouterConfig := metadata.Resource != "" ||
+			len(metadata.RouteOverrides) > 0 ||
+			metadata.PathPrefix != ""
+
+		if !hasRouterConfig {
+			// Skip services without router configuration
+			continue
+		}
+
+		// Get service instance
+		serviceInstance, ok := registry.GetServiceAny(serviceName)
+		if !ok || serviceInstance == nil {
+			// Service not yet instantiated - this shouldn't happen but handle gracefully
+			log.Printf("⚠️  Warning: Service '%s' not instantiated, skipping router creation", serviceName)
+			continue
+		}
+
+		// Build ServiceRouterOptions from metadata
+		opts := &router.ServiceRouterOptions{
+			Prefix:         metadata.PathPrefix,
+			Middlewares:    metadata.MiddlewareNames,
+			RouteOverrides: make(map[string]router.RouteMeta),
+		}
+
+		// Convert metadata.RouteOverrides to router.RouteMeta
+		for methodName, routeMeta := range metadata.RouteOverrides {
+			opts.RouteOverrides[methodName] = router.RouteMeta{
+				HTTPMethod: routeMeta.Method,
+				Path:       routeMeta.Path,
+			}
+		}
+
+		// Create router from service
+		r := router.NewFromService(serviceInstance, opts)
+
+		// Register router instance
+		registry.RegisterRouter(routerName, r)
+		log.Printf("🔧 Auto-created router '%s' from service '%s' (type: %s)", routerName, serviceName, serviceDef.Type)
 	}
 
 	return nil

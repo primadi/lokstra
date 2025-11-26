@@ -37,11 +37,15 @@ func main() {
 	// Service factories can now access config via lokstra_registry.GetConfig()
 	registerServiceTypes()
 
-	// ===== STEP 3: Register Middleware Types =====
+	// ===== STEP 3: Register Manual Routers =====
+	// Register routers that are not generated from @RouterService annotations
+	registerRouters()
+
+	// ===== STEP 4: Register Middleware Types =====
 	// Middleware factories can also access config if needed
 	registerMiddlewareTypes()
 
-	// ===== STEP 4: Initialize and Run Server =====
+	// ===== STEP 5: Initialize and Run Server =====
 	// This will:
 	// - Select server based on config (or auto-select first server)
 	// - Read shutdown timeout from config

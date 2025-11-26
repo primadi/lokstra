@@ -132,14 +132,34 @@ func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
     return s.UserRepo.GetByID(p.ID)
 }
 
-// @Route "POST /"
+// @Route "POST /", middlewares=["auth"]
 func (s *UserService) Create(p *CreateUserParams) (*User, error) {
     u := &User{Name: p.Name, Email: p.Email}
     return s.UserRepo.Create(u)
 }
 
+// @Route "DELETE /{id}", middlewares=["auth", "admin"]
+func (s *UserService) Delete(p *DeleteUserParams) error {
+    return s.UserRepo.Delete(p.ID)
+}
+
 // Generate code
 // lokstra autogen .
+```
+
+**Annotation with Variables** (resolves from config.yaml):
+```go
+// @RouterService name="user-service", prefix="${api-prefix}"
+// @Route "GET ${api-version}/users/{id}"
+```
+
+```yaml
+# config.yaml
+configs:
+  - name: api-prefix
+    value: /api/v1
+  - name: api-version
+    value: v2
 ```
 
 ### Manual Service Factory (Advanced)

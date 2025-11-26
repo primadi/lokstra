@@ -9,14 +9,17 @@ deployments:
       api-server:
         base-url: "http://localhost"
         addr: ":3000"
+        routers: [ health-router ]
         published-services: [ user-service, order-service ]
   microservice:
     servers:
       user-server:
         base-url: "http://localhost"
         addr: ":4000"
+        routers: [ health-router ]
         published-services: [ user-service ]
       order-server:
         base-url: "http://localhost"
         addr: ":5000"
+        routers: [ health-router ]
         published-services: [ order-service ]
