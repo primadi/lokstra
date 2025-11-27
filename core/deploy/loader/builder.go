@@ -13,6 +13,39 @@ import (
 	"github.com/primadi/lokstra/core/router"
 )
 
+// Case-insensitive map lookup helpers
+// Try lowercase first, then fallback to original case for backward compatibility
+
+func getServiceDef(defs map[string]*schema.ServiceDef, name string) (*schema.ServiceDef, bool) {
+	// Try lowercase first
+	if svc, ok := defs[strings.ToLower(name)]; ok {
+		return svc, true
+	}
+	// Fallback to original case
+	svc, ok := defs[name]
+	return svc, ok
+}
+
+func getMiddlewareDef(defs map[string]*schema.MiddlewareDef, name string) (*schema.MiddlewareDef, bool) {
+	// Try lowercase first
+	if mw, ok := defs[strings.ToLower(name)]; ok {
+		return mw, true
+	}
+	// Fallback to original case
+	mw, ok := defs[name]
+	return mw, ok
+}
+
+func getRouterDef(defs map[string]*schema.RouterDef, name string) (*schema.RouterDef, bool) {
+	// Try lowercase first
+	if rtr, ok := defs[strings.ToLower(name)]; ok {
+		return rtr, true
+	}
+	// Fallback to original case
+	rtr, ok := defs[name]
+	return rtr, ok
+}
+
 // flattenConfigs flattens nested config maps using dot notation
 // Example: {"db": {"host": "localhost"}} => {"db.host": "localhost"}
 // func flattenConfigs(configs map[string]any) map[string]any {
@@ -137,14 +170,26 @@ func NormalizeInlineDefinitionsForServer(
 	config *schema.DeployConfig,
 	deploymentName, serverName string,
 ) error {
-	depDef, ok := config.Deployments[deploymentName]
+	// Case-insensitive lookup: try lowercase version first
+	lowerDeploymentName := strings.ToLower(deploymentName)
+	depDef, ok := config.Deployments[lowerDeploymentName]
 	if !ok {
-		return fmt.Errorf("deployment %s not found", deploymentName)
+		// Fallback to original case for backward compatibility
+		depDef, ok = config.Deployments[deploymentName]
+		if !ok {
+			return fmt.Errorf("deployment %s not found", deploymentName)
+		}
 	}
 
-	serverDef, ok := depDef.Servers[serverName]
+	// Case-insensitive server lookup
+	lowerServerName := strings.ToLower(serverName)
+	serverDef, ok := depDef.Servers[lowerServerName]
 	if !ok {
-		return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
+		// Fallback to original case for backward compatibility
+		serverDef, ok = depDef.Servers[serverName]
+		if !ok {
+			return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
+		}
 	}
 
 	// Initialize global maps if nil
@@ -162,46 +207,46 @@ func NormalizeInlineDefinitionsForServer(
 	}
 
 	// Process deployment-level inline definitions
-	// Move to global with normalized names
+	// Move to global with normalized names (lowercase for case-insensitive lookup)
 	for name, mwDef := range depDef.InlineMiddlewares {
-		normalizedName := deploymentName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + name)
 		config.MiddlewareDefinitions[normalizedName] = mwDef
 	}
 
 	for name, svcDef := range depDef.InlineServices {
-		normalizedName := deploymentName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + name)
 		config.ServiceDefinitions[normalizedName] = svcDef
 	}
 
 	for name, rtrDef := range depDef.InlineRouters {
-		normalizedName := deploymentName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + name)
 		config.RouterDefinitions[normalizedName] = rtrDef
 	}
 
 	for name, extDef := range depDef.InlineExternalServices {
-		normalizedName := deploymentName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + name)
 		config.ExternalServiceDefinitions[normalizedName] = extDef
 	}
 
 	// Process server-level inline definitions
-	// Move to global with normalized names (server-level overrides deployment-level if same name)
+	// Move to global with normalized names (lowercase, server-level overrides deployment-level if same name)
 	for name, mwDef := range serverDef.InlineMiddlewares {
-		normalizedName := deploymentName + "." + serverName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + serverName + "." + name)
 		config.MiddlewareDefinitions[normalizedName] = mwDef
 	}
 
 	for name, svcDef := range serverDef.InlineServices {
-		normalizedName := deploymentName + "." + serverName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + serverName + "." + name)
 		config.ServiceDefinitions[normalizedName] = svcDef
 	}
 
 	for name, rtrDef := range serverDef.InlineRouters {
-		normalizedName := deploymentName + "." + serverName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + serverName + "." + name)
 		config.RouterDefinitions[normalizedName] = rtrDef
 	}
 
 	for name, extDef := range serverDef.InlineExternalServices {
-		normalizedName := deploymentName + "." + serverName + "." + name
+		normalizedName := strings.ToLower(deploymentName + "." + serverName + "." + name)
 		config.ExternalServiceDefinitions[normalizedName] = extDef
 	}
 
@@ -209,32 +254,32 @@ func NormalizeInlineDefinitionsForServer(
 	// Maps short names to normalized names for this deployment+server context
 	renamings := make(map[string]string)
 
-	// Add deployment-level renamings
+	// Add deployment-level renamings (lowercase)
 	for name := range depDef.InlineMiddlewares {
-		renamings[name] = deploymentName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + name)
 	}
 	for name := range depDef.InlineServices {
-		renamings[name] = deploymentName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + name)
 	}
 	for name := range depDef.InlineRouters {
-		renamings[name] = deploymentName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + name)
 	}
 	for name := range depDef.InlineExternalServices {
-		renamings[name] = deploymentName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + name)
 	}
 
-	// Add server-level renamings (these override deployment-level if same name)
+	// Add server-level renamings (these override deployment-level if same name, lowercase)
 	for name := range serverDef.InlineMiddlewares {
-		renamings[name] = deploymentName + "." + serverName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + serverName + "." + name)
 	}
 	for name := range serverDef.InlineServices {
-		renamings[name] = deploymentName + "." + serverName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + serverName + "." + name)
 	}
 	for name := range serverDef.InlineRouters {
-		renamings[name] = deploymentName + "." + serverName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + serverName + "." + name)
 	}
 	for name := range serverDef.InlineExternalServices {
-		renamings[name] = deploymentName + "." + serverName + "." + name
+		renamings[name] = strings.ToLower(deploymentName + "." + serverName + "." + name)
 	}
 
 	// Clear inline definitions (they're now in global)
@@ -464,8 +509,8 @@ func collectAllServiceDependencies(config *schema.DeployConfig, publishedService
 		}
 		visited[serviceName] = true
 
-		// Get service definition
-		svc, exists := config.ServiceDefinitions[serviceName]
+		// Get service definition (case-insensitive)
+		svc, exists := getServiceDef(config.ServiceDefinitions, serviceName)
 		if !exists {
 			return
 		}
@@ -497,15 +542,26 @@ func collectAllServiceDependencies(config *schema.DeployConfig, publishedService
 // This is called in RunCurrentServer AFTER normalization
 // It registers middlewares, services (with remote/local logic), and auto-generates routers for published services
 func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *schema.DeployConfig, deploymentName, serverName string, serverTopo *deploy.ServerTopology) error {
-	// Get the current server's apps to know which services are published
-	depDef, ok := config.Deployments[deploymentName]
+	// Case-insensitive lookup: try lowercase version first
+	lowerDeploymentName := strings.ToLower(deploymentName)
+	depDef, ok := config.Deployments[lowerDeploymentName]
 	if !ok {
-		return fmt.Errorf("deployment %s not found", deploymentName)
+		// Fallback to original case for backward compatibility
+		depDef, ok = config.Deployments[deploymentName]
+		if !ok {
+			return fmt.Errorf("deployment %s not found", deploymentName)
+		}
 	}
 
-	serverDef, ok := depDef.Servers[serverName]
+	// Case-insensitive server lookup
+	lowerServerName := strings.ToLower(serverName)
+	serverDef, ok := depDef.Servers[lowerServerName]
 	if !ok {
-		return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
+		// Fallback to original case for backward compatibility
+		serverDef, ok = depDef.Servers[serverName]
+		if !ok {
+			return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
+		}
 	}
 
 	// Register middlewares
@@ -518,8 +574,8 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	externalServices := config.ExternalServiceDefinitions
 	for name, extSvc := range externalServices {
 		if extSvc.Type != "" {
-			// Check if service definition already exists (manual override)
-			if _, exists := config.ServiceDefinitions[name]; exists {
+			// Check if service definition already exists (manual override, case-insensitive)
+			if _, exists := getServiceDef(config.ServiceDefinitions, name); exists {
 				continue
 			}
 
@@ -567,7 +623,8 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 				}
 			}
 
-			config.ServiceDefinitions[name] = autoServiceDef
+			// Store with lowercase key for case-insensitive lookup
+			config.ServiceDefinitions[strings.ToLower(name)] = autoServiceDef
 		}
 	}
 
@@ -581,7 +638,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	// Register service definitions with remote/local logic
 	// Iterate through all services (published + dependencies)
 	for _, serviceName := range servicesToRegister {
-		svc, exists := config.ServiceDefinitions[serviceName]
+		svc, exists := getServiceDef(config.ServiceDefinitions, serviceName)
 		if !exists {
 			return fmt.Errorf("service %s in topology not found in service definitions", serviceName)
 		}
@@ -640,8 +697,8 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	for serviceName := range publishedServicesMap {
 		routerName := serviceName + "-router"
 
-		// Get service definition from config (already normalized)
-		serviceDef, exists := config.ServiceDefinitions[serviceName]
+		// Get service definition from config (case-insensitive)
+		serviceDef, exists := getServiceDef(config.ServiceDefinitions, serviceName)
 		if !exists {
 			return fmt.Errorf("published service '%s' not found in service-definitions after normalization", serviceName)
 		}
@@ -667,8 +724,8 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			custom = serviceDef.Router.Custom
 		}
 
-		// Priority 2: Check if router manually defined in router-definitions (override/standalone)
-		if yamlRouter, exists := config.RouterDefinitions[routerName]; exists {
+		// Priority 2: Check if router manually defined in router-definitions (override/standalone, case-insensitive)
+		if yamlRouter, exists := getRouterDef(config.RouterDefinitions, routerName); exists {
 			// Override only if not set in service.router
 			if resourceName == "" {
 				resourceName = yamlRouter.Resource
@@ -729,8 +786,8 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			Custom:         custom,
 		}
 
-		// Store to config.RouterDefinitions so it's available for later lookup
-		config.RouterDefinitions[routerName] = autoRouter
+		// Store to config.RouterDefinitions so it's available for later lookup (lowercase key)
+		config.RouterDefinitions[strings.ToLower(routerName)] = autoRouter
 
 		// Also define in registry
 		if registry.GetRouterDef(routerName) == nil {
@@ -774,8 +831,8 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			continue
 		}
 
-		// Get service definition to find its type
-		serviceDef, exists := config.ServiceDefinitions[serviceName]
+		// Get service definition to find its type (case-insensitive)
+		serviceDef, exists := getServiceDef(config.ServiceDefinitions, serviceName)
 		if !exists {
 			continue
 		}
