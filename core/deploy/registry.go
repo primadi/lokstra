@@ -679,6 +679,26 @@ func (g *GlobalRegistry) resolveAnyValue(value any, tempConfigs map[string]any) 
 	return value, nil
 }
 
+// SetConfig sets a runtime configuration value
+// Useful for:
+//   - Runtime detection results (mode, environment)
+//   - Computed values (expensive calculations)
+//   - Dynamic service discovery
+//   - Feature flags
+//
+// Key is automatically converted to lowercase for case-insensitive access
+func (g *GlobalRegistry) SetConfig(key string, value any) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.resolvedConfigs == nil {
+		g.resolvedConfigs = make(map[string]any)
+	}
+
+	// Store with lowercase key for case-insensitive access
+	g.resolvedConfigs[strings.ToLower(key)] = value
+}
+
 // GetResolvedConfig returns a resolved config value
 // Supports both flat access ("global-db.dsn") and nested access ("global-db" returns map)
 // Key lookup is case-insensitive

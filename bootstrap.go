@@ -9,6 +9,7 @@ import (
 
 	"github.com/primadi/lokstra/core/annotation"
 	"github.com/primadi/lokstra/core/deploy"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 type RunMode string
@@ -57,8 +58,9 @@ func Bootstrap(scanPath ...string) {
 		os.Exit(0)
 	}
 
-	// 2️⃣ Detect mode
+	// 2️⃣ Detect mode and store in config for runtime access
 	Mode = detectRunMode()
+	lokstra_registry.SetConfig("runtime.mode", string(Mode))
 	fmt.Printf("[Lokstra] Environment detected: %s\n", strings.ToUpper(string(Mode)))
 
 	// 3️⃣ Prevent infinite loop
