@@ -9,6 +9,7 @@ import (
 
 	"github.com/primadi/lokstra/core/annotation"
 	"github.com/primadi/lokstra/core/deploy"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 type RunMode string
@@ -27,10 +28,11 @@ var (
 // Bootstrap initializes Lokstra environment and regenerates routes if needed.
 // It must be called at the very beginning of main().
 func Bootstrap(scanPath ...string) {
-	// 1️⃣ Check for --generate-only flag
+	// 1️⃣ Check for --generate-only flag (case-insensitive)
 	generateOnly := false
 	for _, arg := range os.Args {
-		if arg == "--generate-only" {
+		// Case-insensitive check: --generate-only, --GENERATE-ONLY, etc.
+		if strings.ToLower(arg) == "--generate-only" {
 			generateOnly = true
 			break
 		}
@@ -56,8 +58,9 @@ func Bootstrap(scanPath ...string) {
 		os.Exit(0)
 	}
 
-	// 2️⃣ Detect mode
+	// 2️⃣ Detect mode and store in config for runtime access
 	Mode = detectRunMode()
+	lokstra_registry.SetConfig("runtime.mode", string(Mode))
 	fmt.Printf("[Lokstra] Environment detected: %s\n", strings.ToUpper(string(Mode)))
 
 	// 3️⃣ Prevent infinite loop

@@ -1,0 +1,4 @@
+dbpool-name: tenant-db
+schema-table: tenant_migrations
+force: auto
+description: Tenant management database for multi-tenant system

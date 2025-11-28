@@ -396,6 +396,29 @@ func GetResolvedConfig(key string) (any, bool) {
 	return deploy.Global().GetResolvedConfig(key)
 }
 
+// SetConfig sets a runtime configuration value.
+// Useful for:
+//   - Runtime detection results (mode, environment)
+//   - Computed values from expensive calculations
+//   - Dynamic service discovery
+//   - Feature flags
+//
+// Example:
+//
+//	// Store runtime mode
+//	lokstra_registry.SetConfig("runtime.mode", "dev")
+//
+//	// Store computed license key
+//	licenseKey := generateComplexLicenseKey() // expensive
+//	lokstra_registry.SetConfig("computed.license-key", licenseKey)
+//
+//	// Later retrieve
+//	mode := lokstra_registry.GetConfig("runtime.mode", "prod")
+//	key := lokstra_registry.GetConfig("computed.license-key", "")
+func SetConfig(key string, value any) {
+	deploy.Global().SetConfig(key, value)
+}
+
 // GetConfig retrieves a configuration value with type assertion and default value.
 // Supports automatic conversion from map[string]any to struct T.
 //

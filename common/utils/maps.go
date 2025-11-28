@@ -7,6 +7,12 @@ import (
 )
 
 func GetValueFromMap[T any](settings map[string]any, key string, defaultValue T) T {
+	// Special case: if T is time.Duration, delegate to GetDurationFromMap
+	if _, ok := any(defaultValue).(time.Duration); ok {
+		duration := GetDurationFromMap(settings, key, defaultValue)
+		return any(duration).(T)
+	}
+
 	if value, exists := settings[key]; exists {
 		if typedValue, ok := value.(T); ok {
 			return typedValue

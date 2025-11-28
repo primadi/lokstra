@@ -483,8 +483,8 @@ func flattenNestedConfig(prefix string, config map[string]any, result map[string
 		if nestedMap, ok := value.(map[string]any); ok {
 			flattenNestedConfig(fullKey, nestedMap, result)
 		} else {
-			// Store leaf value
-			result[fullKey] = value
+			// Store leaf value with lowercase key for case-insensitive lookup
+			result[strings.ToLower(fullKey)] = value
 		}
 	}
 }
@@ -517,8 +517,10 @@ func (g *GlobalRegistry) ResolveConfigs() error {
 		if err != nil {
 			return fmt.Errorf("failed to resolve config %s: %w", name, err)
 		}
-		g.resolvedConfigs[name] = resolved
-		tempConfigs[name] = resolved // Update for subsequent @cfg references
+		// Store with lowercase key for case-insensitive lookup
+		lowerName := strings.ToLower(name)
+		g.resolvedConfigs[lowerName] = resolved
+		tempConfigs[name] = resolved // Keep original case for @cfg references
 	}
 
 	// Pass 2: Resolve nested configs (can now reference Pass 1 results)
@@ -532,8 +534,10 @@ func (g *GlobalRegistry) ResolveConfigs() error {
 		if err != nil {
 			return fmt.Errorf("failed to resolve config %s: %w", name, err)
 		}
-		g.resolvedConfigs[name] = resolved
-		tempConfigs[name] = resolved // Update for subsequent @cfg references
+		// Store with lowercase key for case-insensitive lookup
+		lowerName := strings.ToLower(name)
+		g.resolvedConfigs[lowerName] = resolved
+		tempConfigs[name] = resolved // Keep original case for @cfg references
 	}
 
 	// STEP 1.5: Flatten nested configs AFTER resolution
@@ -675,26 +679,50 @@ func (g *GlobalRegistry) resolveAnyValue(value any, tempConfigs map[string]any) 
 	return value, nil
 }
 
+// SetConfig sets a runtime configuration value
+// Useful for:
+//   - Runtime detection results (mode, environment)
+//   - Computed values (expensive calculations)
+//   - Dynamic service discovery
+//   - Feature flags
+//
+// Key is automatically converted to lowercase for case-insensitive access
+func (g *GlobalRegistry) SetConfig(key string, value any) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.resolvedConfigs == nil {
+		g.resolvedConfigs = make(map[string]any)
+	}
+
+	// Store with lowercase key for case-insensitive access
+	g.resolvedConfigs[strings.ToLower(key)] = value
+}
+
 // GetResolvedConfig returns a resolved config value
 // Supports both flat access ("global-db.dsn") and nested access ("global-db" returns map)
+// Key lookup is case-insensitive
 func (g *GlobalRegistry) GetResolvedConfig(name string) (any, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
+	// Convert to lowercase for case-insensitive lookup
+	lowerName := strings.ToLower(name)
+
 	// Try direct lookup first (flat access)
-	if value, ok := g.resolvedConfigs[name]; ok {
+	if value, ok := g.resolvedConfigs[lowerName]; ok {
 		return value, true
 	}
 
 	// Try nested access: collect all keys starting with "name."
-	prefix := name + "."
+	prefix := lowerName + "."
 	nested := make(map[string]any)
 	hasNested := false
 
 	for key, value := range g.resolvedConfigs {
-		if strings.HasPrefix(key, prefix) {
+		if after, ok := strings.CutPrefix(key, prefix); ok {
 			// Remove prefix and reconstruct nested structure
-			subKey := strings.TrimPrefix(key, prefix)
+			subKey := after
 
 			// Handle further nesting (e.g., "global-db.connection.pool.size")
 			if strings.Contains(subKey, ".") {
@@ -1612,13 +1640,14 @@ func (a *shorthandAppConfig) GetPublishedServices() []string { return a.publishe
 
 var FirstServer string
 
-// StoreDeploymentTopology stores deployment topology in global registry
+// StoreDeploymentTopology stores deployment topology in global registry (case-insensitive)
 func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
-	g.deploymentTopologies.Store(topology.Name, topology)
+	lowerName := strings.ToLower(topology.Name)
+	g.deploymentTopologies.Store(lowerName, topology)
 
-	// Also store server topologies with composite keys
+	// Also store server topologies with composite keys (case-insensitive)
 	for serverName, serverTopo := range topology.Servers {
-		compositeKey := topology.Name + "." + serverName
+		compositeKey := lowerName + "." + strings.ToLower(serverName)
 		g.serverTopologies.Store(compositeKey, serverTopo)
 		if FirstServer == "" {
 			FirstServer = compositeKey
@@ -1626,17 +1655,20 @@ func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
 	}
 }
 
-// GetDeploymentTopology retrieves deployment topology by name
+// GetDeploymentTopology retrieves deployment topology by name (case-insensitive)
 func (g *GlobalRegistry) GetDeploymentTopology(deploymentName string) (*DeploymentTopology, bool) {
-	if v, ok := g.deploymentTopologies.Load(deploymentName); ok {
+	lowerName := strings.ToLower(deploymentName)
+	if v, ok := g.deploymentTopologies.Load(lowerName); ok {
 		return v.(*DeploymentTopology), true
 	}
 	return nil, false
 }
 
 // GetServerTopology retrieves server topology by composite key "deployment.server"
+// GetServerTopology retrieves server topology by composite key (case-insensitive)
 func (g *GlobalRegistry) GetServerTopology(compositeKey string) (*ServerTopology, bool) {
-	if v, ok := g.serverTopologies.Load(compositeKey); ok {
+	lowerKey := strings.ToLower(compositeKey)
+	if v, ok := g.serverTopologies.Load(lowerKey); ok {
 		return v.(*ServerTopology), true
 	}
 	return nil, false

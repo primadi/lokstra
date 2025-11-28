@@ -1,0 +1,4 @@
+dbpool-name: main-db
+schema-table: schema_migrations
+force: auto
+description: Main application database with users, orders, products

@@ -1,0 +1,4 @@
+dbpool-name: ledger-db
+schema-table: ledger_migrations
+force: off
+description: General ledger database - use CLI for production migrations

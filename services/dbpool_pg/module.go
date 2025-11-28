@@ -27,18 +27,18 @@ type Config struct {
 	Username string `json:"username" yaml:"username"`
 	Password string `json:"password" yaml:"password"`
 
-	MinConnections int           `json:"min_cons" yaml:"min_cons"`
-	MaxConnections int           `json:"max_cons" yaml:"max_cons"`
-	MaxIdleTime    time.Duration `json:"max_idle_time" yaml:"max_idle_time"`
-	MaxLifetime    time.Duration `json:"max_lifetime" yaml:"max_lifetime"`
-	SSLMode        string        `json:"sslmode" yaml:"sslmode"`
+	MinConns    int           `json:"min-cons" yaml:"min-cons"`
+	MaxConns    int           `json:"max-cons" yaml:"max-cons"`
+	MaxIdleTime time.Duration `json:"max-idle-time" yaml:"max-idle-time"`
+	MaxLifetime time.Duration `json:"max-lifetime" yaml:"max-lifetime"`
+	SSLMode     string        `json:"sslmode" yaml:"sslmode"`
 }
 
 func (cfg *Config) buildDSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s&pool_min_conns=%d&pool_max_conns=%d&pool_max_conn_idle_time=%s&pool_max_conn_lifetime=%s",
 		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Database,
-		cfg.SSLMode, cfg.MinConnections, cfg.MaxConnections, cfg.MaxIdleTime, cfg.MaxLifetime)
+		cfg.SSLMode, cfg.MinConns, cfg.MaxConns, cfg.MaxIdleTime, cfg.MaxLifetime)
 }
 
 func (cfg *Config) GetFinalDSN() string {
@@ -48,10 +48,10 @@ func (cfg *Config) GetFinalDSN() string {
 	dsnFinal := cfg.DSN
 
 	if !strings.Contains(dsnFinal, "pool_min_conns=") {
-		dsnFinal += fmt.Sprintf("&pool_min_conns=%d", cfg.MinConnections)
+		dsnFinal += fmt.Sprintf("&pool_min_conns=%d", cfg.MinConns)
 	}
 	if !strings.Contains(dsnFinal, "pool_max_conns=") {
-		dsnFinal += fmt.Sprintf("&pool_max_conns=%d", cfg.MaxConnections)
+		dsnFinal += fmt.Sprintf("&pool_max_conns=%d", cfg.MaxConns)
 	}
 	if !strings.Contains(dsnFinal, "pool_max_conn_idle_time=") {
 		dsnFinal += fmt.Sprintf("&pool_max_conn_idle_time=%s", cfg.MaxIdleTime)
@@ -78,17 +78,17 @@ func Service(cfg *Config) *pgxPostgresPool {
 
 func ServiceFactory(params map[string]any) any {
 	cfg := &Config{
-		DSN:            utils.GetValueFromMap(params, "dsn", ""),
-		Host:           utils.GetValueFromMap(params, "host", "localhost"),
-		Port:           utils.GetValueFromMap(params, "port", 5432),
-		Database:       utils.GetValueFromMap(params, "database", "postgres"),
-		Username:       utils.GetValueFromMap(params, "username", "postgres"),
-		Password:       utils.GetValueFromMap(params, "password", ""),
-		MinConnections: utils.GetValueFromMap(params, "min_connections", 0),
-		MaxConnections: utils.GetValueFromMap(params, "max_connections", 4),
-		MaxIdleTime:    utils.GetValueFromMap(params, "max_idle_time", 30*time.Minute),
-		MaxLifetime:    utils.GetValueFromMap(params, "max_lifetime", time.Hour),
-		SSLMode:        utils.GetValueFromMap(params, "sslmode", "disable"),
+		DSN:         utils.GetValueFromMap(params, "dsn", ""),
+		Host:        utils.GetValueFromMap(params, "host", "localhost"),
+		Port:        utils.GetValueFromMap(params, "port", 5432),
+		Database:    utils.GetValueFromMap(params, "database", "postgres"),
+		Username:    utils.GetValueFromMap(params, "username", "postgres"),
+		Password:    utils.GetValueFromMap(params, "password", ""),
+		MinConns:    utils.GetValueFromMap(params, "min_connections", 0),
+		MaxConns:    utils.GetValueFromMap(params, "max_connections", 4),
+		MaxIdleTime: utils.GetValueFromMap(params, "max_idle_time", 30*time.Minute),
+		MaxLifetime: utils.GetValueFromMap(params, "max_lifetime", time.Hour),
+		SSLMode:     utils.GetValueFromMap(params, "sslmode", "disable"),
 	}
 	return Service(cfg)
 }

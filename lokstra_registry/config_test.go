@@ -142,3 +142,70 @@ func TestGetConfig_DefaultValue(t *testing.T) {
 		t.Errorf("Expected default struct, got %+v", config)
 	}
 }
+
+func TestSetConfig_RuntimeValues(t *testing.T) {
+	// Test setting runtime config
+	lokstra_registry.SetConfig("runtime.mode", "dev")
+	lokstra_registry.SetConfig("computed.license-key", "ABC123XYZ")
+
+	// Test retrieval
+	mode := lokstra_registry.GetConfig("runtime.mode", "prod")
+	if mode != "dev" {
+		t.Errorf("Expected runtime.mode='dev', got '%s'", mode)
+	}
+
+	key := lokstra_registry.GetConfig("computed.license-key", "")
+	if key != "ABC123XYZ" {
+		t.Errorf("Expected license-key='ABC123XYZ', got '%s'", key)
+	}
+}
+
+func TestSetConfig_CaseInsensitive(t *testing.T) {
+	// Set with lowercase
+	lokstra_registry.SetConfig("my.config.value", "test123")
+
+	// Get with different cases
+	val1 := lokstra_registry.GetConfig("my.config.value", "")
+	val2 := lokstra_registry.GetConfig("My.Config.Value", "")
+	val3 := lokstra_registry.GetConfig("MY.CONFIG.VALUE", "")
+
+	if val1 != "test123" || val2 != "test123" || val3 != "test123" {
+		t.Errorf("Case-insensitive access failed: %s, %s, %s", val1, val2, val3)
+	}
+}
+
+func TestSetConfig_ComplexTypes(t *testing.T) {
+	// Test with map
+	configMap := map[string]any{
+		"host": "localhost",
+		"port": 5432,
+	}
+	lokstra_registry.SetConfig("database.settings", configMap)
+
+	// Retrieve as map
+	retrieved := lokstra_registry.GetConfig[map[string]any]("database.settings", nil)
+	if retrieved == nil {
+		t.Fatal("Expected map, got nil")
+	}
+
+	if retrieved["host"] != "localhost" {
+		t.Errorf("Expected host='localhost', got '%v'", retrieved["host"])
+	}
+}
+
+func TestSetConfig_Overwrite(t *testing.T) {
+	// Set initial value
+	lokstra_registry.SetConfig("test.overwrite", "initial")
+	val1 := lokstra_registry.GetConfig("test.overwrite", "")
+
+	// Overwrite
+	lokstra_registry.SetConfig("test.overwrite", "updated")
+	val2 := lokstra_registry.GetConfig("test.overwrite", "")
+
+	if val1 != "initial" {
+		t.Errorf("Expected initial value='initial', got '%s'", val1)
+	}
+	if val2 != "updated" {
+		t.Errorf("Expected updated value='updated', got '%s'", val2)
+	}
+}
