@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/router"
@@ -26,15 +28,15 @@ func getServiceDef(defs map[string]*schema.ServiceDef, name string) (*schema.Ser
 	return svc, ok
 }
 
-func getMiddlewareDef(defs map[string]*schema.MiddlewareDef, name string) (*schema.MiddlewareDef, bool) {
-	// Try lowercase first
-	if mw, ok := defs[strings.ToLower(name)]; ok {
-		return mw, true
-	}
-	// Fallback to original case
-	mw, ok := defs[name]
-	return mw, ok
-}
+// func getMiddlewareDef(defs map[string]*schema.MiddlewareDef, name string) (*schema.MiddlewareDef, bool) {
+// 	// Try lowercase first
+// 	if mw, ok := defs[strings.ToLower(name)]; ok {
+// 		return mw, true
+// 	}
+// 	// Fallback to original case
+// 	mw, ok := defs[name]
+// 	return mw, ok
+// }
 
 func getRouterDef(defs map[string]*schema.RouterDef, name string) (*schema.RouterDef, bool) {
 	// Try lowercase first
@@ -1013,6 +1015,112 @@ func LoadAndBuild(configPaths []string) error {
 	// This includes configs, deployment values, service configs, etc.
 	if err := registry.ResolveConfigs(); err != nil {
 		return fmt.Errorf("failed to resolve configs: %w", err)
+	}
+
+	// Auto-discover and setup named DB pools
+	if err := setupNamedDbPools(registry); err != nil {
+		return fmt.Errorf("failed to setup named DB pools: %w", err)
+	}
+
+	return nil
+}
+
+// setupNamedDbPools auto-discovers and sets up named DB pools from config
+func setupNamedDbPools(registry *deploy.GlobalRegistry) error {
+	// Get named-db-pools config
+	poolsConfigRaw, ok := registry.GetResolvedConfig("named-db-pools")
+	if !ok || poolsConfigRaw == nil {
+		// No named-db-pools section, skip
+		return nil
+	}
+
+	poolsConfig, ok := poolsConfigRaw.(map[string]any)
+	if !ok {
+		return fmt.Errorf("named-db-pools must be a map, got %T", poolsConfigRaw)
+	}
+
+	// Get or create DBPool Manager (same pattern as lokstra.SetupNamedDbPools)
+	dbPoolManager, ok := registry.GetServiceAny("dbpool-manager")
+	if !ok || dbPoolManager == nil {
+		return fmt.Errorf("dbpool-manager not registered - please call services/dbpool_manager.Register() in your main.go or import _ \"github.com/primadi/lokstra/services/dbpool_manager\"")
+	}
+
+	// Type assert to interface with required methods
+	type DbPoolManager interface {
+		SetNamedDsn(name, dsn, schema string)
+		GetNamedPool(name string) (any, error)
+	}
+
+	poolManager, ok := dbPoolManager.(DbPoolManager)
+	if !ok {
+		return fmt.Errorf("dbpool-manager does not implement required interface (SetNamedDsn, GetNamedPool)")
+	}
+
+	// Setup each pool
+	for poolName, poolConfigRaw := range poolsConfig {
+		poolConfig, ok := poolConfigRaw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("named-db-pools.%s must be a map, got %T", poolName, poolConfigRaw)
+		}
+
+		// Extract DSN or build from components
+		dsn := utils.GetValueFromMap(poolConfig, "dsn", "")
+
+		// Extract optional pool parameters with best practice defaults
+		minConns := utils.GetValueFromMap(poolConfig, "min-conns", 2)                     // Best practice: 2 minimum connections
+		maxConns := utils.GetValueFromMap(poolConfig, "max-conns", 10)                    // Best practice: 10 max connections (adjust based on load)
+		maxIdleTime := utils.GetValueFromMap(poolConfig, "max-idle-time", 30*time.Minute) // Best practice: 30 minutes
+		maxLifetime := utils.GetValueFromMap(poolConfig, "max-lifetime", time.Hour)       // Best practice: 1 hour
+
+		// If no DSN, build from components
+		if dsn == "" {
+			host := utils.GetValueFromMap(poolConfig, "host", "")
+			port := utils.GetValueFromMap(poolConfig, "port", 5432)
+			database := utils.GetValueFromMap(poolConfig, "database", "")
+			username := utils.GetValueFromMap(poolConfig, "username", "")
+			password := utils.GetValueFromMap(poolConfig, "password", "")
+
+			if host == "" || database == "" {
+				return fmt.Errorf("named-db-pools.%s: must provide either 'dsn' or 'host'+'database'", poolName)
+			}
+
+			// Build DSN with best practice defaults
+			sslmode := utils.GetValueFromMap(poolConfig, "sslmode", "disable")
+
+			dsn = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s&pool_min_conns=%d&pool_max_conns=%d&pool_max_conn_idle_time=%s&pool_max_conn_lifetime=%s",
+				username, password, host, port, database, sslmode, minConns, maxConns, maxIdleTime, maxLifetime)
+		} else {
+			// DSN provided - apply optional pool parameters if not already set
+			if !strings.Contains(dsn, "pool_min_conns=") {
+				dsn += fmt.Sprintf("&pool_min_conns=%d", minConns)
+			}
+			if !strings.Contains(dsn, "pool_max_conns=") {
+				dsn += fmt.Sprintf("&pool_max_conns=%d", maxConns)
+			}
+			if !strings.Contains(dsn, "pool_max_conn_idle_time=") {
+				dsn += fmt.Sprintf("&pool_max_conn_idle_time=%s", maxIdleTime)
+			}
+			if !strings.Contains(dsn, "pool_max_conn_lifetime=") {
+				dsn += fmt.Sprintf("&pool_max_conn_lifetime=%s", maxLifetime)
+			}
+		}
+
+		// Extract schema (default: public)
+		schema := utils.GetValueFromMap(poolConfig, "schema", "public")
+
+		// Set DSN and Schema for poolName
+		poolManager.SetNamedDsn(poolName, dsn, schema)
+
+		// Create the pool
+		dbPool, err := poolManager.GetNamedPool(poolName)
+		if err != nil {
+			return fmt.Errorf("failed to create pool '%s': %w", poolName, err)
+		}
+
+		// Register pool as a service
+		registry.RegisterService(poolName, dbPool)
+
+		log.Printf("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
 	}
 
 	return nil
