@@ -150,6 +150,75 @@
       },
       "additionalProperties": false
     },
+    "reverseProxyRewrite": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Pattern to match in path (regex supported)"
+        },
+        "to": {
+          "type": "string",
+          "description": "Replacement pattern"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reverseProxyDefinition": {
+      "type": "object",
+      "required": ["prefix", "target"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix to match (e.g., '/api')"
+        },
+        "strip-prefix": {
+          "type": "boolean",
+          "description": "Whether to strip the prefix before forwarding",
+          "default": false
+        },
+        "target": {
+          "type": "string",
+          "description": "Target backend URL (e.g., 'http://api-server:8080')",
+          "pattern": "^https?://"
+        },
+        "rewrite": {
+          "$ref": "#/definitions/reverseProxyRewrite"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mountSpaDefinition": {
+      "type": "object",
+      "required": ["prefix", "dir"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix (e.g., '/app', '/')"
+        },
+        "dir": {
+          "type": "string",
+          "description": "Directory path containing SPA files (e.g., './dist', './build')"
+        }
+      },
+      "additionalProperties": false
+    },
+    "mountStaticDefinition": {
+      "type": "object",
+      "required": ["prefix", "dir"],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "URL prefix (e.g., '/static', '/assets')"
+        },
+        "dir": {
+          "type": "string",
+          "description": "Directory path containing static files (e.g., './public', './static')"
+        }
+      },
+      "additionalProperties": false
+    },
     "appDefinition": {
       "type": "object",
       "required": ["addr"],
@@ -177,6 +246,21 @@
             "type": "string",
             "pattern": "^[a-z][a-z0-9.-]*$"
           }
+        },
+        "reverse-proxies": {
+          "type": "array",
+          "description": "Reverse proxy configurations",
+          "items": { "$ref": "#/definitions/reverseProxyDefinition" }
+        },
+        "mount-spa": {
+          "type": "array",
+          "description": "SPA mount configurations",
+          "items": { "$ref": "#/definitions/mountSpaDefinition" }
+        },
+        "mount-static": {
+          "type": "array",
+          "description": "Static file mount configurations",
+          "items": { "$ref": "#/definitions/mountStaticDefinition" }
         }
       },
       "additionalProperties": false

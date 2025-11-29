@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 { color: #2c3e50; }
+        .info { background: #ecf0f1; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Admin Dashboard</h1>
+    <div class="info">
+        <p>This is a Single Page Application (SPA) mounted at <code>/admin</code></p>
+        <p>Any route under <code>/admin/*</code> will serve this page.</p>
+        <ul>
+            <li><a href="/admin">/admin</a> (root)</li>
+            <li><a href="/admin/users">/admin/users</a> (client-side route)</li>
+            <li><a href="/admin/settings">/admin/settings</a> (client-side route)</li>
+        </ul>
+        <p><strong>Note:</strong> In a real SPA, you'd have React/Vue/Angular handling routing.</p>
+    </div>
+</body>
+</html>

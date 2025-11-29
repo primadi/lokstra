@@ -8,6 +8,9 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 )
 
+// ===== LEGACY API (For Backward Compatibility) =====
+
+// RunServerFromConfig loads configuration from specified YAML file(s) and runs the server.
 func RunServerFromConfig(config ...string) {
 
 	if len(config) == 0 {
@@ -42,6 +45,7 @@ func RunServerFromConfig(config ...string) {
 	}
 }
 
+// RunServerFromConfigFolder loads all YAML files from the specified folder and runs the server.
 func RunServerFromConfigFolder(configFolder string) {
 	// Load all YAML files in the specified config folder
 	basePath := utils.GetBasePath()
@@ -156,8 +160,3 @@ func InitAndRunServer() error {
 	// Run server
 	return RunServer(server, timeout)
 }
-
-// NOTE: GetConfig is already defined in registry.go as a generic function
-// It can be used to retrieve configuration values:
-//   dbDSN := lokstra_registry.GetConfig("database.dsn", "postgres://localhost/mydb")
-//   cacheTTL := lokstra_registry.GetConfig("cache.ttl", 300)

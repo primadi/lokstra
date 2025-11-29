@@ -1,0 +1,17 @@
+### Test Business API
+GET http://localhost:8080/api/users
+
+### Test SPA - Root
+GET http://localhost:8080/admin
+
+### Test SPA - Client Route
+GET http://localhost:8080/admin/users
+
+### Test Landing Page
+GET http://localhost:8080/
+
+### Test Static Asset - Logo
+GET http://localhost:8080/assets/logo.svg
+
+### Test Static Asset - CSS
+GET http://localhost:8080/assets/style.css

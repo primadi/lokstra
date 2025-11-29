@@ -1,0 +1,29 @@
+# Handler Configurations Example
+# Demonstrates SPA mounting and static file serving
+
+deployments:
+  production:
+    servers:
+      web:
+        base-url: "http://localhost"
+        
+        apps:
+          # Main application server with handlers
+          - addr: ":8080"
+            published-services: [user-service]
+            
+            # SPA mounts (Single Page Applications)
+            mount-spa:
+              # Admin dashboard at /admin
+              - prefix: "/admin"
+                dir: "./dist/admin"
+              
+              # Landing page at root (must be last for fallback)
+              - prefix: "/"
+                dir: "./dist/landing"
+            
+            # Static file mounts
+            mount-static:
+              # Public assets (images, CSS, JS)
+              - prefix: "/assets"
+                dir: "./public/assets"

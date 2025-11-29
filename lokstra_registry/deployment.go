@@ -3,6 +3,7 @@ package lokstra_registry
 import (
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -10,8 +11,10 @@ import (
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
+	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
+	"github.com/primadi/lokstra/lokstra_handler"
 )
 
 var (
@@ -186,8 +189,11 @@ func RunCurrentServer(timeout time.Duration) error {
 	// NOTE: registerLazyServicesForServer is NO LONGER NEEDED
 	// All service registration (including remote/local logic) is now handled in RegisterDefinitionsForRuntime
 
-	// Get apps from topology
+	// Extract deployment and server names for handler configurations
+	deploymentName := GetCurrentDeploymentName()
 	serverName := GetCurrentServerName()
+
+	// Get apps from topology
 	if len(serverTopo.Apps) == 0 {
 		return fmt.Errorf("server '%s' has no apps configured", serverName)
 	}
@@ -278,6 +284,12 @@ func RunCurrentServer(timeout time.Duration) error {
 
 		// Address is already resolved by ResolveConfigs()
 		coreApp := app.New(appName, appTopo.Addr, routers...)
+
+		// Apply handler configurations from YAML (reverse-proxies, mount-spa, mount-static)
+		if err := applyAppHandlerConfigurations(coreApp, config, deploymentName, serverName, i); err != nil {
+			return fmt.Errorf("failed to apply handler configurations to app %d: %w", i+1, err)
+		}
+
 		coreApps = append(coreApps, coreApp)
 	}
 
@@ -287,6 +299,99 @@ func RunCurrentServer(timeout time.Duration) error {
 
 	// Delegate to coreServer.Run() - no code duplication!
 	return coreServer.Run(timeout)
+}
+
+// applyAppHandlerConfigurations applies handler configurations (reverse-proxies, mount-spa, mount-static) to an app
+func applyAppHandlerConfigurations(coreApp *app.App, config *schema.DeployConfig, deploymentName, serverName string, appIndex int) error {
+	if config == nil {
+		return nil
+	}
+
+	// Get server definition from config
+	lowerDeploymentName := strings.ToLower(deploymentName)
+	depDef, ok := config.Deployments[lowerDeploymentName]
+	if !ok {
+		depDef, ok = config.Deployments[deploymentName]
+		if !ok {
+			return nil
+		}
+	}
+
+	lowerServerName := strings.ToLower(serverName)
+	serverDef, ok := depDef.Servers[lowerServerName]
+	if !ok {
+		serverDef, ok = depDef.Servers[serverName]
+		if !ok {
+			return nil
+		}
+	}
+
+	if appIndex >= len(serverDef.Apps) {
+		return nil
+	}
+
+	appDef := serverDef.Apps[appIndex]
+
+	// 1. Apply reverse proxies
+	if len(appDef.ReverseProxies) > 0 {
+		proxies := make([]*app.ReverseProxyConfig, 0, len(appDef.ReverseProxies))
+		for _, proxyDef := range appDef.ReverseProxies {
+			proxy := &app.ReverseProxyConfig{
+				Prefix:      proxyDef.Prefix,
+				StripPrefix: proxyDef.StripPrefix,
+				Target:      proxyDef.Target,
+			}
+
+			if proxyDef.Rewrite != nil {
+				proxy.Rewrite = &app.ReverseProxyRewrite{
+					From: proxyDef.Rewrite.From,
+					To:   proxyDef.Rewrite.To,
+				}
+			}
+
+			proxies = append(proxies, proxy)
+		}
+
+		coreApp.AddReverseProxies(proxies)
+	}
+
+	// 2. Apply SPA mounts
+	if len(appDef.MountSpa) > 0 {
+		for _, spaDef := range appDef.MountSpa {
+			// Create filesystem from directory
+			fsys := os.DirFS(spaDef.Dir)
+
+			// Create SPA handler
+			handler := lokstra_handler.MountSpa(spaDef.Prefix, fsys)
+
+			// Mount to app's router
+			spaRouter := router.New(fmt.Sprintf("%s-spa-%s", coreApp.GetName(), spaDef.Prefix))
+			spaRouter.ANYPrefix(spaDef.Prefix, handler)
+			coreApp.AddRouter(spaRouter)
+
+			log.Printf("📦 [%s] Mounted SPA: %s -> %s\n", coreApp.GetName(), spaDef.Prefix, spaDef.Dir)
+		}
+	}
+
+	// 3. Apply static file mounts
+	if len(appDef.MountStatic) > 0 {
+		for _, staticDef := range appDef.MountStatic {
+			// Create filesystem from directory
+			fsys := os.DirFS(staticDef.Dir)
+
+			// Create static handler
+			handler := lokstra_handler.MountStatic(staticDef.Prefix, fsys)
+
+			// Mount to app's router
+			staticRouter := router.New(fmt.Sprintf("%s-static-%s", coreApp.GetName(), staticDef.Prefix))
+			staticRouter.ANYPrefix(staticDef.Prefix, handler)
+			coreApp.AddRouter(staticRouter)
+
+			log.Printf("📦 [%s] Mounted Static: %s -> %s\n", coreApp.GetName(), staticDef.Prefix, staticDef.Dir)
+		}
+	}
+
+	return nil
 }
 
 // RunServer is a convenience helper that combines SetCurrentServer, PrintCurrentServerInfo, and RunCurrentServer.

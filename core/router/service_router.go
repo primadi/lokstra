@@ -5,9 +5,18 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/route"
 )
+
+// pathResolver is a callback function for resolving ${key} placeholders in paths
+// Registered by lokstra_registry to avoid circular dependency
+var pathResolver func(string) string
+
+// RegisterPathResolver registers the path resolver callback
+// Called by lokstra_registry during initialization
+func RegisterPathResolver(fn func(string) string) {
+	pathResolver = fn
+}
 
 // NewFromService creates a Router by registering service methods with explicit route definitions.
 // Each method MUST have a route override in opts.RouteOverrides to be registered.
@@ -80,8 +89,11 @@ func NewFromServiceWithEngine(service any, engineType string, opts *ServiceRoute
 		}
 
 		// Expand variables in final path at runtime
-		// Resolves ${key} or ${key:default} via lokstra_registry.GetConfig()
-		path = config.SimpleResolver(path)
+		// Resolves ${key} or ${key:default} via pathResolver callback
+		// Callback is registered by lokstra_registry to avoid circular dependency
+		if pathResolver != nil {
+			path = pathResolver(path)
+		}
 
 		// HTTP method is required
 		httpMethod := override.HTTPMethod

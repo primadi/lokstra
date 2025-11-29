@@ -1,7 +1,0 @@
-# Staging Environment Configuration
-
-configs:
-  - name: db_host
-    value: "staging-db.example.com:5432"
-  - name: log_level
-    value: "INFO"

@@ -1,0 +1,45 @@
+# Production deployment configuration
+deployments:
+  production:
+    config-overrides:
+      app:
+        debug: false
+        log-level: "info"
+      database:
+        host: "${DB_HOST}"
+        port: 5432
+    
+    servers:
+      api:
+        base-url: "https://api.myapp.com"
+        
+        # Production-specific middleware
+        middleware-definitions:
+          prod-logger:
+            type: request-logger
+            config:
+              format: "json"
+              color: false
+          
+          rate-limit:
+            type: rate-limiter
+            config:
+              requests-per-second: 100
+        
+        apps:
+          - addr: ":8080"
+            published-services: [user-service]
+            
+            # Production handlers
+            reverse-proxies:
+              - prefix: "/api/v2"
+                strip-prefix: true
+                target: "http://backend:9000"
+            
+            mount-spa:
+              - prefix: "/"
+                dir: "./dist/production"
+            
+            mount-static:
+              - prefix: "/assets"
+                dir: "./public/assets"
