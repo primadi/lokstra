@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/router"
@@ -1018,7 +1017,7 @@ func LoadAndBuild(configPaths []string) error {
 	}
 
 	// Auto-discover and setup named DB pools
-	if err := setupNamedDbPools(registry); err != nil {
+	if err := setupNamedDbPools(registry, config); err != nil {
 		return fmt.Errorf("failed to setup named DB pools: %w", err)
 	}
 
@@ -1026,17 +1025,11 @@ func LoadAndBuild(configPaths []string) error {
 }
 
 // setupNamedDbPools auto-discovers and sets up named DB pools from config
-func setupNamedDbPools(registry *deploy.GlobalRegistry) error {
-	// Get named-db-pools config
-	poolsConfigRaw, ok := registry.GetResolvedConfig("named-db-pools")
-	if !ok || poolsConfigRaw == nil {
+func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
+	// Check if named-db-pools section exists
+	if len(config.NamedDbPools) == 0 {
 		// No named-db-pools section, skip
 		return nil
-	}
-
-	poolsConfig, ok := poolsConfigRaw.(map[string]any)
-	if !ok {
-		return fmt.Errorf("named-db-pools must be a map, got %T", poolsConfigRaw)
 	}
 
 	// Get or create DBPool Manager (same pattern as lokstra.SetupNamedDbPools)
@@ -1057,35 +1050,55 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry) error {
 	}
 
 	// Setup each pool
-	for poolName, poolConfigRaw := range poolsConfig {
-		poolConfig, ok := poolConfigRaw.(map[string]any)
-		if !ok {
-			return fmt.Errorf("named-db-pools.%s must be a map, got %T", poolName, poolConfigRaw)
-		}
-
+	for poolName, poolConfig := range config.NamedDbPools {
 		// Extract DSN or build from components
-		dsn := utils.GetValueFromMap(poolConfig, "dsn", "")
+		dsn := poolConfig.DSN
 
 		// Extract optional pool parameters with best practice defaults
-		minConns := utils.GetValueFromMap(poolConfig, "min-conns", 2)                     // Best practice: 2 minimum connections
-		maxConns := utils.GetValueFromMap(poolConfig, "max-conns", 10)                    // Best practice: 10 max connections (adjust based on load)
-		maxIdleTime := utils.GetValueFromMap(poolConfig, "max-idle-time", 30*time.Minute) // Best practice: 30 minutes
-		maxLifetime := utils.GetValueFromMap(poolConfig, "max-lifetime", time.Hour)       // Best practice: 1 hour
+		minConns := poolConfig.MinConns
+		if minConns == 0 {
+			minConns = 2 // Best practice: 2 minimum connections
+		}
+
+		maxConns := poolConfig.MaxConns
+		if maxConns == 0 {
+			maxConns = 10 // Best practice: 10 max connections
+		}
+
+		maxIdleTime := 30 * time.Minute // Best practice default
+		if poolConfig.MaxIdleTime != "" {
+			if parsed, err := time.ParseDuration(poolConfig.MaxIdleTime); err == nil {
+				maxIdleTime = parsed
+			}
+		}
+
+		maxLifetime := time.Hour // Best practice default
+		if poolConfig.MaxLifetime != "" {
+			if parsed, err := time.ParseDuration(poolConfig.MaxLifetime); err == nil {
+				maxLifetime = parsed
+			}
+		}
 
 		// If no DSN, build from components
 		if dsn == "" {
-			host := utils.GetValueFromMap(poolConfig, "host", "")
-			port := utils.GetValueFromMap(poolConfig, "port", 5432)
-			database := utils.GetValueFromMap(poolConfig, "database", "")
-			username := utils.GetValueFromMap(poolConfig, "username", "")
-			password := utils.GetValueFromMap(poolConfig, "password", "")
+			host := poolConfig.Host
+			port := poolConfig.Port
+			if port == 0 {
+				port = 5432 // Default PostgreSQL port
+			}
+			database := poolConfig.Database
+			username := poolConfig.Username
+			password := poolConfig.Password
 
 			if host == "" || database == "" {
 				return fmt.Errorf("named-db-pools.%s: must provide either 'dsn' or 'host'+'database'", poolName)
 			}
 
 			// Build DSN with best practice defaults
-			sslmode := utils.GetValueFromMap(poolConfig, "sslmode", "disable")
+			sslmode := poolConfig.SSLMode
+			if sslmode == "" {
+				sslmode = "disable"
+			}
 
 			dsn = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s&pool_min_conns=%d&pool_max_conns=%d&pool_max_conn_idle_time=%s&pool_max_conn_lifetime=%s",
 				username, password, host, port, database, sslmode, minConns, maxConns, maxIdleTime, maxLifetime)
@@ -1106,7 +1119,10 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry) error {
 		}
 
 		// Extract schema (default: public)
-		schema := utils.GetValueFromMap(poolConfig, "schema", "public")
+		schema := poolConfig.Schema
+		if schema == "" {
+			schema = "public"
+		}
 
 		// Set DSN and Schema for poolName
 		poolManager.SetNamedDsn(poolName, dsn, schema)
