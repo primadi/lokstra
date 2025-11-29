@@ -686,6 +686,91 @@ deployments:
 
 ---
 
+### Handler Configurations
+```yaml
+# Full example with reverse proxies, SPAs, and static files
+service-definitions:
+  api-service:
+    type: api-service-factory
+
+router-definitions:
+  api-service-router:
+    convention: rest
+
+deployments:
+  production:
+    servers:
+      app-server:
+        base-url: https://example.com
+        apps:
+          # Backend API server
+          - addr: ":8080"
+            routers:
+              - api-service-router
+          
+          # Frontend gateway server
+          - addr: ":3000"
+            # Proxy API requests to backend
+            reverse-proxies:
+              - prefix: /api
+                target: http://localhost:8080
+                strip-prefix: false
+              
+              # Proxy to legacy system with rewrite
+              - prefix: /legacy
+                target: http://legacy-system:9000
+                strip-prefix: true
+                rewrite:
+                  path-pattern: "^/legacy/(.*)$"
+                  path-replacement: "/v1/$1"
+            
+            # Serve SPA applications
+            mount-spa:
+              - prefix: /admin
+                dir: ./dist/admin
+              - prefix: /
+                dir: ./dist/app
+            
+            # Serve static assets
+            mount-static:
+              - prefix: /assets
+                dir: ./public/assets
+              - prefix: /uploads
+                dir: ./storage/uploads
+```
+
+**Code Loading:**
+```go
+package main
+
+import (
+    "log"
+    "github.com/primadi/lokstra/core/deploy/loader"
+    "github.com/primadi/lokstra/lokstra_registry"
+)
+
+func main() {
+    // Load configuration
+    config, err := loader.LoadConfig("config.yaml")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Handler configurations are automatically applied
+    // during server initialization via applyAppHandlerConfigurations()
+    
+    // Run deployment
+    lokstra_registry.RunServerFromConfig()
+}
+```
+
+**Handler Application Order:**
+1. **Reverse Proxies** - Applied first using `app.AddReverseProxies()`
+2. **SPA Mounts** - Applied using `lokstra_handler.MountSpa()`
+3. **Static Mounts** - Applied using `lokstra_handler.MountStatic()`
+
+---
+
 ## Best Practices
 
 ### 1. Use Multi-File Configuration

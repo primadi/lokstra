@@ -1,7 +1,0 @@
-# Development Environment Configuration
-
-configs:
-  - name: db_host
-    value: "localhost:5432"
-  - name: log_level
-    value: "DEBUG"

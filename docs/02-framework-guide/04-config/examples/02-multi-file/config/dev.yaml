@@ -1,0 +1,31 @@
+# Development deployment configuration
+deployments:
+  development:
+    config-overrides:
+      app:
+        debug: true
+        log-level: "debug"
+      database:
+        host: "localhost"
+        port: 5432
+    
+    servers:
+      api:
+        base-url: "http://localhost"
+        
+        # Development-specific middleware
+        middleware-definitions:
+          dev-logger:
+            type: request-logger
+            config:
+              format: "dev"
+              color: true
+        
+        apps:
+          - addr: ":8080"
+            published-services: [user-service]
+            
+            # Mount dev tools
+            mount-spa:
+              - prefix: "/dev-tools"
+                dir: "./dev-tools/dist"

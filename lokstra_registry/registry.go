@@ -18,7 +18,6 @@ import (
 	"reflect"
 
 	"github.com/primadi/lokstra/common/cast"
-	"github.com/primadi/lokstra/core/config"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/request"
@@ -26,10 +25,9 @@ import (
 	"github.com/primadi/lokstra/core/service"
 )
 
-// Register SimpleResolver implementation on package init
+// Register path resolver for router package
 func init() {
-	// Register the public SimpleResolver as the implementation
-	config.RegisterSimpleResolverFunc(SimpleResolver)
+	router.RegisterPathResolver(SimpleResolver)
 }
 
 // ===== TYPE ALIASES FOR CLEANER API =====

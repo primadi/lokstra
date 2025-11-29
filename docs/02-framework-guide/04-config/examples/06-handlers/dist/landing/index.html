@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landing Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        h1 { font-size: 3em; margin-bottom: 20px; }
+        .links { margin-top: 30px; }
+        .links a {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px 30px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .links a:hover { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Welcome to Lokstra Handlers Example</h1>
+    <p>This landing page is mounted at the root <code>/</code></p>
+    
+    <div class="links">
+        <a href="/admin">Admin Dashboard (SPA)</a>
+        <a href="/api/users">API: Get Users</a>
+        <a href="/assets/logo.svg">Static Asset</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+# Named Database Pools Example
+
+# Global configs
+configs:
+  app:
+    name: "DatabaseApp"
+
+# Named database pool configurations
+named-db-pools:
+  # Main application database
+  main-db:
+    host: "localhost"
+    port: 5432
+    database: "myapp"
+    username: "postgres"
+    password: "${DB_PASSWORD}"
+    schema: "public"
+    min-conns: 2
+    max-conns: 10
+    max-idle-time: "30m"
+    max-lifetime: "1h"
+    sslmode: "disable"
+  
+  # Analytics database (read-only)
+  analytics-db:
+    dsn: "postgres://readonly:${ANALYTICS_PASSWORD}@analytics-server:5432/analytics?sslmode=require"
+    schema: "analytics"
+    min-conns: 1
+    max-conns: 5
+    max-idle-time: "10m"
+  
+  # Reporting database
+  reporting-db:
+    host: "reporting-server"
+    port: 5432
+    database: "reports"
+    username: "reporter"
+    password: "${REPORTING_PASSWORD}"
+    schema: "reports"
+    min-conns: 1
+    max-conns: 3
+
+# Service definitions
+service-definitions:
+  user-repository:
+    type: user-repository-factory
+    depends-on: [main-db]  # Uses main-db pool
+    config:
+      pool-name: "main-db"
+  
+  analytics-service:
+    type: analytics-service-factory
+    depends-on: [analytics-db]  # Uses analytics-db pool
+    config:
+      pool-name: "analytics-db"
+  
+  report-generator:
+    type: report-generator-factory
+    depends-on:
+      - mainDb:main-db
+      - reportDb:reporting-db
+    config:
+      main-pool: "main-db"
+      report-pool: "reporting-db"
+
+deployments:
+  production:
+    servers:
+      api:
+        base-url: "https://api.myapp.com"
+        addr: ":8080"
+        published-services:
+          - user-repository
+          - analytics-service
+          - report-generator

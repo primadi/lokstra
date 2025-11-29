@@ -1,0 +1,33 @@
+# Multi-File Configuration Example
+# This demonstrates config merging across multiple files
+
+# Base configuration - shared across all environments
+configs:
+  app:
+    name: "MultiFileApp"
+    version: "2.0.0"
+
+# Common middleware
+middleware-definitions:
+  cors:
+    type: cors
+    config:
+      allowed-origins: ["*"]
+  
+  recovery:
+    type: recovery
+    config:
+      print-stack: true
+
+# Common services
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on: [user-repository]
+    router:
+      convention: rest
+      resource: user
+
+  user-repository:
+    type: user-repository-factory
+    depends-on: []

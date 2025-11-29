@@ -1,0 +1,14 @@
+# Basic Lokstra Configuration Example
+
+configs:
+  app:
+    name: "BasicApp"
+    version: "1.0.0"
+
+deployments:
+  development:
+    servers:
+      api:
+        base-url: "http://localhost"
+        addr: ":8080"
+        published-services: [user-service]

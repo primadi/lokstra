@@ -515,6 +515,9 @@ type AppDefMap struct {
     Addr              string
     Routers           []string
     PublishedServices []string // Auto-generate routers for these services
+    ReverseProxies    []*ReverseProxyDef
+    MountSpa          []*MountSpaDef
+    MountStatic       []*MountStaticDef
 }
 ```
 
@@ -531,6 +534,19 @@ apps:
     published-services:
       - user-service
       - order-service
+      
+  - addr: ":3000"
+    # Handler configurations
+    reverse-proxies:
+      - prefix: /api/v1
+        target: http://backend:8080
+        strip-prefix: true
+    mount-spa:
+      - prefix: /admin
+        dir: ./dist/admin
+    mount-static:
+      - prefix: /assets
+        dir: ./public/assets
 ```
 
 ---
@@ -797,6 +813,175 @@ deployments:
 
 ---
 
+### Handler Configurations
+```yaml
+# Full example with reverse proxies, SPAs, and static files
+service-definitions:
+  api-service:
+    type: api-service-factory
+
+router-definitions:
+  api-service-router:
+    convention: rest
+    resource: item
+    resource-plural: items
+
+deployments:
+  production:
+    servers:
+      web-server:
+        base-url: https://example.com
+        apps:
+          # Backend API
+          - addr: ":8080"
+            routers:
+              - api-service-router
+          
+          # Frontend + Gateway
+          - addr: ":3000"
+            # Reverse proxy to backend API
+            reverse-proxies:
+              - prefix: /api
+                target: http://localhost:8080
+                strip-prefix: false
+              
+              # Proxy to legacy system
+              - prefix: /legacy
+                target: http://legacy-system:9000
+                strip-prefix: true
+                rewrite:
+                  path-pattern: "^/legacy/(.*)$"
+                  path-replacement: "/v1/$1"
+            
+            # SPA applications
+            mount-spa:
+              - prefix: /admin
+                dir: ./dist/admin
+              - prefix: /
+                dir: ./dist/app
+            
+            # Static assets
+            mount-static:
+              - prefix: /assets
+                dir: ./public/assets
+              - prefix: /uploads
+                dir: ./storage/uploads
+```
+
+---
+
+### ReverseProxyDef
+HTTP reverse proxy configuration.
+
+**Definition:**
+```go
+type ReverseProxyDef struct {
+    Prefix      string
+    StripPrefix bool
+    Target      string
+    Rewrite     *ReverseProxyRewriteDef
+}
+
+type ReverseProxyRewriteDef struct {
+    PathPattern      string
+    PathReplacement  string
+    HostPattern      string
+    HostReplacement  string
+}
+```
+
+**YAML Example:**
+```yaml
+reverse-proxies:
+  # Simple proxy
+  - prefix: /api/v1
+    target: http://backend:8080
+    strip-prefix: true
+    
+  # Advanced rewrite
+  - prefix: /api/v2
+    target: http://new-backend:8080
+    rewrite:
+      path-pattern: "^/api/v2/(.*)$"
+      path-replacement: "/v3/$1"
+      host-pattern: "^api\\.(.*)$"
+      host-replacement: "new-api.$1"
+```
+
+**Use Cases:**
+- Proxy to backend services (microservices architecture)
+- API gateway patterns
+- Legacy system integration
+- Dynamic path/host rewriting
+
+---
+
+### MountSpaDef
+Single Page Application mounting configuration.
+
+**Definition:**
+```go
+type MountSpaDef struct {
+    Prefix string
+    Dir    string
+}
+```
+
+**YAML Example:**
+```yaml
+mount-spa:
+  # Admin dashboard
+  - prefix: /admin
+    dir: ./dist/admin
+    
+  # Main application
+  - prefix: /
+    dir: ./dist/app
+```
+
+**Use Cases:**
+- Serve React/Vue/Angular applications
+- Multiple SPA deployments on one server
+- Admin panels and dashboards
+- Fallback to index.html for client-side routing
+
+---
+
+### MountStaticDef
+Static file serving configuration.
+
+**Definition:**
+```go
+type MountStaticDef struct {
+    Prefix string
+    Dir    string
+}
+```
+
+**YAML Example:**
+```yaml
+mount-static:
+  # Static assets
+  - prefix: /assets
+    dir: ./public/assets
+    
+  # User uploads
+  - prefix: /uploads
+    dir: ./storage/uploads
+    
+  # Documentation
+  - prefix: /docs
+    dir: ./public/docs
+```
+
+**Use Cases:**
+- Serve CSS, JavaScript, images
+- User-generated content (uploads)
+- Documentation files
+- Static resources
+
+---
+
 ## Schema Validation Rules
 
 ### Required Fields
@@ -951,6 +1136,93 @@ router-definitions:
       - name: List
         method: GET
         path: /users  # Unnecessary override
+```
+
+---
+
+### 6. Organize Handler Configurations by Purpose
+```yaml
+# ✅ Good: Clear separation of concerns
+apps:
+  # API backend
+  - addr: ":8080"
+    routers:
+      - api-router
+  
+  # Frontend gateway
+  - addr: ":3000"
+    reverse-proxies:
+      - prefix: /api
+        target: http://localhost:8080
+    mount-spa:
+      - prefix: /
+        dir: ./dist/app
+    mount-static:
+      - prefix: /assets
+        dir: ./public/assets
+
+# 🚫 Avoid: Mixing everything in one app
+apps:
+  - addr: ":8080"
+    routers:
+      - api-router
+    reverse-proxies:
+      - prefix: /other-api
+        target: http://other:9000
+    mount-spa:
+      - prefix: /admin
+        dir: ./dist/admin
+    # Too many responsibilities!
+```
+
+---
+
+### 7. Use Reverse Proxy for Backend Integration
+```yaml
+# ✅ Good: Proxy pattern for microservices
+reverse-proxies:
+  - prefix: /api/users
+    target: http://user-service:8080
+    strip-prefix: false
+  - prefix: /api/orders
+    target: http://order-service:8080
+    strip-prefix: false
+
+# ✅ Good: Strip prefix for clean routing
+reverse-proxies:
+  - prefix: /api/v1
+    target: http://backend:8080
+    strip-prefix: true  # /api/v1/users -> /users
+
+# 🚫 Avoid: No strip-prefix when needed
+reverse-proxies:
+  - prefix: /api/v1
+    target: http://backend:8080
+    # Backend receives /api/v1/users instead of /users
+```
+
+---
+
+### 8. Validate Directory Paths for Static Handlers
+```yaml
+# ✅ Good: Relative paths from project root
+mount-spa:
+  - prefix: /admin
+    dir: ./dist/admin    # Clear relative path
+  
+mount-static:
+  - prefix: /assets
+    dir: ./public/assets # Clear relative path
+
+# ⚠️ Caution: Absolute paths (environment-specific)
+mount-spa:
+  - prefix: /admin
+    dir: /var/www/admin  # Only works in production
+
+# 🚫 Avoid: Non-existent paths
+mount-static:
+  - prefix: /assets
+    dir: ./assets  # Typo: should be ./public/assets
 ```
 
 ---

@@ -1,5 +1,0 @@
-### Home page
-GET http://localhost:3050/
-
-### Check secret status
-GET http://localhost:3050/status

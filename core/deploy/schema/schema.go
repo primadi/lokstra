@@ -115,6 +115,11 @@ type AppDefMap struct {
 	Addr              string   `yaml:"addr" json:"addr"`                                                 // e.g., ":8080", "127.0.0.1:8080", "unix:/tmp/app.sock"
 	Routers           []string `yaml:"routers,omitempty" json:"routers,omitempty"`                       // Routers to include in this app
 	PublishedServices []string `yaml:"published-services,omitempty" json:"published-services,omitempty"` // Services to auto-generate routers for
+
+	// Handler configurations (mount at app level)
+	ReverseProxies []*ReverseProxyDef `yaml:"reverse-proxies,omitempty" json:"reverse-proxies,omitempty"` // Reverse proxy configurations
+	MountSpa       []*MountSpaDef     `yaml:"mount-spa,omitempty" json:"mount-spa,omitempty"`             // SPA mount configurations
+	MountStatic    []*MountStaticDef  `yaml:"mount-static,omitempty" json:"mount-static,omitempty"`       // Static file mount configurations
 }
 
 // RemoteServiceSimple defines an external service (outside this deployment)
@@ -146,4 +151,30 @@ type ServiceDef struct {
 	DependsOn []string       `yaml:"depends-on"`       // Dependencies (can be "paramName:serviceName")
 	Router    *RouterDef     `yaml:"router,omitempty"` // Embedded router definition (auto-generated router for this service)
 	Config    map[string]any `yaml:"config"`           // Optional config
+}
+
+// ReverseProxyDef defines a reverse proxy configuration
+type ReverseProxyDef struct {
+	Prefix      string                  `yaml:"prefix" json:"prefix"`                                 // URL prefix to match (e.g., "/api")
+	StripPrefix bool                    `yaml:"strip-prefix,omitempty" json:"strip-prefix,omitempty"` // Whether to strip the prefix before forwarding
+	Target      string                  `yaml:"target" json:"target"`                                 // Target backend URL (e.g., "http://api-server:8080")
+	Rewrite     *ReverseProxyRewriteDef `yaml:"rewrite,omitempty" json:"rewrite,omitempty"`           // Path rewrite rules
+}
+
+// ReverseProxyRewriteDef represents path rewrite rules for reverse proxy
+type ReverseProxyRewriteDef struct {
+	From string `yaml:"from" json:"from"` // Pattern to match in path (regex supported)
+	To   string `yaml:"to" json:"to"`     // Replacement pattern
+}
+
+// MountSpaDef defines a Single Page Application mount configuration
+type MountSpaDef struct {
+	Prefix string `yaml:"prefix" json:"prefix"` // URL prefix (e.g., "/app", "/")
+	Dir    string `yaml:"dir" json:"dir"`       // Directory path containing SPA files (e.g., "./dist", "./build")
+}
+
+// MountStaticDef defines a static file mount configuration
+type MountStaticDef struct {
+	Prefix string `yaml:"prefix" json:"prefix"` // URL prefix (e.g., "/static", "/assets")
+	Dir    string `yaml:"dir" json:"dir"`       // Directory path containing static files (e.g., "./public", "./static")
 }
