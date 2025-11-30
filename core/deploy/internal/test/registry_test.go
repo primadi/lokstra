@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/primadi/lokstra/core/deploy"
-
-	"github.com/primadi/lokstra/core/deploy/schema"
 )
 
 func TestGlobalRegistry_ConfigResolution(t *testing.T) {
@@ -17,24 +15,12 @@ func TestGlobalRegistry_ConfigResolution(t *testing.T) {
 	os.Setenv("TEST_DB_URL", "postgres://test-server/testdb")
 	defer os.Unsetenv("TEST_DB_URL")
 
-	// Define configs
-	reg.DefineConfig(&schema.ConfigDef{
-		Name:  "DB_MAX_CONNS",
-		Value: 20,
-	})
-
-	reg.DefineConfig(&schema.ConfigDef{
-		Name:  "DB_URL",
-		Value: "${TEST_DB_URL}",
-	})
-
-	// Resolve configs
-	if err := reg.ResolveConfigs(); err != nil {
-		t.Fatalf("failed to resolve configs: %v", err)
-	}
+	// Set configs directly (already resolved)
+	reg.SetConfig("DB_MAX_CONNS", 20)
+	reg.SetConfig("DB_URL", "postgres://test-server/testdb")
 
 	// Check DB_MAX_CONNS (should preserve type)
-	maxConns, ok := reg.GetResolvedConfig("DB_MAX_CONNS")
+	maxConns, ok := reg.GetConfig("DB_MAX_CONNS")
 	if !ok {
 		t.Fatal("DB_MAX_CONNS not found")
 	}
@@ -42,8 +28,8 @@ func TestGlobalRegistry_ConfigResolution(t *testing.T) {
 		t.Errorf("expected 20, got %v (type %T)", maxConns, maxConns)
 	}
 
-	// Check DB_URL (should resolve env var)
-	dbURL, ok := reg.GetResolvedConfig("DB_URL")
+	// Check DB_URL
+	dbURL, ok := reg.GetConfig("DB_URL")
 	if !ok {
 		t.Fatal("DB_URL not found")
 	}
@@ -55,29 +41,17 @@ func TestGlobalRegistry_ConfigResolution(t *testing.T) {
 func TestGlobalRegistry_ConfigReference(t *testing.T) {
 	reg := deploy.NewGlobalRegistry()
 
-	// Define configs
-	reg.DefineConfig(&schema.ConfigDef{
-		Name:  "MAX_CONNECTIONS",
-		Value: 50,
-	})
+	// Set configs
+	reg.SetConfig("MAX_CONNECTIONS", 50)
+	reg.SetConfig("LOG_LEVEL", "debug")
 
-	reg.DefineConfig(&schema.ConfigDef{
-		Name:  "LOG_LEVEL",
-		Value: "debug",
-	})
-
-	// Create a service definition with config references
-	// This simulates how service configs with @cfg references are handled
+	// Create a service definition with static config
+	// Note: Config references ${@cfg:...} are resolved at YAML byte level by loader
 	reg.RegisterLazyService("test-service", "test-factory", map[string]any{
-		"max-conns": "${@cfg:MAX_CONNECTIONS}",
-		"level":     "${@cfg:LOG_LEVEL}",
+		"max-conns": 50,
+		"level":     "debug",
 		"static":    "static-value",
 	})
-
-	// Resolve all configs - this should resolve service configs too
-	if err := reg.ResolveConfigs(); err != nil {
-		t.Fatalf("failed to resolve configs: %v", err)
-	}
 
 	// Get the resolved service definition
 	serviceDef := reg.GetDeferredServiceDef("test-service")

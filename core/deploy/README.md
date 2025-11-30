@@ -314,63 +314,39 @@ func main() {
 }
 ```
 
-## Custom Resolvers
+## Custom Providers
 
-Implement the `Resolver` interface:
+Providers resolve variables at YAML byte level. Built-in providers:
+- `@env` - Environment variables (default)
+- `@aws-secret` - AWS Secrets Manager
+- `@vault` - HashiCorp Vault
+- `@cfg` - Config references (step 2)
+
+**Add custom provider:**
 
 ```go
-type MyResolver struct{}
+// See core/deploy/loader/provider_registry.go
+type CustomProvider struct{}
 
-func (r *MyResolver) Name() string {
-    return "myresolver"
+func (p *CustomProvider) Name() string {
+    return "custom"
 }
 
-func (r *MyResolver) Resolve(key string) (string, bool) {
-    // Custom logic to resolve key
+func (p *CustomProvider) Resolve(key string) (string, error) {
     value, err := fetchFromSomewhere(key)
-    if err != nil {
-        return "", false
-    }
-    return value, true
+    return value, err
 }
 
-// Register
-deploy.Global().RegisterResolver(&MyResolver{})
+// Register in init()
+func init() {
+    loader.RegisterProvider(&CustomProvider{})
+}
 ```
 
 **Use in YAML:**
 ```yaml
 configs:
-  - name: SECRET
-    value: ${@myresolver:path/to/secret:default}
-```
-
-## Testing
-
-```go
-func TestDeployment(t *testing.T) {
-    // Create isolated registry for testing
-    registry := deploy.NewGlobalRegistry()
-    
-    // Register test factories
-    registry.RegisterServiceType("test-service", testFactory, nil)
-    
-    // Define test config
-    registry.DefineConfig(&schema.ConfigDef{
-        Name: "TEST_VALUE",
-        Value: "test",
-    })
-    
-    // Test resolution
-    if err := registry.ResolveConfigs(); err != nil {
-        t.Fatal(err)
-    }
-    
-    value, ok := registry.GetResolvedConfig("TEST_VALUE")
-    if !ok || value != "test" {
-        t.Errorf("expected 'test', got %v", value)
-    }
-}
+  api-key: ${@custom:path/to/secret:default}
 ```
 
 ## Migration from `core/config`
@@ -397,39 +373,37 @@ See:
 ## Architecture
 
 ```
+Loader (YAML Resolution)
+├── Provider Registry
+│   ├── @env (environment variables)
+│   ├── @aws-secret (AWS Secrets Manager)
+│   ├── @vault (HashiCorp Vault)
+│   └── @cfg (config references - step 2)
+└── 2-Step Resolution
+    ├── Step 1: Resolve providers at byte level
+    └── Step 2: Resolve @cfg references
+
 GlobalRegistry (Singleton)
-├── Resolver Registry
-│   ├── env (default)
-│   ├── consul
-│   ├── aws-ssm
-│   └── k8s
-├── Factories (code)
+├── Factories (code-registered)
 │   ├── ServiceFactories (local + remote)
 │   └── MiddlewareFactories
-└── Definitions (YAML/code)
-    ├── Configs
-    ├── Middlewares
-    ├── Services
-    ├── Routers
-    ├── RouterOverrides
-    └── ServiceRouters
-
-Deployment
-├── Config Overrides
-└── Servers
-    └── Apps
-        ├── Services (instances)
-        ├── Routers (manual)
-        ├── ServiceRouters (auto)
-        └── RemoteServices (proxies)
+├── Runtime Config (resolvedConfigs)
+│   ├── From YAML (flattened + nested)
+│   └── From code (SetConfig)
+└── Topology (2-Layer)
+    ├── DeploymentTopology
+    └── ServerTopology
+        ├── Services (local)
+        ├── RemoteServices (HTTP proxies)
+        └── Apps (addr + routers)
 ```
 
 ## Best Practices
 
 1. ✅ **Define factories in code** - Type safety, compile-time checks
-2. ✅ **Use @cfg for config references** - Preserves types
-3. ✅ **Use global definitions** - DRY, reusable
-4. ✅ **Override configs per deployment** - Environment-specific values
+2. ✅ **Use @cfg for config references** - Preserves types (int stays int)
+3. ✅ **Use native YAML types** - Don't quote numbers: `port: 5432` not `port: "5432"`
+4. ✅ **Leverage 2-step resolution** - ENV/providers first, then @cfg references
 5. ✅ **Use depends-on with aliases** - Clear parameter mapping
-6. ✅ **Use router-overrides** - Fine-grained control
-7. ✅ **Test with isolated registries** - Clean test state
+6. ✅ **Single quote for colons** - `${@vault:'path:with:colons'}` avoids parsing issues
+7. ✅ **Test config access** - Use `lokstra_registry.GetConfig[T]()` for type-safe access

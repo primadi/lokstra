@@ -19,7 +19,7 @@ import (
 
 	"github.com/primadi/lokstra/common/cast"
 	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/core/deploy/schema"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
@@ -424,19 +424,6 @@ func CreateMiddleware(name string) request.HandlerFunc {
 
 // ===== CONFIGURATION =====
 
-// DefineConfig defines a configuration value in the global registry (for YAML config)
-func DefineConfig(name string, value any) {
-	deploy.Global().DefineConfig(&schema.ConfigDef{
-		Name:  name,
-		Value: value,
-	})
-}
-
-// GetResolvedConfig gets a resolved configuration value from the global registry
-func GetResolvedConfig(key string) (any, bool) {
-	return deploy.Global().GetResolvedConfig(key)
-}
-
 // SetConfig sets a runtime configuration value.
 // Useful for:
 //   - Runtime detection results (mode, environment)
@@ -479,7 +466,7 @@ func SetConfig(key string, value any) {
 //	}
 //	dbConfig := GetConfig[DBConfig]("global-db", DBConfig{})
 func GetConfig[T any](name string, defaultValue T) T {
-	value, ok := deploy.Global().GetResolvedConfig(name)
+	value, ok := deploy.Global().GetConfig(name)
 	if !ok {
 		return defaultValue
 	}
@@ -550,6 +537,25 @@ func GetConfig[T any](name string, defaultValue T) T {
 // Note: This function requires lokstra_registry to be initialized with loaded config.
 func SimpleResolver(input string) string {
 	return deploy.Global().SimpleResolver(input)
+}
+
+// ===== PROVIDER REGISTRY (for custom config resolvers) =====
+
+// Provider is an alias to loader.Provider for easier access
+// This allows registering custom config value providers (AWS, Vault, K8s, etc.)
+type Provider = loader.Provider
+
+// RegisterProvider registers a custom provider for config value resolution
+// Providers can resolve values from various sources (AWS Secrets, Vault, K8s, etc.)
+//
+// Examples:
+//   - RegisterProvider(&AWSSecretProvider{}) -> resolve ${@aws-secret:key}
+//   - RegisterProvider(&VaultProvider{}) -> resolve ${@vault:path}
+//   - RegisterProvider(&K8sConfigMapProvider{}) -> resolve ${@k8s:configmap/key}
+//
+// See core/deploy/loader/PROVIDER-REGISTRY.md for complete examples
+func RegisterProvider(p Provider) {
+	loader.RegisterProvider(p)
 }
 
 // ===== SHUTDOWN =====

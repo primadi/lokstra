@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/primadi/lokstra/core/deploy/resolver"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/core/request"
@@ -20,9 +19,6 @@ import (
 // These are shared across all deployments
 type GlobalRegistry struct {
 	mu sync.RWMutex
-
-	// Resolver for config values
-	resolver *resolver.Registry
 
 	// Factories (code-defined)
 	serviceFactories    map[string]*ServiceFactoryEntry
@@ -44,13 +40,14 @@ type GlobalRegistry struct {
 	serviceDefs sync.Map // map[string]*deferredServiceDef
 
 	// Definitions (YAML or code-defined)
-	configs map[string]*schema.ConfigDef
 	routers map[string]*schema.RouterDef
 	// Note: routerOverrides removed - overrides are now inline in RouterDef
 	// Note: middlewares map removed - use middlewareEntries sync.Map (unified API)
 	// Note: services map removed - use serviceDefs sync.Map (unified API - Opsi 2)
+	// Note: configs map removed - use resolvedConfigs only (simplified)
 
-	// Resolved config values (after resolver processing)
+	// Config values (runtime and YAML-loaded configs)
+	// All configs are stored here after loader's 2-step resolution
 	resolvedConfigs map[string]any
 
 	// Topology storage (2-Layer Architecture)
@@ -171,10 +168,8 @@ func Global() *GlobalRegistry {
 // NewGlobalRegistry creates a new global registry
 func NewGlobalRegistry() *GlobalRegistry {
 	return &GlobalRegistry{
-		resolver:            resolver.NewRegistry(),
 		serviceFactories:    make(map[string]*ServiceFactoryEntry),
 		middlewareFactories: make(map[string]MiddlewareFactory),
-		configs:             make(map[string]*schema.ConfigDef),
 		routers:             make(map[string]*schema.RouterDef),
 		resolvedConfigs:     make(map[string]any),
 		// Topology maps, serviceDefs, and middlewareEntries use sync.Map, no initialization needed
@@ -348,24 +343,7 @@ func normalizeServiceFactory(factoryInput any, serviceType, factoryKind string) 
 	}
 }
 
-// RegisterResolver registers a custom config resolver
-func (g *GlobalRegistry) RegisterResolver(r resolver.Resolver) {
-	g.resolver.Register(r)
-}
-
 // ===== DEFINITION REGISTRATION (YAML OR CODE) =====
-
-// DefineConfig defines a configuration value
-func (g *GlobalRegistry) DefineConfig(def *schema.ConfigDef) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if _, exists := g.configs[def.Name]; exists {
-		panic(fmt.Sprintf("config %s already defined", def.Name))
-	}
-
-	g.configs[def.Name] = def
-}
 
 // DefineRouter defines a router
 func (g *GlobalRegistry) DefineRouter(name string, def *schema.RouterDef) {
@@ -419,14 +397,6 @@ func (g *GlobalRegistry) GetServiceMetadata(serviceType string) *ServiceMetadata
 	return entry.Metadata
 }
 
-// GetConfig returns a config definition
-func (g *GlobalRegistry) GetConfig(name string) *schema.ConfigDef {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	return g.configs[name]
-}
-
 // GetRouterDef returns a router definition
 func (g *GlobalRegistry) GetRouterDef(name string) *schema.RouterDef {
 	g.mu.RLock()
@@ -437,223 +407,23 @@ func (g *GlobalRegistry) GetRouterDef(name string) *schema.RouterDef {
 
 // ===== CONFIG RESOLUTION =====
 
-// flattenNestedConfig flattens nested config maps using dot notation
-// Example: flattenNestedConfig("global-db", {"dsn": "...", "schema": "..."}, result)
-//
-//	=> result["global-db.dsn"] = "...", result["global-db.schema"] = "..."
-func flattenNestedConfig(prefix string, config map[string]any, result map[string]any) {
-	for key, value := range config {
-		fullKey := key
-		if prefix != "" {
-			fullKey = prefix + "." + key
-		}
-
-		// If value is a map, recurse
-		if nestedMap, ok := value.(map[string]any); ok {
-			flattenNestedConfig(fullKey, nestedMap, result)
-		} else {
-			// Store leaf value with lowercase key for case-insensitive lookup
-			result[strings.ToLower(fullKey)] = value
-		}
-	}
-}
-
-// ResolveConfigs resolves ALL values throughout the entire configuration using the resolver
-// This performs 2-step resolution globally across all sections:
-//  1. Resolve all ${...} except ${@cfg:...} in configs, deployments, service configs, etc.
-//  2. Resolve ${@cfg:...} using step 1 results
-//
-// After this call, all ${...} values are resolved and ready for use.
-func (g *GlobalRegistry) ResolveConfigs() error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	// Build initial resolved configs map (before resolution) - needed for @cfg references
-	tempConfigs := make(map[string]any)
-	for name, def := range g.configs {
-		tempConfigs[name] = def.Value
-	}
-
-	// STEP 1: Resolve configs section in multiple passes to handle dependencies
-	// Pass 1: Resolve non-nested configs (these might be referenced by nested configs)
-	for name, def := range g.configs {
-		// Skip nested maps in first pass
-		if _, isMap := def.Value.(map[string]any); isMap {
-			continue
-		}
-
-		resolved, err := g.resolveAnyValue(def.Value, tempConfigs)
-		if err != nil {
-			return fmt.Errorf("failed to resolve config %s: %w", name, err)
-		}
-		// Store with lowercase key for case-insensitive lookup
-		lowerName := strings.ToLower(name)
-		g.resolvedConfigs[lowerName] = resolved
-		tempConfigs[name] = resolved // Keep original case for @cfg references
-	}
-
-	// Pass 2: Resolve nested configs (can now reference Pass 1 results)
-	for name, def := range g.configs {
-		// Only process nested maps in second pass
-		if _, isMap := def.Value.(map[string]any); !isMap {
-			continue
-		}
-
-		resolved, err := g.resolveAnyValue(def.Value, tempConfigs)
-		if err != nil {
-			return fmt.Errorf("failed to resolve config %s: %w", name, err)
-		}
-		// Store with lowercase key for case-insensitive lookup
-		lowerName := strings.ToLower(name)
-		g.resolvedConfigs[lowerName] = resolved
-		tempConfigs[name] = resolved // Keep original case for @cfg references
-	}
-
-	// STEP 1.5: Flatten nested configs AFTER resolution
-	// This ensures ${cfg:...} references are resolved before flattening
-	flattenedConfigs := make(map[string]any)
-	for name, value := range g.resolvedConfigs {
-		if nestedMap, ok := value.(map[string]any); ok {
-			// Flatten nested map
-			flattenNestedConfig(name, nestedMap, flattenedConfigs)
-		} else {
-			// Keep non-map values as-is
-			flattenedConfigs[name] = value
-		}
-	}
-	g.resolvedConfigs = flattenedConfigs
-
-	// STEP 2: Resolve ALL deployment topology values in-place
-	g.deploymentTopologies.Range(func(key, value any) bool {
-		deployment := value.(*DeploymentTopology)
-
-		// Resolve config overrides
-		for configKey, configValue := range deployment.ConfigOverrides {
-			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
-			if err != nil {
-				// Don't fail the whole process, just log warning
-				fmt.Printf("Warning: failed to resolve deployment config override %s.%s: %v\n",
-					deployment.Name, configKey, err)
-				continue
-			}
-			deployment.ConfigOverrides[configKey] = resolved
-		}
-
-		// Resolve server values
-		for _, server := range deployment.Servers {
-			// Resolve BaseURL
-			resolved, err := g.resolveAnyValue(server.BaseURL, tempConfigs)
-			if err != nil {
-				fmt.Printf("Warning: failed to resolve server base-url %s.%s: %v\n",
-					deployment.Name, server.Name, err)
-			} else {
-				if resolvedStr, ok := resolved.(string); ok {
-					server.BaseURL = resolvedStr
-				}
-			}
-
-			// Resolve app addresses
-			for _, app := range server.Apps {
-				resolved, err := g.resolveAnyValue(app.Addr, tempConfigs)
-				if err != nil {
-					fmt.Printf("Warning: failed to resolve app addr %s.%s: %v\n",
-						deployment.Name, server.Name, err)
-				} else {
-					if resolvedStr, ok := resolved.(string); ok {
-						app.Addr = resolvedStr
-					}
-				}
-			}
-		}
-		return true // Continue iteration
-	})
-
-	// STEP 3: Resolve service definition config values
-	g.serviceDefs.Range(func(key, value any) bool {
-		serviceDef := value.(*deferredServiceDef)
-
-		// Resolve config map
-		for configKey, configValue := range serviceDef.Config {
-			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
-			if err != nil {
-				fmt.Printf("Warning: failed to resolve service config %s.%s: %v\n",
-					serviceDef.Name, configKey, err)
-				continue
-			}
-			serviceDef.Config[configKey] = resolved
-		}
-		return true // Continue iteration
-	})
-
-	// STEP 4: Resolve middleware definition config values
-	g.middlewareEntries.Range(func(key, value any) bool {
-		middlewareEntry := value.(*MiddlewareEntry)
-
-		// Resolve config map
-		for configKey, configValue := range middlewareEntry.Config {
-			resolved, err := g.resolveAnyValue(configValue, tempConfigs)
-			if err != nil {
-				middlewareName := key.(string)
-				fmt.Printf("Warning: failed to resolve middleware config %s.%s: %v\n",
-					middlewareName, configKey, err)
-				continue
-			}
-			middlewareEntry.Config[configKey] = resolved
-		}
-		return true // Continue iteration
-	})
-
-	return nil
-}
-
-// resolveAnyValue resolves a value of any type using the resolver
-// Only string values containing ${...} are processed, others are returned as-is
-func (g *GlobalRegistry) resolveAnyValue(value any, tempConfigs map[string]any) (any, error) {
-	// Handle string values
-	if valueStr, ok := value.(string); ok {
-		// Only resolve if contains resolver syntax
-		if strings.Contains(valueStr, "${") {
-			return g.resolver.ResolveValue(valueStr, tempConfigs)
-		}
-		return value, nil // No resolver syntax, return as-is
-	}
-
-	// Handle nested maps (recursive resolution)
-	if valueMap, ok := value.(map[string]any); ok {
-		resolvedMap := make(map[string]any)
-		for k, v := range valueMap {
-			resolved, err := g.resolveAnyValue(v, tempConfigs)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve map key %s: %w", k, err)
-			}
-			resolvedMap[k] = resolved
-		}
-		return resolvedMap, nil
-	}
-
-	// Handle slices (recursive resolution)
-	if valueSlice, ok := value.([]any); ok {
-		resolvedSlice := make([]any, len(valueSlice))
-		for i, v := range valueSlice {
-			resolved, err := g.resolveAnyValue(v, tempConfigs)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve slice index %d: %w", i, err)
-			}
-			resolvedSlice[i] = resolved
-		}
-		return resolvedSlice, nil
-	}
-
-	// Non-string, non-map, non-slice values are used as-is
-	return value, nil
-}
-
 // SetConfig sets a runtime configuration value
 // Useful for:
 //   - Runtime detection results (mode, environment)
 //   - Computed values (expensive calculations)
 //   - Dynamic service discovery
 //   - Feature flags
+//
+// If value is a map[string]any, also flattens nested values automatically:
+//
+//	SetConfig("db", {"host": "x", "port": 5432})
+//	→ Also sets: "db.host" = "x", "db.port" = 5432
+//
+// IMPORTANT: When setting a map, deletes all existing "key.*" entries first
+// to prevent stale nested values:
+//
+//	SetConfig("db", {"host": "x", "port": 5432}) // Creates db, db.host, db.port
+//	SetConfig("db", {"host": "y"})               // Deletes db.port (stale), keeps only db, db.host
 //
 // Key is automatically converted to lowercase for case-insensitive access
 func (g *GlobalRegistry) SetConfig(key string, value any) {
@@ -665,13 +435,51 @@ func (g *GlobalRegistry) SetConfig(key string, value any) {
 	}
 
 	// Store with lowercase key for case-insensitive access
-	g.resolvedConfigs[strings.ToLower(key)] = value
+	lowerKey := strings.ToLower(key)
+
+	// If value is a map, delete all existing nested keys first (prevent stale data)
+	if _, ok := value.(map[string]any); ok {
+		g.deleteNestedKeys(lowerKey)
+	}
+
+	// Store the value
+	g.resolvedConfigs[lowerKey] = value
+
+	// If value is a map, also flatten nested values
+	if nestedMap, ok := value.(map[string]any); ok {
+		g.flattenAndStoreNested(lowerKey, nestedMap)
+	}
 }
 
-// GetResolvedConfig returns a resolved config value
+// deleteNestedKeys deletes all keys with prefix "key.*"
+// Called before setting a map value to prevent stale nested data
+func (g *GlobalRegistry) deleteNestedKeys(prefix string) {
+	prefixDot := prefix + "."
+	for key := range g.resolvedConfigs {
+		if key == prefix || strings.HasPrefix(key, prefixDot) {
+			delete(g.resolvedConfigs, key)
+		}
+	}
+}
+
+// flattenAndStoreNested recursively flattens nested map values
+// Called internally by SetConfig when value is a map
+func (g *GlobalRegistry) flattenAndStoreNested(prefix string, values map[string]any) {
+	for key, value := range values {
+		fullKey := prefix + "." + strings.ToLower(key)
+		g.resolvedConfigs[fullKey] = value
+
+		// Recurse if value is also a map
+		if nestedMap, ok := value.(map[string]any); ok {
+			g.flattenAndStoreNested(fullKey, nestedMap)
+		}
+	}
+}
+
+// GetConfig returns a config value
 // Supports both flat access ("global-db.dsn") and nested access ("global-db" returns map)
 // Key lookup is case-insensitive
-func (g *GlobalRegistry) GetResolvedConfig(name string) (any, bool) {
+func (g *GlobalRegistry) GetConfig(name string) (any, bool) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -737,7 +545,7 @@ func setNestedValue(target map[string]any, path string, value any) {
 }
 
 // SimpleResolver resolves variables in the format ${key} or ${key:default}
-// by looking up values from the resolved config registry via GetResolvedConfig().
+// by looking up values from the config registry via GetConfig().
 //
 // This is designed for annotations where config values are managed centrally:
 //   - Annotation prefix: prefix="${auth-prefix}"
@@ -749,22 +557,17 @@ func setNestedValue(target map[string]any, path string, value any) {
 //
 // Examples:
 //
-//	SimpleResolver("${auth-prefix}")              -> GetResolvedConfig("auth-prefix")
-//	SimpleResolver("${auth-prefix:/api/auth}")    -> GetResolvedConfig("auth-prefix") with default "/api/auth"
-//	SimpleResolver("/api/${version:v1}/users")    -> "/api/" + GetResolvedConfig("version") + "/users"
+//	SimpleResolver("${auth-prefix}")              -> GetConfig("auth-prefix", "")
+//	SimpleResolver("${auth-prefix:/api/auth}")    -> GetConfig("auth-prefix", "/api/auth")
+//	SimpleResolver("/api/${version:v1}/users")    -> "/api/" + GetConfig("version", "v1") + "/users"
 //	SimpleResolver("GET ${api-version}/users/{id}") -> "GET /api/users/{id}" (if api-version=/api)
 //
 // YAML Config Example:
 //
 //	configs:
-//	  - name: auth-prefix
-//	    value: ${AUTH_PREFIX:/api/auth}  # ENV variable with default
-//	  - name: api-version
-//	    value: /api                      # Static value
-//	  - name: db-host
-//	    value: ${@VAULT:database/host:localhost}  # Vault with default
-//
-// Note: This function requires config to be resolved first via ResolveConfigs().
+//	  auth-prefix: ${AUTH_PREFIX:/api/auth}  # ENV variable with default
+//	  api-version: /api                      # Static value
+//	  db-host: ${@VAULT:database/host:localhost}  # Vault with default
 func (g *GlobalRegistry) SimpleResolver(input string) string {
 	return os.Expand(input, func(placeholder string) string {
 		// Parse placeholder: "key" or "key:default"
@@ -777,7 +580,7 @@ func (g *GlobalRegistry) SimpleResolver(input string) string {
 		}
 
 		// Look up from resolved config registry
-		value, ok := g.GetResolvedConfig(key)
+		value, ok := g.GetConfig(key)
 		if !ok {
 			return defaultValue
 		}

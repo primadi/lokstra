@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -23,18 +22,8 @@ type ServerConfig struct {
 func TestGetConfig_FlatAccess(t *testing.T) {
 	// Setup
 	registry := deploy.Global()
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "global-db.dsn",
-		Value: "postgres://localhost/test",
-	})
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "global-db.schema",
-		Value: "public",
-	})
-	if err := registry.ResolveConfigs(); err != nil {
-		t.Fatalf("Failed to resolve configs: %v", err)
-	}
-
+	registry.SetConfig("global-db.dsn", "postgres://localhost/test")
+	registry.SetConfig("global-db.schema", "public")
 	// Test flat access
 	dsn := lokstra_registry.GetConfig("global-db.dsn", "default")
 	if dsn != "postgres://localhost/test" {
@@ -50,18 +39,8 @@ func TestGetConfig_FlatAccess(t *testing.T) {
 func TestGetConfig_NestedMap(t *testing.T) {
 	// Setup
 	registry := deploy.Global()
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "app-db.dsn",
-		Value: "postgres://localhost/test",
-	})
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "app-db.schema",
-		Value: "public",
-	})
-	if err := registry.ResolveConfigs(); err != nil {
-		t.Fatalf("Failed to resolve configs: %v", err)
-	}
-
+	registry.SetConfig("app-db.dsn", "postgres://localhost/test")
+	registry.SetConfig("app-db.schema", "public")
 	// Test nested access as map
 	dbConfig := lokstra_registry.GetConfig[map[string]any]("app-db", nil)
 	if dbConfig == nil {
@@ -80,18 +59,8 @@ func TestGetConfig_NestedMap(t *testing.T) {
 func TestGetConfig_StructBinding(t *testing.T) {
 	// Setup
 	registry := deploy.Global()
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "database.dsn",
-		Value: "postgres://localhost/mydb",
-	})
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "database.schema",
-		Value: "app",
-	})
-	if err := registry.ResolveConfigs(); err != nil {
-		t.Fatalf("Failed to resolve configs: %v", err)
-	}
-
+	registry.SetConfig("database.dsn", "postgres://localhost/mydb")
+	registry.SetConfig("database.schema", "app")
 	// Test struct binding
 	config := lokstra_registry.GetConfig("database", DBConfig{})
 	if config.DSN != "postgres://localhost/mydb" {
@@ -105,17 +74,8 @@ func TestGetConfig_StructBinding(t *testing.T) {
 func TestGetConfig_StructBindingWithPointer(t *testing.T) {
 	// Setup
 	registry := deploy.Global()
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "server.host",
-		Value: "localhost",
-	})
-	registry.DefineConfig(&schema.ConfigDef{
-		Name:  "server.port",
-		Value: 8080.0, // YAML numbers are float64
-	})
-	if err := registry.ResolveConfigs(); err != nil {
-		t.Fatalf("Failed to resolve configs: %v", err)
-	}
+	registry.SetConfig("server.host", "localhost")
+	registry.SetConfig("server.port", 8080)
 
 	// Test struct pointer binding
 	config := lokstra_registry.GetConfig[*ServerConfig]("server", nil)
@@ -207,5 +167,110 @@ func TestSetConfig_Overwrite(t *testing.T) {
 	}
 	if val2 != "updated" {
 		t.Errorf("Expected updated value='updated', got '%s'", val2)
+	}
+}
+
+func TestSetConfig_LeafValue(t *testing.T) {
+	// Test setting leaf values (non-map) with dot notation
+	lokstra_registry.SetConfig("db.host", "localhost")
+	lokstra_registry.SetConfig("db.port", 5432)
+	lokstra_registry.SetConfig("db.schema", "public")
+
+	// Verify individual access
+	host := lokstra_registry.GetConfig("db.host", "")
+	port := lokstra_registry.GetConfig("db.port", 0)
+	schema := lokstra_registry.GetConfig("db.schema", "")
+
+	if host != "localhost" {
+		t.Errorf("Expected host='localhost', got '%s'", host)
+	}
+	if port != 5432 {
+		t.Errorf("Expected port=5432, got %d", port)
+	}
+	if schema != "public" {
+		t.Errorf("Expected schema='public', got '%s'", schema)
+	}
+
+	// Verify nested access returns reconstructed map
+	dbConfig := lokstra_registry.GetConfig[map[string]any]("db", nil)
+	if dbConfig == nil {
+		t.Fatal("Expected map, got nil")
+	}
+	if dbConfig["host"] != "localhost" {
+		t.Errorf("Expected nested host='localhost', got '%v'", dbConfig["host"])
+	}
+	if dbConfig["port"] != 5432 {
+		t.Errorf("Expected nested port=5432, got '%v'", dbConfig["port"])
+	}
+}
+
+func TestSetConfig_MapWithCleanup(t *testing.T) {
+	registry := deploy.Global()
+
+	// First: Set complex nested structure
+	lokstra_registry.SetConfig("db", map[string]any{
+		"host": "localhost",
+		"port": 5432,
+		"pool": map[string]any{
+			"min": 2,
+			"max": 10,
+		},
+	})
+
+	// Verify all keys exist
+	if _, ok := registry.GetConfig("db"); !ok {
+		t.Error("Expected 'db' to exist")
+	}
+	if _, ok := registry.GetConfig("db.host"); !ok {
+		t.Error("Expected 'db.host' to exist")
+	}
+	if _, ok := registry.GetConfig("db.port"); !ok {
+		t.Error("Expected 'db.port' to exist")
+	}
+	if _, ok := registry.GetConfig("db.pool"); !ok {
+		t.Error("Expected 'db.pool' to exist")
+	}
+	if _, ok := registry.GetConfig("db.pool.min"); !ok {
+		t.Error("Expected 'db.pool.min' to exist")
+	}
+	if _, ok := registry.GetConfig("db.pool.max"); !ok {
+		t.Error("Expected 'db.pool.max' to exist")
+	}
+
+	// Second: Overwrite with simpler structure (should delete stale keys)
+	lokstra_registry.SetConfig("db", map[string]any{
+		"host": "newhost",
+	})
+
+	// Verify only new keys exist
+	host := lokstra_registry.GetConfig("db.host", "")
+	if host != "newhost" {
+		t.Errorf("Expected host='newhost', got '%s'", host)
+	}
+
+	// Verify stale keys are deleted
+	if _, ok := registry.GetConfig("db.port"); ok {
+		t.Error("Expected 'db.port' to be deleted (stale)")
+	}
+	if _, ok := registry.GetConfig("db.pool"); ok {
+		t.Error("Expected 'db.pool' to be deleted (stale)")
+	}
+	if _, ok := registry.GetConfig("db.pool.min"); ok {
+		t.Error("Expected 'db.pool.min' to be deleted (stale)")
+	}
+	if _, ok := registry.GetConfig("db.pool.max"); ok {
+		t.Error("Expected 'db.pool.max' to be deleted (stale)")
+	}
+
+	// Verify nested access only returns new structure
+	dbConfig := lokstra_registry.GetConfig[map[string]any]("db", nil)
+	if dbConfig == nil {
+		t.Fatal("Expected map, got nil")
+	}
+	if len(dbConfig) != 1 {
+		t.Errorf("Expected 1 key in nested map, got %d: %+v", len(dbConfig), dbConfig)
+	}
+	if dbConfig["host"] != "newhost" {
+		t.Errorf("Expected nested host='newhost', got '%v'", dbConfig["host"])
 	}
 }
