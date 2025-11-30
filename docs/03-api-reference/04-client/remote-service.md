@@ -1011,44 +1011,6 @@ func (s *Service) GetUser(id int) (*User, error) {
     remote := api_client.NewRemoteService(client, "/api")
     return api_client.CallRemoteService[*User](remote, "GetUser", nil, &GetUserRequest{ID: id})
 }
-```
-
----
-
-## Convention Comparison
-
-### REST
-```
-ListUsers       → GET    /users
-GetUser         → GET    /users/{id}
-CreateUser      → POST   /users
-UpdateUser      → PUT    /users/{id}
-DeleteUser      → DELETE /users/{id}
-```
-
-**Best for:** CRUD operations, resource-oriented APIs
-
----
-
-### RPC
-```
-ValidateToken   → POST /rpc/ValidateToken
-ProcessPayment  → POST /rpc/ProcessPayment
-SendEmail       → POST /rpc/SendEmail
-```
-
-**Best for:** Action-oriented operations, procedures
-
----
-
-### Kebab-Case
-```
-ValidateToken   → POST /validate-token
-GetUserProfile  → GET  /get-user-profile
-ProcessPayment  → POST /process-payment
-```
-
-**Best for:** Flat URL structure, simpler routing
 
 ---
 

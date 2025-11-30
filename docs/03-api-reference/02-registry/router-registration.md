@@ -418,17 +418,11 @@ Define routers in YAML configuration with inline overrides.
 ```yaml
 router-definitions:
   user-service-router:  # Service name derived: "user-service"
-    convention: rest
-    resource: user
-    resource-plural: users
     # Inline overrides
     path-prefix: /api/v1
     middlewares:
       - auth
       - logger
-    hidden:
-      - Delete
-      - InternalHelper
     custom:
       - name: Login
         method: POST
@@ -479,11 +473,6 @@ Manual routers registered via `RegisterRouter()` can now be configured from YAML
 - ✅ `path-prefix` - Change router base path
 - ✅ `middlewares` - Add router-level middlewares
 - ✅ `custom` routes - Update individual route method, path, or middlewares
-
-**Not Supported:**
-- ❌ `convention` - Manual routers don't use conventions
-- ❌ `resource`/`resource-plural` - Manual routers don't use resource names
-- ❌ `hidden` - Manual routers control visibility in code
 
 ---
 

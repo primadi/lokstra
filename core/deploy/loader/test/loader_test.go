@@ -1,12 +1,15 @@
-package loader
+package loader_test
 
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/primadi/lokstra/core/deploy/loader"
+	"github.com/primadi/lokstra/core/deploy/loader/internal"
 )
 
 func TestLoadSingleFile(t *testing.T) {
-	config, err := LoadConfig("testdata/base.yaml")
+	config, err := loader.LoadConfig("./testdata/base.yaml")
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
@@ -36,10 +39,10 @@ func TestLoadSingleFile(t *testing.T) {
 }
 
 func TestLoadMultipleFiles(t *testing.T) {
-	config, err := LoadConfig(
-		"testdata/base.yaml",
-		"testdata/services.yaml",
-		"testdata/deployments.yaml",
+	config, err := loader.LoadConfig(
+		"./testdata/base.yaml",
+		"./testdata/services.yaml",
+		"./testdata/deployments.yaml",
 	)
 	if err != nil {
 		t.Fatalf("failed to load configs: %v", err)
@@ -63,20 +66,6 @@ func TestLoadMultipleFiles(t *testing.T) {
 	userSvc := config.ServiceDefinitions["user-service"]
 	if len(userSvc.DependsOn) != 3 {
 		t.Errorf("expected 3 dependencies, got %d", len(userSvc.DependsOn))
-	}
-
-	// Check remote services
-	if len(config.ExternalServiceDefinitions) != 2 {
-		t.Errorf("expected 2 external services, got %d", len(config.ExternalServiceDefinitions))
-	}
-
-	paymentAPI := config.ExternalServiceDefinitions["payment-api"]
-	if paymentAPI == nil {
-		t.Fatal("payment-api external service not found")
-	}
-
-	if paymentAPI.URL != "https://payment.example.com" {
-		t.Errorf("expected payment URL, got %s", paymentAPI.URL)
 	}
 
 	// Check deployments
@@ -120,7 +109,7 @@ func TestLoadMultipleFiles(t *testing.T) {
 }
 
 func TestLoadFromDirectory(t *testing.T) {
-	config, err := LoadConfigFromDir("testdata")
+	config, err := loader.LoadConfigFromDir("testdata")
 	if err != nil {
 		t.Fatalf("failed to load from directory: %v", err)
 	}
@@ -137,7 +126,7 @@ func TestLoadFromDirectory(t *testing.T) {
 
 func TestMergeStrategy(t *testing.T) {
 	// Create temp files with overlapping configs
-	config, err := LoadConfig(
+	config, err := loader.LoadConfig(
 		"testdata/base.yaml",
 		"testdata/services.yaml",
 	)
@@ -160,12 +149,12 @@ func TestMergeStrategy(t *testing.T) {
 }
 
 func TestValidation_ValidConfig(t *testing.T) {
-	config, err := LoadConfig("testdata/base.yaml")
+	config, err := loader.LoadConfig("testdata/base.yaml")
 	if err != nil {
 		t.Fatalf("valid config should load without error: %v", err)
 	}
 
-	// Validation happens automatically in LoadConfig
+	// Validation happens automatically in loader.LoadConfig
 	// If we got here, validation passed
 	if config == nil {
 		t.Error("config should not be nil")
@@ -181,12 +170,12 @@ func TestValidation_InvalidServiceName(t *testing.T) {
 }
 
 func TestConfigToMap(t *testing.T) {
-	config, err := LoadConfig("testdata/base.yaml", "testdata/services.yaml")
+	config, err := loader.LoadConfig("testdata/base.yaml", "testdata/services.yaml")
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	configMap := configToMap(config)
+	configMap := internal.ConfigToMap(config)
 
 	// Check configs section
 	configs, ok := configMap["configs"].(map[string]any)
@@ -231,7 +220,7 @@ func TestAbsolutePaths(t *testing.T) {
 		t.Fatalf("failed to get absolute path: %v", err)
 	}
 
-	config, err := LoadConfig(absPath)
+	config, err := loader.LoadConfig(absPath)
 	if err != nil {
 		t.Fatalf("failed to load with absolute path: %v", err)
 	}
@@ -242,21 +231,21 @@ func TestAbsolutePaths(t *testing.T) {
 }
 
 func TestNonExistentFile(t *testing.T) {
-	_, err := LoadConfig("testdata/nonexistent.yaml")
+	_, err := loader.LoadConfig("testdata/nonexistent.yaml")
 	if err == nil {
 		t.Error("expected error for non-existent file")
 	}
 }
 
 func TestEmptyConfig(t *testing.T) {
-	_, err := LoadConfig()
+	_, err := loader.LoadConfig()
 	if err == nil {
 		t.Error("expected error when no files specified")
 	}
 }
 
 func TestShorthandSyntax(t *testing.T) {
-	config, err := LoadConfig("testdata/shorthand.yaml")
+	config, err := loader.LoadConfig("testdata/shorthand.yaml")
 	if err != nil {
 		t.Fatalf("failed to load shorthand config: %v", err)
 	}
@@ -271,7 +260,7 @@ func TestShorthandSyntax(t *testing.T) {
 		t.Fatal("api-server not found")
 	}
 
-	// After LoadConfig, normalization already happened, so helper fields are cleared
+	// After loader.LoadConfig, normalization already happened, so helper fields are cleared
 	// and apps should be created
 	if len(server.Apps) != 1 {
 		t.Errorf("expected 1 app after normalization, got %d", len(server.Apps))
@@ -294,7 +283,7 @@ func TestShorthandSyntax(t *testing.T) {
 
 func TestSmartMerging(t *testing.T) {
 	// Test smart merging behavior: helper fields without addr should merge into first app
-	config, err := LoadConfig("testdata/deployments.yaml")
+	config, err := loader.LoadConfig("testdata/deployments.yaml")
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}

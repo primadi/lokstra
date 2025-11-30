@@ -31,16 +31,6 @@
           "description": "Convention type (rest, rpc, graphql)",
           "pattern": "^[a-z][a-z0-9-]*$"
         },
-        "resource": {
-          "type": "string",
-          "description": "Singular form of resource name",
-          "pattern": "^[a-z][a-z-]*$"
-        },
-        "resource-plural": {
-          "type": "string",
-          "description": "Plural form of resource name",
-          "pattern": "^[a-z][a-z-]*$"
-        },
         "path-prefix": {
           "type": "string",
           "description": "Path prefix for all routes"
@@ -121,32 +111,6 @@
           "description": "Service-specific configuration",
           "additionalProperties": true
         }
-      },
-      "additionalProperties": false
-    },
-    "externalServiceDefinition": {
-      "type": "object",
-      "required": ["url"],
-      "properties": {
-        "url": {
-          "type": "string",
-          "description": "Base URL of external service",
-          "oneOf": [
-            { "pattern": "^https?://" },
-            { "pattern": "^\\$\\{.*\\}$" }
-          ]
-        },
-        "type": {
-          "type": "string",
-          "description": "Factory type (optional)",
-          "pattern": "^[a-z][a-z0-9-]*$"
-        },
-        "config": {
-          "type": "object",
-          "description": "Additional configuration",
-          "additionalProperties": true
-        },
-        "router": { "$ref": "#/definitions/routerDefinition" }
       },
       "additionalProperties": false
     },
@@ -383,13 +347,6 @@
         "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/routerDefinition" }
       }
     },
-    "external-service-definitions": {
-      "type": "object",
-      "description": "External service definitions",
-      "patternProperties": {
-        "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/externalServiceDefinition" }
-      }
-    },
     "deployments": {
       "type": "object",
       "description": "Deployment configurations",
@@ -421,13 +378,6 @@
               "description": "Deployment-level router definitions",
               "patternProperties": {
                 "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/routerDefinition" }
-              }
-            },
-            "external-service-definitions": {
-              "type": "object",
-              "description": "Deployment-level external service definitions",
-              "patternProperties": {
-                "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/externalServiceDefinition" }
               }
             },
             "servers": {
@@ -465,13 +415,6 @@
                       "description": "Server-level router definitions",
                       "patternProperties": {
                         "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/routerDefinition" }
-                      }
-                    },
-                    "external-service-definitions": {
-                      "type": "object",
-                      "description": "Server-level external service definitions",
-                      "patternProperties": {
-                        "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/externalServiceDefinition" }
                       }
                     },
                     "apps": {

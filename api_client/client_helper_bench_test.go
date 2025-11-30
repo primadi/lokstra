@@ -1,4 +1,4 @@
-package api_client
+package api_client_test
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/common/cast"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 )
@@ -17,8 +18,8 @@ type BenchResponse struct {
 }
 
 // Helper to create a test ClientRouter pointing to a URL
-func newTestClientRouter(url string) *ClientRouter {
-	return &ClientRouter{
+func newTestClientRouter(url string) *api_client.ClientRouter {
+	return &api_client.ClientRouter{
 		RouterName: "test-router",
 		ServerName: "test-server",
 		FullURL:    url,
@@ -27,8 +28,8 @@ func newTestClientRouter(url string) *ClientRouter {
 }
 
 // FetchAndCastUnoptimized - Original version WITHOUT caching for comparison
-func FetchAndCastUnoptimized[T any](client *ClientRouter, path string, opts ...FetchOption) (T, error) {
-	cfg := &fetchConfig{}
+func FetchAndCastUnoptimized[T any](client *api_client.ClientRouter, path string, opts ...api_client.FetchOption) (T, error) {
+	cfg := &api_client.FetchConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}
@@ -105,7 +106,7 @@ func FetchAndCastUnoptimized[T any](client *ClientRouter, path string, opts ...F
 			}
 		}
 
-		return zero, &ApiError{
+		return zero, &api_client.ApiError{
 			StatusCode: resp.StatusCode,
 			Code:       code,
 			Message:    message,
@@ -147,7 +148,7 @@ func BenchmarkFetchAndCast_Struct(b *testing.B) {
 	client := newTestClientRouter(server.URL)
 
 	for b.Loop() {
-		_, err := FetchAndCast[BenchResponse](client, "/test")
+		_, err := api_client.FetchAndCast[BenchResponse](client, "/test")
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -186,7 +187,7 @@ func BenchmarkFetchAndCast_Pointer(b *testing.B) {
 	client := newTestClientRouter(server.URL)
 
 	for b.Loop() {
-		_, err := FetchAndCast[*BenchResponse](client, "/test")
+		_, err := api_client.FetchAndCast[*BenchResponse](client, "/test")
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -229,7 +230,7 @@ func BenchmarkFetchAndCast_CustomFunc(b *testing.B) {
 	}
 
 	for b.Loop() {
-		_, err := FetchAndCast[BenchResponse](client, "/test", WithCustomFunc(customFunc))
+		_, err := api_client.FetchAndCast[BenchResponse](client, "/test", api_client.WithCustomFunc(customFunc))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -251,7 +252,7 @@ func BenchmarkFetchAndCast_Concurrent(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, err := FetchAndCast[BenchResponse](client, "/test")
+			_, err := api_client.FetchAndCast[BenchResponse](client, "/test")
 			if err != nil {
 				b.Fatal(err)
 			}

@@ -31,7 +31,6 @@ type DeployConfig struct {
     MiddlewareDefinitions      map[string]*MiddlewareDef
     ServiceDefinitions         map[string]*ServiceDef
     RouterDefinitions          map[string]*RouterDef           // Renamed from "Routers"
-    ExternalServiceDefinitions map[string]*RemoteServiceSimple
     Deployments                map[string]*DeploymentDefMap
     // RouterOverrides removed - overrides are now inline in RouterDef
 }
@@ -99,57 +98,6 @@ depends-on:
 depends-on:
   - userRepo:user-repository
   - paymentSvc:payment-service
-```
-
----
-
-### RemoteServiceSimple
-Defines an external service (outside this deployment).
-
-**Definition:**
-```go
-type RemoteServiceSimple struct {
-    URL            string
-    Type           string         // Factory type (auto-creates wrapper)
-    Resource       string         // Resource name (singular)
-    ResourcePlural string         // Resource name (plural)
-    Convention     string         // Convention type (rest, rpc, graphql)
-    // Inline overrides (no more references)
-    PathPrefix     string
-    PathRewrites   []PathRewriteDef // Regex-based path rewrite rules
-    Middlewares    []string
-    Hidden         []string
-    Custom         []RouteDef
-    Config         map[string]any // Additional factory config
-}
-```
-
-**YAML Example:**
-```yaml
-external-service-definitions:
-  payment-service:
-    url: https://payment-api.example.com
-    type: payment-service-factory
-    resource: payment
-    resource-plural: payments
-    convention: rest
-    path-prefix: /api/v1
-    path-rewrites:
-      - pattern: "^/api/v1/(.*)$"
-        replacement: "/v2/$1"
-    middlewares:
-      - auth
-      - rate-limiter
-    config:
-      api_key: "${PAYMENT_API_KEY}"
-      timeout: 10s
-```
-
-**Use Cases:**
-- Third-party APIs (Stripe, SendGrid, etc.)
-- Microservices in other deployments
-- External REST/RPC services
-- Legacy system integration
 
 ---
 
@@ -195,16 +143,11 @@ type PathRewriteDef struct {
 ```yaml
 router-definitions:
   user-service-router:  # Service derived: "user-service"
-    convention: rest
-    resource: user
-    resource-plural: users
     # Inline overrides
     path-prefix: /api/v1
     middlewares:
       - auth
       - logger
-    hidden:
-      - InternalHelper
     custom:
       - name: Login
         method: POST
@@ -653,16 +596,11 @@ service-definitions:
 # Router definitions
 router-definitions:
   user-service-router:  # Service derived: "user-service"
-    convention: rest
-    resource: user
-    resource-plural: users
     # Inline overrides
     path-prefix: /api/v1
     middlewares:
       - auth
       - logger
-    hidden:
-      - InternalHelper
     custom:
       - name: Login
         method: POST
@@ -672,21 +610,6 @@ router-definitions:
       - name: Logout
         method: POST
         path: /auth/logout
-    
-  order-service-router:  # Service derived: "order-service"
-    convention: rest
-    resource: order
-    resource-plural: orders
-
-# External services
-external-service-definitions:
-  payment-service:
-    url: https://payment-api.example.com
-    type: payment-client-factory
-    resource: payment
-    resource-plural: payments
-    config:
-      api_key: "${PAYMENT_API_KEY}"
 
 # Deployments
 deployments:
@@ -819,12 +742,6 @@ deployments:
 service-definitions:
   api-service:
     type: api-service-factory
-
-router-definitions:
-  api-service-router:
-    convention: rest
-    resource: item
-    resource-plural: items
 
 deployments:
   production:
