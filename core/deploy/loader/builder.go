@@ -873,6 +873,7 @@ func LoadAndBuild(configPaths []string) error {
 }
 
 // setupNamedDbPools auto-discovers and sets up named DB pools from config
+// Requires dbpool-manager service to be already registered
 func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
 	// Check if named-db-pools section exists
 	if len(config.NamedDbPools) == 0 {
@@ -880,27 +881,16 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 		return nil
 	}
 
-	// Get or create DBPool Manager (same pattern as lokstra.SetupNamedDbPools)
-	// dbPoolManager, ok := registry.GetServiceAny("dbpool-manager")
-	// if !ok || dbPoolManager == nil {
-	// 	return fmt.Errorf("dbpool-manager not registered - please call services/dbpool_manager.Register() in your main.go or import _ \"github.com/primadi/lokstra/services/dbpool_manager\"")
-	// }
-
 	// Type assert to interface with required methods
 	type DbPoolManager interface {
 		SetNamedDsn(name, dsn, schema string)
 		GetNamedPool(name string) (any, error)
 	}
 
-	// poolManager, ok := dbPoolManager.(DbPoolManager)
-	// if !ok {
-	// 	return fmt.Errorf("dbpool-manager does not implement required interface (SetNamedDsn, GetNamedPool)")
-	// }
-
 	poolManager, ok := registry.GetServiceAny("dbpool-manager")
 	if !ok || poolManager == nil {
-		// poolManager = dbpool_manager.NewPgxPoolManager()
-		registry.RegisterService("dbpool-manager", poolManager)
+		log.Println("Warning: named-db-pools defined but dbpool-manager service not registered")
+		return nil
 	}
 
 	dbPoolManager, ok := poolManager.(DbPoolManager)

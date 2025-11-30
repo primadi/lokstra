@@ -10,6 +10,8 @@ import (
 	"github.com/primadi/lokstra/core/annotation"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/serviceapi"
+	"github.com/primadi/lokstra/services/dbpool_manager"
 )
 
 type RunMode string
@@ -27,6 +29,16 @@ var (
 
 // Bootstrap initializes Lokstra environment and regenerates routes if needed.
 // It must be called at the very beginning of main().
+// It will auto create dbpool-manager service using PgxPoolManager if not exists.
+//
+// scanPath specifies additional paths to scan for annotations (besides current working directory).
+// If --generate-only flag is present, it will only run code generation and exit.
+// Example:
+//
+//	func main() {
+//	    lokstra.Bootstrap("./services", "./custom_modules")
+//	    // ... rest of main ...
+//	}
 func Bootstrap(scanPath ...string) {
 	// 1️⃣ Check for --generate-only flag (case-insensitive)
 	generateOnly := false
@@ -67,6 +79,12 @@ func Bootstrap(scanPath ...string) {
 	if os.Getenv(childEnvKey) == "1" {
 		// fmt.Println("[Lokstra] Child process detected — skipping bootstrap autogen.")
 		return
+	}
+
+	// auto create dbpool-manager service if not exists
+	if svc := lokstra_registry.GetService[serviceapi.DbPoolManager]("dbpool-manager"); svc == nil {
+		svc = dbpool_manager.NewPgxPoolManager()
+		lokstra_registry.RegisterService("dbpool-manager", svc)
 	}
 
 	// 4️⃣ If prod, just continue
