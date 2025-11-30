@@ -426,10 +426,8 @@ service-definitions:
       dsn: "postgresql://localhost/myapp"
 
 router-definitions:
-  user-service-router:  # Service derived from name
-    convention: rest
-    resource: user
-    resource-plural: users
+  custom:
+
 
 deployments:
   production:
@@ -532,12 +530,6 @@ service-definitions:
   user-service:
     type: user-service-factory
 
-router-definitions:
-  user-service-router:
-    convention: rest
-    resource: user
-    resource-plural: users
-
 # config/development.yaml
 deployments:
   development:
@@ -580,20 +572,6 @@ service-definitions:
   user-service:
     type: user-service-factory
 
-router-definitions:
-  user-service-router:
-    convention: rest
-    resource: user
-    resource-plural: users
-
-external-service-definitions:
-  payment-service:
-    url: https://payment-api.example.com
-    type: payment-service-factory  # Auto-creates wrapper
-    resource: payment
-    resource-plural: payments
-    convention: rest
-
 deployments:
   production:
     servers:
@@ -616,13 +594,10 @@ service-definitions:
 
 router-definitions:
   user-service-router:  # Service derived from name
-    convention: rest
     path-prefix: /api/v1
     middlewares:
       - auth
       - logger
-    hidden:
-      - InternalHelper
     custom:
       - name: Login
         method: POST

@@ -21,7 +21,6 @@ func main() {
 
 	fmt.Printf("✅ Config loaded successfully!\n")
 	fmt.Printf("   Service definitions: %d\n", len(config.ServiceDefinitions))
-	fmt.Printf("   External service definitions: %d\n", len(config.ExternalServiceDefinitions))
 	fmt.Printf("   Deployments: %d\n", len(config.Deployments))
 
 	// Show deployment details

@@ -13,13 +13,12 @@ func GetSchemaBytes() []byte {
 // DeployConfig is the root configuration structure for YAML files
 // This matches the JSON schema and supports multi-file merging
 type DeployConfig struct {
-	Configs                    map[string]any                  `yaml:"configs" json:"configs"`
-	NamedDbPools               map[string]*DbPoolConfig        `yaml:"named-db-pools,omitempty" json:"named-db-pools,omitempty"`
-	MiddlewareDefinitions      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
-	ServiceDefinitions         map[string]*ServiceDef          `yaml:"service-definitions" json:"service-definitions"`
-	RouterDefinitions          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"` // Renamed from Routers
-	ExternalServiceDefinitions map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
-	Deployments                map[string]*DeploymentDefMap    `yaml:"deployments" json:"deployments"`
+	Configs               map[string]any               `yaml:"configs" json:"configs"`
+	NamedDbPools          map[string]*DbPoolConfig     `yaml:"named-db-pools,omitempty" json:"named-db-pools,omitempty"`
+	MiddlewareDefinitions map[string]*MiddlewareDef    `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
+	ServiceDefinitions    map[string]*ServiceDef       `yaml:"service-definitions" json:"service-definitions"`
+	RouterDefinitions     map[string]*RouterDef        `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"` // Renamed from Routers
+	Deployments           map[string]*DeploymentDefMap `yaml:"deployments" json:"deployments"`
 }
 
 // DbPoolConfig defines configuration for a named database pool
@@ -49,11 +48,6 @@ type DbPoolConfig struct {
 // Service name is derived from router name by removing "-router" suffix
 // Example: "user-service-router" → service is "user-service"
 type RouterDef struct {
-	// Basic configuration
-	Convention     string `yaml:"convention,omitempty" json:"convention,omitempty"`           // Convention type (rest, rpc, graphql) - optional if set in RegisterServiceType
-	Resource       string `yaml:"resource,omitempty" json:"resource,omitempty"`               // Singular form, e.g., "user" - optional if set in RegisterServiceType
-	ResourcePlural string `yaml:"resource-plural,omitempty" json:"resource-plural,omitempty"` // Plural form, e.g., "users" - optional if set in RegisterServiceType
-
 	// Override configuration (inline - no more references)
 	PathPrefix   string           `yaml:"path-prefix,omitempty" json:"path-prefix,omitempty"`     // e.g., "/api/v1"
 	PathRewrites []PathRewriteDef `yaml:"path-rewrites,omitempty" json:"path-rewrites,omitempty"` // Regex-based path rewrites
@@ -82,10 +76,9 @@ type DeploymentDefMap struct {
 	ConfigOverrides map[string]any `yaml:"config-overrides,omitempty" json:"config-overrides,omitempty"`
 
 	// Inline definitions at deployment level (will be normalized to {deployment}.{name})
-	InlineMiddlewares      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
-	InlineServices         map[string]*ServiceDef          `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
-	InlineRouters          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
-	InlineExternalServices map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
+	InlineMiddlewares map[string]*MiddlewareDef `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
+	InlineServices    map[string]*ServiceDef    `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
+	InlineRouters     map[string]*RouterDef     `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
 
 	Servers map[string]*ServerDefMap `yaml:"servers" json:"servers"`
 }
@@ -95,10 +88,9 @@ type ServerDefMap struct {
 	BaseURL string `yaml:"base-url" json:"base-url"`
 
 	// Inline definitions at server level (will be normalized to {deployment}.{server}.{name})
-	InlineMiddlewares      map[string]*MiddlewareDef       `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
-	InlineServices         map[string]*ServiceDef          `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
-	InlineRouters          map[string]*RouterDef           `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
-	InlineExternalServices map[string]*RemoteServiceSimple `yaml:"external-service-definitions,omitempty" json:"external-service-definitions,omitempty"`
+	InlineMiddlewares map[string]*MiddlewareDef `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
+	InlineServices    map[string]*ServiceDef    `yaml:"service-definitions,omitempty" json:"service-definitions,omitempty"`
+	InlineRouters     map[string]*RouterDef     `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"`
 
 	Apps []*AppDefMap `yaml:"apps,omitempty" json:"apps,omitempty"`
 
@@ -120,15 +112,6 @@ type AppDefMap struct {
 	ReverseProxies []*ReverseProxyDef `yaml:"reverse-proxies,omitempty" json:"reverse-proxies,omitempty"` // Reverse proxy configurations
 	MountSpa       []*MountSpaDef     `yaml:"mount-spa,omitempty" json:"mount-spa,omitempty"`             // SPA mount configurations
 	MountStatic    []*MountStaticDef  `yaml:"mount-static,omitempty" json:"mount-static,omitempty"`       // Static file mount configurations
-}
-
-// RemoteServiceSimple defines an external service (outside this deployment)
-// For external services, you typically need to override everything since their API structure may differ
-type RemoteServiceSimple struct {
-	URL    string         `yaml:"url" json:"url"`
-	Type   string         `yaml:"type,omitempty" json:"type,omitempty"`     // Factory type (auto-creates service wrapper)
-	Router *RouterDef     `yaml:"router,omitempty" json:"router,omitempty"` // Embedded router definition
-	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"` // Additional config for factory
 }
 
 // ConfigDef defines a configuration value

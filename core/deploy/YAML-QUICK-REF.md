@@ -23,12 +23,6 @@ routers:                      # Router definitions
         hide: bool
         middleware: [...]
 
-remote-services:              # Remote service proxies
-  remote-name:
-    url: https://...          # REQUIRED
-    resource: item            # REQUIRED (singular)
-    resource-plural: items    # Optional
-
 deployments:                  # Deployment targets
   deployment-name:
     config-overrides:         # Optional

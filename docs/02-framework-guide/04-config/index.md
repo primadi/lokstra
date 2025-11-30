@@ -250,12 +250,8 @@ service-definitions:
 ```yaml
 router-definitions:
   user-service-router:
-    convention: rest
-    resource: user
-    resource-plural: users
     path-prefix: /api/v1
     middlewares: [cors, auth]
-    hidden: [Delete]
     custom:
       - name: GetByEmail
         method: GET

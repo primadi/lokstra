@@ -1447,35 +1447,13 @@ func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config Deploy
 		}
 
 		// Get service metadata from factory registration
-		metadata := g.GetServiceMetadata(serviceDef.Type)
-
-		// Build router definition
-		var resourceName, resourcePlural, convention string
-
-		// Use metadata from RegisterServiceType if available
-		if metadata != nil && metadata.Resource != "" {
-			resourceName = metadata.Resource
-			resourcePlural = metadata.ResourcePlural
-			convention = metadata.Convention
-		} else {
-			// Fallback: auto-generate from service name
-			resourceName = strings.TrimSuffix(serviceName, "-service")
-			resourcePlural = resourceName + "s" // Simple pluralization
-			convention = "rest"
-		}
-
-		// Define router with metadata
-		routerDef := &schema.RouterDef{
-			Convention:     convention,
-			Resource:       resourceName,
-			ResourcePlural: resourcePlural,
-		}
-
-		// Add metadata overrides if available
-		if metadata != nil {
-			routerDef.PathPrefix = metadata.PathPrefix
-			routerDef.Middlewares = metadata.MiddlewareNames
-			routerDef.Hidden = metadata.HiddenMethods
+		if metadata := g.GetServiceMetadata(serviceDef.Type); metadata != nil {
+			// Define router with metadata
+			routerDef := &schema.RouterDef{
+				PathPrefix:  metadata.PathPrefix,
+				Middlewares: metadata.MiddlewareNames,
+				Hidden:      metadata.HiddenMethods,
+			}
 
 			// Convert RouteOverrides to Custom routes
 			if len(metadata.RouteOverrides) > 0 {
@@ -1489,9 +1467,8 @@ func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config Deploy
 					})
 				}
 			}
+			g.DefineRouter(routerName, routerDef)
 		}
-
-		g.DefineRouter(routerName, routerDef)
 	}
 
 	// Build service location registry (service-name → base-url)

@@ -3,7 +3,6 @@ package loader
 import (
 	"fmt"
 	"log"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -203,9 +202,6 @@ func NormalizeInlineDefinitionsForServer(
 	if config.RouterDefinitions == nil {
 		config.RouterDefinitions = make(map[string]*schema.RouterDef)
 	}
-	if config.ExternalServiceDefinitions == nil {
-		config.ExternalServiceDefinitions = make(map[string]*schema.RemoteServiceSimple)
-	}
 
 	// Process deployment-level inline definitions
 	// Move to global with normalized names (lowercase for case-insensitive lookup)
@@ -222,11 +218,6 @@ func NormalizeInlineDefinitionsForServer(
 	for name, rtrDef := range depDef.InlineRouters {
 		normalizedName := strings.ToLower(deploymentName + "." + name)
 		config.RouterDefinitions[normalizedName] = rtrDef
-	}
-
-	for name, extDef := range depDef.InlineExternalServices {
-		normalizedName := strings.ToLower(deploymentName + "." + name)
-		config.ExternalServiceDefinitions[normalizedName] = extDef
 	}
 
 	// Process server-level inline definitions
@@ -246,11 +237,6 @@ func NormalizeInlineDefinitionsForServer(
 		config.RouterDefinitions[normalizedName] = rtrDef
 	}
 
-	for name, extDef := range serverDef.InlineExternalServices {
-		normalizedName := strings.ToLower(deploymentName + "." + serverName + "." + name)
-		config.ExternalServiceDefinitions[normalizedName] = extDef
-	}
-
 	// Build renaming map for reference resolution BEFORE clearing inline definitions
 	// Maps short names to normalized names for this deployment+server context
 	renamings := make(map[string]string)
@@ -265,9 +251,6 @@ func NormalizeInlineDefinitionsForServer(
 	for name := range depDef.InlineRouters {
 		renamings[name] = strings.ToLower(deploymentName + "." + name)
 	}
-	for name := range depDef.InlineExternalServices {
-		renamings[name] = strings.ToLower(deploymentName + "." + name)
-	}
 
 	// Add server-level renamings (these override deployment-level if same name, lowercase)
 	for name := range serverDef.InlineMiddlewares {
@@ -279,20 +262,15 @@ func NormalizeInlineDefinitionsForServer(
 	for name := range serverDef.InlineRouters {
 		renamings[name] = strings.ToLower(deploymentName + "." + serverName + "." + name)
 	}
-	for name := range serverDef.InlineExternalServices {
-		renamings[name] = strings.ToLower(deploymentName + "." + serverName + "." + name)
-	}
 
 	// Clear inline definitions (they're now in global)
 	depDef.InlineMiddlewares = nil
 	depDef.InlineServices = nil
 	depDef.InlineRouters = nil
-	depDef.InlineExternalServices = nil
 
 	serverDef.InlineMiddlewares = nil
 	serverDef.InlineServices = nil
 	serverDef.InlineRouters = nil
-	serverDef.InlineExternalServices = nil
 
 	// Update references in ALL service definitions (global + normalized inline)
 	for _, svcDef := range config.ServiceDefinitions {
@@ -346,29 +324,6 @@ func NormalizeInlineDefinitionsForServer(
 
 		// Update custom route middleware references
 		for _, customRoute := range rtrDef.Custom {
-			for i, mwName := range customRoute.Middlewares {
-				if normalizedName, found := renamings[mwName]; found {
-					customRoute.Middlewares[i] = normalizedName
-				}
-			}
-		}
-	}
-
-	// Update references in ALL external service definitions (global + normalized inline)
-	for _, extSvc := range config.ExternalServiceDefinitions {
-		if extSvc.Router == nil {
-			continue
-		}
-
-		// Update middleware references
-		for i, mwName := range extSvc.Router.Middlewares {
-			if normalizedName, found := renamings[mwName]; found {
-				extSvc.Router.Middlewares[i] = normalizedName
-			}
-		}
-
-		// Update custom route middleware references
-		for _, customRoute := range extSvc.Router.Custom {
 			for i, mwName := range customRoute.Middlewares {
 				if normalizedName, found := renamings[mwName]; found {
 					customRoute.Middlewares[i] = normalizedName
@@ -492,9 +447,6 @@ func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.
 		registry.DefineRouter(name, rtr)
 	}
 
-	// External service definitions don't need to be stored separately
-	// They'll be processed in RegisterDefinitionsForRuntime
-
 	return nil
 }
 
@@ -571,64 +523,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 		registry.RegisterMiddlewareName(name, mw.Type, mw.Config)
 	}
 
-	// Auto-create service wrappers for external services with factory type
-	externalServices := config.ExternalServiceDefinitions
-	for name, extSvc := range externalServices {
-		if extSvc.Type != "" {
-			// Check if service definition already exists (manual override, case-insensitive)
-			if _, exists := getServiceDef(config.ServiceDefinitions, name); exists {
-				continue
-			}
-
-			// Auto-create service definition
-			autoServiceDef := &schema.ServiceDef{
-				Name:      name,
-				Type:      extSvc.Type,
-				DependsOn: nil,
-				Config:    make(map[string]any),
-			}
-
-			// Copy external service config
-			if extSvc.Config != nil {
-				maps.Copy(autoServiceDef.Config, extSvc.Config)
-			}
-
-			// Add URL to config
-			autoServiceDef.Config["url"] = extSvc.URL
-
-			// Copy router definition from external service to service definition
-			if extSvc.Router != nil {
-				autoServiceDef.Router = extSvc.Router
-
-				// Also add to config for backward compatibility
-				if extSvc.Router.Resource != "" {
-					autoServiceDef.Config["resource"] = extSvc.Router.Resource
-				}
-				if extSvc.Router.ResourcePlural != "" {
-					autoServiceDef.Config["resource_plural"] = extSvc.Router.ResourcePlural
-				}
-				if extSvc.Router.Convention != "" {
-					autoServiceDef.Config["convention"] = extSvc.Router.Convention
-				}
-				if extSvc.Router.PathPrefix != "" {
-					autoServiceDef.Config["path_prefix"] = extSvc.Router.PathPrefix
-				}
-				if len(extSvc.Router.Middlewares) > 0 {
-					autoServiceDef.Config["middlewares"] = extSvc.Router.Middlewares
-				}
-				if len(extSvc.Router.Hidden) > 0 {
-					autoServiceDef.Config["hidden"] = extSvc.Router.Hidden
-				}
-				if len(extSvc.Router.Custom) > 0 {
-					autoServiceDef.Config["custom"] = extSvc.Router.Custom
-				}
-			}
-
-			// Store with lowercase key for case-insensitive lookup
-			config.ServiceDefinitions[strings.ToLower(name)] = autoServiceDef
-		}
-	}
-
+	// Register service definitions
 	// Merge service definitions from registry (RegisterLazyService) into config
 	// This allows services registered via code to be available in config.ServiceDefinitions
 	registry.MergeRegistryServicesToConfig(config)
@@ -704,9 +599,6 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			return fmt.Errorf("published service '%s' not found in service-definitions after normalization", serviceName)
 		}
 
-		metadata := registry.GetServiceMetadata(serviceDef.Type)
-
-		var resourceName, resourcePlural, convention string
 		var pathPrefix string
 		var pathRewrites []schema.PathRewriteDef
 		var middlewares []string
@@ -715,9 +607,6 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 
 		// Priority 1: Check if service has embedded router definition
 		if serviceDef.Router != nil {
-			resourceName = serviceDef.Router.Resource
-			resourcePlural = serviceDef.Router.ResourcePlural
-			convention = serviceDef.Router.Convention
 			pathPrefix = serviceDef.Router.PathPrefix
 			pathRewrites = serviceDef.Router.PathRewrites
 			middlewares = serviceDef.Router.Middlewares
@@ -728,15 +617,6 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 		// Priority 2: Check if router manually defined in router-definitions (override/standalone, case-insensitive)
 		if yamlRouter, exists := getRouterDef(config.RouterDefinitions, routerName); exists {
 			// Override only if not set in service.router
-			if resourceName == "" {
-				resourceName = yamlRouter.Resource
-			}
-			if resourcePlural == "" {
-				resourcePlural = yamlRouter.ResourcePlural
-			}
-			if convention == "" {
-				convention = yamlRouter.Convention
-			}
 			if pathPrefix == "" {
 				pathPrefix = yamlRouter.PathPrefix
 			}
@@ -754,37 +634,13 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			}
 		}
 
-		// Priority 3: Fallback to metadata from RegisterServiceType
-		if resourceName == "" && metadata != nil && metadata.Resource != "" {
-			resourceName = metadata.Resource
-			resourcePlural = metadata.ResourcePlural
-			convention = metadata.Convention
-		}
-
-		// Priority 4: Final fallback - auto-generate from service name
-		if resourceName == "" {
-			// Extract resource name from normalized service name
-			// Examples:
-			//   "development.user-service" -> "user"
-			//   "development.dev-server.product-service" -> "product"
-			//   "order-service" -> "order"
-			parts := strings.Split(serviceName, ".")
-			lastPart := parts[len(parts)-1]
-			resourceName = strings.TrimSuffix(lastPart, "-service")
-			resourcePlural = resourceName + "s"
-			convention = "rest"
-		}
-
 		// Define auto-generated router
 		autoRouter := &schema.RouterDef{
-			Convention:     convention,
-			Resource:       resourceName,
-			ResourcePlural: resourcePlural,
-			PathPrefix:     pathPrefix,
-			PathRewrites:   pathRewrites,
-			Middlewares:    middlewares,
-			Hidden:         hidden,
-			Custom:         custom,
+			PathPrefix:   pathPrefix,
+			PathRewrites: pathRewrites,
+			Middlewares:  middlewares,
+			Hidden:       hidden,
+			Custom:       custom,
 		}
 
 		// Store to config.RouterDefinitions so it's available for later lookup (lowercase key)
@@ -977,14 +833,6 @@ func LoadAndBuild(configPaths []string) error {
 				serverTopo.RemoteServices[svcName] = svcURL
 			}
 
-			// Add external services to RemoteServices map
-			// External services are ALWAYS remote (never local)
-			for extSvcName, extSvc := range config.ExternalServiceDefinitions {
-				if extSvc.URL != "" {
-					serverTopo.RemoteServices[extSvcName] = extSvc.URL
-				}
-			}
-
 			// Build app topologies (only addr + routers, NO services)
 			for _, appDef := range serverDef.Apps {
 				appTopo := &deploy.AppTopology{
@@ -1033,10 +881,10 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 	}
 
 	// Get or create DBPool Manager (same pattern as lokstra.SetupNamedDbPools)
-	dbPoolManager, ok := registry.GetServiceAny("dbpool-manager")
-	if !ok || dbPoolManager == nil {
-		return fmt.Errorf("dbpool-manager not registered - please call services/dbpool_manager.Register() in your main.go or import _ \"github.com/primadi/lokstra/services/dbpool_manager\"")
-	}
+	// dbPoolManager, ok := registry.GetServiceAny("dbpool-manager")
+	// if !ok || dbPoolManager == nil {
+	// 	return fmt.Errorf("dbpool-manager not registered - please call services/dbpool_manager.Register() in your main.go or import _ \"github.com/primadi/lokstra/services/dbpool_manager\"")
+	// }
 
 	// Type assert to interface with required methods
 	type DbPoolManager interface {
@@ -1044,11 +892,21 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 		GetNamedPool(name string) (any, error)
 	}
 
-	poolManager, ok := dbPoolManager.(DbPoolManager)
+	// poolManager, ok := dbPoolManager.(DbPoolManager)
+	// if !ok {
+	// 	return fmt.Errorf("dbpool-manager does not implement required interface (SetNamedDsn, GetNamedPool)")
+	// }
+
+	poolManager, ok := registry.GetServiceAny("dbpool-manager")
+	if !ok || poolManager == nil {
+		// poolManager = dbpool_manager.NewPgxPoolManager()
+		registry.RegisterService("dbpool-manager", poolManager)
+	}
+
+	dbPoolManager, ok := poolManager.(DbPoolManager)
 	if !ok {
 		return fmt.Errorf("dbpool-manager does not implement required interface (SetNamedDsn, GetNamedPool)")
 	}
-
 	// Setup each pool
 	for poolName, poolConfig := range config.NamedDbPools {
 		// Extract DSN or build from components
@@ -1125,10 +983,10 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 		}
 
 		// Set DSN and Schema for poolName
-		poolManager.SetNamedDsn(poolName, dsn, schema)
+		dbPoolManager.SetNamedDsn(poolName, dsn, schema)
 
 		// Create the pool
-		dbPool, err := poolManager.GetNamedPool(poolName)
+		dbPool, err := dbPoolManager.GetNamedPool(poolName)
 		if err != nil {
 			return fmt.Errorf("failed to create pool '%s': %w", poolName, err)
 		}

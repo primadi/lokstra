@@ -1391,7 +1391,6 @@ external-service-definitions:
 - `type` (optional): Factory type for auto-creating service wrapper
   - ✅ Required if used in `published-services` (auto-router generation)
   - ❌ Not needed if only accessed via `GetRemoteService()`
-- `resource`, `resource-plural`, `convention`, `overrides`: Override metadata
 
 **Use case:** Third-party services not in your topology
 

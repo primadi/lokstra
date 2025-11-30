@@ -9,9 +9,9 @@ import (
 	"github.com/primadi/lokstra/core/response/api_formatter"
 )
 
-type FetchOption func(*fetchConfig)
+type FetchOption func(*FetchConfig)
 
-type fetchConfig struct {
+type FetchConfig struct {
 	Headers    map[string]string
 	Formatter  api_formatter.ResponseFormatter
 	Method     string
@@ -21,35 +21,35 @@ type fetchConfig struct {
 
 // WithHeaders sets custom headers for the request
 func WithHeaders(headers map[string]string) FetchOption {
-	return func(cfg *fetchConfig) {
+	return func(cfg *FetchConfig) {
 		cfg.Headers = headers
 	}
 }
 
 // WithFormatter sets a custom formatter for the response
 func WithFormatter(formatter api_formatter.ResponseFormatter) FetchOption {
-	return func(cfg *fetchConfig) {
+	return func(cfg *FetchConfig) {
 		cfg.Formatter = formatter
 	}
 }
 
 // WithMethod sets the HTTP method (GET, POST, etc)
 func WithMethod(method string) FetchOption {
-	return func(cfg *fetchConfig) {
+	return func(cfg *FetchConfig) {
 		cfg.Method = method
 	}
 }
 
 // WithCustomFunc allows custom handling of the response and parsed client response, returns result and error
 func WithCustomFunc(fn func(*http.Response, *api_formatter.ClientResponse) (any, error)) FetchOption {
-	return func(cfg *fetchConfig) {
+	return func(cfg *FetchConfig) {
 		cfg.CustomFunc = fn
 	}
 }
 
 // WithBody sets the request body for POST, PUT, PATCH
 func WithBody(body any) FetchOption {
-	return func(cfg *fetchConfig) {
+	return func(cfg *FetchConfig) {
 		cfg.Body = body
 	}
 }
@@ -60,7 +60,7 @@ func WithBody(body any) FetchOption {
 // Note: Reflection overhead for type checking is minimal (~8ns per call) and caching adds more overhead
 // than it saves. The code is kept simple and readable without premature optimization.
 func FetchAndCast[T any](client *ClientRouter, path string, opts ...FetchOption) (T, error) {
-	cfg := &fetchConfig{}
+	cfg := &FetchConfig{}
 	for _, opt := range opts {
 		opt(cfg)
 	}

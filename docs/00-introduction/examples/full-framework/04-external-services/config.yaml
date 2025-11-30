@@ -23,10 +23,6 @@ external-service-definitions:
   payment-gateway:
     url: "http://localhost:9000"
     type: payment-service-remote-factory  # Auto-creates service wrapper!
-    # Optional metadata for proxy.Service:
-    # resource: "payment"
-    # resource-plural: "payments"
-    # convention: "rest"
 
 # ========================================
 # Service Definitions

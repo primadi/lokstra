@@ -10,28 +10,24 @@ import (
 
 // ==============================================================================
 // Remote Service Client
-// Maps interface method calls to HTTP endpoints automatically
+// Maps interface method calls to HTTP endpoints with explicit route configuration
 // ==============================================================================
 
-// RemoteService provides automatic HTTP mapping for service method calls.
-// It converts Go method calls to REST API calls using naming conventions.
+// RemoteService provides type-safe HTTP calls for remote service methods.
+// Routes and HTTP methods must be explicitly configured via WithRouteOverride and WithMethodOverride.
 //
 // Usage:
 //
-//	client := api_client.NewRemoteService(clientRouter, "/auth")
+//	client := api_client.NewRemoteService(clientRouter, "/auth").
+//		WithRouteOverride("Login", "/login").
+//		WithMethodOverride("Login", "POST")
 //	response := api_client.CallRemoteService[LoginResponse](client, "Login", ctx, req)
 //
-// Method Mapping Rules:
-//   - Create*, Add*, Process*, Generate*, Login*, Register* → POST
-//   - Update*, Modify* → PUT
-//   - Delete*, Remove* → DELETE
-//   - Get*, Find*, List*, Validate* → GET (or POST with body)
-//   - Method names convert to kebab-case paths: ValidateToken → /validate-token
-//
-// Strategy Detection:
-//   - Detects path tags in request struct: `path:"dep"`, `path:"id"`
-//   - Detects strategy tags: `method:"POST"`, `path:"/custom/path"`
-//   - Supports multiple strategies: REST, custom paths, method overrides
+// Features:
+//   - Explicit route configuration (no auto-mapping)
+//   - Automatic path parameter substitution via `path:"id"` tags
+//   - Type-safe response handling with generics
+//   - Defaults to POST if request has body, GET otherwise
 type RemoteService struct {
 	client          *ClientRouter
 	basePath        string            // e.g., "/auth", "/users", "/orders"
@@ -62,17 +58,18 @@ func (c *RemoteService) WithMethodOverride(methodName, httpMethod string) *Remot
 	return c
 }
 
-// CallRemoteService makes a type-safe remote service call using method name conventions.
+// CallRemoteService makes a type-safe remote service call using configured routes.
+// Routes must be configured via WithRouteOverride, otherwise falls back to basePath.
 //
 // Example:
 //
+//	client := NewRemoteService(router, "/auth").
+//		WithRouteOverride("Login", "/login").
+//		WithMethodOverride("Login", "POST")
 //	response, err := api_client.CallRemoteService[LoginResponse](client, "Login", ctx, req)
 //	// → POST /auth/login with req as body
 //
-// Method naming determines HTTP method and path:
-//   - Login(req) → POST /auth/login
-//   - GetUser(req) → GET /users/get-user (or POST if req has body)
-//   - ValidateToken(req) → POST /auth/validate-token
+// Path parameters are automatically substituted from request fields with `path:"id"` tags.
 func CallRemoteService[TResponse any](c *RemoteService, methodName string, ctx *request.Context, req any) (TResponse, error) {
 	httpMethod, path := c.methodToHTTP(methodName, req)
 
@@ -100,8 +97,8 @@ func (c *RemoteService) Call(methodName string, ctx *request.Context, req any) (
 }
 
 // methodToHTTP converts method name to HTTP method and path.
-// REQUIRES explicit route override via WithRouteOverride.
-// Returns error path if no override found.
+// Path is taken from routeOverrides, falls back to basePath if not configured.
+// HTTP method is taken from methodOverrides, defaults to POST (with body) or GET (without body).
 func (c *RemoteService) methodToHTTP(methodName string, req any) (httpMethod string, path string) {
 	// Check for configured route override (REQUIRED)
 	path, exists := c.routeOverrides[methodName]
@@ -253,7 +250,7 @@ func (c *RemoteService) substitutePathParameters(path string, req any) string {
 // ==============================================================================
 //
 // type authServiceRemote struct {
-//     client *api_client.ClientRemoteService
+//     client *api_client.RemoteService
 // }
 //
 // func (s *authServiceRemote) Login(ctx *request.Context, req *LoginRequest) (*LoginResponse, error) {
@@ -269,7 +266,13 @@ func (c *RemoteService) substitutePathParameters(path string, req any) string {
 //     pathPrefix := utils.GetValueFromMap(cfg, "path-prefix", "/auth")
 //
 //     clientRouter := lokstra_registry.GetClientRouter(routerName)
-//     client := api_client.NewClientRemoteService(clientRouter, pathPrefix)
+//
+//     // Explicit route configuration
+//     client := api_client.NewRemoteService(clientRouter, pathPrefix).
+//         WithRouteOverride("Login", "/login").
+//         WithMethodOverride("Login", "POST").
+//         WithRouteOverride("ValidateToken", "/validate-token").
+//         WithMethodOverride("ValidateToken", "POST")
 //
 //     return &authServiceRemote{
 //         client: client,
