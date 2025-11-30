@@ -11,7 +11,7 @@ import (
 func Register() {
 	// Register order repository (infrastructure - local only)
 	lokstra_registry.RegisterServiceType("order-repository-factory",
-		repository.OrderRepositoryFactory, nil)
+		repository.OrderRepositoryFactory)
 
 	lokstra_registry.RegisterLazyService("order-repository", "order-repository-factory", nil)
 

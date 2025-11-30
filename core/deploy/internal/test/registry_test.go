@@ -158,7 +158,7 @@ func TestGlobalRegistry_FactoryRegistration(t *testing.T) {
 	}
 
 	// Register service type
-	reg.RegisterServiceType("test-service", localFactory, remoteFactory)
+	reg.RegisterRouterServiceType("test-service", localFactory, remoteFactory, nil)
 
 	// Get local factory
 	local := reg.GetServiceFactory("test-service", true)
@@ -217,14 +217,21 @@ func TestGlobalSingleton(t *testing.T) {
 	}
 
 	// Test registration via global
-	reg1.RegisterServiceType("test", nil, nil)
+	reg1.RegisterServiceType("test", func() any { return nil })
 
 	// Should be accessible from reg2
 	factory := reg2.GetServiceFactory("test", true)
-	if factory != nil {
-		t.Error("expected nil factory (we registered nil)")
+	if factory == nil {
+		t.Fatal("expected factory to be registered")
 	}
-	// But the type should be registered
+
+	// Factory should return nil when called
+	result := factory(nil, nil)
+	if result != nil {
+		t.Errorf("expected factory to return nil, got %v", result)
+	}
+
+	// Remote factory should be nil (we didn't register one)
 	if reg2.GetServiceFactory("test", false) != nil {
 		t.Error("expected nil remote factory")
 	}

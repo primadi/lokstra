@@ -150,14 +150,12 @@ func Home() *response.Response {
 // ============================================
 
 func main() {
-	// Register remote service type
-	lokstra_registry.RegisterServiceType("remote-user-service", RemoteUserServiceFactory, nil)
-
 	// Define remote service with configuration
-	lokstra_registry.RegisterLazyService("remote-user-service", RemoteUserServiceFactory, map[string]any{
-		"router":      "user-api",
-		"path-prefix": "/api/v1",
-	})
+	lokstra_registry.RegisterLazyService("remote-user-service", RemoteUserServiceFactory,
+		map[string]any{
+			"router":      "user-api",
+			"path-prefix": "/api/v1",
+		})
 
 	// Setup router
 	router := lokstra.NewRouter("remote-services")

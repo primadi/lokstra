@@ -74,8 +74,8 @@ func Home() *response.Response {
 }
 
 func main() {
-	lokstra_registry.RegisterServiceType("data-service", DataServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("cached-data-service", CachedDataServiceFactory, nil)
+	lokstra_registry.RegisterServiceType("data-service", DataServiceFactory)
+	lokstra_registry.RegisterServiceType("cached-data-service", CachedDataServiceFactory)
 
 	lokstra_registry.RegisterLazyService("data-service", DataServiceFactory, nil)
 	lokstra_registry.RegisterLazyServiceWithDeps("cached-data-service",

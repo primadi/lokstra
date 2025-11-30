@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
 	svc "github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/05-remote-router/service"
 	"github.com/primadi/lokstra/lokstra_registry"
@@ -20,10 +19,7 @@ func main() {
 
 	// Register service factory
 	lokstra_registry.RegisterServiceType("weather-service-factory",
-		svc.WeatherServiceFactory, nil,
-		deploy.WithResource("weather-report", "weather-reports"),
-		deploy.WithConvention("rest"),
-	)
+		svc.WeatherServiceFactory)
 
 	// Load config and build deployment topology
 	if err := loader.LoadAndBuild([]string{"config.yaml"}); err != nil {

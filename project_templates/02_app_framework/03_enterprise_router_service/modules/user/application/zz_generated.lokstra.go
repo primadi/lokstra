@@ -99,26 +99,38 @@ func UserServiceImplRemoteFactory(deps, config map[string]any) any {
 //   - @Route annotations on methods
 func RegisterUserServiceImpl() {
 	// Register service type with router configuration
-	lokstra_registry.RegisterServiceType("user-service-factory",
+	lokstra_registry.RegisterRouterServiceType("user-service-factory",
 		UserServiceImplFactory,
 		UserServiceImplRemoteFactory,
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
+		&deploy.ServiceTypeConfig{
 			PathPrefix:  "/api",
 			Middlewares: []string{ "recovery", "request-logger" },
-			CustomRoutes: map[string]string{
-				"Activate":  "POST /users/{id}/activate",
-				"Create":  "POST /users",
-				"Delete":  "DELETE /users/{id}",
-				"GetByID":  "GET /users/{id}",
-				"List":  "GET /users",
-				"Suspend":  "POST /users/{id}/suspend",
-				"Update":  "PUT /users/{id}",
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"Activate": {
+					Path: "POST /users/{id}/activate",
+				},
+				"Create": {
+					Path: "POST /users",
+				},
+				"Delete": {
+					Path: "DELETE /users/{id}",
+				},
+				"GetByID": {
+					Path: "GET /users/{id}",
+					Middlewares: []string{ "mw-test param1=123, param2=abc" },
+				},
+				"List": {
+					Path: "GET /users",
+					Middlewares: []string{ "mw-test" },
+				},
+				"Suspend": {
+					Path: "POST /users/{id}/suspend",
+				},
+				"Update": {
+					Path: "PUT /users/{id}",
+				},
 			},
-			RouteMiddlewares: map[string][]string{
-				"GetByID": { "mw-test param1=123, param2=abc" },
-				"List": { "mw-test" },
-			},
-		}),
+		},
 	)
 
 	// Register lazy service with auto-detected dependencies

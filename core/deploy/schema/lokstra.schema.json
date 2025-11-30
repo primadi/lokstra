@@ -26,11 +26,6 @@
       "type": "object",
       "description": "Router definition for auto-generated routes",
       "properties": {
-        "convention": {
-          "type": "string",
-          "description": "Convention type (rest, rpc, graphql)",
-          "pattern": "^[a-z][a-z0-9-]*$"
-        },
         "path-prefix": {
           "type": "string",
           "description": "Path prefix for all routes"

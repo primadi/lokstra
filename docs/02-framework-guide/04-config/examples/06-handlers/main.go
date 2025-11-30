@@ -33,7 +33,6 @@ func registerServiceTypes() {
 	lokstra_registry.RegisterServiceType(
 		"user-repository-factory",
 		NewUserRepository,
-		nil,
 	)
 
 	lokstra_registry.RegisterLazyService(

@@ -108,10 +108,6 @@ func Home() *response.Response {
 }
 
 func main() {
-	lokstra_registry.RegisterServiceType("monolith-service", MonolithServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("user-microservice", UserMicroserviceFactory, nil)
-	lokstra_registry.RegisterServiceType("facade-service", FacadeServiceFactory, nil)
-
 	lokstra_registry.RegisterLazyService("monolith-service", MonolithServiceFactory, nil)
 	lokstra_registry.RegisterLazyService("user-microservice", UserMicroserviceFactory, nil)
 

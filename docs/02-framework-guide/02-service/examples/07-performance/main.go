@@ -116,10 +116,6 @@ func Home() *response.Response {
 }
 
 func main() {
-	lokstra_registry.RegisterServiceType("data-service", DataServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("lazy-consumer", LazyConsumerFactory, nil)
-	lokstra_registry.RegisterServiceType("direct-consumer", DirectConsumerFactory, nil)
-
 	lokstra_registry.RegisterLazyService("data-service", DataServiceFactory, nil)
 	lokstra_registry.RegisterLazyServiceWithDeps("lazy-consumer",
 		LazyConsumerFactory,

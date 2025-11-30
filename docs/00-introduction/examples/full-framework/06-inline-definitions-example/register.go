@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
@@ -146,22 +145,13 @@ func registerServiceTypes() {
 	// Register service types with REST metadata
 	lokstra_registry.RegisterServiceType("user-service-type",
 		UserServiceFactory,
-		nil,
-		deploy.WithResource("user", "users"),
-		deploy.WithConvention("rest"),
 	)
 
 	lokstra_registry.RegisterServiceType("product-service-type",
 		ProductServiceFactory,
-		nil,
-		deploy.WithResource("product", "products"),
-		deploy.WithConvention("rest"),
 	)
 
 	lokstra_registry.RegisterServiceType("order-service-type",
 		OrderServiceFactory,
-		nil,
-		deploy.WithResource("order", "orders"),
-		deploy.WithConvention("rest"),
 	)
 }

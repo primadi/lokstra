@@ -108,9 +108,6 @@ func Home() *response.Response {
 }
 
 func main() {
-	lokstra_registry.RegisterServiceType("email-service", SMTPEmailServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("notification-service", NotificationServiceFactory, nil)
-
 	// Use mock for testing
 	lokstra_registry.RegisterLazyService("email-service", MockEmailServiceFactory, nil)
 	lokstra_registry.RegisterLazyService("notification-service", NotificationServiceFactory, nil)

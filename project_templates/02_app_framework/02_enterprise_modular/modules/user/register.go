@@ -13,20 +13,20 @@ import (
 func Register() {
 	// Register user repository (infrastructure - local only)
 	lokstra_registry.RegisterServiceType("user-repository-factory",
-		repository.UserRepositoryFactory, nil)
+		repository.UserRepositoryFactory)
 
 	// Register user service (application - local and remote)
-	lokstra_registry.RegisterServiceType("user-service-factory",
+	lokstra_registry.RegisterRouterServiceType("user-service-factory",
 		application.UserServiceFactory,
 		UserServiceRemoteFactory, // Remote factory for microservices
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
+		&deploy.ServiceTypeConfig{
 			PathPrefix:  "/api",
 			Middlewares: []string{"recovery", "request-logger"},
-			CustomRoutes: map[string]string{
-				"Suspend":  "POST /user/{id}/suspend",
-				"Activate": "POST /user/{id}/activate",
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"Suspend":  {Method: "POST", Path: "/user/{id}/suspend"},
+				"Activate": {Method: "POST", Path: "/user/{id}/activate"},
 			},
-		}),
+		},
 	)
 
 	lokstra_registry.RegisterLazyService("user-repository", "user-repository-factory", nil)

@@ -6,38 +6,41 @@ import (
 	"github.com/primadi/lokstra/core/deploy"
 )
 
-// Test RegisterServiceType with all three factory signatures
-func TestRegisterServiceType_ThreeModes(t *testing.T) {
+// Test RegisterRouterServiceType with all three factory signatures
+func TestRegisterRouterServiceType_ThreeModes(t *testing.T) {
 	g := deploy.NewGlobalRegistry()
 
 	// Mode 1: func() any (simplest)
-	g.RegisterServiceType("simple-service",
+	g.RegisterRouterServiceType("simple-service",
 		func() any {
 			return "simple-local"
 		},
 		func() any {
 			return "simple-remote"
 		},
+		nil,
 	)
 
 	// Mode 2: func(cfg map[string]any) any (config only)
-	g.RegisterServiceType("config-service",
+	g.RegisterRouterServiceType("config-service",
 		func(cfg map[string]any) any {
 			return "local-" + cfg["env"].(string)
 		},
 		func(cfg map[string]any) any {
 			return "remote-" + cfg["env"].(string)
 		},
+		nil,
 	)
 
 	// Mode 3: func(deps, cfg map[string]any) any (full control)
-	g.RegisterServiceType("full-service",
+	g.RegisterRouterServiceType("full-service",
 		func(deps, cfg map[string]any) any {
 			return "full-local-" + cfg["mode"].(string)
 		},
 		func(deps, cfg map[string]any) any {
 			return "full-remote-" + cfg["mode"].(string)
 		},
+		nil,
 	)
 
 	// Test local factory retrieval
@@ -75,15 +78,44 @@ func TestRegisterServiceType_ThreeModes(t *testing.T) {
 	}
 }
 
-// Test RegisterServiceType with nil remote factory
-func TestRegisterServiceType_NilRemote(t *testing.T) {
+// Test RegisterServiceType simple signature (infrastructure services)
+func TestRegisterServiceType_Simple(t *testing.T) {
 	g := deploy.NewGlobalRegistry()
 
-	g.RegisterServiceType("local-only",
+	// Simple infrastructure service registration
+	g.RegisterServiceType("db-pool",
+		func(cfg map[string]any) any {
+			return "db-pool-instance"
+		},
+	)
+
+	local := g.GetServiceFactory("db-pool", true)
+	if local == nil {
+		t.Fatal("db-pool factory not found")
+	}
+
+	result := local(nil, map[string]any{"dsn": "test"})
+	if result != "db-pool-instance" {
+		t.Errorf("expected 'db-pool-instance', got '%v'", result)
+	}
+
+	// Remote should be nil for simple registration
+	remote := g.GetServiceFactory("db-pool", false)
+	if remote != nil {
+		t.Error("remote factory should be nil for simple RegisterServiceType")
+	}
+}
+
+// Test RegisterRouterServiceType with nil remote factory
+func TestRegisterRouterServiceType_NilRemote(t *testing.T) {
+	g := deploy.NewGlobalRegistry()
+
+	g.RegisterRouterServiceType("local-only",
 		func() any {
 			return "local-service"
 		},
 		nil, // No remote factory
+		nil, // No config
 	)
 
 	local := g.GetServiceFactory("local-only", true)
@@ -97,17 +129,19 @@ func TestRegisterServiceType_NilRemote(t *testing.T) {
 	}
 }
 
-// Test RegisterServiceType with metadata
-func TestRegisterServiceType_WithMetadata(t *testing.T) {
+// Test RegisterRouterServiceType with metadata
+func TestRegisterRouterServiceType_WithMetadata(t *testing.T) {
 	g := deploy.NewGlobalRegistry()
 
-	g.RegisterServiceType("user-service",
+	g.RegisterRouterServiceType("user-service",
 		func() any {
 			return "user-service-instance"
 		},
 		nil,
-		deploy.WithResource("user", "users"),
-		deploy.WithConvention("rest"),
+		&deploy.ServiceTypeConfig{
+			PathPrefix:  "/api/users",
+			Middlewares: []string{"auth", "cors"},
+		},
 	)
 
 	metadata := g.GetServiceMetadata("user-service")
@@ -115,16 +149,12 @@ func TestRegisterServiceType_WithMetadata(t *testing.T) {
 		t.Fatal("metadata not found")
 	}
 
-	if metadata.Resource != "user" {
-		t.Errorf("expected resource 'user', got '%s'", metadata.Resource)
+	if metadata.PathPrefix != "/api/users" {
+		t.Errorf("expected PathPrefix '/api/users', got '%s'", metadata.PathPrefix)
 	}
 
-	if metadata.ResourcePlural != "users" {
-		t.Errorf("expected resource plural 'users', got '%s'", metadata.ResourcePlural)
-	}
-
-	if metadata.Convention != "rest" {
-		t.Errorf("expected convention 'rest', got '%s'", metadata.Convention)
+	if len(metadata.MiddlewareNames) != 2 {
+		t.Errorf("expected 2 middlewares, got %d", len(metadata.MiddlewareNames))
 	}
 }
 
@@ -143,6 +173,5 @@ func TestRegisterServiceType_InvalidSignature(t *testing.T) {
 		func(s string) any {
 			return s
 		},
-		nil,
 	)
 }

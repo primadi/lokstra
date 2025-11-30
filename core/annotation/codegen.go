@@ -855,27 +855,25 @@ func {{$service.RemoteTypeName}}Factory(deps, config map[string]any) any {
 //   - @Route annotations on methods
 func Register{{$service.StructName}}() {
 	// Register service type with router configuration
-	lokstra_registry.RegisterServiceType("{{$service.ServiceName}}-factory",
+	lokstra_registry.RegisterRouterServiceType("{{$service.ServiceName}}-factory",
 		{{$service.StructName}}Factory,
 		{{$service.RemoteTypeName}}Factory,
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
+		&deploy.ServiceTypeConfig{
 			PathPrefix:  {{quote $service.Prefix}},
 			Middlewares: []string{ {{range $i, $mw := $service.Middlewares}}{{if $i}}, {{end}}{{quote $mw}}{{end}} },
-			CustomRoutes: map[string]string{
+			RouteOverrides: map[string]deploy.RouteConfig{
 {{- range $method := sortedKeys $service.Routes }}
 {{- $route := index $service.Routes $method }}
-				{{quote $method}}:  {{quote $route}},
-{{- end }}
-			},
-{{- if gt (len $service.RouteMiddlewares) 0 }}
-			RouteMiddlewares: map[string][]string{
-{{- range $method := sortedKeys $service.RouteMiddlewares }}
 {{- $middlewares := index $service.RouteMiddlewares $method }}
-				{{quote $method}}: { {{range $i, $mw := $middlewares}}{{if $i}}, {{end}}{{quote $mw}}{{end}} },
+				{{quote $method}}: {
+					Path: {{quote $route}},
+{{- if $middlewares }}
+					Middlewares: []string{ {{range $i, $mw := $middlewares}}{{if $i}}, {{end}}{{quote $mw}}{{end}} },
+{{- end }}
+				},
 {{- end }}
 			},
-{{- end }}
-		}),
+		},
 	)
 
 	// Register lazy service with auto-detected dependencies
