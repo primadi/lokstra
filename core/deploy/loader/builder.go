@@ -11,6 +11,7 @@ import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 // Case-insensitive map lookup helpers
@@ -881,22 +882,15 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 		return nil
 	}
 
-	// Type assert to interface with required methods
-	type DbPoolManager interface {
-		SetNamedDsn(name, dsn, schema string)
-		GetNamedPool(name string) (any, error)
+	dpm, ok := deploy.Global().GetServiceAny("dbpool-manager")
+	if !ok || dpm == nil {
+		return fmt.Errorf("dbpool-manager service not found in registry")
 	}
-
-	poolManager, ok := registry.GetServiceAny("dbpool-manager")
-	if !ok || poolManager == nil {
-		log.Println("Warning: named-db-pools defined but dbpool-manager service not registered")
-		return nil
-	}
-
-	dbPoolManager, ok := poolManager.(DbPoolManager)
+	dbPoolManager, ok := dpm.(serviceapi.DbPoolManager)
 	if !ok {
-		return fmt.Errorf("dbpool-manager does not implement required interface (SetNamedDsn, GetNamedPool)")
+		return fmt.Errorf("dbpool-manager service does not implement serviceapi.DbPoolManager interface")
 	}
+
 	// Setup each pool
 	for poolName, poolConfig := range config.NamedDbPools {
 		// Extract DSN or build from components

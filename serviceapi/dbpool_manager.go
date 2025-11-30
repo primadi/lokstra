@@ -2,8 +2,6 @@ package serviceapi
 
 import (
 	"context"
-
-	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 type DbPoolManager interface {
@@ -40,5 +38,5 @@ type DbPoolManager interface {
 	// acquire connection for the given name
 	AcquireNamedConn(ctx context.Context, name string) (DbConn, error)
 
-	lokstra_registry.Shutdownable
+	Shutdownable
 }
