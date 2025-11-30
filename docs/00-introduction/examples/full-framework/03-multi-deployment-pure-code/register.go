@@ -17,28 +17,30 @@ func registerServiceTypes() {
 
 	// Register repositories (infrastructure layer)
 	lokstra_registry.RegisterServiceType("user-repository-factory",
-		repository.NewUserRepositoryMemory, nil)
+		repository.NewUserRepositoryMemory)
 
 	lokstra_registry.RegisterServiceType("order-repository-factory",
-		repository.NewOrderRepositoryMemory, nil)
+		repository.NewOrderRepositoryMemory)
 
 	// Register services (application layer)
 	// Metadata provided via RegisterServiceType options (not in factory structs)
-	lokstra_registry.RegisterServiceType("user-service-factory",
+	lokstra_registry.RegisterRouterServiceType("user-service-factory",
 		service.UserServiceFactory,
 		service.UserServiceRemoteFactory,
-		deploy.WithResource("user", "users"),
-		deploy.WithConvention("rest"),
-		deploy.WithMiddlewares("recovery", "before-after-logger"),
+		&deploy.ServiceTypeConfig{
+			Middlewares: []string{"recovery", "before-after-logger"},
+		},
 	)
 
-	lokstra_registry.RegisterServiceType("order-service-factory",
+	lokstra_registry.RegisterRouterServiceType("order-service-factory",
 		service.OrderServiceFactory,
 		service.OrderServiceRemoteFactory,
-		deploy.WithResource("order", "orders"),
-		deploy.WithConvention("rest"),
-		deploy.WithRouteOverride("GetByUserID", "/users/{user_id}/orders"),
-		deploy.WithMiddlewares("recovery", "before-after-logger"),
+		&deploy.ServiceTypeConfig{
+			Middlewares: []string{"recovery", "before-after-logger"},
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"GetByUserID": {Path: "/users/{user_id}/orders"},
+			},
+		},
 	)
 }
 

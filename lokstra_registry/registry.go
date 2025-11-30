@@ -189,8 +189,51 @@ func GetAllRouters() map[string]router.Router {
 //	    },
 //	    nil,
 //	)
-func RegisterServiceType(serviceType string, local, remote any, configOrOptions ...any) {
-	deploy.Global().RegisterServiceType(serviceType, local, remote, configOrOptions...)
+//
+// RegisterRouterServiceType registers a service type with HTTP routing configuration.
+// Use this for services that expose HTTP endpoints (annotated with @RouterService).
+// For simple infrastructure services (DB, Redis, etc), use RegisterServiceType instead.
+//
+// Parameters:
+//   - serviceType: Unique identifier for this service type
+//   - local: Factory for local deployment (same process)
+//   - remote: Factory for remote deployment (HTTP client)
+//   - config: Optional routing configuration (path prefix, middlewares, route overrides)
+//
+// Example:
+//
+//	lokstra_registry.RegisterRouterServiceType("user-service-factory",
+//	    application.UserServiceFactory, nil,
+//	    &deploy.ServiceTypeConfig{
+//	        PathPrefix: "/api/users",
+//	        Middlewares: []string{"auth"},
+//	    })
+func RegisterRouterServiceType(serviceType string, local, remote any, config *deploy.ServiceTypeConfig) {
+	deploy.Global().RegisterRouterServiceType(serviceType, local, remote, config)
+}
+
+// RegisterServiceType registers a simple service type without HTTP routing.
+// Use this for infrastructure services like database pools, Redis clients, metrics, etc.
+// For services that expose HTTP endpoints, use RegisterRouterServiceType instead.
+//
+// Parameters:
+//   - serviceType: Unique identifier for this service type
+//   - factory: Factory function that creates service instances
+//
+// Supported factory signatures:
+//   - func() any
+//   - func(deps map[string]any) any
+//   - func(cfg map[string]any) any
+//   - func(deps, cfg map[string]any) any
+//
+// Example:
+//
+//	lokstra_registry.RegisterServiceType("db-pool-factory",
+//	    func(cfg map[string]any) any {
+//	        return db.NewPool(cfg["dsn"].(string))
+//	    })
+func RegisterServiceType(serviceType string, factory any) {
+	deploy.Global().RegisterServiceType(serviceType, factory)
 }
 
 // GetServiceFactory returns the service factory for a service type

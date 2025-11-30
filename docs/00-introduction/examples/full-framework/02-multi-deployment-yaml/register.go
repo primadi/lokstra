@@ -17,26 +17,27 @@ func registerServiceTypes() {
 
 	// Register repositories (infrastructure layer - local only)
 	lokstra_registry.RegisterServiceType("user-repository-factory",
-		repository.NewUserRepositoryMemory, nil)
+		repository.NewUserRepositoryMemory)
 
 	lokstra_registry.RegisterServiceType("order-repository-factory",
-		repository.NewOrderRepositoryMemory, nil)
+		repository.NewOrderRepositoryMemory)
 
 	// Register services (application layer - local and remote)
 	// Metadata provided via RegisterServiceType options (not in factory structs)
-	lokstra_registry.RegisterServiceType("user-service-factory",
+	lokstra_registry.RegisterRouterServiceType("user-service-factory",
 		service.UserServiceFactory,
 		service.UserServiceRemoteFactory,
-		deploy.WithResource("user", "users"),
-		deploy.WithConvention("rest"),
+		nil, // No custom config - uses default REST routing
 	)
 
-	lokstra_registry.RegisterServiceType("order-service-factory",
+	lokstra_registry.RegisterRouterServiceType("order-service-factory",
 		service.OrderServiceFactory,
 		service.OrderServiceRemoteFactory,
-		deploy.WithResource("order", "orders"),
-		deploy.WithConvention("rest"),
-		deploy.WithRouteOverride("GetByUserID", "/users/{user_id}/orders"),
+		&deploy.ServiceTypeConfig{
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"GetByUserID": {Path: "/users/{user_id}/orders"},
+			},
+		},
 	)
 }
 

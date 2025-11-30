@@ -14,7 +14,7 @@ func TestRegisterLazyService_StringFactoryType(t *testing.T) {
 	reg := deploy.NewGlobalRegistry()
 
 	// Register a factory type first
-	reg.RegisterServiceType("user-factory",
+	reg.RegisterRouterServiceType("user-factory",
 		func(deps, cfg map[string]any) any {
 			return map[string]any{
 				"type": "user-service",
@@ -24,9 +24,7 @@ func TestRegisterLazyService_StringFactoryType(t *testing.T) {
 		},
 		nil, // No remote factory
 		&deploy.ServiceTypeConfig{
-			Resource:       "User",
-			ResourcePlural: "Users",
-			Convention:     "rest",
+			PathPrefix: "/api/users",
 		},
 	)
 
@@ -37,7 +35,6 @@ func TestRegisterLazyService_StringFactoryType(t *testing.T) {
 				"type": "user-repository",
 			}
 		},
-		nil,
 	)
 
 	// Register dependency first
@@ -166,7 +163,6 @@ func TestRegisterLazyService_YAMLEquivalence(t *testing.T) {
 				"maxOrd": cfg["max-orders"],
 			}
 		},
-		nil,
 	)
 
 	// Simulate YAML loading (what loader/builder.go does)

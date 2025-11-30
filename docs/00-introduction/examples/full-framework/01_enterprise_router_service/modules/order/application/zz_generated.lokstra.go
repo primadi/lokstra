@@ -95,21 +95,33 @@ func OrderServiceImplRemoteFactory(deps, config map[string]any) any {
 //   - @Route annotations on methods
 func RegisterOrderServiceImpl() {
 	// Register service type with router configuration
-	lokstra_registry.RegisterServiceType("order-service-factory",
+	lokstra_registry.RegisterRouterServiceType("order-service-factory",
 		OrderServiceImplFactory,
 		OrderServiceImplRemoteFactory,
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
+		&deploy.ServiceTypeConfig{
 			PathPrefix:  "/api",
 			Middlewares: []string{ "recovery", "request-logger" },
-			CustomRoutes: map[string]string{
-				"Cancel":  "POST /orders/{id}/cancel",
-				"Create":  "POST /orders",
-				"Delete":  "DELETE /orders/{id}",
-				"GetByID":  "GET /orders/{id}",
-				"List":  "GET /orders",
-				"UpdateStatus":  "PUT /orders/{id}/status",
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"Cancel": {
+					Path: "POST /orders/{id}/cancel",
+				},
+				"Create": {
+					Path: "POST /orders",
+				},
+				"Delete": {
+					Path: "DELETE /orders/{id}",
+				},
+				"GetByID": {
+					Path: "GET /orders/{id}",
+				},
+				"List": {
+					Path: "GET /orders",
+				},
+				"UpdateStatus": {
+					Path: "PUT /orders/{id}/status",
+				},
 			},
-		}),
+		},
 	)
 
 	// Register lazy service with auto-detected dependencies

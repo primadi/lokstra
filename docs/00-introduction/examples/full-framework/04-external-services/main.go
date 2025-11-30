@@ -11,20 +11,24 @@ import (
 
 func main() {
 	// Register service factories
-	lokstra_registry.RegisterServiceType("order-service-factory",
+	lokstra_registry.RegisterRouterServiceType("order-service-factory",
 		svc.OrderServiceFactory, nil,
-		deploy.WithResource("order", "orders"),
-		deploy.WithConvention("rest"),
-		deploy.WithRouteOverride("Refund", "POST /orders/{id}/refund"),
+		&deploy.ServiceTypeConfig{
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"Refund": {Method: "POST", Path: "/orders/{id}/refund"},
+			},
+		},
 	)
 
-	lokstra_registry.RegisterServiceType("payment-service-remote-factory",
+	lokstra_registry.RegisterRouterServiceType("payment-service-remote-factory",
 		nil, svc.PaymentServiceRemoteFactory,
-		deploy.WithResource("payment", "payments"),
-		deploy.WithConvention("rest"),
-		deploy.WithRouteOverride("CreatePayment", "POST /payments"),
-		deploy.WithRouteOverride("GetPayment", "GET /payments/{id}"),
-		deploy.WithRouteOverride("Refund", "POST /payments/{id}/refund"),
+		&deploy.ServiceTypeConfig{
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"CreatePayment": {Method: "POST", Path: "/payments"},
+				"GetPayment":    {Method: "GET", Path: "/payments/{id}"},
+				"Refund":        {Method: "POST", Path: "/payments/{id}/refund"},
+			},
+		},
 	)
 
 	printStartInfo()

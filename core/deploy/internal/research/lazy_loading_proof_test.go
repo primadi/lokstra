@@ -19,7 +19,6 @@ func TestLazyLoadingProof_OnDemandCreation(t *testing.T) {
 			callLog = append(callLog, "service-a-factory")
 			return &struct{ Name string }{Name: "ServiceA"}
 		},
-		nil,
 	)
 
 	reg.RegisterServiceType("service-b-factory",
@@ -27,7 +26,6 @@ func TestLazyLoadingProof_OnDemandCreation(t *testing.T) {
 			callLog = append(callLog, "service-b-factory")
 			return &struct{ Name string }{Name: "ServiceB"}
 		},
-		nil,
 	)
 
 	reg.RegisterServiceType("service-c-factory",
@@ -35,7 +33,6 @@ func TestLazyLoadingProof_OnDemandCreation(t *testing.T) {
 			callLog = append(callLog, "service-c-factory")
 			return &struct{ Name string }{Name: "ServiceC"}
 		},
-		nil,
 	)
 
 	// Register lazy services
@@ -122,7 +119,6 @@ func TestLazyLoadingProof_DependencyResolution(t *testing.T) {
 			resolutionOrder = append(resolutionOrder, "repository")
 			return &struct{ Name string }{Name: "Repository"}
 		},
-		nil,
 	)
 
 	// Register service (depends on repository)
@@ -131,7 +127,6 @@ func TestLazyLoadingProof_DependencyResolution(t *testing.T) {
 			resolutionOrder = append(resolutionOrder, "service")
 			return &struct{ Name string }{Name: "Service"}
 		},
-		nil,
 	)
 
 	// Register as lazy services
@@ -204,7 +199,6 @@ func TestLazyLoadingProof_UnusedDependencies(t *testing.T) {
 			createdServices = append(createdServices, "service-a")
 			return &struct{ Name string }{Name: "ServiceA"}
 		},
-		nil,
 	)
 
 	// Service B depends on Service A
@@ -213,7 +207,6 @@ func TestLazyLoadingProof_UnusedDependencies(t *testing.T) {
 			createdServices = append(createdServices, "service-b")
 			return &struct{ Name string }{Name: "ServiceB"}
 		},
-		nil,
 	)
 
 	// Service C depends on Service B (transitive dependency on A)
@@ -222,7 +215,6 @@ func TestLazyLoadingProof_UnusedDependencies(t *testing.T) {
 			createdServices = append(createdServices, "service-c")
 			return &struct{ Name string }{Name: "ServiceC"}
 		},
-		nil,
 	)
 
 	// Register lazy services

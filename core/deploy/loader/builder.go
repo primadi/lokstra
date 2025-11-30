@@ -703,9 +703,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 		}
 
 		// Check if metadata has router configuration
-		hasRouterConfig := metadata.Resource != "" ||
-			len(metadata.RouteOverrides) > 0 ||
-			metadata.PathPrefix != ""
+		hasRouterConfig := len(metadata.RouteOverrides) > 0 || metadata.PathPrefix != ""
 
 		if !hasRouterConfig {
 			// Skip services without router configuration

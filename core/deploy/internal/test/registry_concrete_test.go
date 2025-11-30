@@ -36,19 +36,16 @@ func TestNormalizeServiceFactory_ConcreteReturnTypes(t *testing.T) {
 	// Mode 1: func() *TestService (concrete return type!)
 	g.RegisterServiceType("test-service-1",
 		NewTestService, // func() *TestService
-		nil,
 	)
 
 	// Mode 2: func(cfg map[string]any) *TestService
 	g.RegisterServiceType("test-service-2",
 		NewTestServiceWithConfig,
-		nil,
 	)
 
 	// Mode 3: func(deps, cfg map[string]any) *TestService
 	g.RegisterServiceType("test-service-3",
 		NewTestServiceFull,
-		nil,
 	)
 
 	// Test retrieval and invocation
@@ -128,7 +125,7 @@ func TestNormalizeServiceFactory_InvalidSignatures(t *testing.T) {
 					t.Errorf("expected panic for %s", tc.name)
 				}
 			}()
-			g.RegisterServiceType("invalid-"+tc.name, tc.factory, nil)
+			g.RegisterServiceType("invalid-"+tc.name, tc.factory)
 		})
 	}
 }

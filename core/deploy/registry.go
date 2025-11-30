@@ -93,9 +93,6 @@ type LazyServiceEntry struct {
 // ServiceMetadata holds metadata for a service type registration
 // Can be populated from ServiceTypeConfig or legacy functional options
 type ServiceMetadata struct {
-	Resource        string                   // Singular resource name (e.g., "user")
-	ResourcePlural  string                   // Plural resource name (e.g., "users")
-	Convention      string                   // Convention type (e.g., "rest", "rpc")
 	PathPrefix      string                   // Path prefix for all routes
 	MiddlewareNames []string                 // Router-level middleware names
 	HiddenMethods   []string                 // Methods to hide from router
@@ -186,24 +183,24 @@ func NewGlobalRegistry() *GlobalRegistry {
 
 // ===== FACTORY REGISTRATION (CODE) =====
 
-// RegisterServiceType registers a service factory with configuration
-// Supports two patterns:
-//
-//  1. Struct-based (recommended):
-//     RegisterServiceType(type, local, remote, &ServiceTypeConfig{...})
-//
-//  2. Functional options (legacy):
-//     RegisterServiceType(type, local, remote, WithResource(...), WithConvention(...))
-//
 // Factory signatures (auto-wrapped by framework):
 //   - func(deps, cfg map[string]any) any - full control (canonical)
 //   - func(cfg map[string]any) any       - only config
 //   - func() any                          - no params
 //
 // Both local and remote factories support all three signatures.
-func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote any,
-	configOrOptions ...any) {
-	LogDebug("[RegisterServiceType CALLED] serviceType=%s, options count=%d", serviceType, len(configOrOptions))
+// RegisterRouterServiceType registers a service type with HTTP routing configuration.
+// Use this for services that expose HTTP endpoints (annotated with @RouterService).
+// For simple infrastructure services (DB, Redis, etc), use RegisterServiceType instead.
+//
+// Parameters:
+//   - serviceType: Unique identifier for this service type
+//   - local: Factory for local deployment (same process)
+//   - remote: Factory for remote deployment (HTTP client)
+//   - config: Optional routing configuration (path prefix, middlewares, route overrides)
+func (g *GlobalRegistry) RegisterRouterServiceType(serviceType string, local, remote any,
+	config *ServiceTypeConfig) {
+	LogDebug("[RegisterRouterServiceType CALLED] serviceType=%s", serviceType)
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -212,72 +209,30 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 		panic(fmt.Sprintf("service type %s already registered", serviceType))
 	}
 
-	// Build metadata from config or options
-	metadata := &ServiceMetadata{
-		Convention: "rest", // Default convention
-	}
+	// Build metadata from config
+	metadata := &ServiceMetadata{}
 
-	// Check if first argument is ServiceTypeConfig
-	if len(configOrOptions) > 0 {
-		if config, ok := configOrOptions[0].(*ServiceTypeConfig); ok {
-			// Struct-based configuration (new pattern)
-			if config != nil {
-				metadata.Resource = config.Resource
-				metadata.ResourcePlural = config.ResourcePlural
-				metadata.Convention = config.Convention
-				metadata.PathPrefix = config.PathPrefix
-				metadata.MiddlewareNames = config.Middlewares
-				metadata.HiddenMethods = config.Hidden
+	if config != nil {
+		metadata.PathPrefix = config.PathPrefix
+		metadata.MiddlewareNames = config.Middlewares
+		metadata.HiddenMethods = config.Hidden
 
-				// Convert RouteConfig to RouteMetadata
-				if len(config.RouteOverrides) > 0 {
-					metadata.RouteOverrides = make(map[string]RouteMetadata)
-					for methodName, routeConfig := range config.RouteOverrides {
-						metadata.RouteOverrides[methodName] = RouteMetadata(routeConfig)
-					}
-				}
-			}
-		} else {
-			// Functional options (legacy pattern)
-			for _, opt := range configOrOptions {
-				if optFunc, ok := opt.(RegisterServiceTypeOption); ok {
-					optFunc(metadata)
-				}
+		// Convert RouteConfig to RouteMetadata
+		if len(config.RouteOverrides) > 0 {
+			metadata.RouteOverrides = make(map[string]RouteMetadata)
+			for methodName, routeConfig := range config.RouteOverrides {
+				metadata.RouteOverrides[methodName] = RouteMetadata(routeConfig)
 			}
 		}
-	}
-
-	// Infer Resource from serviceType if not provided
-	if metadata.Resource == "" {
-		// Auto-generate from service type: "order-service-factory" -> "order"
-		resource := strings.TrimSuffix(serviceType, "-factory")
-		resource = strings.TrimSuffix(resource, "-service")
-		if resource != "" && resource != serviceType {
-			metadata.Resource = resource
-			LogDebug("[RegisterServiceType] %s: Inferred Resource=%s", serviceType, resource)
-		}
-	}
-
-	// Infer ResourcePlural if Resource is set but ResourcePlural is empty
-	if metadata.Resource != "" && metadata.ResourcePlural == "" {
-		metadata.ResourcePlural = metadata.Resource + "s"
-		LogDebug("[RegisterServiceType] %s: Inferred ResourcePlural=%s", serviceType, metadata.ResourcePlural)
-	}
-
-	// Set default convention if not provided
-	if metadata.Convention == "" {
-		metadata.Convention = "rest"
 	}
 
 	// Debug: log metadata before filtering
-	LogDebug("[RegisterServiceType] %s (before filter): Resource='%s', PathPrefix='%s', RouteOverrides=%d",
-		serviceType, metadata.Resource, metadata.PathPrefix, len(metadata.RouteOverrides))
+	LogDebug("[RegisterServiceType] %s (before filter): PathPrefix='%s', RouteOverrides=%d",
+		serviceType, metadata.PathPrefix, len(metadata.RouteOverrides))
 
 	// Store metadata if any meaningful configuration is provided
 	var metadataPtr *ServiceMetadata
-	hasConfig := metadata.Resource != "" ||
-		metadata.Convention != "rest" || // Non-default convention
-		metadata.PathPrefix != "" ||
+	hasConfig := metadata.PathPrefix != "" ||
 		len(metadata.RouteOverrides) > 0 ||
 		len(metadata.MiddlewareNames) > 0 ||
 		len(metadata.HiddenMethods) > 0
@@ -285,8 +240,8 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 	if hasConfig {
 		metadataPtr = metadata
 		// Debug log
-		LogDebug("[RegisterServiceType] %s: STORED - Resource=%s, PathPrefix=%s, RouteOverrides count=%d",
-			serviceType, metadata.Resource, metadata.PathPrefix, len(metadata.RouteOverrides))
+		LogDebug("[RegisterServiceType] %s: STORED - PathPrefix=%s, RouteOverrides count=%d",
+			serviceType, metadata.PathPrefix, len(metadata.RouteOverrides))
 		for methodName, route := range metadata.RouteOverrides {
 			LogDebug("  - %s: method=%s, path=%s", methodName, route.Method, route.Path)
 		}
@@ -310,6 +265,20 @@ func (g *GlobalRegistry) RegisterServiceType(serviceType string, local, remote a
 		Remote:   remoteFactory,
 		Metadata: metadataPtr,
 	}
+
+	LogDebug("[RegisterRouterServiceType] %s: registered (local=%v, remote=%v)",
+		serviceType, localFactory != nil, remoteFactory != nil)
+}
+
+// RegisterServiceType registers a simple service type without HTTP routing.
+// Use this for infrastructure services like database pools, Redis clients, metrics, etc.
+// For services that expose HTTP endpoints, use RegisterRouterServiceType instead.
+//
+// Parameters:
+//   - serviceType: Unique identifier for this service type
+//   - factory: Factory function (supports multiple signatures - see normalizeServiceFactory)
+func (g *GlobalRegistry) RegisterServiceType(serviceType string, factory any) {
+	g.RegisterRouterServiceType(serviceType, factory, nil, nil)
 }
 
 // converts any supported factory signature to canonical ServiceFactory
@@ -441,8 +410,8 @@ func (g *GlobalRegistry) GetServiceMetadata(serviceType string) *ServiceMetadata
 	}
 
 	if entry.Metadata != nil {
-		LogDebug("[GetServiceMetadata] serviceType '%s' FOUND: Resource=%s, RouteOverrides=%d",
-			serviceType, entry.Metadata.Resource, len(entry.Metadata.RouteOverrides))
+		LogDebug("[GetServiceMetadata] serviceType '%s' FOUND: PathPrefix=%s, RouteOverrides=%d",
+			serviceType, entry.Metadata.PathPrefix, len(entry.Metadata.RouteOverrides))
 	} else {
 		LogDebug("[GetServiceMetadata] serviceType '%s' FOUND but Metadata=nil", serviceType)
 	}

@@ -32,7 +32,7 @@ func main() {
 	lokstra_registry.RegisterServiceType("user-service", func() any {
 		log.Println("🏭 UserService factory called (creating instance)")
 		return &UserService{}
-	}, nil)
+	})
 
 	// Create router with 3 different access methods
 	router := lokstra.NewRouter("demo")

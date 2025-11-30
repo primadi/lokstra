@@ -119,6 +119,5 @@ func ServiceFactory(params map[string]any) any {
 }
 
 func Register() {
-	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory,
-		nil)
+	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory)
 }

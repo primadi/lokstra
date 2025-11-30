@@ -96,9 +96,6 @@ func Home() *response.Response {
 }
 
 func main() {
-	lokstra_registry.RegisterServiceType("user-repository", UserRepositoryFactory, nil)
-	lokstra_registry.RegisterServiceType("user-service", UserServiceFactory, nil)
-
 	lokstra_registry.RegisterLazyService("user-repository", UserRepositoryFactory, nil)
 	lokstra_registry.RegisterLazyService("user-service", UserServiceFactory, nil)
 

@@ -356,12 +356,12 @@ func Home() *response.Response {
 
 func main() {
 	// Register all services
-	lokstra_registry.RegisterServiceType("cache-service", CacheServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("logger-service", LoggerServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("simple-service", SimpleServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("configurable-service", ConfigurableServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("dependent-service", DependentServiceFactory, nil)
-	lokstra_registry.RegisterServiceType("lifecycle-service", LifecycleServiceFactory, nil)
+	lokstra_registry.RegisterServiceType("cache-service", CacheServiceFactory)
+	lokstra_registry.RegisterServiceType("logger-service", LoggerServiceFactory)
+	lokstra_registry.RegisterServiceType("simple-service", SimpleServiceFactory)
+	lokstra_registry.RegisterServiceType("configurable-service", ConfigurableServiceFactory)
+	lokstra_registry.RegisterServiceType("dependent-service", DependentServiceFactory)
+	lokstra_registry.RegisterServiceType("lifecycle-service", LifecycleServiceFactory)
 
 	// Define services
 	lokstra_registry.RegisterLazyService("cache-service", CacheServiceFactory, nil)

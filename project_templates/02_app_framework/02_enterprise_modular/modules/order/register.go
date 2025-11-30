@@ -13,20 +13,20 @@ import (
 func Register() {
 	// Register order repository (infrastructure - local only)
 	lokstra_registry.RegisterServiceType("order-repository-factory",
-		repository.OrderRepositoryFactory, nil)
+		repository.OrderRepositoryFactory)
 
 	// Register order service (application - local and remote)
-	lokstra_registry.RegisterServiceType("order-service-factory",
+	lokstra_registry.RegisterRouterServiceType("order-service-factory",
 		application.OrderServiceFactory,
 		OrderServiceRemoteFactory, // Remote factory for microservices
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
+		&deploy.ServiceTypeConfig{
 			PathPrefix:  "/api",
 			Middlewares: []string{"recovery", "request-logger"},
-			CustomRoutes: map[string]string{
-				"UpdateStatus": "PUT /orders/{id}/status",
-				"Cancel":       "POST /orders/{id}/cancel",
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"UpdateStatus": {Method: "PUT", Path: "/orders/{id}/status"},
+				"Cancel":       {Method: "POST", Path: "/orders/{id}/cancel"},
 			},
-		}),
+		},
 	)
 
 	lokstra_registry.RegisterLazyService("order-repository", "order-repository-factory", nil)

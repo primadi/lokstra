@@ -15,30 +15,35 @@ import (
 func registerServiceTypes() {
 	// Register repositories (infrastructure layer - local only)
 	lokstra_registry.RegisterServiceType("user-repository-factory",
-		repository.NewUserRepositoryMemory, nil)
+		repository.NewUserRepositoryMemory)
 
 	lokstra_registry.RegisterServiceType("order-repository-factory",
-		repository.NewOrderRepositoryMemory, nil)
+		repository.NewOrderRepositoryMemory)
 
 	// Register services (application layer - local and remote)
-	lokstra_registry.RegisterServiceType("user-service-factory",
+	lokstra_registry.RegisterRouterServiceType("user-service-factory",
 		service.UserServiceFactory,
 		service.UserServiceRemoteFactory,
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
+		&deploy.ServiceTypeConfig{
 			PathPrefix:  "/api",
 			Middlewares: []string{"recovery", "request-logger"},
-		}),
+		},
 	)
 
-	lokstra_registry.RegisterServiceType("order-service-factory",
+	lokstra_registry.RegisterRouterServiceType("order-service-factory",
 		service.OrderServiceFactory,
 		service.OrderServiceRemoteFactory,
-		deploy.WithRouter(&deploy.ServiceTypeRouter{
-			CustomRoutes: map[string]string{
-				"GetByUserID":  "/users/{user_id}/orders",
-				"UpdateStatus": "PATCH /orders/{id}/status",
+		&deploy.ServiceTypeConfig{
+			RouteOverrides: map[string]deploy.RouteConfig{
+				"GetByUserID": {
+					Path: "/users/{user_id}/orders",
+				},
+				"UpdateStatus": {
+					Method: "PATCH",
+					Path:   "/orders/{id}/status",
+				},
 			},
-		}),
+		},
 	)
 }
 

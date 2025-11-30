@@ -21,9 +21,7 @@ func TestCircularDependency_StillCrashes(t *testing.T) {
 			}{
 				B: service.Cast[any](deps["service-b"]),
 			}
-		},
-		nil,
-	)
+		})
 
 	// Service B depends on A (CIRCULAR!)
 	reg.RegisterServiceType("service-b-factory",
@@ -33,9 +31,7 @@ func TestCircularDependency_StillCrashes(t *testing.T) {
 			}{
 				A: service.Cast[any](deps["service-a"]),
 			}
-		},
-		nil,
-	)
+		})
 
 	// Register with circular dependencies
 	reg.RegisterLazyService("service-a", "service-a-factory", map[string]any{
@@ -79,9 +75,7 @@ func TestCached_UsefulForConditionalLoading(t *testing.T) {
 	reg.RegisterServiceType("cache-factory",
 		func(deps, cfg map[string]any) any {
 			return &struct{ Name string }{Name: "Cache"}
-		},
-		nil,
-	)
+		})
 
 	// Expensive service
 	reg.RegisterServiceType("expensive-api-factory",
@@ -89,9 +83,7 @@ func TestCached_UsefulForConditionalLoading(t *testing.T) {
 			expensiveAPICalled = true
 			t.Logf("💰 Expensive API factory called")
 			return &struct{ Name string }{Name: "ExpensiveAPI"}
-		},
-		nil,
-	)
+		})
 
 	// Analytics service with LAZY dependencies
 	reg.RegisterServiceType("analytics-factory",
@@ -103,9 +95,7 @@ func TestCached_UsefulForConditionalLoading(t *testing.T) {
 				Cache:        service.Cast[any](deps["cache"]),
 				ExpensiveAPI: service.Cast[any](deps["expensive-api"]),
 			}
-		},
-		nil,
-	)
+		})
 
 	reg.RegisterLazyService("cache", "cache-factory", nil)
 	reg.RegisterLazyService("expensive-api", "expensive-api-factory", nil)
@@ -141,18 +131,14 @@ func TestEagerInjection_WorksNormally(t *testing.T) {
 		func(deps, cfg map[string]any) any {
 			paymentAPICalled = true
 			return &struct{ Name string }{Name: "PaymentAPI"}
-		},
-		nil,
-	)
+		})
 
 	// Email Service
 	reg.RegisterServiceType("email-service-factory",
 		func(deps, cfg map[string]any) any {
 			emailSvcCalled = true
 			return &struct{ Name string }{Name: "EmailService"}
-		},
-		nil,
-	)
+		})
 
 	// Order service with EAGER dependencies (no service.Cached)
 	type OrderService struct {
@@ -166,9 +152,7 @@ func TestEagerInjection_WorksNormally(t *testing.T) {
 				PaymentAPI: deps["payment-api"],   // Direct, no Cast
 				EmailSvc:   deps["email-service"], // Direct, no Cast
 			}
-		},
-		nil,
-	)
+		})
 
 	reg.RegisterLazyService("payment-api", "payment-api-factory", nil)
 	reg.RegisterLazyService("email-service", "email-service-factory", nil)
