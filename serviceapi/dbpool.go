@@ -2,8 +2,6 @@ package serviceapi
 
 import (
 	"context"
-
-	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 // DbPool defines a connection pool interface
@@ -21,26 +19,26 @@ type DbPool interface {
 	// This is useful for multi-tenant applications.
 	AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (DbConn, error)
 
-	lokstra_registry.Shutdownable
+	Shutdownable
 }
 
 type DbPoolWithSchema interface {
 	Acquire(ctx context.Context) (DbConn, error)
 
-	lokstra_registry.Shutdownable
+	Shutdownable
 }
 
 type DbPoolWithTenant interface {
 	Acquire(ctx context.Context) (DbConn, error)
 
-	lokstra_registry.Shutdownable
+	Shutdownable
 }
 
 type RowMap = map[string]any
 
 // DbConn represents a live DB connection (e.g. from pgxpool)
 type DbConn interface {
-	lokstra_registry.Shutdownable
+	Shutdownable
 	Begin(ctx context.Context) (DbTx, error)
 	Transaction(ctx context.Context, fn func(tx DbExecutor) error) error
 	Ping(context context.Context) error
