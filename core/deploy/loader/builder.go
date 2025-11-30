@@ -47,30 +47,27 @@ func getRouterDef(defs map[string]*schema.RouterDef, name string) (*schema.Route
 	return rtr, ok
 }
 
-// flattenConfigs flattens nested config maps using dot notation
-// Example: {"db": {"host": "localhost"}} => {"db.host": "localhost"}
-// func flattenConfigs(configs map[string]any) map[string]any {
-// 	result := make(map[string]any)
-// 	flattenConfigsRecursive("", configs, result)
-// 	return result
-// }
+// flattenAndStoreConfigs flattens configs and stores them to registry.resolvedConfigs
+// This populates the config registry that GetConfig() reads from
+func flattenAndStoreConfigs(registry *deploy.GlobalRegistry, configs map[string]any, prefix string) {
+	for key, value := range configs {
+		fullKey := key
+		if prefix != "" {
+			fullKey = prefix + "." + key
+		}
 
-// func flattenConfigsRecursive(prefix string, configs map[string]any, result map[string]any) {
-// 	for key, value := range configs {
-// 		fullKey := key
-// 		if prefix != "" {
-// 			fullKey = prefix + "." + key
-// 		}
-
-// 		// If value is a map, recurse
-// 		if nestedMap, ok := value.(map[string]any); ok {
-// 			flattenConfigsRecursive(fullKey, nestedMap, result)
-// 		} else {
-// 			// Store leaf value
-// 			result[fullKey] = value
-// 		}
-// 	}
-// }
+		// If value is a map, recurse AND store the map itself
+		if nestedMap, ok := value.(map[string]any); ok {
+			// Store the map at this level (for GetConfig[map[string]any]("db"))
+			registry.SetConfig(fullKey, nestedMap)
+			// Recurse to flatten nested values
+			flattenAndStoreConfigs(registry, nestedMap, fullKey)
+		} else {
+			// Store leaf value
+			registry.SetConfig(fullKey, value)
+		}
+	}
+}
 
 // normalizeServerDefinitions converts server-level helper fields to a new app
 // This allows shorthand syntax: addr/routers/published-services at server level
@@ -400,13 +397,10 @@ func NormalizeInlineDefinitionsForServer(
 // This is called during LoadAndBuild to prepare definitions for later lazy registration
 // Runtime registration happens in RunCurrentServer after normalization
 func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
-	// Store configs as definitions (keep original nested structure - will be flattened after resolve)
-	for name, value := range config.Configs {
-		registry.DefineConfig(&schema.ConfigDef{
-			Name:  name,
-			Value: value,
-		})
-	}
+	// Flatten and store configs to resolvedConfigs
+	// Configs are already resolved at YAML byte level by loader (2-step resolution)
+	// Now we flatten nested maps to dot notation for easy access via GetConfig()
+	flattenAndStoreConfigs(registry, config.Configs, "")
 
 	// Store middleware definitions to registry (no runtime registration yet)
 	// Middlewares will be registered in RegisterDefinitionsForRuntime
@@ -855,12 +849,6 @@ func LoadAndBuild(configPaths []string) error {
 
 		// Store topology in global registry
 		registry.StoreDeploymentTopology(deployTopo)
-	}
-
-	// Resolve ALL config values throughout the entire configuration
-	// This includes configs, deployment values, service configs, etc.
-	if err := registry.ResolveConfigs(); err != nil {
-		return fmt.Errorf("failed to resolve configs: %w", err)
 	}
 
 	// Auto-discover and setup named DB pools

@@ -282,7 +282,6 @@ func RunCurrentServer(timeout time.Duration) error {
 		// Create Lokstra App for this deploy app. Name it using serverName#index to keep unique names
 		appName := fmt.Sprintf("%s#%s", serverName, strconv.Itoa(i+1))
 
-		// Address is already resolved by ResolveConfigs()
 		coreApp := app.New(appName, appTopo.Addr, routers...)
 
 		// Apply handler configurations from YAML (reverse-proxies, mount-spa, mount-static)

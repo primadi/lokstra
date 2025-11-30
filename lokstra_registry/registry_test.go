@@ -127,13 +127,7 @@ func TestRegisterAndGetMiddleware(t *testing.T) {
 
 func TestConfigDefineAndGet(t *testing.T) {
 	// Define config
-	lokstra_registry.DefineConfig("test-config", "test-value")
-
-	// Resolve configs to make them available
-	err := lokstra_registry.Global().ResolveConfigs()
-	if err != nil {
-		t.Fatalf("failed to resolve configs: %v", err)
-	}
+	lokstra_registry.SetConfig("test-config", "test-value")
 
 	// Get config with default
 	value := lokstra_registry.GetConfig("test-config", "default")
@@ -150,13 +144,7 @@ func TestConfigDefineAndGet(t *testing.T) {
 
 func TestGetConfig_TypeAssertion(t *testing.T) {
 	// Define config with int value
-	lokstra_registry.DefineConfig("int-config", 42)
-
-	// Resolve configs
-	err := lokstra_registry.Global().ResolveConfigs()
-	if err != nil {
-		t.Fatalf("failed to resolve configs: %v", err)
-	}
+	lokstra_registry.SetConfig("int-config", 42)
 
 	// Get as int
 	intValue := lokstra_registry.GetConfig("int-config", 0)

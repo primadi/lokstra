@@ -99,41 +99,38 @@ func main() {
 }
 ```
 
-### Step 3: Test Config Resolution
+### Step 3: Test Config Access
 
 ```go
 package main
 
 import (
     "testing"
-    "github.com/primadi/lokstra/core/deploy"
-    "github.com/primadi/lokstra/core/deploy/schema"
+    "github.com/primadi/lokstra/lokstra_registry"
 )
 
-func TestConfigResolution(t *testing.T) {
-    // Create registry
-    reg := deploy.NewGlobalRegistry()
+func TestConfigAccess(t *testing.T) {
+    // Set config value
+    lokstra_registry.SetConfig("db.max-conns", 20)
     
-    // Define config
-    reg.DefineConfig(&schema.ConfigDef{
-        Name: "DB_MAX_CONNS",
-        Value: 20,
+    // Get config value with type-safe generic
+    maxConns := lokstra_registry.GetConfig("db.max-conns", 10)
+    
+    // Verify value and type
+    if maxConns != 20 {
+        t.Errorf("expected int 20, got %v (type %T)", maxConns, maxConns)
+    }
+    
+    // Test nested access
+    lokstra_registry.SetConfig("database", map[string]any{
+        "host": "localhost",
+        "port": 5432,
     })
     
-    // Resolve
-    if err := reg.ResolveConfigs(); err != nil {
-        t.Fatal(err)
-    }
-    
-    // Get resolved value
-    value, ok := reg.GetResolvedConfig("DB_MAX_CONNS")
-    if !ok {
-        t.Fatal("config not found")
-    }
-    
-    // Verify type preserved
-    if value != 20 {
-        t.Errorf("expected int 20, got %v (type %T)", value, value)
+    // Access as nested map
+    dbConfig := lokstra_registry.GetConfig[map[string]any]("database", nil)
+    if dbConfig["host"] != "localhost" {
+        t.Errorf("expected 'localhost', got %v", dbConfig["host"])
     }
 }
 ```
@@ -205,41 +202,37 @@ deployments:
       MAX_CONNECTIONS: 1000
 ```
 
-## Custom Resolver Example
+## Config Resolution with Providers
 
-```go
-package main
+Lokstra uses a **2-step resolution** at YAML byte level (before unmarshaling):
 
-import "github.com/primadi/lokstra/core/deploy/resolver"
-
-// Consul resolver
-type ConsulResolver struct{}
-
-func (c *ConsulResolver) Name() string {
-    return "consul"
-}
-
-func (c *ConsulResolver) Resolve(key string) (string, bool) {
-    // Fetch from Consul
-    value, err := consulClient.Get(key)
-    if err != nil {
-        return "", false
-    }
-    return value, true
-}
-
-func init() {
-    // Register custom resolver
-    deploy.Global().RegisterResolver(&ConsulResolver{})
-}
-```
-
-**Use in YAML:**
+**STEP 1:** Resolve non-@cfg variables
 ```yaml
 configs:
-  - name: API_KEY
-    value: ${@consul:config/api-key:fallback}
+  database:
+    host: ${DB_HOST:localhost}           # ENV variable
+    secret: ${@aws-secret:db/password}   # AWS Secrets Manager
+    token: ${@vault:secret/api-key}      # HashiCorp Vault
 ```
+
+**STEP 2:** Resolve @cfg references (using step 1 results)
+```yaml
+configs:
+  max-connections: 100
+
+services:
+  - name: db
+    config:
+      max-conns: ${@cfg:max-connections}  # References config value
+```
+
+**Benefits:**
+- ✅ All fields auto-resolved (no manual iteration)
+- ✅ Extensible via provider registry
+- ✅ Type-safe after resolution
+- ✅ Single quote escaping: `${@vault:'path:with:colons'}`
+
+See `core/deploy/loader/provider_registry.go` for available providers.
 
 ## Testing Best Practices
 
@@ -263,31 +256,34 @@ func TestMyService(t *testing.T) {
 }
 ```
 
-### Mock Resolver for Tests
+### Config with Different Types
 
 ```go
-func TestWithMockResolver(t *testing.T) {
-    reg := deploy.NewGlobalRegistry()
-    
-    // Register mock resolver
-    reg.RegisterResolver(resolver.NewStaticResolver("mock", map[string]string{
-        "api-key": "test-key-123",
-    }))
-    
-    // Define config using mock resolver
-    reg.DefineConfig(&schema.ConfigDef{
-        Name: "API_KEY",
-        Value: "${@mock:api-key}",
-    })
-    
-    // Resolve and test
-    if err := reg.ResolveConfigs(); err != nil {
-        t.Fatal(err)
+func TestConfigTypes(t *testing.T) {
+    // String config
+    lokstra_registry.SetConfig("api.key", "test-key-123")
+    apiKey := lokstra_registry.GetConfig("api.key", "")
+    if apiKey != "test-key-123" {
+        t.Errorf("expected 'test-key-123', got %v", apiKey)
     }
     
-    value, _ := reg.GetResolvedConfig("API_KEY")
-    if value != "test-key-123" {
-        t.Errorf("expected 'test-key-123', got %v", value)
+    // Integer config
+    lokstra_registry.SetConfig("server.port", 8080)
+    port := lokstra_registry.GetConfig("server.port", 3000)
+    if port != 8080 {
+        t.Errorf("expected 8080, got %v", port)
+    }
+    
+    // Map config with auto-flattening
+    lokstra_registry.SetConfig("database", map[string]any{
+        "host": "localhost",
+        "port": 5432,
+    })
+    
+    // Access flattened keys
+    dbHost := lokstra_registry.GetConfig("database.host", "")
+    if dbHost != "localhost" {
+        t.Errorf("expected 'localhost', got %v", dbHost)
     }
 }
 ```
@@ -297,41 +293,41 @@ func TestWithMockResolver(t *testing.T) {
 ### Config Not Found Error
 
 ```
-Error: config key DB_MAX_CONNS not found (referenced in ${@cfg:DB_MAX_CONNS})
+Error: config 'db.max-conns' not found
 ```
 
-**Solution:** Make sure the config is defined before resolution:
-```yaml
+**Solution:** Make sure the config is set before access:
+```go
+// In YAML (resolved at load time)
 configs:
-  - name: DB_MAX_CONNS
-    value: 20
+  database:
+    max-conns: 20
+
+// OR in code (runtime)
+lokstra_registry.SetConfig("database.max-conns", 20)
 ```
 
 ### Type Mismatch
 
 ```yaml
-# Wrong: This becomes string "20"
-config:
-  max-conns: "20"
-
-# Correct: This stays as int 20
+# Wrong: String instead of int
 configs:
-  - name: DB_MAX_CONNS
-    value: 20
+  database:
+    max-conns: "20"  # String
 
-config:
-  max-conns: ${@cfg:DB_MAX_CONNS}
-```
+# Correct: Native YAML type
+configs:
+  database:
+    max-conns: 20    # Integer
 
-### Resolver Not Found
+# Also correct: Reference preserves type
+configs:
+  max-connections: 100
 
-```
-Error: resolver consul not found (in ${@consul:config/api-key})
-```
-
-**Solution:** Register the resolver first:
-```go
-deploy.Global().RegisterResolver(&ConsulResolver{})
+service-definitions:
+  db:
+    config:
+      max-conns: ${@cfg:max-connections}  # Stays as int 100
 ```
 
 ### Factory Not Registered
@@ -356,11 +352,11 @@ deploy.Global().RegisterServiceType("user-factory", factory, nil)
 **Q: Can I use code instead of YAML?**  
 A: Yes! You can define everything programmatically using `registry.DefineConfig()`, `registry.DefineService()`, etc.
 
-**Q: Do I need to use @cfg for all config references?**  
-A: Only when you want to reference another config value. Direct env vars don't need it: `${DATABASE_URL}`
+**Q: How does config resolution work?**  
+A: 2-step resolution at YAML byte level: (1) ENV/provider variables → (2) @cfg references. All automatic before unmarshaling.
 
-**Q: Why ${@cfg:...} instead of ${cfg:...}?**  
-A: The `@` prefix clearly distinguishes custom resolvers from env vars, making parsing easier.
+**Q: Can I add custom providers (like Vault, Consul)?**  
+A: Yes! See `core/deploy/loader/provider_registry.go`. Implement the provider interface and register it.
 
 **Q: Can I have multiple deployments in one YAML?**  
 A: Yes! The `deployments:` section is an array. See example.yaml.
