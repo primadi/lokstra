@@ -216,7 +216,24 @@ func (g *GlobalRegistry) RegisterRouterServiceType(serviceType string, local, re
 		if len(config.RouteOverrides) > 0 {
 			metadata.RouteOverrides = make(map[string]RouteMetadata)
 			for methodName, routeConfig := range config.RouteOverrides {
-				metadata.RouteOverrides[methodName] = RouteMetadata(routeConfig)
+				// Parse "METHOD /path" format from Path field if Method is empty
+				// This handles annotation-generated code format: Path: "POST /users/{id}"
+				method := routeConfig.Method
+				path := routeConfig.Path
+
+				if method == "" && path != "" {
+					parts := strings.SplitN(path, " ", 2)
+					if len(parts) == 2 {
+						method = parts[0]
+						path = parts[1]
+					}
+				}
+
+				metadata.RouteOverrides[methodName] = RouteMetadata{
+					Method:      method,
+					Path:        path,
+					Middlewares: routeConfig.Middlewares,
+				}
 			}
 		}
 	}
