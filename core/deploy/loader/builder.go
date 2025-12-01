@@ -932,17 +932,23 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 				username, password, host, port, database, sslmode, minConns, maxConns, maxIdleTime, maxLifetime)
 		} else {
 			// DSN provided - apply optional pool parameters if not already set
+			opts := ""
 			if !strings.Contains(dsn, "pool_min_conns=") {
-				dsn += fmt.Sprintf("&pool_min_conns=%d", minConns)
+				opts += fmt.Sprintf("&pool_min_conns=%d", minConns)
 			}
 			if !strings.Contains(dsn, "pool_max_conns=") {
-				dsn += fmt.Sprintf("&pool_max_conns=%d", maxConns)
+				opts += fmt.Sprintf("&pool_max_conns=%d", maxConns)
 			}
 			if !strings.Contains(dsn, "pool_max_conn_idle_time=") {
-				dsn += fmt.Sprintf("&pool_max_conn_idle_time=%s", maxIdleTime)
+				opts += fmt.Sprintf("&pool_max_conn_idle_time=%s", maxIdleTime)
 			}
 			if !strings.Contains(dsn, "pool_max_conn_lifetime=") {
-				dsn += fmt.Sprintf("&pool_max_conn_lifetime=%s", maxLifetime)
+				opts += fmt.Sprintf("&pool_max_conn_lifetime=%s", maxLifetime)
+			}
+			if strings.Contains(dsn, "?") {
+				dsn += opts
+			} else {
+				dsn += "?" + strings.TrimPrefix(opts, "&")
 			}
 		}
 

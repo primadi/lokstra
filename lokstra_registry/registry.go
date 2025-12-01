@@ -19,7 +19,7 @@ import (
 
 	"github.com/primadi/lokstra/common/cast"
 	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/core/deploy/loader"
+	"github.com/primadi/lokstra/core/deploy/loader/resolver"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/service"
@@ -543,7 +543,7 @@ func SimpleResolver(input string) string {
 
 // Provider is an alias to loader.Provider for easier access
 // This allows registering custom config value providers (AWS, Vault, K8s, etc.)
-type Provider = loader.Provider
+type Provider = resolver.Provider
 
 // RegisterProvider registers a custom provider for config value resolution
 // Providers can resolve values from various sources (AWS Secrets, Vault, K8s, etc.)
@@ -555,7 +555,7 @@ type Provider = loader.Provider
 //
 // See core/deploy/loader/PROVIDER-REGISTRY.md for complete examples
 func RegisterProvider(p Provider) {
-	loader.RegisterProvider(p)
+	resolver.RegisterProvider(p)
 }
 
 // ===== SHUTDOWN =====
