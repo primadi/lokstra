@@ -102,7 +102,6 @@ import (
     "log"
     "github.com/primadi/lokstra"
     "github.com/primadi/lokstra/core/deploy"
-    "github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
@@ -110,7 +109,7 @@ func main() {
     deploy.SetLogLevelFromEnv()
     
     // 1. Load config FIRST
-    if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+    if err := lokstra.LoadConfigFromFolder("config"); err != nil {
         log.Fatal("Failed to load config:", err)
     }
     
@@ -121,7 +120,7 @@ func main() {
     registerMiddlewareTypes()
     
     // 4. Initialize and run server
-    if err := lokstra_registry.InitAndRunServer(); err != nil {
+    if err := lokstra.InitAndRunServer(); err != nil {
         log.Fatal("Failed to run server:", err)
     }
 }
@@ -173,7 +172,7 @@ func main() {
     deploy.SetLogLevelFromEnv()
     
     // Load config first
-    if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+    if err := lokstra.LoadConfigFromFolder("config"); err != nil {
         log.Fatal("Failed to load config:", err)
     }
     
@@ -182,7 +181,7 @@ func main() {
     registerMiddlewareTypes()
     
     // Start server
-    if err := lokstra_registry.InitAndRunServer(); err != nil {
+    if err := lokstra.InitAndRunServer(); err != nil {
         log.Fatal("Failed to run server:", err)
     }
 }
@@ -241,20 +240,19 @@ package main
 import (
     "log"
     "github.com/primadi/lokstra"
-    "github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
     lokstra.Bootstrap()
     
     // Load single config file
-    if err := lokstra_registry.LoadConfig("config.yaml"); err != nil {
+    if err := lokstra.LoadConfig("config.yaml"); err != nil {
         log.Fatal(err)
     }
     
     registerServiceTypes()
     
-    if err := lokstra_registry.InitAndRunServer(); err != nil {
+    if err := lokstra.InitAndRunServer(); err != nil {
         log.Fatal(err)
     }
 }
@@ -268,14 +266,13 @@ package main
 import (
     "log"
     "github.com/primadi/lokstra"
-    "github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
     lokstra.Bootstrap()
     
     // Load multiple config files
-    if err := lokstra_registry.LoadConfig(
+    if err := lokstra.LoadConfig(
         "config/base.yaml",
         "config/services.yaml",
         "config/deployments.yaml",
@@ -286,7 +283,7 @@ func main() {
     registerServiceTypes()
     registerMiddlewareTypes()
     
-    if err := lokstra_registry.InitAndRunServer(); err != nil {
+    if err := lokstra.InitAndRunServer(); err != nil {
         log.Fatal(err)
     }
 }
@@ -300,21 +297,20 @@ package main
 import (
     "log"
     "github.com/primadi/lokstra"
-    "github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
     lokstra.Bootstrap()
     
     // Load all YAML files from folder
-    if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+    if err := lokstra.LoadConfigFromFolder("config"); err != nil {
         log.Fatal(err)
     }
     
     registerServiceTypes()
     registerMiddlewareTypes()
     
-    if err := lokstra_registry.InitAndRunServer(); err != nil {
+    if err := lokstra.InitAndRunServer(); err != nil {
         log.Fatal(err)
     }
 }
@@ -359,10 +355,10 @@ Loads YAML configuration file(s) and registers lazy load services.
 
 ```go
 // Single file
-err := lokstra_registry.LoadConfig("config.yaml")
+err := lokstra.LoadConfig("config.yaml")
 
 // Multiple files
-err := lokstra_registry.LoadConfig(
+err := lokstra.LoadConfig(
     "config/base.yaml",
     "config/services.yaml",
 )
@@ -373,7 +369,7 @@ err := lokstra_registry.LoadConfig(
 Loads all YAML files from the specified folder.
 
 ```go
-err := lokstra_registry.LoadConfigFromFolder("config")
+err := lokstra.LoadConfigFromFolder("config")
 ```
 
 #### `InitAndRunServer() error`
@@ -385,7 +381,7 @@ Initializes and runs the server based on loaded config.
 // - server: Server selection (optional, uses first if not specified)
 // - shutdown_timeout: Graceful shutdown timeout (optional, default: 30s)
 
-err := lokstra_registry.InitAndRunServer()
+err := lokstra.InitAndRunServer()
 ```
 
 #### `GetConfig[T any](key string, defaultValue T) T`

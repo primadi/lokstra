@@ -80,7 +80,6 @@ import (
     "log"
     "github.com/primadi/lokstra"
     "github.com/primadi/lokstra/core/deploy"
-    "github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
@@ -88,7 +87,7 @@ func main() {
     deploy.SetLogLevelFromEnv()
     
     // 1. Load config FIRST
-    if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+    if err := lokstra.LoadConfigFromFolder("config"); err != nil {
         log.Fatal("Failed to load config:", err)
     }
     
@@ -99,7 +98,7 @@ func main() {
     registerMiddlewareTypes()
     
     // 4. Initialize and run server
-    if err := lokstra_registry.InitAndRunServer(); err != nil {
+    if err := lokstra.InitAndRunServer(); err != nil {
         log.Fatal("Failed to run server:", err)
     }
 }
@@ -180,11 +179,11 @@ Replace `RunServerFromConfigFolder()` with 3 separate calls:
 lokstra_registry.RunServerFromConfigFolder("config")
 
 // After  
-if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+if err := lokstra.LoadConfigFromFolder("config"); err != nil {
     log.Fatal(err)
 }
 // ... register services/middlewares ...
-if err := lokstra_registry.InitAndRunServer(); err != nil {
+if err := lokstra.InitAndRunServer(); err != nil {
     log.Fatal(err)
 }
 ```

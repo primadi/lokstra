@@ -20,7 +20,7 @@ func main() {
 
 	deploy.SetLogLevelFromEnv()
 
-	lokstra_registry.LoadConfigFromFolder("config")
+	lokstra.LoadConfigFromFolder("config")
 
 	dsn := lokstra_registry.GetConfig("global-db.dsn", "")
 	schema := lokstra_registry.GetConfig("global-db.schema", "public")
@@ -44,7 +44,7 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. Run server from config folder
-	if err := lokstra_registry.InitAndRunServer(); err != nil {
+	if err := lokstra.InitAndRunServer(); err != nil {
 		panic(err)
 	}
 }
