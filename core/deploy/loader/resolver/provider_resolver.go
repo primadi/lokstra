@@ -184,11 +184,5 @@ func resolvePlaceholder(placeholder string) string {
 		return value
 	}
 
-	// Use default value if provided
-	if defaultValue != "" {
-		return defaultValue
-	}
-
-	// Not found - return original placeholder for debugging
-	return "${" + placeholder + "}"
+	return defaultValue
 }
