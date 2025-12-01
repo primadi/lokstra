@@ -6,29 +6,25 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/deploy/loader"
 )
 
 // ===== LEGACY API (For Backward Compatibility) =====
 
 // RunServerFromConfig loads configuration from specified YAML file(s) and runs the server.
 func RunServerFromConfig(config ...string) {
-
-	if len(config) == 0 {
-		config = []string{"config.yaml"}
-	}
-
 	// 1. Load config (loads ALL deployments into Global registry)
-	if err := LoadAndBuild(config); err != nil {
+	if err := LoadConfig(config...); err != nil {
 		log.Fatal("❌ Failed to load config:", err)
 	}
 
 	server := GetConfig("server", "")
-	// if server == "" {
-	// 	log.Fatal("❌ 'server' not specified in config, Please add this to your config.yaml:\n" +
-	// 		"configs:\n" +
-	// 		"  server: ${SERVER}                          # mandatory, default first_server_defined\n" +
-	// 		"  shutdown_timeout: ${SHUTDOWN_TIMEOUT:30s}  # optional, default 30s")
-	// }
+	if server == "" {
+		log.Fatal("❌ 'server' not specified in config, Please add this to your config.yaml:\n" +
+			"configs:\n" +
+			"  server: ${SERVER}                          # mandatory, default first_server_defined\n" +
+			"  shutdown_timeout: ${SHUTDOWN_TIMEOUT:30s}  # optional, default 30s")
+	}
 
 	var timeout time.Duration
 
@@ -91,7 +87,7 @@ func LoadConfig(configPaths ...string) error {
 	}
 
 	// Load config (loads ALL deployments into Global registry)
-	if err := LoadAndBuild(configPaths); err != nil {
+	if err := loader.LoadAndBuild(configPaths); err != nil {
 		return err
 	}
 

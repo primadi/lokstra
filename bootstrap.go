@@ -70,6 +70,8 @@ func Bootstrap(scanPath ...string) {
 		os.Exit(0)
 	}
 
+	autoCreateDbPoolManager()
+
 	// 2️⃣ Detect mode and store in config for runtime access
 	Mode = detectRunMode()
 	lokstra_registry.SetConfig("runtime.mode", string(Mode))
@@ -79,12 +81,6 @@ func Bootstrap(scanPath ...string) {
 	if os.Getenv(childEnvKey) == "1" {
 		// fmt.Println("[Lokstra] Child process detected — skipping bootstrap autogen.")
 		return
-	}
-
-	// auto create dbpool-manager service if not exists
-	if svc := lokstra_registry.GetService[serviceapi.DbPoolManager]("dbpool-manager"); svc == nil {
-		svc = dbpool_manager.NewPgxPoolManager()
-		lokstra_registry.RegisterService("dbpool-manager", svc)
 	}
 
 	// 4️⃣ If prod, just continue
@@ -284,4 +280,31 @@ func relaunchWithDlv() {
 
 	// Exit cleanly so debugger can be restarted
 	os.Exit(0)
+}
+
+// auto create dbpool-manager service if not exists
+func autoCreateDbPoolManager() {
+	if svc := lokstra_registry.GetService[serviceapi.DbPoolManager]("dbpool-manager"); svc == nil {
+		svc = dbpool_manager.NewPgxPoolManager()
+		lokstra_registry.RegisterService("dbpool-manager", svc)
+	}
+}
+
+// LoadConfigFromFolder loads configuration from the specified folder path.
+// It also ensures that the dbpool-manager service is registered before loading config.
+func LoadConfigFromFolder(folderPath string) error {
+	autoCreateDbPoolManager()
+	return lokstra_registry.LoadConfigFromFolder(folderPath)
+}
+
+// LoadConfig loads configuration from the specified file path.
+// It also ensures that the dbpool-manager service is registered before loading config.
+func LoadConfig(filePath string) error {
+	autoCreateDbPoolManager()
+	return lokstra_registry.LoadConfig(filePath)
+}
+
+// InitAndRunServer initializes and runs the server based on loaded configuration.
+func InitAndRunServer() error {
+	return lokstra_registry.InitAndRunServer()
 }

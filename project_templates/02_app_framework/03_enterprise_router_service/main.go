@@ -6,7 +6,6 @@ import (
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 // NEW RECOMMENDED FLOW
@@ -28,7 +27,7 @@ func main() {
 	// ===== STEP 1: Load Config =====
 	// Config is loaded first, making it available for service/middleware registration
 	// This registers lazy load services and deployment structure from YAML
-	if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+	if err := lokstra.LoadConfigFromFolder("config"); err != nil {
 		log.Fatal("❌ Failed to load config:", err)
 	}
 
@@ -50,7 +49,7 @@ func main() {
 	// - Select server based on config (or auto-select first server)
 	// - Read shutdown timeout from config
 	// - Start the server
-	if err := lokstra_registry.InitAndRunServer(); err != nil {
+	if err := lokstra.InitAndRunServer(); err != nil {
 		log.Fatal("❌ Failed to run server:", err)
 	}
 }

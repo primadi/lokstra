@@ -12,7 +12,7 @@ func main() {
 	lokstra.Bootstrap()
 
 	// STEP 1: Load Config
-	if err := lokstra_registry.LoadConfig("config.yaml"); err != nil {
+	if err := lokstra.LoadConfig("config.yaml"); err != nil {
 		log.Fatal("Failed to load config:", err)
 	}
 
@@ -23,7 +23,7 @@ func main() {
 	registerMiddlewareTypes()
 
 	// STEP 4: Initialize and Run Server
-	if err := lokstra_registry.InitAndRunServer(); err != nil {
+	if err := lokstra.InitAndRunServer(); err != nil {
 		log.Fatal("Failed to run server:", err)
 	}
 }

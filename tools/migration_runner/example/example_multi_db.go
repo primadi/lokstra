@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 // Example: Multi-database migration setup
@@ -14,7 +13,7 @@ func main() {
 	lokstra.Bootstrap()
 
 	// load database and other configurations
-	if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
+	if err := lokstra.LoadConfigFromFolder("config"); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
@@ -53,7 +52,7 @@ func main() {
 	// lokstra migration status -dir multi_db/ledger-db
 
 	// Start your application servers
-	if err := lokstra_registry.InitAndRunServer(); err != nil {
+	if err := lokstra.InitAndRunServer(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

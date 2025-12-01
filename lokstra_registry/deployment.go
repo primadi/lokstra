@@ -28,11 +28,6 @@ func getFirstServerCompositeKey() string {
 	return registry.GetFirstServerCompositeKey()
 }
 
-// LoadAndBuild loads config and builds ALL deployments into Global registry
-func LoadAndBuild(configPaths []string) error {
-	return loader.LoadAndBuild(configPaths)
-}
-
 // SetCurrentServer sets the current server using composite key: "deploymentName.serverName"
 // If compositeKey is empty, it will automatically use the first deployment and server available
 // Example: SetCurrentServer("order-service.order-api")
