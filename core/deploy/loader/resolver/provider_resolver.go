@@ -81,11 +81,12 @@ func ResolveYAMLBytesStep2(data []byte, configs map[string]any) []byte {
 		// Extract key: ${@cfg:KEY} -> KEY
 		key := content[start+7 : end] // 7 = len("${@cfg:")
 
-		// Parse key:default format (simple split on last ':')
+		// Parse key:default format (split on FIRST ':')
+		// This allows default values to contain ':' (e.g., URLs, DSNs)
 		var configKey, defaultValue string
-		if lastColon := strings.LastIndex(key, ":"); lastColon != -1 {
-			configKey = key[:lastColon]
-			defaultValue = key[lastColon+1:]
+		if firstColon := strings.Index(key, ":"); firstColon != -1 {
+			configKey = key[:firstColon]
+			defaultValue = key[firstColon+1:]
 		} else {
 			configKey = key
 		}
@@ -145,10 +146,11 @@ func resolvePlaceholder(placeholder string) string {
 		providerName = afterAt[:firstColon]
 		restAfterProvider := afterAt[firstColon+1:]
 
-		// Parse key:default (simple split on last ':')
-		if lastColon := strings.LastIndex(restAfterProvider, ":"); lastColon != -1 {
-			key = restAfterProvider[:lastColon]
-			defaultValue = restAfterProvider[lastColon+1:]
+		// Parse key:default (split on FIRST ':')
+		// This allows default values to contain ':' (e.g., URLs, DSNs)
+		if firstColonInRest := strings.Index(restAfterProvider, ":"); firstColonInRest != -1 {
+			key = restAfterProvider[:firstColonInRest]
+			defaultValue = restAfterProvider[firstColonInRest+1:]
 		} else {
 			key = restAfterProvider
 		}
@@ -157,10 +159,11 @@ func resolvePlaceholder(placeholder string) string {
 		// Format: VAR_NAME:default or VAR_NAME
 		providerName = "env"
 
-		// Parse key:default (simple split on last ':')
-		if lastColon := strings.LastIndex(placeholder, ":"); lastColon != -1 {
-			key = placeholder[:lastColon]
-			defaultValue = placeholder[lastColon+1:]
+		// Parse key:default (split on FIRST ':')
+		// This allows default values to contain ':' (e.g., URLs, DSNs)
+		if firstColon := strings.Index(placeholder, ":"); firstColon != -1 {
+			key = placeholder[:firstColon]
+			defaultValue = placeholder[firstColon+1:]
 		} else {
 			key = placeholder
 		}
