@@ -9,6 +9,7 @@ import (
 
 	"github.com/primadi/lokstra/core/annotation"
 	"github.com/primadi/lokstra/core/deploy"
+	"github.com/primadi/lokstra/internal"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/dbpool_manager"
@@ -290,17 +291,19 @@ func autoCreateDbPoolManager() {
 	}
 }
 
+func init() {
+	internal.AutoCreateDbPoolManager = autoCreateDbPoolManager
+}
+
 // LoadConfigFromFolder loads configuration from the specified folder path.
 // It also ensures that the dbpool-manager service is registered before loading config.
 func LoadConfigFromFolder(folderPath string) error {
-	autoCreateDbPoolManager()
 	return lokstra_registry.LoadConfigFromFolder(folderPath)
 }
 
 // LoadConfig loads configuration from the specified file path.
 // It also ensures that the dbpool-manager service is registered before loading config.
 func LoadConfig(filePath string) error {
-	autoCreateDbPoolManager()
 	return lokstra_registry.LoadConfig(filePath)
 }
 

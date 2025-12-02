@@ -32,6 +32,8 @@ func main() {
 | **KvStore** | `kvstore_redis` | `serviceapi.KvStore` | Key-value store with Redis backend |
 | **Metrics** | `metrics_prometheus` | `serviceapi.Metrics` | Prometheus metrics collection |
 | **DbPool** | `dbpool_pg` | `serviceapi.DbPool` | PostgreSQL connection pool |
+| **Email** | `email_smtp` | `serviceapi.EmailSender` | SMTP email sender with attachments support |
+| **SyncConfig** | `sync_config_pg` | `serviceapi.SyncConfig` | Synchronized configuration with PostgreSQL LISTEN/NOTIFY |
 
 > **Note:** Authentication services (Session, TokenIssuer, UserRepository, Auth Flows, etc.) have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
 
@@ -116,6 +118,34 @@ kvStore := old_registry.NewService[any](
         "prefix": "myapp",
     },
 )
+```
+
+### 3. Creating an Email Sender
+
+```go
+import (
+    "context"
+    "github.com/primadi/lokstra/serviceapi"
+    "github.com/primadi/lokstra/services/email_smtp"
+)
+
+emailSender := email_smtp.Service(&email_smtp.Config{
+    Host:      "smtp.gmail.com",
+    Port:      587,
+    Username:  "your-email@gmail.com",
+    Password:  "your-app-password",
+    FromEmail: "noreply@myapp.com",
+    FromName:  "My Application",
+    UseSTARTTLS: true,
+})
+
+msg := &serviceapi.EmailMessage{
+    To:      []string{"user@example.com"},
+    Subject: "Welcome!",
+    Body:    "Thank you for signing up.",
+}
+
+err := emailSender.Send(context.Background(), msg)
 ```
 
 > **Note:** For authentication examples, see [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
