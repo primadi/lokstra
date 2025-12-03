@@ -1,4 +1,4 @@
-package annotation
+package annotation_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/primadi/lokstra/core/annotation"
 	"github.com/primadi/lokstra/core/annotation/internal"
 )
 
@@ -27,7 +28,7 @@ type UserService struct {
 	}
 
 	// Process to create cache and generated file
-	_, err := ProcessPerFolder(tmpDir, GenerateCodeForFolder)
+	_, err := annotation.ProcessPerFolder(tmpDir, annotation.GenerateCodeForFolder)
 	if err != nil {
 		t.Fatalf("Initial ProcessPerFolder() error = %v", err)
 	}
@@ -59,7 +60,7 @@ func InvalidService() {
 	}
 
 	// Process again - should fail and cleanup
-	_, err = ProcessPerFolder(tmpDir, GenerateCodeForFolder)
+	_, err = annotation.ProcessPerFolder(tmpDir, annotation.GenerateCodeForFolder)
 	if err == nil {
 		t.Fatalf("Expected error for invalid annotation, got nil")
 	}
@@ -96,7 +97,7 @@ type UserService struct {}
 	}
 
 	// Process to create cache and generated file
-	_, err := ProcessPerFolder(tmpDir, GenerateCodeForFolder)
+	_, err := annotation.ProcessPerFolder(tmpDir, annotation.GenerateCodeForFolder)
 	if err != nil {
 		t.Fatalf("Initial ProcessPerFolder() error = %v", err)
 	}
@@ -129,7 +130,7 @@ type BadService struct {
 	}
 
 	// Process again - should fail and cleanup
-	_, err = ProcessPerFolder(tmpDir, GenerateCodeForFolder)
+	_, err = annotation.ProcessPerFolder(tmpDir, annotation.GenerateCodeForFolder)
 	if err == nil {
 		t.Fatalf("Expected error for invalid Go syntax, got nil")
 	}
@@ -166,7 +167,7 @@ type UserService struct {}
 	}
 
 	// First process with normal callback
-	_, err := ProcessPerFolder(tmpDir, GenerateCodeForFolder)
+	_, err := annotation.ProcessPerFolder(tmpDir, annotation.GenerateCodeForFolder)
 	if err != nil {
 		t.Fatalf("Initial ProcessPerFolder() error = %v", err)
 	}
@@ -190,11 +191,11 @@ type UserService struct {}
 	}
 
 	// Process with callback that returns error
-	errorCallback := func(ctx *RouterServiceContext) error {
+	errorCallback := func(ctx *annotation.RouterServiceContext) error {
 		return fmt.Errorf("simulated processing error")
 	}
 
-	_, err = ProcessPerFolder(tmpDir, errorCallback)
+	_, err = annotation.ProcessPerFolder(tmpDir, errorCallback)
 	if err == nil {
 		t.Fatalf("Expected processing error, got nil")
 	}
