@@ -1,9 +1,11 @@
-package annotation
+package annotation_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/primadi/lokstra/core/annotation"
 )
 
 // TestRouterServiceValidation_MustBeOnStruct tests that @RouterService
@@ -81,31 +83,31 @@ type UserService = string
 			}
 
 			// Parse annotations
-			annotations, err := ParseFileAnnotations(filePath)
+			annotations, err := annotation.ParseFileAnnotations(filePath)
 			if err != nil {
 				t.Fatalf("ParseFileAnnotations() error = %v", err)
 			}
 
 			// Create context for code generation
-			ctx := &RouterServiceContext{
+			ctx := &annotation.RouterServiceContext{
 				FolderPath: tmpDir,
-				UpdatedFiles: []*FileToProcess{
+				UpdatedFiles: []*annotation.FileToProcess{
 					{
 						Filename:    "test.go",
 						FullPath:    filePath,
 						Annotations: annotations,
 					},
 				},
-				SkippedFiles: []*FileToProcess{},
+				SkippedFiles: []*annotation.FileToProcess{},
 				DeletedFiles: []string{},
-				GeneratedCode: &GeneratedCode{
-					Services:          make(map[string]*ServiceGeneration),
+				GeneratedCode: &annotation.GeneratedCode{
+					Services:          make(map[string]*annotation.ServiceGeneration),
 					PreservedSections: make(map[string]string),
 				},
 			}
 
 			// Try to generate code
-			err = GenerateCodeForFolder(ctx)
+			err = annotation.GenerateCodeForFolder(ctx)
 
 			if tt.expectError {
 				if err == nil {

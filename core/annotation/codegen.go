@@ -18,14 +18,22 @@ import (
 
 // GenerateCodeForFolder generates zz_generated.lokstra.go based on RouterServiceContext
 func GenerateCodeForFolder(ctx *RouterServiceContext) error {
+	genPath := filepath.Join(ctx.FolderPath, internal.GeneratedFileName)
+
 	// If all files are skipped and no files were deleted, skip generation
+	// BUT still check if we need to cleanup empty generated file
 	if len(ctx.UpdatedFiles) == 0 && len(ctx.DeletedFiles) == 0 {
-		// Nothing changed, no need to regenerate
+		// Check if existing generated file has no services
+		// This handles case where annotations were removed but file was skipped due to cache
+		existingGenCode := readExistingGenCode(genPath)
+		if len(existingGenCode) == 0 {
+			// No services in existing file, remove it
+			os.Remove(genPath)
+		}
 		return nil
 	}
 
 	// Read existing zz_generated.lokstra.go to preserve code for skipped files
-	genPath := filepath.Join(ctx.FolderPath, internal.GeneratedFileName)
 	existingGenCode := readExistingGenCode(genPath)
 	existingImports := extractImportsFromExistingGenCode(genPath)
 
