@@ -9,10 +9,14 @@ import (
 	"github.com/primadi/lokstra/services/dbpool_pg"
 )
 
-type dsnSchema struct {
-	dsn    string
-	schema string
+// DsnSchema holds database DSN and schema name
+type DsnSchema struct {
+	Dsn    string
+	Schema string
 }
+
+// For backward compatibility with internal code
+type dsnSchema = DsnSchema
 
 type PoolManager struct {
 	pools       *sync.Map //map[dsn]serviceapi.DbPool
@@ -20,6 +24,8 @@ type PoolManager struct {
 	namedPools  *sync.Map // map[name]dsn, schema
 	newPoolFunc func(dsn string) (serviceapi.DbPool, error)
 }
+
+var _ serviceapi.DbPoolManager = (*PoolManager)(nil)
 
 func NewPoolManager(newPoolFunc func(dsn string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
 	return &PoolManager{
@@ -74,7 +80,7 @@ func (m *PoolManager) GetNamedDsn(name string) (string, string, error) {
 		return "", "", fmt.Errorf("named pool not found: %s", name)
 	}
 	ds := _ds.(dsnSchema)
-	return ds.dsn, ds.schema, nil
+	return ds.Dsn, ds.Schema, nil
 }
 
 // GetNamedPool implements serviceapi.DbPoolManager.
@@ -87,10 +93,7 @@ func (m *PoolManager) GetNamedPool(name string) (serviceapi.DbPoolWithSchema, er
 	if err != nil {
 		return nil, err
 	}
-	return &pgxDbPoolWithSchema{
-		pool:   dbPool,
-		schema: schema,
-	}, nil
+	return dbpool_pg.NewDbPoolWithSchema(dbPool, schema), nil
 }
 
 // GetTenantDsn implements serviceapi.DbPoolManager.
@@ -100,7 +103,7 @@ func (m *PoolManager) GetTenantDsn(tenant string) (string, string, error) {
 		return "", "", fmt.Errorf("tenant pool not found: %s", tenant)
 	}
 	ds := _ds.(dsnSchema)
-	return ds.dsn, ds.schema, nil
+	return ds.Dsn, ds.Schema, nil
 }
 
 // GetTenantPool implements serviceapi.DbPoolManager.
@@ -113,11 +116,7 @@ func (m *PoolManager) GetTenantPool(tenant string) (serviceapi.DbPoolWithTenant,
 	if err != nil {
 		return nil, err
 	}
-	return &pgxDbPoolWithTenant{
-		pool:     dbPool,
-		schema:   schema,
-		tenantID: tenant,
-	}, nil
+	return dbpool_pg.NewDbPoolWithTenant(dbPool, schema, tenant), nil
 }
 
 // RemoveNamed implements serviceapi.DbPoolManager.
@@ -132,12 +131,12 @@ func (m *PoolManager) RemoveTenant(tenant string) {
 
 // SetNamedDsn implements serviceapi.DbPoolManager.
 func (m *PoolManager) SetNamedDsn(name string, dsn string, schema string) {
-	m.namedPools.Store(name, dsnSchema{dsn: dsn, schema: schema})
+	m.namedPools.Store(name, dsnSchema{Dsn: dsn, Schema: schema})
 }
 
 // SetTenantDsn implements serviceapi.DbPoolManager.
 func (m *PoolManager) SetTenantDsn(tenant string, dsn string, schema string) {
-	m.tenantPools.Store(tenant, dsnSchema{dsn: dsn, schema: schema})
+	m.tenantPools.Store(tenant, dsnSchema{Dsn: dsn, Schema: schema})
 }
 
 func (m *PoolManager) GetDsnPool(dsn string) (serviceapi.DbPool, error) {

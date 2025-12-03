@@ -54,6 +54,14 @@
       "complexity": 5,
       "tags": ["ddd", "annotations", "enterprise", "code-generation"],
       "minGoVersion": "1.23"
+    }, {
+      "path": "02_app_framework/04_sync_config",
+      "name": "SyncMap Config with PostgreSQL",
+      "description": "Centralized configuration management using PostgreSQL - SyncConfigPG service",
+      "category": "Framework Patterns",
+      "complexity": 4,
+      "tags": ["configuration", "postgresql", "sync-config", "advanced"],
+      "minGoVersion": "1.23"
     }
   ]
 }

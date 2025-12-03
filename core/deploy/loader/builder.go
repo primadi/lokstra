@@ -11,6 +11,7 @@ import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/internal"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
@@ -864,9 +865,12 @@ func LoadAndBuild(configPaths []string) error {
 func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
 	// Check if named-db-pools section exists
 	if len(config.NamedDbPools) == 0 {
+		internal.AutoCreateDbPoolManager()
 		// No named-db-pools section, skip
 		return nil
 	}
+
+	internal.AutoCreateDbPoolManager()
 
 	dpm, ok := deploy.Global().GetServiceAny("dbpool-manager")
 	if !ok || dpm == nil {
@@ -970,7 +974,7 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 		// Register pool as a service
 		registry.RegisterService(poolName, dbPool)
 
-		log.Printf("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
+		deploy.LogDebug("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
 	}
 
 	return nil

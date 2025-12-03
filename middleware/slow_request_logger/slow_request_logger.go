@@ -8,6 +8,7 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/middleware/slow_request_logger/internal"
 )
 
 const SLOW_REQUEST_LOGGER_TYPE = "slow_request_logger"
@@ -105,9 +106,9 @@ func Middleware(cfg *Config) request.HandlerFunc {
 					c.R.URL.Path,
 					statusCode,
 					durationColor,
-					formatDuration(duration),
+					internal.FormatDuration(duration),
 					colorReset,
-					formatDuration(cfg.Threshold),
+					internal.FormatDuration(cfg.Threshold),
 				)
 				cfg.CustomLogger("%s", msg)
 			} else {
@@ -115,8 +116,8 @@ func Middleware(cfg *Config) request.HandlerFunc {
 					c.R.Method,
 					c.R.URL.Path,
 					statusCode,
-					formatDuration(duration),
-					formatDuration(cfg.Threshold),
+					internal.FormatDuration(duration),
+					internal.FormatDuration(cfg.Threshold),
 				)
 				cfg.CustomLogger("%s", msg)
 			}
@@ -161,15 +162,4 @@ func MiddlewareFactory(params map[string]any) request.HandlerFunc {
 func Register() {
 	lokstra_registry.RegisterMiddlewareFactory(SLOW_REQUEST_LOGGER_TYPE, MiddlewareFactory,
 		lokstra_registry.AllowOverride(true))
-}
-
-// formatDuration formats duration for display
-func formatDuration(d time.Duration) string {
-	if d < time.Millisecond {
-		return d.Round(time.Microsecond).String()
-	}
-	if d < time.Second {
-		return d.Round(time.Millisecond).String()
-	}
-	return d.Round(10 * time.Millisecond).String()
 }

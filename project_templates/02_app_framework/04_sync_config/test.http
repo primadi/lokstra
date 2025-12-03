@@ -1,0 +1,55 @@
+### SyncMap Test Endpoints
+@baseUrl = http://localhost:3000
+
+### Ping - Health Check
+GET {{baseUrl}}/ping
+
+### Get Value by Key
+GET {{baseUrl}}/get-value?key=mykey
+
+### Get Value by Key (example 2)
+GET {{baseUrl}}/get-value?key=username
+
+### Set Value
+POST {{baseUrl}}/set-value
+Content-Type: application/json
+
+{
+  "key": "mykey",
+  "value": "myvalue2"
+}
+
+### Set Value (example 2)
+POST {{baseUrl}}/set-value
+Content-Type: application/json
+
+{
+  "key": "username",
+  "value": "john_doe"
+}
+
+### Set Value (example 3)
+POST {{baseUrl}}/set-value
+Content-Type: application/json
+
+{
+  "key": "config.debug",
+  "value": "true"
+}
+
+### Test Flow: Set then Get
+# 1. Set a value
+POST {{baseUrl}}/set-value
+Content-Type: application/json
+
+{
+  "key": "test_flow",
+  "value": "test_value_123"
+}
+
+###
+# 2. Get the value back
+GET {{baseUrl}}/get-value?key=test_flow
+
+### Test all-keys
+GET {{baseUrl}}/all-keys

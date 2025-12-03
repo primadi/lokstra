@@ -1,4 +1,4 @@
-package slow_request_logger
+package slow_request_logger_test
 
 import (
 	"fmt"
@@ -10,19 +10,21 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/middleware/slow_request_logger"
+	"github.com/primadi/lokstra/middleware/slow_request_logger/internal"
 )
 
 func TestSlowRequestLogger(t *testing.T) {
 	tests := []struct {
 		name      string
-		config    *Config
+		config    *slow_request_logger.Config
 		path      string
 		delay     time.Duration
 		shouldLog bool
 	}{
 		{
 			name: "log slow request",
-			config: &Config{
+			config: &slow_request_logger.Config{
 				Threshold:    100 * time.Millisecond,
 				EnableColors: false,
 			},
@@ -32,7 +34,7 @@ func TestSlowRequestLogger(t *testing.T) {
 		},
 		{
 			name: "skip fast request",
-			config: &Config{
+			config: &slow_request_logger.Config{
 				Threshold:    100 * time.Millisecond,
 				EnableColors: false,
 			},
@@ -42,7 +44,7 @@ func TestSlowRequestLogger(t *testing.T) {
 		},
 		{
 			name: "skip path even if slow",
-			config: &Config{
+			config: &slow_request_logger.Config{
 				Threshold:    50 * time.Millisecond,
 				EnableColors: false,
 				SkipPaths:    []string{"/health"},
@@ -53,7 +55,7 @@ func TestSlowRequestLogger(t *testing.T) {
 		},
 		{
 			name: "log extra slow request",
-			config: &Config{
+			config: &slow_request_logger.Config{
 				Threshold:    100 * time.Millisecond,
 				EnableColors: false,
 			},
@@ -79,7 +81,7 @@ func TestSlowRequestLogger(t *testing.T) {
 			r := router.New("test-router")
 
 			// Add slow logger middleware
-			r.Use(Middleware(tt.config))
+			r.Use(slow_request_logger.Middleware(tt.config))
 
 			// Add test handler with delay
 			r.GET(tt.path, func(c *request.Context) error {
@@ -128,7 +130,7 @@ func TestSlowRequestLoggerWithColors(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	var logOutput []string
-	cfg := &Config{
+	cfg := &slow_request_logger.Config{
 		Threshold:    50 * time.Millisecond,
 		EnableColors: true,
 		CustomLogger: func(format string, args ...any) {
@@ -138,7 +140,7 @@ func TestSlowRequestLoggerWithColors(t *testing.T) {
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(slow_request_logger.Middleware(cfg))
 
 	r.GET("/test", func(c *request.Context) error {
 		time.Sleep(60 * time.Millisecond) // Trigger slow log
@@ -167,7 +169,7 @@ func TestSlowRequestLoggerThresholdBoundary(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	var logOutput []string
-	cfg := &Config{
+	cfg := &slow_request_logger.Config{
 		Threshold:    100 * time.Millisecond,
 		EnableColors: false,
 		CustomLogger: func(format string, args ...any) {
@@ -177,7 +179,7 @@ func TestSlowRequestLoggerThresholdBoundary(t *testing.T) {
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(slow_request_logger.Middleware(cfg))
 
 	// Test exactly at threshold
 	r.GET("/boundary", func(c *request.Context) error {
@@ -199,27 +201,27 @@ func TestSlowRequestLoggerThresholdBoundary(t *testing.T) {
 
 func TestSlowRequestLoggerFactory(t *testing.T) {
 	// Test with nil params (uses defaults)
-	middleware1 := MiddlewareFactory(nil)
+	middleware1 := slow_request_logger.MiddlewareFactory(nil)
 	if middleware1 == nil {
 		t.Error("Expected middleware with nil params")
 	}
 
 	// Test with int threshold (milliseconds)
 	params1 := map[string]any{
-		PARAMS_THRESHOLD:     1000, // 1000ms = 1s
-		PARAMS_ENABLE_COLORS: false,
+		slow_request_logger.PARAMS_THRESHOLD:     1000, // 1000ms = 1s
+		slow_request_logger.PARAMS_ENABLE_COLORS: false,
 	}
-	middleware2 := MiddlewareFactory(params1)
+	middleware2 := slow_request_logger.MiddlewareFactory(params1)
 	if middleware2 == nil {
 		t.Error("Expected middleware with int threshold")
 	}
 
 	// Test with string threshold
 	params2 := map[string]any{
-		PARAMS_THRESHOLD:  "2s",
-		PARAMS_SKIP_PATHS: []string{"/health"},
+		slow_request_logger.PARAMS_THRESHOLD:  "2s",
+		slow_request_logger.PARAMS_SKIP_PATHS: []string{"/health"},
 	}
-	middleware3 := MiddlewareFactory(params2)
+	middleware3 := slow_request_logger.MiddlewareFactory(params2)
 	if middleware3 == nil {
 		t.Error("Expected middleware with string threshold")
 	}
@@ -230,7 +232,7 @@ func TestSlowRequestLoggerFastRequestsNotLogged(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	var logOutput []string
-	cfg := &Config{
+	cfg := &slow_request_logger.Config{
 		Threshold:    500 * time.Millisecond,
 		EnableColors: false,
 		CustomLogger: func(format string, args ...any) {
@@ -240,7 +242,7 @@ func TestSlowRequestLoggerFastRequestsNotLogged(t *testing.T) {
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(slow_request_logger.Middleware(cfg))
 
 	// Fast handler
 	r.GET("/fast", func(c *request.Context) error {
@@ -268,7 +270,7 @@ func TestFormatDuration(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := formatDuration(tt.duration)
+		result := internal.FormatDuration(tt.duration)
 		if !strings.Contains(result, tt.contains) {
 			t.Errorf("formatDuration(%v) = %s, expected to contain %s", tt.duration, result, tt.contains)
 		}

@@ -5,9 +5,11 @@ package services
 import (
 	// Core services
 	"github.com/primadi/lokstra/services/dbpool_pg"
+	"github.com/primadi/lokstra/services/email_smtp"
 	"github.com/primadi/lokstra/services/kvstore_redis"
 	"github.com/primadi/lokstra/services/metrics_prometheus"
 	"github.com/primadi/lokstra/services/redis"
+	"github.com/primadi/lokstra/services/sync_config_pg"
 )
 
 // RegisterAllServices registers all built-in Lokstra service factories
@@ -18,12 +20,6 @@ func RegisterAllServices() {
 	kvstore_redis.Register()
 	metrics_prometheus.Register()
 	dbpool_pg.Register()
-}
-
-// RegisterCoreServices registers only core infrastructure services
-func RegisterCoreServices() {
-	redis.Register()
-	kvstore_redis.Register()
-	metrics_prometheus.Register()
-	dbpool_pg.Register()
+	email_smtp.Register()
+	sync_config_pg.Register()
 }

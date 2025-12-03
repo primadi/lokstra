@@ -1,4 +1,4 @@
-package recovery
+package recovery_test
 
 import (
 	"net/http/httptest"
@@ -8,19 +8,20 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/middleware/recovery"
 )
 
 func TestRecovery(t *testing.T) {
 	tests := []struct {
 		name             string
-		config           *Config
+		config           *recovery.Config
 		panicValue       any
 		expectStatus     int
 		expectStackTrace bool
 	}{
 		{
 			name: "recover from string panic",
-			config: &Config{
+			config: &recovery.Config{
 				EnableStackTrace: false,
 				EnableLogging:    false,
 			},
@@ -30,7 +31,7 @@ func TestRecovery(t *testing.T) {
 		},
 		{
 			name: "recover with stack trace enabled (logged only)",
-			config: &Config{
+			config: &recovery.Config{
 				EnableStackTrace: true,
 				EnableLogging:    true, // Stack trace logged to console, not in response
 			},
@@ -40,7 +41,7 @@ func TestRecovery(t *testing.T) {
 		},
 		{
 			name: "recover from nil panic",
-			config: &Config{
+			config: &recovery.Config{
 				EnableStackTrace: false,
 				EnableLogging:    false,
 			},
@@ -59,7 +60,7 @@ func TestRecovery(t *testing.T) {
 			r := router.New("test-router")
 
 			// Add recovery middleware
-			r.Use(Middleware(tt.config))
+			r.Use(recovery.Middleware(tt.config))
 
 			// Add handler that panics
 			r.GET("/panic", func(c *request.Context) error {
@@ -101,7 +102,7 @@ func TestRecoveryWithCustomHandler(t *testing.T) {
 
 	customHandlerCalled := false
 
-	cfg := &Config{
+	cfg := &recovery.Config{
 		EnableStackTrace: false,
 		EnableLogging:    false,
 		CustomHandler: func(c *request.Context, recovered any, stack []byte) error {
@@ -114,7 +115,7 @@ func TestRecoveryWithCustomHandler(t *testing.T) {
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(recovery.Middleware(cfg))
 
 	r.GET("/panic", func(c *request.Context) error {
 		panic("custom handled panic")
@@ -139,7 +140,7 @@ func TestRecoveryDoesNotAffectNormalRequests(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	r := router.New("test-router")
-	r.Use(Middleware(&Config{
+	r.Use(recovery.Middleware(&recovery.Config{
 		EnableStackTrace: false,
 		EnableLogging:    false,
 	}))
@@ -164,17 +165,17 @@ func TestRecoveryDoesNotAffectNormalRequests(t *testing.T) {
 
 func TestRecoveryFactory(t *testing.T) {
 	// Test with nil params
-	middleware1 := MiddlewareFactory(nil)
+	middleware1 := recovery.MiddlewareFactory(nil)
 	if middleware1 == nil {
 		t.Error("Expected middleware with nil params")
 	}
 
 	// Test with custom params
 	params := map[string]any{
-		PARAMS_ENABLE_STACK_TRACE: true,
-		PARAMS_ENABLE_LOGGING:     false,
+		recovery.PARAMS_ENABLE_STACK_TRACE: true,
+		recovery.PARAMS_ENABLE_LOGGING:     false,
 	}
-	middleware2 := MiddlewareFactory(params)
+	middleware2 := recovery.MiddlewareFactory(params)
 	if middleware2 == nil {
 		t.Error("Expected middleware with custom params")
 	}

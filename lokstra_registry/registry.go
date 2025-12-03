@@ -247,6 +247,11 @@ func RegisterService(name string, instance any) {
 	deploy.Global().RegisterService(name, instance)
 }
 
+// check if a service is registered in the global registry
+func HasService(name string) bool {
+	return deploy.Global().HasService(name)
+}
+
 // RegisterLazyService registers a lazy service factory that will be instantiated on first access.
 // The factory will be called only once, and the result is cached.
 // This allows services to be registered in any order, regardless of dependencies.
@@ -280,7 +285,11 @@ func RegisterService(name string, instance any) {
 //	}, nil)
 //
 // For explicit dependency injection, use RegisterLazyServiceWithDeps instead.
-func RegisterLazyService(name string, factory any, config map[string]any) {
+func RegisterLazyService(
+	name string,
+	factory any,
+	config map[string]any,
+) {
 	deploy.Global().RegisterLazyService(name, factory, config)
 }
 

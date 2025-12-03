@@ -1,4 +1,4 @@
-package body_limit
+package body_limit_test
 
 import (
 	"bytes"
@@ -9,12 +9,14 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/middleware/body_limit"
+	"github.com/primadi/lokstra/middleware/body_limit/internal"
 )
 
 func TestBodyLimit(t *testing.T) {
 	tests := []struct {
 		name           string
-		config         *Config
+		config         *body_limit.Config
 		bodySize       int64
 		path           string
 		expectedStatus int
@@ -22,7 +24,7 @@ func TestBodyLimit(t *testing.T) {
 	}{
 		{
 			name: "body within limit",
-			config: &Config{
+			config: &body_limit.Config{
 				MaxSize: 1024,
 			},
 			bodySize:       512,
@@ -32,7 +34,7 @@ func TestBodyLimit(t *testing.T) {
 		},
 		{
 			name: "body exceeds limit",
-			config: &Config{
+			config: &body_limit.Config{
 				MaxSize: 1024,
 			},
 			bodySize:       2048,
@@ -42,7 +44,7 @@ func TestBodyLimit(t *testing.T) {
 		},
 		{
 			name: "body exceeds limit but skip large payloads",
-			config: &Config{
+			config: &body_limit.Config{
 				MaxSize:           1024,
 				SkipLargePayloads: true,
 			},
@@ -53,7 +55,7 @@ func TestBodyLimit(t *testing.T) {
 		},
 		{
 			name: "body exceeds limit but path is skipped",
-			config: &Config{
+			config: &body_limit.Config{
 				MaxSize:    1024,
 				SkipOnPath: []string{"/upload/*"},
 			},
@@ -64,7 +66,7 @@ func TestBodyLimit(t *testing.T) {
 		},
 		{
 			name: "body exceeds limit and path not skipped",
-			config: &Config{
+			config: &body_limit.Config{
 				MaxSize:    1024,
 				SkipOnPath: []string{"/upload/*"},
 			},
@@ -75,7 +77,7 @@ func TestBodyLimit(t *testing.T) {
 		},
 		{
 			name: "custom status code and message",
-			config: &Config{
+			config: &body_limit.Config{
 				MaxSize:    1024,
 				Message:    "Custom error message",
 				StatusCode: http.StatusBadRequest,
@@ -87,7 +89,7 @@ func TestBodyLimit(t *testing.T) {
 		},
 		{
 			name: "skip path with ** pattern",
-			config: &Config{
+			config: &body_limit.Config{
 				MaxSize:    1024,
 				SkipOnPath: []string{"/public/**"},
 			},
@@ -107,7 +109,7 @@ func TestBodyLimit(t *testing.T) {
 			r := router.New("test-router")
 
 			// Add body limit middleware
-			r.Use(Middleware(tt.config))
+			r.Use(body_limit.Middleware(tt.config))
 
 			// Add test handler
 			r.GET(tt.path, func(c *request.Context) error {
@@ -216,7 +218,7 @@ func TestMatchPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := matchPath(tt.path, tt.pattern)
+			result := internal.MatchPath(tt.path, tt.pattern)
 			if result != tt.expected {
 				t.Errorf("matchPath(%q, %q) = %v, want %v", tt.path, tt.pattern, result, tt.expected)
 			}
@@ -225,7 +227,7 @@ func TestMatchPath(t *testing.T) {
 }
 
 func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
+	cfg := body_limit.DefaultConfig()
 
 	if cfg.MaxSize != 10*1024*1024 {
 		t.Errorf("Expected default MaxSize to be 10MB, got %d", cfg.MaxSize)
@@ -253,10 +255,10 @@ func TestBodyLimitWithDefaultValues(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	// Test with empty config - should use defaults
-	cfg := &Config{}
+	cfg := &body_limit.Config{}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(body_limit.Middleware(cfg))
 	r.GET("/test", func(c *request.Context) error {
 		return c.Api.Ok("success")
 	})

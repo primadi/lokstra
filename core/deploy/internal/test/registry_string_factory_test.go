@@ -47,7 +47,7 @@ func TestRegisterLazyService_StringFactoryType(t *testing.T) {
 	})
 
 	// Verify service is registered
-	if !reg.HasLazyService("user-service") {
+	if !reg.HasService("user-service") {
 		t.Fatal("user-service not registered")
 	}
 
@@ -125,7 +125,7 @@ func TestRegisterLazyService_InlineFunction(t *testing.T) {
 	})
 
 	// Verify service is registered
-	if !reg.HasLazyService("cache") {
+	if !reg.HasService("cache") {
 		t.Fatal("cache not registered")
 	}
 

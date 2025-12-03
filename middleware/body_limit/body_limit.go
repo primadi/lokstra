@@ -1,16 +1,13 @@
 package body_limit
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/middleware/body_limit/internal"
 )
 
 const BODY_LIMIT_TYPE = "body_limit"
@@ -20,26 +17,7 @@ const PARAMS_MESSAGE = "message"
 const PARAMS_STATUS_CODE = "status_code"
 const PARAMS_SKIP_ON_PATH = "skip_on_path"
 
-type Config struct {
-	// MaxSize is the maximum allowed body size in bytes
-	MaxSize int64
-
-	// SkipLargePayloads if true, skips reading body when it exceeds limit
-	// If false, returns error immediately
-	SkipLargePayloads bool
-
-	// Message is the custom error message for oversized bodies
-	Message string
-
-	// StatusCode is the HTTP status code to return for oversized bodies
-	StatusCode int
-
-	// SkipOnPath is a list of path patterns to skip body limit check
-	// Supports wildcards like /api/* or /public/** to skip multiple paths
-	// Example: ["/api/*", "/public/**"]
-	// will skip all paths under /api/ and /public/ (including subpaths)
-	SkipOnPath []string
-}
+type Config = internal.Config
 
 func DefaultConfig() *Config {
 	return &Config{
@@ -68,7 +46,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 		// Check if current path should skip body limit
 		requestPath := path.Clean(c.R.URL.Path)
 		for _, pattern := range cfg.SkipOnPath {
-			if matched := matchPath(requestPath, pattern); matched {
+			if matched := internal.MatchPath(requestPath, pattern); matched {
 				return c.Next()
 			}
 		}
@@ -93,11 +71,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 		// - When body is actually read
 		// The limit is enforced during actual read operations
 		if c.R.Body != nil {
-			c.R.Body = &limitedReadCloser{
-				reader:    c.R.Body,
-				remaining: cfg.MaxSize,
-				config:    cfg,
-			}
+			c.R.Body = internal.NewLimitedReadCloser(c.R.Body, cfg.MaxSize, cfg)
 		}
 
 		// Continue to next handler
@@ -125,89 +99,4 @@ func MiddlewareFactory(params map[string]any) request.HandlerFunc {
 func Register() {
 	lokstra_registry.RegisterMiddlewareFactory(BODY_LIMIT_TYPE, MiddlewareFactory,
 		lokstra_registry.AllowOverride(true))
-}
-
-// matchPath checks if a path matches a pattern
-// Supports basic wildcard patterns with * and **
-func matchPath(requestPath, pattern string) bool {
-	// Direct match
-	if requestPath == pattern {
-		return true
-	}
-
-	// Handle ** patterns (match any number of path segments)
-	if strings.Contains(pattern, "**") {
-		parts := strings.SplitN(pattern, "**", 2)
-		if len(parts) == 2 {
-			prefix := parts[0]
-			suffix := parts[1]
-
-			prefixMatch := prefix == "" || strings.HasPrefix(requestPath, prefix)
-			suffixMatch := suffix == "" || strings.HasSuffix(requestPath, suffix)
-
-			return prefixMatch && suffixMatch
-		}
-	}
-
-	// Handle single * patterns (should not match path separators)
-	if strings.Contains(pattern, "*") && !strings.Contains(pattern, "**") {
-		// Split pattern by / to handle segments properly
-		patternParts := strings.Split(pattern, "/")
-		pathParts := strings.Split(requestPath, "/")
-
-		// Must have same number of segments for single * match
-		if len(patternParts) != len(pathParts) {
-			return false
-		}
-
-		for i, patternPart := range patternParts {
-			if patternPart == "*" {
-				continue // * matches any single segment
-			}
-			if matched, err := filepath.Match(patternPart, pathParts[i]); err != nil || !matched {
-				return false
-			}
-		}
-		return true
-	}
-
-	// Fallback to filepath.Match for patterns without wildcards
-	if matched, err := filepath.Match(pattern, requestPath); err == nil && matched {
-		return true
-	}
-
-	return false
-}
-
-// limitedReadCloser wraps the request body to enforce size limits during reading
-type limitedReadCloser struct {
-	reader    io.ReadCloser
-	remaining int64
-	config    *Config
-}
-
-func (l *limitedReadCloser) Read(p []byte) (int, error) {
-	if l.remaining <= 0 {
-		if l.config.SkipLargePayloads {
-			// Return EOF to signal end of reading
-			return 0, io.EOF
-		}
-
-		// Body size exceeded during reading
-		return 0, fmt.Errorf("request body exceeds limit of %d bytes", l.config.MaxSize)
-	}
-
-	// Limit read to remaining bytes
-	if int64(len(p)) > l.remaining {
-		p = p[:l.remaining]
-	}
-
-	n, err := l.reader.Read(p)
-	l.remaining -= int64(n)
-
-	return n, err
-}
-
-func (l *limitedReadCloser) Close() error {
-	return l.reader.Close()
 }

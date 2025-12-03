@@ -1,4 +1,4 @@
-package cors
+package cors_test
 
 import (
 	"net/http"
@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/middleware/cors"
 )
 
 func TestCorsMiddleware_AllOrigins(t *testing.T) {
-	h := Middleware("*")
+	h := cors.Middleware("*")
 
 	// Test GET with Origin
 	req := httptest.NewRequest("GET", "/", nil)
@@ -27,7 +28,7 @@ func TestCorsMiddleware_AllOrigins(t *testing.T) {
 }
 
 func TestCorsMiddleware_AllowedOrigin(t *testing.T) {
-	h := Middleware("http://allowed.com")
+	h := cors.Middleware("http://allowed.com")
 
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Origin", "http://allowed.com")
@@ -41,7 +42,7 @@ func TestCorsMiddleware_AllowedOrigin(t *testing.T) {
 }
 
 func TestCorsMiddleware_DisallowedOrigin(t *testing.T) {
-	h := Middleware("http://allowed.com")
+	h := cors.Middleware("http://allowed.com")
 
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Origin", "http://forbidden.com")
@@ -55,7 +56,7 @@ func TestCorsMiddleware_DisallowedOrigin(t *testing.T) {
 }
 
 func TestCorsMiddleware_OPTIONS(t *testing.T) {
-	h := Middleware("*")
+	h := cors.Middleware("*")
 
 	req := httptest.NewRequest("OPTIONS", "/", nil)
 	req.Header.Set("Origin", "http://example.com")

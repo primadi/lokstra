@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
 )
 
@@ -91,7 +92,7 @@ func LoadConfig(configPaths ...string) error {
 		return err
 	}
 
-	log.Printf("✅ Config loaded successfully from: %v", configPaths)
+	deploy.LogDebug("✅ Config loaded successfully from: %v", configPaths)
 	return nil
 }
 

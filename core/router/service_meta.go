@@ -108,7 +108,6 @@ func (o *ServiceRouterOptions) WithRouteOverride(methodName string, meta RouteMe
 }
 
 // WithMethodMiddleware adds middleware for a specific method without changing route
-// This is a convenience method that creates a RouteOverride with only middleware
 func (o *ServiceRouterOptions) WithMethodMiddleware(methodName string, middleware ...any) *ServiceRouterOptions {
 	if o.RouteOverrides == nil {
 		o.RouteOverrides = make(map[string]RouteMeta)

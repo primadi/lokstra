@@ -647,7 +647,7 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 	g.serviceInstances.Store(name, service)
 
 	if GetLogLevel() >= LogLevelInfo {
-		fmt.Printf("ℹ️  Registered service instance: '%s'\n", name)
+		LogDebug("ℹ️  Registered service instance: '%s'\n", name)
 	}
 }
 
@@ -949,9 +949,9 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 		// Call factory with resolved deps or nil
 		// Check if this is a remote service (has "remote" in config)
 		if _, isRemote := entry.Config["remote"]; isRemote {
-			LogInfo("📦 Creating remote service wrapper: '%s'", name)
+			LogDebug("📦 Creating remote service wrapper: '%s'", name)
 		} else {
-			LogInfo("📦 Creating service instance: '%s'", name)
+			LogDebug("📦 Creating service instance: '%s'", name)
 		}
 		instance := entry.Factory(resolvedDeps, entry.Config)
 		g.serviceInstances.Store(name, instance)
@@ -962,9 +962,9 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 	return svc, ok
 }
 
-// HasLazyService checks if a service is registered in the lazy service registry
+// HasService checks if a service is registered in the lazy service registry
 // or defined in the deferred service definitions (from YAML or code).
-func (g *GlobalRegistry) HasLazyService(name string) bool {
+func (g *GlobalRegistry) HasService(name string) bool {
 	// Check if already instantiated in lazy registry
 	if _, ok := g.lazyServiceFactories.Load(name); ok {
 		return true
@@ -972,6 +972,11 @@ func (g *GlobalRegistry) HasLazyService(name string) bool {
 
 	// Check if defined but not yet instantiated
 	if _, ok := g.serviceDefs.Load(name); ok {
+		return true
+	}
+
+	// Check if instantiated in eager registry
+	if _, ok := g.serviceInstances.Load(name); ok {
 		return true
 	}
 
@@ -1097,14 +1102,14 @@ func (g *GlobalRegistry) autoRegisterLocalService(name string, def *schema.Servi
 		}
 
 		// Call original factory
-		LogInfo("📦 Creating service instance: '%s' (type: %s)", name, def.Type)
+		LogDebug("📦 Creating service instance: '%s' (type: %s)", name, def.Type)
 		return factory(lazyDeps, cfg)
 	}, deps, def.Config)
 }
 
 // AutoRegisterRemoteService registers a service as REMOTE (HTTP proxy)
 func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.ServiceDef, remoteBaseURL string) {
-	LogInfo("🌐 Creating remote service proxy: '%s' -> %s", name, remoteBaseURL)
+	LogDebug("🌐 Creating remote service proxy: '%s' -> %s", name, remoteBaseURL)
 
 	// Get remote factory
 	factory := g.GetServiceFactory(def.Type, false) // false = remote factory
@@ -1142,7 +1147,7 @@ func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.Serv
 	} else {
 		// No metadata - service must have explicit route mappings
 		// Create empty proxy (routes must be added manually)
-		LogInfo("⚠️  Remote service '%s' has no route metadata - proxy created with empty routes", name)
+		LogDebug("⚠️  Remote service '%s' has no route metadata - proxy created with empty routes", name)
 		proxyService = proxy.NewService(remoteBaseURL, make(map[string]proxy.RouteMapping))
 	}
 
@@ -1225,7 +1230,7 @@ func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config Deploy
 		}
 
 		// Check if service is registered
-		if !g.HasLazyService(serviceName) {
+		if !g.HasService(serviceName) {
 			return fmt.Errorf("published service '%s' not found in service registry", serviceName)
 		}
 

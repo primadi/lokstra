@@ -46,3 +46,17 @@ func NormalizeWithBasePath(path string) string {
 	}
 	return filepath.Join(GetBasePath(), path)
 }
+
+func NormalizeWithWordkingDir(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	dir, _ := os.Getwd()
+	return filepath.Join(dir, path)
+}
+
+func IsFileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}

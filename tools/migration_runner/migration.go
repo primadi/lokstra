@@ -53,9 +53,6 @@ func (r *Runner) load() error {
 // loadFrom reads migration files starting from a specific version
 // This is an optimization to avoid loading already-applied migrations
 func (r *Runner) loadFrom(minVersion int) error {
-	// Pattern: {version}_{description}.{up|down}.sql
-	pattern := regexp.MustCompile(`^(\d+)_([a-z0-9_]+)\.(up|down)\.sql$`)
-
 	entries, err := os.ReadDir(r.migrationsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -66,6 +63,49 @@ func (r *Runner) loadFrom(minVersion int) error {
 
 	// Group migrations by version
 	migrationMap := make(map[int]*Migration)
+
+	// Detect structure type by checking for migration.yaml in subfolders
+	hasSubfolderStructure := false
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Check if this subfolder has migration.yaml
+			yamlPath := filepath.Join(r.migrationsDir, entry.Name(), "migration.yaml")
+			if _, err := os.Stat(yamlPath); err == nil {
+				hasSubfolderStructure = true
+				break
+			}
+		}
+	}
+
+	if hasSubfolderStructure {
+		// Load from subfolder structure: migrations/001_name/migration.yaml + SQL files
+		if err := r.loadFromSubfolders(entries, minVersion, migrationMap); err != nil {
+			return err
+		}
+	} else {
+		// Load from flat structure: migrations/001_name.up.sql
+		if err := r.loadFromFlat(entries, minVersion, migrationMap); err != nil {
+			return err
+		}
+	}
+
+	// Convert map to sorted slice
+	r.migrations = make([]*Migration, 0, len(migrationMap))
+	for _, m := range migrationMap {
+		r.migrations = append(r.migrations, m)
+	}
+
+	sort.Slice(r.migrations, func(i, j int) bool {
+		return r.migrations[i].Version < r.migrations[j].Version
+	})
+
+	return nil
+}
+
+// loadFromFlat loads migrations from flat structure: migrations/001_name.up.sql
+func (r *Runner) loadFromFlat(entries []os.DirEntry, minVersion int, migrationMap map[int]*Migration) error {
+	// Pattern: {version}_{description}.{up|down}.sql
+	pattern := regexp.MustCompile(`^(\d+)_([a-z0-9_]+)\.(up|down)\.sql$`)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -145,15 +185,109 @@ func (r *Runner) loadFrom(minVersion int) error {
 		}
 	}
 
-	// Convert map to sorted slice
-	r.migrations = make([]*Migration, 0, len(migrationMap))
-	for _, m := range migrationMap {
-		r.migrations = append(r.migrations, m)
-	}
+	return nil
+}
 
-	sort.Slice(r.migrations, func(i, j int) bool {
-		return r.migrations[i].Version < r.migrations[j].Version
-	})
+// loadFromSubfolders loads migrations from subfolder structure: migrations/001_name/migration.yaml + SQL files
+func (r *Runner) loadFromSubfolders(entries []os.DirEntry, minVersion int, migrationMap map[int]*Migration) error {
+	// Pattern for folder: {version}_{description}
+	folderPattern := regexp.MustCompile(`^(\d+)_([a-z0-9_]+)$`)
+	// Pattern for SQL files inside folder: {version}_{description}.{up|down}.sql or just {description}.{up|down}.sql
+	filePattern := regexp.MustCompile(`^(?:\d+_)?([a-z0-9_]+)\.(up|down)\.sql$`)
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue // Skip files in root migrations folder
+		}
+
+		// Check if this subfolder has migration.yaml (REQUIRED)
+		folderPath := filepath.Join(r.migrationsDir, entry.Name())
+		yamlPath := filepath.Join(folderPath, "migration.yaml")
+		if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
+			continue // Skip folders without migration.yaml
+		}
+
+		// Parse folder name
+		folderMatches := folderPattern.FindStringSubmatch(entry.Name())
+		if folderMatches == nil {
+			continue // Skip non-migration folders
+		}
+
+		folderVersion, err := strconv.Atoi(folderMatches[1])
+		if err != nil {
+			return fmt.Errorf("invalid version in folder %s: %w", entry.Name(), err)
+		}
+
+		// OPTIMIZATION: Skip folders with version < minVersion
+		if minVersion > 0 && folderVersion < minVersion {
+			continue
+		}
+
+		folderDesc := folderMatches[2]
+
+		// Read files inside subfolder
+		subEntries, err := os.ReadDir(folderPath)
+		if err != nil {
+			return fmt.Errorf("failed to read migration folder %s: %w", entry.Name(), err)
+		}
+
+		// Get or create migration
+		migration, exists := migrationMap[folderVersion]
+		if !exists {
+			migration = &Migration{
+				Version:     folderVersion,
+				Description: folderDesc,
+			}
+			migrationMap[folderVersion] = migration
+		}
+
+		// Process each SQL file in the subfolder
+		for _, subEntry := range subEntries {
+			if subEntry.IsDir() {
+				continue
+			}
+
+			// Skip migration.yaml metadata file
+			if subEntry.Name() == "migration.yaml" {
+				continue
+			}
+
+			fileMatches := filePattern.FindStringSubmatch(subEntry.Name())
+			if fileMatches == nil {
+				continue // Skip non-SQL files
+			}
+
+			fileDesc := fileMatches[1]
+			direction := fileMatches[2]
+
+			// Read SQL file
+			sqlPath := filepath.Join(folderPath, subEntry.Name())
+			sqlBytes, err := os.ReadFile(sqlPath)
+			if err != nil {
+				return fmt.Errorf("failed to read migration file %s/%s: %w", entry.Name(), subEntry.Name(), err)
+			}
+
+			sql := string(sqlBytes)
+
+			// Set UP or DOWN SQL
+			// For subfolder structure, we concatenate multiple SQL files
+			if direction == "up" {
+				if migration.UpSQL != "" {
+					// Concatenate multiple UP migrations
+					migration.UpSQL += "\n\n-- " + fileDesc + "\n" + sql
+				} else {
+					migration.UpSQL = sql
+				}
+			} else {
+				if migration.DownSQL != "" {
+					// Concatenate multiple DOWN migrations
+					migration.DownSQL += "\n\n-- " + fileDesc + "\n" + sql
+				} else {
+					migration.DownSQL = sql
+				}
+			}
+		}
+	}
 
 	return nil
 }
@@ -426,7 +560,7 @@ func (r *Runner) Status(ctx context.Context) (string, error) {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("Migration Status:\n")
+	sb.WriteString("\nMigration Status:\n")
 	sb.WriteString("=================\n\n")
 
 	if len(r.migrations) == 0 {
