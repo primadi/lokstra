@@ -151,6 +151,8 @@ func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServ
 			// Parse annotations for skipped files
 			annotations, err := ParseFileAnnotations(file.FullPath)
 			if err != nil {
+				// Cleanup before returning error
+				cleanupFolder(folderPath)
 				return false, fmt.Errorf("failed to parse annotations from %s: %w", file.Filename, err)
 			}
 			file.Annotations = annotations
@@ -184,6 +186,8 @@ func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServ
 	}
 
 	if err := onProcessRouterService(ctx); err != nil {
+		// Cleanup before returning error
+		cleanupFolder(folderPath)
 		return false, fmt.Errorf("failed to process router service: %w", err)
 	}
 
@@ -369,6 +373,8 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 		// Quick check: does file contain @RouterService?
 		hasRouterService, err := fileContainsRouterService(fullPath)
 		if err != nil {
+			// Cleanup before returning error
+			cleanupFolder(folderPath)
 			return nil, nil, nil, err
 		}
 		if !hasRouterService {
@@ -399,6 +405,8 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 		// File changed or new, parse annotations
 		annotations, err := ParseFileAnnotations(fullPath)
 		if err != nil {
+			// Cleanup before returning error
+			cleanupFolder(folderPath)
 			return nil, nil, nil, err
 		}
 
@@ -550,4 +558,22 @@ func saveCache(path string, cache *FolderCache) error {
 	}
 
 	return os.WriteFile(path, data, 0644)
+}
+
+// cleanupFolder removes cache and generated files from a folder
+func cleanupFolder(folderPath string) {
+	cachePath := filepath.Join(folderPath, internal.CacheFileName)
+	genPath := filepath.Join(folderPath, internal.GeneratedFileName)
+
+	// Remove cache file
+	if err := os.Remove(cachePath); err == nil {
+		fmt.Fprintf(os.Stderr, "[lokstra-annotation] 🗑️  Cleaned up %s in %s\n",
+			internal.CacheFileName, folderPath)
+	}
+
+	// Remove generated file
+	if err := os.Remove(genPath); err == nil {
+		fmt.Fprintf(os.Stderr, "[lokstra-annotation] 🗑️  Cleaned up %s in %s\n",
+			internal.GeneratedFileName, folderPath)
+	}
 }
