@@ -425,6 +425,7 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 // fileContainsRouterService quickly checks if file contains @RouterService annotation.
 // Uses same parsing logic as ParseFileAnnotations for consistency.
 // Only matches when @RouterService is at the start of comment content (after // and spaces).
+// Ignores TAB-indented annotations (Go code examples in documentation).
 func fileContainsRouterService(path string) (bool, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -434,22 +435,70 @@ func fileContainsRouterService(path string) (bool, error) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := bytes.TrimSpace(scanner.Bytes())
+		line := scanner.Bytes()
+		trimmedLine := bytes.TrimSpace(line)
+
 		// Check for // comment
-		if after, ok := bytes.CutPrefix(line, []byte("//")); ok {
-			// Trim space after // (same as parser)
+		if after, ok := bytes.CutPrefix(trimmedLine, []byte("//")); ok {
+			// CRITICAL: Detect Go code examples (TAB-indented after //)
+			// Valid annotation:   // @RouterService
+			// Invalid annotation: //	@RouterService (TAB - code example)
+
+			// Find the position of // in original line
+			commentPos := bytes.Index(line, []byte("//"))
+			if commentPos != -1 && commentPos+2 < len(line) {
+				afterComment := line[commentPos+2:]
+
+				// Check for TAB immediately after // (Go code example convention)
+				if len(afterComment) > 0 && afterComment[0] == '\t' {
+					// This is a code example (TAB-indented) - skip
+					continue
+				}
+
+				// Check for multiple spaces or single TAB
+				trimmedAfter := bytes.TrimLeft(afterComment, " \t")
+
+				if bytes.HasPrefix(trimmedAfter, []byte("@RouterService")) {
+					leadingWhitespace := afterComment[:len(afterComment)-len(trimmedAfter)]
+
+					// Allow single space only (normal comment: "// @RouterService")
+					// Reject TAB or multiple spaces
+					if len(leadingWhitespace) > 1 || (len(leadingWhitespace) == 1 && leadingWhitespace[0] == '\t') {
+						// Indented - skip it
+						continue
+					}
+
+					return true, nil
+				}
+			}
+
+			// Also check trimmed version for backward compatibility
 			after = bytes.TrimSpace(after)
-			// Check if line STARTS with @RouterService (not just contains)
 			if bytes.HasPrefix(after, []byte("@RouterService")) {
-				return true, nil
+				// Double-check: make sure it's not TAB-indented
+				commentPos := bytes.Index(line, []byte("//"))
+				if commentPos != -1 && commentPos+2 < len(line) {
+					afterComment := line[commentPos+2:]
+					if len(afterComment) > 0 && afterComment[0] == '\t' {
+						// TAB-indented - skip
+						continue
+					}
+
+					trimmedAfter := bytes.TrimLeft(afterComment, " \t")
+					leadingWhitespace := afterComment[:len(afterComment)-len(trimmedAfter)]
+
+					if len(leadingWhitespace) > 1 || (len(leadingWhitespace) == 1 && leadingWhitespace[0] == '\t') {
+						continue
+					}
+
+					return true, nil
+				}
 			}
 		}
 	}
 
 	return false, scanner.Err()
-}
-
-// TestFileContainsRouterService is exported for testing purposes only.
+} // TestFileContainsRouterService is exported for testing purposes only.
 // It wraps the internal fileContainsRouterService function.
 func TestFileContainsRouterService(path string) (bool, error) {
 	return fileContainsRouterService(path)
