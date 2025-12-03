@@ -863,13 +863,14 @@ func LoadAndBuild(configPaths []string) error {
 // setupNamedDbPools auto-discovers and sets up named DB pools from config
 // Requires dbpool-manager service to be already registered
 func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
-	internal.AutoCreateDbPoolManager()
-
 	// Check if named-db-pools section exists
 	if len(config.NamedDbPools) == 0 {
+		internal.AutoCreateDbPoolManager()
 		// No named-db-pools section, skip
 		return nil
 	}
+
+	internal.AutoCreateDbPoolManager()
 
 	dpm, ok := deploy.Global().GetServiceAny("dbpool-manager")
 	if !ok || dpm == nil {
@@ -973,7 +974,7 @@ func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployCon
 		// Register pool as a service
 		registry.RegisterService(poolName, dbPool)
 
-		log.Printf("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
+		deploy.LogDebug("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
 	}
 
 	return nil

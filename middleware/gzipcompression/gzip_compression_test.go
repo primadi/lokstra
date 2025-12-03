@@ -1,4 +1,4 @@
-package gzipcompression
+package gzipcompression_test
 
 import (
 	"compress/gzip"
@@ -10,12 +10,13 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/middleware/gzipcompression"
 )
 
 func TestGzipCompression(t *testing.T) {
 	tests := []struct {
 		name              string
-		config            *Config
+		config            *gzipcompression.Config
 		responseBody      string
 		acceptEncoding    string
 		expectCompressed  bool
@@ -23,7 +24,7 @@ func TestGzipCompression(t *testing.T) {
 	}{
 		{
 			name: "compress large response",
-			config: &Config{
+			config: &gzipcompression.Config{
 				MinSize:          100,
 				CompressionLevel: gzip.BestSpeed,
 			},
@@ -33,7 +34,7 @@ func TestGzipCompression(t *testing.T) {
 		},
 		{
 			name: "skip small response",
-			config: &Config{
+			config: &gzipcompression.Config{
 				MinSize:          1000,
 				CompressionLevel: gzip.BestSpeed,
 			},
@@ -43,7 +44,7 @@ func TestGzipCompression(t *testing.T) {
 		},
 		{
 			name: "client doesn't support gzip",
-			config: &Config{
+			config: &gzipcompression.Config{
 				MinSize:          100,
 				CompressionLevel: gzip.BestSpeed,
 			},
@@ -53,7 +54,7 @@ func TestGzipCompression(t *testing.T) {
 		},
 		{
 			name: "exclude image content type",
-			config: &Config{
+			config: &gzipcompression.Config{
 				MinSize:              100,
 				CompressionLevel:     gzip.BestSpeed,
 				ExcludedContentTypes: []string{"image/jpeg", "image/png"},
@@ -74,7 +75,7 @@ func TestGzipCompression(t *testing.T) {
 			r := router.New("test-router")
 
 			// Add gzip middleware
-			r.Use(Middleware(tt.config))
+			r.Use(gzipcompression.Middleware(tt.config))
 
 			// Add test handler
 			r.GET("/test", func(c *request.Context) error {
@@ -134,7 +135,7 @@ func TestGzipCompressionWithDefaultConfig(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	r := router.New("test-router")
-	r.Use(Middleware(&Config{}))
+	r.Use(gzipcompression.Middleware(&gzipcompression.Config{}))
 
 	r.GET("/test", func(c *request.Context) error {
 		// Large response (> 1KB default)
@@ -161,18 +162,18 @@ func TestGzipCompressionWithDefaultConfig(t *testing.T) {
 
 func TestGzipCompressionFactory(t *testing.T) {
 	// Test with nil params (should use defaults)
-	middleware1 := MiddlewareFactory(nil)
+	middleware1 := gzipcompression.MiddlewareFactory(nil)
 	if middleware1 == nil {
 		t.Error("Expected middleware with nil params")
 	}
 
 	// Test with custom params
 	params := map[string]any{
-		PARAMS_MIN_SIZE:               2048,
-		PARAMS_COMPRESSION_LEVEL:      gzip.BestCompression,
-		PARAMS_EXCLUDED_CONTENT_TYPES: []string{"text/html"},
+		gzipcompression.PARAMS_MIN_SIZE:               2048,
+		gzipcompression.PARAMS_COMPRESSION_LEVEL:      gzip.BestCompression,
+		gzipcompression.PARAMS_EXCLUDED_CONTENT_TYPES: []string{"text/html"},
 	}
-	middleware2 := MiddlewareFactory(params)
+	middleware2 := gzipcompression.MiddlewareFactory(params)
 	if middleware2 == nil {
 		t.Error("Expected middleware with custom params")
 	}

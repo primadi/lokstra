@@ -38,8 +38,12 @@ func DefaultConfig() *Config {
 // middleware to recover from panics and return error response
 func Middleware(cfg *Config) request.HandlerFunc {
 	defConfig := DefaultConfig()
-	if cfg.CustomHandler == nil {
-		cfg.CustomHandler = defConfig.CustomHandler
+	if cfg == nil {
+		cfg = defConfig
+	} else {
+		if cfg.CustomHandler == nil {
+			cfg.CustomHandler = defConfig.CustomHandler
+		}
 	}
 
 	return request.HandlerFunc(func(c *request.Context) error {

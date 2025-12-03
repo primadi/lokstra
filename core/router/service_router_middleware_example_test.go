@@ -46,7 +46,7 @@ func ExampleServiceRouterOptions_WithMethodMiddleware() {
 	// Output: Router with method-specific middleware created
 }
 
-// Example 2: Using RouteOverride for full control (path, method, middleware)
+// Example 2: Using WithRouteOverride for full control (path, method, middleware)
 func ExampleServiceRouterOptions_WithRouteOverride() {
 	opts := router.DefaultServiceRouterOptions().
 		WithPrefix("/api").

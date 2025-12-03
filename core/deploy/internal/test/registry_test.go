@@ -83,7 +83,7 @@ func TestGlobalRegistry_ServiceDefinition(t *testing.T) {
 	})
 
 	// Check if service is registered
-	if !reg.HasLazyService("user-service") {
+	if !reg.HasService("user-service") {
 		t.Fatal("user-service not found")
 	}
 

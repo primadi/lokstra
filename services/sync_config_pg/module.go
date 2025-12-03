@@ -12,32 +12,28 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/primadi/lokstra/common/json"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
+	"github.com/primadi/lokstra/services/dbpool_pg"
 )
 
 const SERVICE_TYPE = "sync_config_pg"
 
+var (
+	instanceMu sync.Mutex
+	instances  = make(map[string]serviceapi.SyncConfig)
+)
+
 // Config represents the configuration for PostgreSQL-based SyncConfig service
 type Config struct {
-	DbPoolName         string        `json:"dbpool_name" yaml:"dbpool_name"`                 // Name of DbPoolManager to use
+	DbPoolName         string        `json:"db_pool_name" yaml:"db_pool_name"`               // Named database pool               // Schema name
 	TableName          string        `json:"table_name" yaml:"table_name"`                   // Table name for storing configs
 	Channel            string        `json:"channel" yaml:"channel"`                         // PostgreSQL NOTIFY channel name
 	HeartbeatInterval  time.Duration `json:"heartbeat_interval" yaml:"heartbeat_interval"`   // CRC heartbeat interval (default: 5 minutes)
 	ReconnectInterval  time.Duration `json:"reconnect_interval" yaml:"reconnect_interval"`   // Reconnect attempt interval
 	SyncOnMismatch     bool          `json:"sync_on_mismatch" yaml:"sync_on_mismatch"`       // Auto sync when CRC mismatch detected
 	EnableNotification bool          `json:"enable_notification" yaml:"enable_notification"` // Enable LISTEN/NOTIFY (default: true)
-}
-
-func DefualtConfig() *Config {
-	return &Config{
-		TableName:          "sync_config",
-		Channel:            "config_changes",
-		HeartbeatInterval:  5 * time.Minute,
-		ReconnectInterval:  10 * time.Second,
-		SyncOnMismatch:     true,
-		EnableNotification: true,
-	}
 }
 
 type subscriber struct {
@@ -55,9 +51,96 @@ type syncConfigPG struct {
 	crc         uint32
 	stopCh      chan struct{}
 	wg          sync.WaitGroup
+	ctx         context.Context
+	cancel      context.CancelFunc
 }
 
 var _ serviceapi.SyncConfig = (*syncConfigPG)(nil)
+
+func getDsnAndSchema(cfg *Config) (string, string) {
+	deployConfig := deploy.Global().GetDeployConfig()
+	if deployConfig == nil {
+		panic("sync_config_pg: deploy config not found")
+	}
+
+	poolConfig, ok := deployConfig.NamedDbPools[cfg.DbPoolName]
+	if !ok {
+		panic(fmt.Sprintf("sync_config_pg: named pool '%s' not found in config", cfg.DbPoolName))
+	}
+
+	schema := poolConfig.Schema
+	if schema == "" {
+		schema = "public" // Default schema
+	}
+
+	return poolConfig.DSN, schema
+}
+
+// NewSyncConfigPG creates a new SyncConfig instance from config
+// It will automatically get the database pool and create listener connection
+// If an instance with the same configuration already exists, it will be reused (singleton per config)
+func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
+	// Check if instance already exists for this configuration
+	instanceKey := fmt.Sprintf("%s:%s:%s", cfg.DbPoolName, cfg.TableName, cfg.Channel)
+
+	instanceMu.Lock()
+	if existing, ok := instances[instanceKey]; ok {
+		instanceMu.Unlock()
+		return existing, nil
+	}
+	instanceMu.Unlock()
+
+	dsn, schema := getDsnAndSchema(cfg)
+
+	// Get DSN for listener connection
+	var listenerDB *pgxpool.Pool
+	if cfg.EnableNotification {
+		var err error
+		listenerDB, err = pgxpool.New(context.Background(), dsn)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create listener pool: %w", err)
+		}
+	}
+
+	// Create context with cancel for goroutine management
+	ctx, cancel := context.WithCancel(context.Background())
+
+	pool, err := dbpool_pg.NewPgxPostgresPool(ctx, dsn)
+	if err != nil {
+		if listenerDB != nil {
+			listenerDB.Close()
+		}
+		cancel()
+		return nil, fmt.Errorf("failed to create db pool: %w", err)
+	}
+
+	dbPool := dbpool_pg.NewDbPoolWithSchema(pool, schema)
+	service := &syncConfigPG{
+		cfg:         cfg,
+		dbPool:      dbPool,
+		listenerDB:  listenerDB,
+		cache:       make(map[string]any),
+		subscribers: make(map[string]*subscriber),
+		stopCh:      make(chan struct{}),
+		ctx:         ctx,
+		cancel:      cancel,
+	}
+
+	// Initialize service (load data, start listener, start heartbeat)
+	if err := service.init(context.Background()); err != nil {
+		if listenerDB != nil {
+			listenerDB.Close()
+		}
+		return nil, fmt.Errorf("failed to initialize sync config: %w", err)
+	}
+
+	// Register instance in singleton registry
+	instanceMu.Lock()
+	instances[instanceKey] = service
+	instanceMu.Unlock()
+
+	return service, nil
+}
 
 func (s *syncConfigPG) Set(ctx context.Context, key string, value any) error {
 	valueJSON, err := json.Marshal(value)
@@ -108,53 +191,6 @@ func (s *syncConfigPG) Get(ctx context.Context, key string) (any, error) {
 	}
 
 	return value, nil
-}
-
-func (s *syncConfigPG) GetString(ctx context.Context, key string, defaultValue string) string {
-	value, err := s.Get(ctx, key)
-	if err != nil {
-		return defaultValue
-	}
-
-	if str, ok := value.(string); ok {
-		return str
-	}
-
-	return defaultValue
-}
-
-func (s *syncConfigPG) GetInt(ctx context.Context, key string, defaultValue int) int {
-	value, err := s.Get(ctx, key)
-	if err != nil {
-		return defaultValue
-	}
-
-	// Handle JSON number conversion
-	switch v := value.(type) {
-	case int:
-		return v
-	case int64:
-		return int(v)
-	case float64:
-		return int(v)
-	case string:
-		return utils.ParseInt(v, defaultValue)
-	}
-
-	return defaultValue
-}
-
-func (s *syncConfigPG) GetBool(ctx context.Context, key string, defaultValue bool) bool {
-	value, err := s.Get(ctx, key)
-	if err != nil {
-		return defaultValue
-	}
-
-	if b, ok := value.(bool); ok {
-		return b
-	}
-
-	return defaultValue
 }
 
 func (s *syncConfigPG) Delete(ctx context.Context, key string) error {
@@ -385,15 +421,14 @@ func (s *syncConfigPG) startListener() {
 func (s *syncConfigPG) listenForNotifications() {
 	defer s.wg.Done()
 
-	ctx := context.Background()
-	conn, err := s.listenerDB.Acquire(ctx)
+	conn, err := s.listenerDB.Acquire(s.ctx)
 	if err != nil {
 		fmt.Printf("Failed to acquire listener connection: %v\n", err)
 		return
 	}
 	defer conn.Release()
 
-	_, err = conn.Exec(ctx, "LISTEN "+s.cfg.Channel)
+	_, err = conn.Exec(s.ctx, "LISTEN "+s.cfg.Channel)
 	if err != nil {
 		fmt.Printf("Failed to LISTEN on channel %s: %v\n", s.cfg.Channel, err)
 		return
@@ -403,11 +438,13 @@ func (s *syncConfigPG) listenForNotifications() {
 		select {
 		case <-s.stopCh:
 			return
+		case <-s.ctx.Done():
+			return
 		default:
-			notification, err := conn.Conn().WaitForNotification(ctx)
+			notification, err := conn.Conn().WaitForNotification(s.ctx)
 			if err != nil {
 				// Check if context is done
-				if ctx.Err() != nil {
+				if s.ctx.Err() != nil {
 					return
 				}
 				fmt.Printf("Notification error: %v\n", err)
@@ -487,88 +524,49 @@ func (s *syncConfigPG) heartbeatLoop() {
 }
 
 func (s *syncConfigPG) Shutdown() error {
+	// Cancel context to unblock WaitForNotification
+	if s.cancel != nil {
+		s.cancel()
+	}
+
+	// Close stop channel
 	close(s.stopCh)
+
+	// Wait for all goroutines to finish
 	s.wg.Wait()
 
 	if s.listenerDB != nil {
 		s.listenerDB.Close()
 	}
 
-	if s.dbPool != nil {
-		return s.dbPool.Shutdown()
-	}
+	// Remove from singleton registry
+	instanceKey := fmt.Sprintf("%s:%s:%s", s.cfg.DbPoolName, s.cfg.TableName, s.cfg.Channel)
+	instanceMu.Lock()
+	delete(instances, instanceKey)
+	instanceMu.Unlock()
 
 	return nil
 }
 
 // Service creates a new PostgreSQL-based SyncConfig service
-func Service(cfg *Config, dbPoolManager serviceapi.DbPoolManager) (*syncConfigPG, error) {
-	dbPool, err := dbPoolManager.GetNamedPool(cfg.DbPoolName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get db pool: %w", err)
-	}
-
-	// Get connection config for listener
-	dsn, _, err := dbPoolManager.GetNamedDsn(cfg.DbPoolName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get DSN: %w", err)
-	}
-
-	var listenerDB *pgxpool.Pool
-	if cfg.EnableNotification {
-		listenerDB, err = pgxpool.New(context.Background(), dsn)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create listener pool: %w", err)
-		}
-	}
-
-	service := &syncConfigPG{
-		cfg:         cfg,
-		dbPool:      dbPool,
-		listenerDB:  listenerDB,
-		cache:       make(map[string]any),
-		subscribers: make(map[string]*subscriber),
-		stopCh:      make(chan struct{}),
-	}
-
-	if err := service.init(context.Background()); err != nil {
-		if listenerDB != nil {
-			listenerDB.Close()
-		}
-		return nil, err
-	}
-
-	return service, nil
+// This is an alias for NewSyncConfigPG for backward compatibility
+func Service(cfg *Config) (serviceapi.SyncConfig, error) {
+	return NewSyncConfigPG(cfg)
 }
 
 // ServiceFactory creates a SyncConfig service from configuration map
-func ServiceFactory(deps map[string]any, params map[string]any) any {
+func ServiceFactory(mapCfg map[string]any) any {
 	cfg := &Config{
-		DbPoolName:         utils.GetValueFromMap(params, "dbpool_name", ""),
-		TableName:          utils.GetValueFromMap(params, "table_name", "sync_config"),
-		Channel:            utils.GetValueFromMap(params, "channel", "config_changes"),
-		HeartbeatInterval:  time.Duration(utils.GetValueFromMap(params, "heartbeat_interval", 5)) * time.Minute,
-		ReconnectInterval:  time.Duration(utils.GetValueFromMap(params, "reconnect_interval", 10)) * time.Second,
-		SyncOnMismatch:     utils.GetValueFromMap(params, "sync_on_mismatch", true),
-		EnableNotification: utils.GetValueFromMap(params, "enable_notification", true),
+		DbPoolName:         utils.GetValueFromMap(mapCfg, "db_pool_name", "global-db"),
+		TableName:          utils.GetValueFromMap(mapCfg, "table_name", "sync_config"),
+		Channel:            utils.GetValueFromMap(mapCfg, "channel", "config_changes"),
+		HeartbeatInterval:  utils.GetValueFromMap(mapCfg, "heartbeat_interval", 5*time.Minute),
+		ReconnectInterval:  utils.GetValueFromMap(mapCfg, "reconnect_interval", 5*time.Second),
+		SyncOnMismatch:     utils.GetValueFromMap(mapCfg, "sync_on_mismatch", true),
+		EnableNotification: utils.GetValueFromMap(mapCfg, "enable_notification", true),
 	}
 
-	if cfg.DbPoolName == "" {
-		panic("sync_config_pg requires 'dbpool_name' parameter")
-	}
-
-	// Get DbPoolManager from dependencies
-	dbPoolManagerRaw, ok := deps["dbpool-manager"]
-	if !ok {
-		panic("sync_config_pg requires 'dbpool-manager' dependency")
-	}
-
-	dbPoolManager, ok := dbPoolManagerRaw.(serviceapi.DbPoolManager)
-	if !ok {
-		panic("dbpool-manager is not of type serviceapi.DbPoolManager")
-	}
-
-	svc, err := Service(cfg, dbPoolManager)
+	svc, err := Service(cfg)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create sync_config_pg service: %v", err))
 	}
@@ -579,4 +577,32 @@ func ServiceFactory(deps map[string]any, params map[string]any) any {
 // Register registers the SyncConfig service type
 func Register() {
 	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory)
+	SetDefaultSyncConfigPG()
+}
+
+// registers the default SyncConfigPG service
+func SetDefaultSyncConfigPG() {
+	if lokstra_registry.HasService("sync-config") {
+		return // Already registered
+	}
+
+	lokstra_registry.RegisterLazyService("sync-config", func() any {
+		cfg := &Config{
+			DbPoolName:         "global-db",
+			TableName:          "sync_config",
+			Channel:            "config_changes",
+			SyncOnMismatch:     true,
+			EnableNotification: true,
+
+			HeartbeatInterval: lokstra_registry.GetConfig(
+				"dbpool-manager.heartbeat-interval", 5*time.Minute), // 5 minutes
+			ReconnectInterval: lokstra_registry.GetConfig(
+				"dbpool-manager.reconnect-interval", 5*time.Second), // 5 seconds
+		}
+		svc, err := Service(cfg)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create default sync_config_pg service: %v", err))
+		}
+		return svc
+	}, nil)
 }

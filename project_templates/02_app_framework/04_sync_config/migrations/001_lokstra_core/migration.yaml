@@ -1,0 +1,4 @@
+dbpool-name: "global-db"
+description: "Initial migration setup for lokstra core services"
+# schema-table: "schema_migrations"
+# force: "auto"

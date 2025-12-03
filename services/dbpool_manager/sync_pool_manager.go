@@ -2,45 +2,43 @@ package dbpool_manager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/dbpool_pg"
+	"github.com/primadi/lokstra/syncmap"
 )
 
-// DsnSchema holds database DSN and schema name
-type DsnSchema struct {
-	Dsn    string
-	Schema string
-}
-
-// For backward compatibility with internal code
-type dsnSchema = DsnSchema
-
-type PoolManager struct {
-	pools       *sync.Map //map[dsn]serviceapi.DbPool
-	tenantPools *sync.Map // map[tenant]dsn, schema
-	namedPools  *sync.Map // map[name]dsn, schema
+type SyncPoolManager struct {
+	pools       *sync.Map // map[dsn]serviceapi.DbPool
+	tenantPools *syncmap.SyncMap[*dsnSchema]
+	namedPools  *syncmap.SyncMap[*dsnSchema]
 	newPoolFunc func(dsn string) (serviceapi.DbPool, error)
 }
 
-var _ serviceapi.DbPoolManager = (*PoolManager)(nil)
+var _ serviceapi.DbPoolManager = (*SyncPoolManager)(nil)
 
-func NewPoolManager(newPoolFunc func(dsn string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
-	return &PoolManager{
+func NewSyncPoolManager(
+	tenantPools *syncmap.SyncMap[*dsnSchema],
+	namedPools *syncmap.SyncMap[*dsnSchema],
+	newPoolFunc func(dsn string) (serviceapi.DbPool, error),
+) serviceapi.DbPoolManager {
+	return &SyncPoolManager{
 		pools:       &sync.Map{},
-		tenantPools: &sync.Map{},
-		namedPools:  &sync.Map{},
+		tenantPools: tenantPools,
+		namedPools:  namedPools,
 		newPoolFunc: newPoolFunc,
 	}
 }
 
-func NewPgxPoolManager() serviceapi.DbPoolManager {
-	return &PoolManager{
+func NewPgxSyncPoolManager(
+	tenantPools *syncmap.SyncMap[*dsnSchema],
+	namedPools *syncmap.SyncMap[*dsnSchema],
+) serviceapi.DbPoolManager {
+	return &SyncPoolManager{
 		pools:       &sync.Map{},
-		tenantPools: &sync.Map{},
-		namedPools:  &sync.Map{},
+		tenantPools: tenantPools,
+		namedPools:  namedPools,
 		newPoolFunc: func(dsn string) (serviceapi.DbPool, error) {
 			return dbpool_pg.NewPgxPostgresPool(context.Background(), dsn)
 		},
@@ -48,7 +46,7 @@ func NewPgxPoolManager() serviceapi.DbPoolManager {
 }
 
 // AcquireNamedConn implements serviceapi.DbPoolManager.
-func (m *PoolManager) AcquireNamedConn(ctx context.Context, name string) (serviceapi.DbConn, error) {
+func (m *SyncPoolManager) AcquireNamedConn(ctx context.Context, name string) (serviceapi.DbConn, error) {
 	dsn, schema, err := m.GetNamedDsn(name)
 	if err != nil {
 		return nil, err
@@ -61,7 +59,7 @@ func (m *PoolManager) AcquireNamedConn(ctx context.Context, name string) (servic
 }
 
 // AcquireTenantConn implements serviceapi.DbPoolManager.
-func (m *PoolManager) AcquireTenantConn(ctx context.Context, tenant string) (serviceapi.DbConn, error) {
+func (m *SyncPoolManager) AcquireTenantConn(ctx context.Context, tenant string) (serviceapi.DbConn, error) {
 	dsn, schema, err := m.GetTenantDsn(tenant)
 	if err != nil {
 		return nil, err
@@ -74,17 +72,16 @@ func (m *PoolManager) AcquireTenantConn(ctx context.Context, tenant string) (ser
 }
 
 // GetNamedDsn implements serviceapi.DbPoolManager.
-func (m *PoolManager) GetNamedDsn(name string) (string, string, error) {
-	_ds, ok := m.namedPools.Load(name)
-	if !ok {
-		return "", "", fmt.Errorf("named pool not found: %s", name)
+func (m *SyncPoolManager) GetNamedDsn(name string) (string, string, error) {
+	ds, err := m.namedPools.Get(context.Background(), name)
+	if err != nil {
+		return "", "", err
 	}
-	ds := _ds.(dsnSchema)
 	return ds.Dsn, ds.Schema, nil
 }
 
 // GetNamedPool implements serviceapi.DbPoolManager.
-func (m *PoolManager) GetNamedPool(name string) (serviceapi.DbPoolWithSchema, error) {
+func (m *SyncPoolManager) GetNamedPool(name string) (serviceapi.DbPoolWithSchema, error) {
 	dsn, schema, err := m.GetNamedDsn(name)
 	if err != nil {
 		return nil, err
@@ -97,17 +94,16 @@ func (m *PoolManager) GetNamedPool(name string) (serviceapi.DbPoolWithSchema, er
 }
 
 // GetTenantDsn implements serviceapi.DbPoolManager.
-func (m *PoolManager) GetTenantDsn(tenant string) (string, string, error) {
-	_ds, ok := m.tenantPools.Load(tenant)
-	if !ok {
-		return "", "", fmt.Errorf("tenant pool not found: %s", tenant)
+func (m *SyncPoolManager) GetTenantDsn(tenant string) (string, string, error) {
+	ds, err := m.tenantPools.Get(context.Background(), tenant)
+	if err != nil {
+		return "", "", err
 	}
-	ds := _ds.(dsnSchema)
 	return ds.Dsn, ds.Schema, nil
 }
 
 // GetTenantPool implements serviceapi.DbPoolManager.
-func (m *PoolManager) GetTenantPool(tenant string) (serviceapi.DbPoolWithTenant, error) {
+func (m *SyncPoolManager) GetTenantPool(tenant string) (serviceapi.DbPoolWithTenant, error) {
 	dsn, schema, err := m.GetTenantDsn(tenant)
 	if err != nil {
 		return nil, err
@@ -120,26 +116,26 @@ func (m *PoolManager) GetTenantPool(tenant string) (serviceapi.DbPoolWithTenant,
 }
 
 // RemoveNamed implements serviceapi.DbPoolManager.
-func (m *PoolManager) RemoveNamed(name string) {
-	m.namedPools.Delete(name)
+func (m *SyncPoolManager) RemoveNamed(name string) {
+	_ = m.namedPools.Delete(context.Background(), name)
 }
 
 // RemoveTenant implements serviceapi.DbPoolManager.
-func (m *PoolManager) RemoveTenant(tenant string) {
-	m.tenantPools.Delete(tenant)
+func (m *SyncPoolManager) RemoveTenant(tenant string) {
+	_ = m.tenantPools.Delete(context.Background(), tenant)
 }
 
 // SetNamedDsn implements serviceapi.DbPoolManager.
-func (m *PoolManager) SetNamedDsn(name string, dsn string, schema string) {
-	m.namedPools.Store(name, dsnSchema{Dsn: dsn, Schema: schema})
+func (m *SyncPoolManager) SetNamedDsn(name string, dsn string, schema string) {
+	_ = m.namedPools.Set(context.Background(), name, &dsnSchema{Dsn: dsn, Schema: schema})
 }
 
 // SetTenantDsn implements serviceapi.DbPoolManager.
-func (m *PoolManager) SetTenantDsn(tenant string, dsn string, schema string) {
-	m.tenantPools.Store(tenant, dsnSchema{Dsn: dsn, Schema: schema})
+func (m *SyncPoolManager) SetTenantDsn(tenant string, dsn string, schema string) {
+	_ = m.tenantPools.Set(context.Background(), tenant, &dsnSchema{Dsn: dsn, Schema: schema})
 }
 
-func (m *PoolManager) GetDsnPool(dsn string) (serviceapi.DbPool, error) {
+func (m *SyncPoolManager) GetDsnPool(dsn string) (serviceapi.DbPool, error) {
 	if pool, ok := m.pools.Load(dsn); ok {
 		if ok {
 			return pool.(serviceapi.DbPool), nil
@@ -155,7 +151,7 @@ func (m *PoolManager) GetDsnPool(dsn string) (serviceapi.DbPool, error) {
 	return pool.(serviceapi.DbPool), nil
 }
 
-func (m *PoolManager) Shutdown() error {
+func (m *SyncPoolManager) Shutdown() error {
 	m.pools.Range(func(key, value any) bool {
 		pool := value.(serviceapi.DbPool)
 		_ = pool.Shutdown()

@@ -1,4 +1,4 @@
-package request_logger
+package request_logger_test
 
 import (
 	"fmt"
@@ -10,19 +10,21 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/middleware/request_logger"
+	"github.com/primadi/lokstra/middleware/request_logger/internal"
 )
 
 func TestRequestLogger(t *testing.T) {
 	tests := []struct {
 		name      string
-		config    *Config
+		config    *request_logger.Config
 		path      string
 		method    string
 		shouldLog bool
 	}{
 		{
 			name: "log GET request",
-			config: &Config{
+			config: &request_logger.Config{
 				EnableColors: false,
 				SkipPaths:    []string{},
 			},
@@ -32,7 +34,7 @@ func TestRequestLogger(t *testing.T) {
 		},
 		{
 			name: "skip health check path",
-			config: &Config{
+			config: &request_logger.Config{
 				EnableColors: false,
 				SkipPaths:    []string{"/health", "/metrics"},
 			},
@@ -42,7 +44,7 @@ func TestRequestLogger(t *testing.T) {
 		},
 		{
 			name: "log POST request",
-			config: &Config{
+			config: &request_logger.Config{
 				EnableColors: false,
 				SkipPaths:    []string{},
 			},
@@ -68,7 +70,7 @@ func TestRequestLogger(t *testing.T) {
 			r := router.New("test-router")
 
 			// Add logger middleware
-			r.Use(Middleware(tt.config))
+			r.Use(request_logger.Middleware(tt.config))
 
 			// Add test handler
 			switch tt.method {
@@ -120,7 +122,7 @@ func TestRequestLoggerWithColors(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	var logOutput []string
-	cfg := &Config{
+	cfg := &request_logger.Config{
 		EnableColors: true,
 		CustomLogger: func(format string, args ...any) {
 			msg := fmt.Sprintf(format, args...)
@@ -129,7 +131,7 @@ func TestRequestLoggerWithColors(t *testing.T) {
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(request_logger.Middleware(cfg))
 
 	r.GET("/test", func(c *request.Context) error {
 		return c.Api.Ok("success")
@@ -157,7 +159,7 @@ func TestRequestLoggerDuration(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	var logOutput []string
-	cfg := &Config{
+	cfg := &request_logger.Config{
 		EnableColors: false,
 		CustomLogger: func(format string, args ...any) {
 			msg := fmt.Sprintf(format, args...)
@@ -166,7 +168,7 @@ func TestRequestLoggerDuration(t *testing.T) {
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(request_logger.Middleware(cfg))
 
 	r.GET("/slow", func(c *request.Context) error {
 		time.Sleep(10 * time.Millisecond) // Simulate slow request
@@ -192,17 +194,17 @@ func TestRequestLoggerDuration(t *testing.T) {
 
 func TestRequestLoggerFactory(t *testing.T) {
 	// Test with nil params
-	middleware1 := MiddlewareFactory(nil)
+	middleware1 := request_logger.MiddlewareFactory(nil)
 	if middleware1 == nil {
 		t.Error("Expected middleware with nil params")
 	}
 
 	// Test with custom params
 	params := map[string]any{
-		PARAMS_ENABLE_COLORS: false,
-		PARAMS_SKIP_PATHS:    []string{"/health"},
+		request_logger.PARAMS_ENABLE_COLORS: false,
+		request_logger.PARAMS_SKIP_PATHS:    []string{"/health"},
 	}
-	middleware2 := MiddlewareFactory(params)
+	middleware2 := request_logger.MiddlewareFactory(params)
 	if middleware2 == nil {
 		t.Error("Expected middleware with custom params")
 	}
@@ -219,7 +221,7 @@ func TestFormatDuration(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := formatDuration(tt.duration)
+		result := internal.FormatDuration(tt.duration)
 		if !strings.Contains(result, tt.contains) {
 			t.Errorf("formatDuration(%v) = %s, expected to contain %s", tt.duration, result, tt.contains)
 		}

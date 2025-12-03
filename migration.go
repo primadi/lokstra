@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/tools/migration_runner"
@@ -238,22 +239,21 @@ func loadMigrationYaml(path string) (*MigrationYamlConfig, error) {
 // Directory structure:
 //
 //	migrations/
-//	├── 01_main-db/           # Runs first
-//	│   ├── migration.yaml
+//	├── 01_main-db/           # Runs first (requires migration.yaml)
+//	│   ├── migration.yaml    # REQUIRED for subfolder detection
 //	│   └── 001_create_users.up.sql
-//	├── 02_tenant-db/         # Runs second
-//	│   ├── migration.yaml
+//	├── 02_tenant-db/         # Runs second (requires migration.yaml)
+//	│   ├── migration.yaml    # REQUIRED for subfolder detection
 //	│   └── 001_create_tenants.up.sql
-//	└── 03_ledger-db/         # Runs third
-//	    ├── migration.yaml
+//	└── 03_ledger-db/         # Runs third (requires migration.yaml)
+//	    ├── migration.yaml    # REQUIRED for subfolder detection
 //	    └── 001_create_accounts.up.sql
 //
 // Execution order is determined by folder name (alphabetical sort).
 // Use numeric prefixes (01_, 02_, 03_) for explicit ordering.
 //
-// Each subfolder should contain:
-//   - migration.yaml: Database configuration (optional, uses defaults if missing)
-//   - *.up.sql and *.down.sql: Migration files
+// Each subfolder MUST contain migration.yaml for detection.
+// Subfolders without migration.yaml will be ignored.
 //
 // Example usage:
 //
@@ -267,22 +267,29 @@ func loadMigrationYaml(path string) (*MigrationYamlConfig, error) {
 //
 //	    lokstra_registry.RunServerFromConfig()
 //	}
-func CheckDbMigrationsAuto(rootDir string) error {
+func CheckDbMigrationsAuto(configFolder string) error {
 	// Read all subdirectories sorted alphabetically
+	basePath := utils.GetBasePath()
+	rootDir := filepath.Join(basePath, configFolder)
+
 	entries, err := os.ReadDir(rootDir)
 	if err != nil {
 		return fmt.Errorf("failed to read migrations directory '%s': %w", rootDir, err)
 	}
 
-	// Collect migration folders (subdirectories only)
+	// Collect migration folders that have migration.yaml (explicit marker)
 	var migrationFolders []string
 	for _, entry := range entries {
 		if entry.IsDir() {
-			migrationFolders = append(migrationFolders, entry.Name())
+			// Check if migration.yaml exists (REQUIRED for subfolder detection)
+			yamlPath := filepath.Join(rootDir, entry.Name(), "migration.yaml")
+			if _, err := os.Stat(yamlPath); err == nil {
+				migrationFolders = append(migrationFolders, entry.Name())
+			}
 		}
 	}
 
-	// If no subdirectories found, treat rootDir as single migration folder
+	// If no subdirectories with migration.yaml found, treat rootDir as single migration folder
 	if len(migrationFolders) == 0 {
 		return CheckDbMigration(&MigrationConfig{
 			MigrationsDir: rootDir,
@@ -297,20 +304,6 @@ func CheckDbMigrationsAuto(rootDir string) error {
 	for _, folder := range migrationFolders {
 		folderPath := filepath.Join(rootDir, folder)
 
-		// Check if migration.yaml exists
-		yamlPath := filepath.Join(folderPath, "migration.yaml")
-		yamlExists := false
-		if _, err := os.Stat(yamlPath); err == nil {
-			yamlExists = true
-		}
-
-		// Check if any .sql files exist
-		sqlFiles, _ := filepath.Glob(filepath.Join(folderPath, "*.sql"))
-		if len(sqlFiles) == 0 {
-			// Skip folders without SQL files
-			continue
-		}
-
 		log.Printf("[Lokstra] Processing migration folder: %s", folder)
 
 		// Run migration for this folder
@@ -323,29 +316,32 @@ func CheckDbMigrationsAuto(rootDir string) error {
 		}
 
 		// Count success/skipped based on yaml config
-		if yamlExists {
-			if yamlCfg, _ := loadMigrationYaml(yamlPath); yamlCfg != nil {
-				shouldRun := false
+		yamlPath := filepath.Join(folderPath, "migration.yaml")
+		if yamlCfg, _ := loadMigrationYaml(yamlPath); yamlCfg != nil {
+			shouldRun := false
 
-				switch yamlCfg.Force {
-				case "on":
-					shouldRun = true
-				case "off":
-					shouldRun = false
-				case "auto", "":
-					shouldRun = (mode == "dev" || mode == "debug")
-				}
+			switch yamlCfg.Force {
+			case "on":
+				shouldRun = true
+			case "off":
+				shouldRun = false
+			case "auto", "":
+				shouldRun = (mode == "dev" || mode == "debug")
+			}
 
-				if shouldRun {
-					successCount++
-				} else {
-					skippedCount++
-				}
-			} else {
+			if shouldRun {
 				successCount++
+			} else {
+				skippedCount++
 			}
 		} else {
-			successCount++
+			// If no yaml config, assume auto mode
+			shouldRun := (mode == "dev" || mode == "debug")
+			if shouldRun {
+				successCount++
+			} else {
+				skippedCount++
+			}
 		}
 	}
 

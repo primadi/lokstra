@@ -23,13 +23,3 @@ func RegisterAllServices() {
 	email_smtp.Register()
 	sync_config_pg.Register()
 }
-
-// RegisterCoreServices registers only core infrastructure services
-func RegisterCoreServices() {
-	redis.Register()
-	kvstore_redis.Register()
-	metrics_prometheus.Register()
-	dbpool_pg.Register()
-	email_smtp.Register()
-	sync_config_pg.Register()
-}

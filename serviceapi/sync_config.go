@@ -14,15 +14,6 @@ type SyncConfig interface {
 	// Get retrieves a configuration value
 	Get(ctx context.Context, key string) (any, error)
 
-	// GetString retrieves a string configuration value
-	GetString(ctx context.Context, key string, defaultValue string) string
-
-	// GetInt retrieves an int configuration value
-	GetInt(ctx context.Context, key string, defaultValue int) int
-
-	// GetBool retrieves a bool configuration value
-	GetBool(ctx context.Context, key string, defaultValue bool) bool
-
 	// Delete removes a configuration value and notifies all listeners
 	Delete(ctx context.Context, key string) error
 
@@ -40,4 +31,6 @@ type SyncConfig interface {
 
 	// Sync forces a synchronization with the backend store
 	Sync(ctx context.Context) error
+
+	Shutdownable
 }

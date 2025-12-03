@@ -1,4 +1,4 @@
-package body_limit
+package body_limit_test
 
 import (
 	"bytes"
@@ -10,6 +10,8 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/response/api_formatter"
 	"github.com/primadi/lokstra/core/router"
+	"github.com/primadi/lokstra/middleware/body_limit"
+	"github.com/primadi/lokstra/middleware/body_limit/internal"
 )
 
 func TestBodyLimitWithActualBodyReading(t *testing.T) {
@@ -17,12 +19,12 @@ func TestBodyLimitWithActualBodyReading(t *testing.T) {
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
 	// Test that body is actually limited during reading (not just ContentLength)
-	cfg := &Config{
+	cfg := &body_limit.Config{
 		MaxSize: 100, // Very small limit to test
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(body_limit.Middleware(cfg))
 	r.POST("/test", func(c *request.Context) error {
 		// Try to read body
 		body, err := io.ReadAll(c.R.Body)
@@ -78,13 +80,13 @@ func TestBodyLimitWithSkipLargePayloadsAndReading(t *testing.T) {
 	// Setup formatter
 	api_formatter.SetGlobalFormatter(api_formatter.NewApiResponseFormatter())
 
-	cfg := &Config{
+	cfg := &body_limit.Config{
 		MaxSize:           50,
 		SkipLargePayloads: true,
 	}
 
 	r := router.New("test-router")
-	r.Use(Middleware(cfg))
+	r.Use(body_limit.Middleware(cfg))
 	r.POST("/test", func(c *request.Context) error {
 		// Try to read body
 		body, err := io.ReadAll(c.R.Body)
@@ -151,14 +153,10 @@ func TestLimitedReadCloser(t *testing.T) {
 			body := bytes.Repeat([]byte("a"), tt.bodySize)
 			reader := io.NopCloser(bytes.NewReader(body))
 
-			limitedReader := &limitedReadCloser{
-				reader:    reader,
-				remaining: tt.maxSize,
-				config: &Config{
-					MaxSize:           tt.maxSize,
-					SkipLargePayloads: tt.skipLargePayloads,
-				},
-			}
+			limitedReader := internal.NewLimitedReadCloser(reader, tt.maxSize, &body_limit.Config{
+				MaxSize:           tt.maxSize,
+				SkipLargePayloads: tt.skipLargePayloads,
+			})
 
 			result, err := io.ReadAll(limitedReader)
 
@@ -186,7 +184,7 @@ func TestBodyLimitCannotBypassBySettingContentLength(t *testing.T) {
 	r := router.New("test")
 
 	// Apply body limit (10 bytes)
-	r.Use(Middleware(&Config{
+	r.Use(body_limit.Middleware(&body_limit.Config{
 		MaxSize: 10,
 	}))
 

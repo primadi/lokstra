@@ -13,6 +13,8 @@ import (
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/dbpool_manager"
+	"github.com/primadi/lokstra/services/sync_config_pg"
+	"github.com/primadi/lokstra/syncmap"
 )
 
 type RunMode string
@@ -71,10 +73,8 @@ func Bootstrap(scanPath ...string) {
 		os.Exit(0)
 	}
 
-	autoCreateDbPoolManager()
-
 	// 2️⃣ Detect mode and store in config for runtime access
-	Mode = detectRunMode()
+	Mode = DetectRunMode()
 	lokstra_registry.SetConfig("runtime.mode", string(Mode))
 	fmt.Printf("[Lokstra] Environment detected: %s\n", strings.ToUpper(string(Mode)))
 
@@ -110,11 +110,11 @@ func Bootstrap(scanPath ...string) {
 	}
 }
 
-// detectRunMode inspects runtime and env to detect how the app was started.
-func detectRunMode() RunMode {
+// DetectRunMode inspects runtime and env to detect how the app was started.
+func DetectRunMode() RunMode {
 	exe, err := os.Executable()
 	if err != nil {
-		fmt.Println("[Lokstra] Warning: cannot get executable path:", err)
+		deploy.LogDebug("[Lokstra] Warning: cannot get executable path:", err)
 		return RunModeProd
 	}
 
@@ -125,61 +125,23 @@ func detectRunMode() RunMode {
 	// 1️⃣ Check if running under Delve debugger
 	// Delve wraps the binary with __debug_bin
 	if strings.Contains(exeName, "__debug_bin") {
-		fmt.Println("[Lokstra] Detected: Delve debugger (debug binary)")
+		deploy.LogDebug("[Lokstra] Detected: Delve debugger (debug binary)")
 		return RunModeDebug
 	}
 
-	// 2️⃣ Check environment variables for debugger presence
-	// VSCode sets these when debugging, Delve also sets DLV_* vars
-	for _, e := range os.Environ() {
-		key := strings.Split(e, "=")[0]
-
-		// Delve environment variables
-		if strings.HasPrefix(key, "DLV_") {
-			fmt.Println("[Lokstra] Detected: Delve environment variable:", key)
-			return RunModeDebug
-		}
-
-		// VSCode debugger detection (more specific check)
-		if key == "VSCODE_DEBUGGER_RUNTIME_TYPE" ||
-			key == "VSCODE_DEBUG_PROTOCOL_VERSION" {
-			fmt.Println("[Lokstra] Detected: VSCode debugger environment")
-			return RunModeDebug
-		}
-	}
-
-	// 3️⃣ Check if running via "go run"
+	// 2️⃣ Check if running via "go run"
 	// "go run" creates temporary executables in go-build cache directory
-	if strings.Contains(exePath, "/go-build/") ||
-		strings.Contains(exePath, "\\go-build\\") ||
-		strings.Contains(exePath, filepath.Join(os.TempDir(), "go-build")) {
-		fmt.Println("[Lokstra] Detected: go run (temporary build)")
+	if strings.Contains(exePath, "go-build") ||
+		strings.Contains(exePath, os.TempDir()) {
+		deploy.LogDebug("[Lokstra] Detected: go run (temporary build)")
 		return RunModeDev
 	}
 
-	// 4️⃣ Additional check for go run on different systems
-	// Check if executable is in system temp directory (common for go run)
-	tempDir := filepath.ToSlash(os.TempDir())
-	if strings.HasPrefix(exePath, tempDir) {
-		fmt.Println("[Lokstra] Detected: go run (temp directory)")
-		return RunModeDev
-	}
-
-	// 5️⃣ Check if binary name suggests it's a compiled production binary
-	// Compiled binaries usually have specific names (not random hashes)
-	// and are located in project directory or system paths
-	if !strings.Contains(exeName, "exe") ||
-		(strings.Contains(exeName, ".exe") && len(exeName) > 10) {
-		// If we're in the project directory with a named binary
-		wd, _ := os.Getwd()
-		if strings.Contains(exePath, filepath.ToSlash(wd)) {
-			fmt.Println("[Lokstra] Detected: compiled binary in project directory")
-			return RunModeProd
-		}
-	}
-
-	// 6️⃣ Default: assume production mode
-	fmt.Println("[Lokstra] Detected: production binary (default)")
+	// 3️⃣ If we reach here, it's a compiled binary (not go run, not debugger)
+	// Windows: .exe extension confirms it's a compiled binary
+	// Linux/Mac: no .exe, but also not in temp/go-build, so it's compiled
+	// Default to production mode for all compiled binaries
+	deploy.LogDebug("[Lokstra] Detected: compiled binary (production mode)")
 	return RunModeProd
 }
 
@@ -285,10 +247,31 @@ func relaunchWithDlv() {
 
 // auto create dbpool-manager service if not exists
 func autoCreateDbPoolManager() {
-	if svc := lokstra_registry.GetService[serviceapi.DbPoolManager]("dbpool-manager"); svc == nil {
-		svc = dbpool_manager.NewPgxPoolManager()
-		lokstra_registry.RegisterService("dbpool-manager", svc)
+	// Register SyncConfigPG service type
+	sync_config_pg.Register()
+
+	pm := lokstra_registry.GetService[serviceapi.DbPoolManager]("dbpool-manager")
+	if pm != nil {
+		return // Already registered
 	}
+
+	// Check if sync mode is enabled via config
+	useSync := lokstra_registry.GetConfig("dbpool-manager.use_sync", true)
+
+	if useSync {
+		// Create SyncMaps for tenant and named pools using syncmap package
+		tenantPools := syncmap.NewSyncMap[*dbpool_manager.DsnSchema]("tenant")
+		namedPools := syncmap.NewSyncMap[*dbpool_manager.DsnSchema]("pool")
+
+		pm = dbpool_manager.NewPgxSyncPoolManager(tenantPools, namedPools)
+		deploy.LogDebug("[Lokstra] DbPoolManager initialized with distributed sync")
+	} else {
+		// Default: use regular pool manager (local sync.Map)
+		pm = dbpool_manager.NewPgxPoolManager()
+		deploy.LogDebug("[Lokstra] DbPoolManager initialized with local sync")
+	}
+
+	lokstra_registry.RegisterService("dbpool-manager", pm)
 }
 
 func init() {

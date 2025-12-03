@@ -8,6 +8,7 @@ import (
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/middleware/request_logger/internal"
 )
 
 const REQUEST_LOGGER_TYPE = "request_logger"
@@ -89,7 +90,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 				c.R.URL.Path,
 				colorGray,
 				statusCode,
-				formatDuration(duration),
+				internal.FormatDuration(duration),
 				colorReset,
 			)
 			cfg.CustomLogger("%s", msg)
@@ -98,7 +99,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 				c.R.Method,
 				c.R.URL.Path,
 				statusCode,
-				formatDuration(duration),
+				internal.FormatDuration(duration),
 			)
 			cfg.CustomLogger("%s", msg)
 		}
@@ -124,15 +125,4 @@ func MiddlewareFactory(params map[string]any) request.HandlerFunc {
 func Register() {
 	lokstra_registry.RegisterMiddlewareFactory(REQUEST_LOGGER_TYPE, MiddlewareFactory,
 		lokstra_registry.AllowOverride(true))
-}
-
-// formatDuration formats duration for display
-func formatDuration(d time.Duration) string {
-	if d < time.Millisecond {
-		return d.Round(time.Microsecond).String()
-	}
-	if d < time.Second {
-		return d.Round(time.Millisecond).String()
-	}
-	return d.Round(10 * time.Millisecond).String()
 }
