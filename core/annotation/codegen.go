@@ -208,6 +208,12 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 			return fmt.Errorf("@RouterService on line %d: 'name' is required", ann.Line)
 		}
 
+		// VALIDATE: @RouterService must be placed above a struct declaration
+		if !isStructDeclaration(astFile, ann.TargetName) {
+			return fmt.Errorf("@RouterService on line %d: must be placed directly above a struct declaration, found '%s' instead (file: %s)",
+				ann.Line, ann.TargetName, file.Filename)
+		}
+
 		// Create service generation entry
 		service := &ServiceGeneration{
 			ServiceName:      serviceName,
@@ -251,6 +257,36 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 	}
 
 	return nil
+}
+
+// isStructDeclaration checks if a name refers to a struct type declaration in the AST
+func isStructDeclaration(astFile *ast.File, name string) bool {
+	if name == "" {
+		return false
+	}
+
+	for _, decl := range astFile.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+
+			// Check if this is the type we're looking for
+			if typeSpec.Name.Name == name {
+				// Check if it's a struct type
+				_, isStruct := typeSpec.Type.(*ast.StructType)
+				return isStruct
+			}
+		}
+	}
+
+	return false
 }
 
 // extractInterfaceInfo finds the interface that the struct implements

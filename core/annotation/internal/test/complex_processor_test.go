@@ -420,13 +420,13 @@ type UserService struct {}
 			expected: true,
 		},
 		{
-			name: "with spaces after //",
+			name: "with_spaces_after_//",
 			content: `package app
 
 //   @RouterService name="user-service"
 type UserService struct {}
 `,
-			expected: true,
+			expected: false, // Changed: Multiple spaces (>1) are treated as indented (code example)
 		},
 		{
 			name: "no space after //",

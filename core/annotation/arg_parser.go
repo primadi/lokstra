@@ -22,21 +22,70 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 	scanner := bufio.NewScanner(file)
 	lineNum := 0
 	var pendingAnnotations []*ParsedAnnotation
+	maxCommentGap := 0 // Track empty comment lines after annotation
 
 	for scanner.Scan() {
 		lineNum++
-		line := strings.TrimSpace(scanner.Text())
+		originalLine := scanner.Text()
+		line := strings.TrimSpace(originalLine)
 
 		// Check for annotation
 		if after, ok := strings.CutPrefix(line, "//"); ok {
-			line = strings.TrimSpace(after)
-			if strings.HasPrefix(line, "@") {
-				ann, err := parseAnnotationLine(line, lineNum)
-				if err != nil {
-					return nil, fmt.Errorf("line %d: %w", lineNum, err)
+			// CRITICAL: Detect code examples in Go documentation
+			// Go doc convention: use TAB after // for code examples
+			// Valid annotation:   // @RouterService  (space after //)
+			// Invalid annotation: //	@RouterService  (TAB after // - code example)
+
+			// Extract the content after //
+			commentStart := strings.Index(originalLine, "//")
+			if commentStart >= 0 && commentStart+2 < len(originalLine) {
+				afterComment := originalLine[commentStart+2:]
+
+				// Check for TAB immediately after // (Go code example convention)
+				if len(afterComment) > 0 && afterComment[0] == '\t' {
+					// This is a code example (TAB-indented) - skip any annotations here
+					if strings.Contains(afterComment, "@") {
+						// Skip this indented annotation
+						continue
+					}
 				}
-				if ann != nil {
-					pendingAnnotations = append(pendingAnnotations, ann)
+
+				// Check for multiple spaces (also indicates indentation)
+				trimmedAfter := strings.TrimLeft(afterComment, " \t")
+				if strings.HasPrefix(trimmedAfter, "@") {
+					leadingWhitespace := afterComment[:len(afterComment)-len(trimmedAfter)]
+
+					// Allow single space (normal comment formatting: "// @RouterService")
+					// Reject TAB or multiple spaces (code examples: "//  @RouterService" or "//\t@RouterService")
+					if len(leadingWhitespace) > 1 || (len(leadingWhitespace) == 1 && leadingWhitespace[0] == '\t') {
+						// Indented annotation - skip it (likely example code)
+						continue
+					}
+
+					// Valid annotation - parse it
+					line = strings.TrimSpace(after)
+					if strings.HasPrefix(line, "@") {
+						ann, err := parseAnnotationLine(line, lineNum)
+						if err != nil {
+							return nil, fmt.Errorf("line %d: %w", lineNum, err)
+						}
+						if ann != nil {
+							pendingAnnotations = append(pendingAnnotations, ann)
+							maxCommentGap = 0
+						}
+					}
+				}
+			} else {
+				// Normal comment processing for empty lines
+				if len(pendingAnnotations) > 0 {
+					// Empty comment line after annotation
+					maxCommentGap++
+					// If too many empty comment lines (>3), discard pending annotations
+					// This prevents matching annotations in doc examples
+					if maxCommentGap > 3 {
+						pendingAnnotations = nil
+						maxCommentGap = 0
+					}
 				}
 			}
 		} else if line != "" && !strings.HasPrefix(line, "//") {
@@ -49,6 +98,7 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 					annotations = append(annotations, ann)
 				}
 				pendingAnnotations = nil
+				maxCommentGap = 0
 			}
 		}
 	}
@@ -58,9 +108,7 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 	}
 
 	return annotations, nil
-}
-
-// parseAnnotationLine parses a single annotation line
+} // parseAnnotationLine parses a single annotation line
 // Supports both formats:
 //
 //	@RouterService name="user-service", prefix="/api"
