@@ -53,6 +53,18 @@ func TestReadArgsValidation(t *testing.T) {
 			shouldError:   true,
 			errorContains: "too many arguments",
 		},
+		{
+			name: "mixed positional and named args - should error",
+			annotation: &annotation.ParsedAnnotation{
+				PositionalArgs: []any{"GET /dashboard"},
+				Args: map[string]any{
+					"middlewares": []string{"auth", "role role=admin"},
+				},
+			},
+			expectedArgs:  []string{"route", "middlewares"},
+			shouldError:   true,
+			errorContains: "cannot mix positional and named",
+		},
 	}
 
 	for _, tt := range tests {

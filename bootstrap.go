@@ -97,16 +97,16 @@ func Bootstrap(scanPath ...string) {
 		os.Exit(1)
 	}
 
-	// 6️⃣ Relaunch using correct method
-	switch Mode {
-	case RunModeDebug:
-		if codeChanged {
+	// 6️⃣ Relaunch using correct method (only if code changed)
+	if codeChanged {
+		switch Mode {
+		case RunModeDebug:
 			relaunchWithDlv()
+		case RunModeDev:
+			relaunchWithGoRun()
+		default:
+			fmt.Println("[Lokstra] Unknown mode — continuing normally.")
 		}
-	case RunModeDev:
-		relaunchWithGoRun()
-	default:
-		fmt.Println("[Lokstra] Unknown mode — continuing normally.")
 	}
 }
 

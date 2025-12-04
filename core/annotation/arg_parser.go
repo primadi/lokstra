@@ -388,12 +388,29 @@ func extractTargetNameFromLine(line string) string {
 func (a *ParsedAnnotation) ReadArgs(expectedArgs ...string) (map[string]any, error) {
 	result := make(map[string]any)
 
+	// Only support EITHER all named OR all positional - not mixed!
+	// This keeps the API clear and unambiguous.
+
+	// Check for mixed mode (not allowed)
+	if len(a.Args) > 0 && len(a.PositionalArgs) > 0 {
+		// Build helpful error message showing both fix options
+		var namedKeys []string
+		for key := range a.Args {
+			cleanKey := key
+			if idx := strings.IndexAny(cleanKey, " (["); idx != -1 {
+				cleanKey = cleanKey[:idx]
+			}
+			namedKeys = append(namedKeys, cleanKey)
+		}
+
+		return nil, fmt.Errorf("cannot mix positional and named arguments. Fix by:\n  Option 1: Add parameter name to positional arg (e.g., route=\"...\")\n  Option 2: Remove named parameters (%v) and use positional only", namedKeys)
+	}
+
 	// If we have named args, use them
 	if len(a.Args) > 0 {
 		// Validate only top-level keys
 		for key := range a.Args {
 			// Clean key: remove everything after space or opening bracket
-			// This handles cases where parsing might include part of the value
 			cleanKey := key
 			if idx := strings.IndexAny(cleanKey, " (["); idx != -1 {
 				cleanKey = cleanKey[:idx]
