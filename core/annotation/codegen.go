@@ -439,27 +439,30 @@ func extractRoutes(file *FileToProcess, service *ServiceGeneration) error {
 			continue
 		}
 
-		// Supported formats:
-		// 1. @Route "GET /users/{id}"                                  - route only
-		// 2. @Route "GET /users/{id}", ["mw1", "mw2"]                  - route + middlewares (shorthand)
-		// 3. @Route route="GET /users/{id}", middlewares=["mw1"]       - named args
+		// Supported formats (DO NOT MIX positional and named!):
+		// 1. @Route "GET /users/{id}"                            - positional only
+		// 2. @Route route="GET /users/{id}", middlewares=[...]   - named only
 
 		var routeStr string
 		var middlewares []string
 
-		// Try route + middlewares first
-		if args, err := ann.ReadArgs("route", "middlewares"); err == nil {
-			routeStr, _ = args["route"].(string)
-			middlewares = extractStringArray(args["middlewares"])
-		} else if args, err := ann.ReadArgs("route"); err == nil {
-			// Route only
-			routeStr, _ = args["route"].(string)
-		} else {
+		// Try to read args
+		args, err := ann.ReadArgs("route", "middlewares")
+		if err != nil {
 			return fmt.Errorf("@Route on line %d: %w", ann.Line, err)
 		}
 
+		// Extract route
+		routeStr, _ = args["route"].(string)
+
+		// Extract middlewares
+		middlewares = extractStringArray(args["middlewares"])
+
 		if routeStr == "" {
-			return fmt.Errorf("@Route on line %d: route string is required", ann.Line)
+			return fmt.Errorf(`@Route on line %d: route string is required. Valid formats:
+  - Positional only: @Route "GET /path"
+  - Named only: @Route route="GET /path", middlewares=["auth"]
+Note: Cannot mix positional and named arguments`, ann.Line)
 		}
 
 		// Remove query parameters if any

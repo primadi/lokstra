@@ -72,9 +72,13 @@ func AllowOverride(enable bool) RegisterOption {
 // This is a helper function that wraps deploy.Global().RegisterMiddlewareType().
 //
 // For compatibility with old_registry pattern where factories return request.HandlerFunc,
-// this function accepts both:
-//   - func(config map[string]any) request.HandlerFunc (old pattern)
-//   - func(config map[string]any) any (new pattern)
+// this function accepts multiple signatures:
+//   - func(config map[string]any) request.HandlerFunc (recommended)
+//   - func(config map[string]any) func(*request.Context) error (same as above, explicit signature)
+//   - func(config map[string]any) any (generic)
+//   - func() request.HandlerFunc (no config)
+//   - func() func(*request.Context) error (no config, explicit signature)
+//   - func() any (no config, generic)
 //
 // Example:
 //
@@ -99,9 +103,19 @@ func RegisterMiddlewareFactory(mwType string, factory any, opts ...RegisterOptio
 		deployFactory = func(cfg map[string]any) any {
 			return f(cfg)
 		}
+	case func(map[string]any) func(*request.Context) error:
+		// Same as request.HandlerFunc, but explicit signature
+		deployFactory = func(cfg map[string]any) any {
+			return f(cfg)
+		}
 	case func(map[string]any) any:
 		deployFactory = f
 	case func() request.HandlerFunc:
+		deployFactory = func(cfg map[string]any) any {
+			return f()
+		}
+	case func() func(*request.Context) error:
+		// Same as request.HandlerFunc, but explicit signature
 		deployFactory = func(cfg map[string]any) any {
 			return f()
 		}
