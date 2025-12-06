@@ -196,44 +196,61 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 		return err
 	}
 
-	// Find @RouterService annotations
+	// Find @RouterService and @Service annotations
 	for _, ann := range file.Annotations {
-		if ann.Name != "RouterService" {
+		if ann.Name != "RouterService" && ann.Name != "Service" {
 			continue
 		}
 
-		// Read RouterService args
-		args, err := ann.ReadArgs("name", "prefix", "middlewares")
-		if err != nil {
-			return fmt.Errorf("@RouterService on line %d: %w", ann.Line, err)
-		}
+		isService := ann.Name == "Service"
 
-		serviceName, _ := args["name"].(string)
-		prefix, _ := args["prefix"].(string)
-		middlewares := extractStringArray(args["middlewares"])
+		// Read common args
+		var serviceName string
+		var prefix string
+		var middlewares []string
+
+		if isService {
+			// @Service only needs name
+			args, err := ann.ReadArgs("name")
+			if err != nil {
+				return fmt.Errorf("@Service on line %d: %w", ann.Line, err)
+			}
+			serviceName, _ = args["name"].(string)
+		} else {
+			// @RouterService needs name, prefix, middlewares
+			args, err := ann.ReadArgs("name", "prefix", "middlewares")
+			if err != nil {
+				return fmt.Errorf("@RouterService on line %d: %w", ann.Line, err)
+			}
+			serviceName, _ = args["name"].(string)
+			prefix, _ = args["prefix"].(string)
+			middlewares = extractStringArray(args["middlewares"])
+		}
 
 		if serviceName == "" {
-			return fmt.Errorf("@RouterService on line %d: 'name' is required", ann.Line)
+			return fmt.Errorf("@%s on line %d: 'name' is required", ann.Name, ann.Line)
 		}
 
-		// VALIDATE: @RouterService must be placed above a struct declaration
+		// VALIDATE: must be placed above a struct declaration
 		if !isStructDeclaration(astFile, ann.TargetName) {
-			return fmt.Errorf("@RouterService on line %d: must be placed directly above a struct declaration, found '%s' instead (file: %s)",
-				ann.Line, ann.TargetName, file.Filename)
+			return fmt.Errorf("@%s on line %d: must be placed directly above a struct declaration, found '%s' instead (file: %s)",
+				ann.Name, ann.Line, ann.TargetName, file.Filename)
 		}
 
 		// Create service generation entry
 		service := &ServiceGeneration{
-			ServiceName:      serviceName,
-			Prefix:           prefix,
-			Middlewares:      middlewares,
-			Routes:           make(map[string]string),
-			RouteMiddlewares: make(map[string][]string),
-			Methods:          make(map[string]*MethodSignature),
-			Dependencies:     make(map[string]*DependencyInfo),
-			Imports:          make(map[string]string),
-			StructName:       ann.TargetName,
-			SourceFile:       file.Filename,
+			ServiceName:        serviceName,
+			Prefix:             prefix,
+			Middlewares:        middlewares,
+			Routes:             make(map[string]string),
+			RouteMiddlewares:   make(map[string][]string),
+			Methods:            make(map[string]*MethodSignature),
+			Dependencies:       make(map[string]*DependencyInfo),
+			ConfigDependencies: make(map[string]*ConfigInfo),
+			Imports:            make(map[string]string),
+			StructName:         ann.TargetName,
+			SourceFile:         file.Filename,
+			IsService:          isService,
 		}
 
 		// Extract imports from source file
@@ -260,6 +277,14 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 		if err := extractDependencies(file, service); err != nil {
 			return err
 		}
+
+		// Find @InjectCfg annotations for config dependencies
+		if err := extractConfigDependencies(file, service); err != nil {
+			return err
+		}
+
+		// Check if struct has Init() error method
+		checkInitMethod(file, service)
 
 		ctx.GeneratedCode.Services[serviceName] = service
 	}
@@ -495,8 +520,10 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		return err
 	}
 
-	// Find struct fields
-	fieldTypes := make(map[string]string) // fieldName -> fieldType
+	// Find struct fields for THIS struct only
+	fieldTypes := make(map[string]string)     // fieldName -> fieldType
+	structFieldNames := make(map[string]bool) // fieldName -> true (for THIS struct only)
+
 	for _, decl := range astFile.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok || genDecl.Tok != token.TYPE {
@@ -522,18 +549,25 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 				fieldName := field.Names[0].Name
 				fieldType := exprToString(field.Type)
 				fieldTypes[fieldName] = fieldType
+				structFieldNames[fieldName] = true
 			}
 		}
 	}
 
-	// Now process @Inject annotations
+	// Now process @Inject annotations - ONLY for fields belonging to THIS struct
 	for _, ann := range file.Annotations {
 		if ann.Name != "Inject" && ann.Name != "inject" {
 			continue
 		}
 
+		// Skip if annotation target is not a field of THIS struct
+		if !structFieldNames[ann.TargetName] {
+			continue
+		}
+
+		// Supported formats:
 		// @Inject "user-repository"
-		// or @Inject service="user-repository"
+		// @Inject service="user-repository"
 		args, err := ann.ReadArgs("service")
 		if err != nil {
 			return fmt.Errorf("@Inject on line %d: %w", ann.Line, err)
@@ -552,6 +586,163 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 				ServiceName: serviceName,
 				FieldName:   ann.TargetName,
 				FieldType:   fieldType,
+			}
+		}
+	}
+
+	return nil
+}
+
+// checkInitMethod checks if struct has Init() error method
+func checkInitMethod(file *FileToProcess, service *ServiceGeneration) {
+	fset := token.NewFileSet()
+	astFile, err := parser.ParseFile(fset, file.FullPath, nil, parser.ParseComments)
+	if err != nil {
+		return
+	}
+
+	// Look for method: func (receiver *StructName) Init() error
+	for _, decl := range astFile.Decls {
+		funcDecl, ok := decl.(*ast.FuncDecl)
+		if !ok || funcDecl.Recv == nil || len(funcDecl.Recv.List) == 0 {
+			continue
+		}
+
+		// Check if method name is Init
+		if funcDecl.Name.Name != "Init" {
+			continue
+		}
+
+		// Check receiver type
+		recvType := funcDecl.Recv.List[0].Type
+		var receiverName string
+		switch t := recvType.(type) {
+		case *ast.StarExpr:
+			if ident, ok := t.X.(*ast.Ident); ok {
+				receiverName = ident.Name
+			}
+		case *ast.Ident:
+			receiverName = t.Name
+		}
+
+		if receiverName != service.StructName {
+			continue
+		}
+
+		// Check signature: no params, returns error
+		if funcDecl.Type.Params.NumFields() != 0 {
+			continue
+		}
+
+		if funcDecl.Type.Results == nil || funcDecl.Type.Results.NumFields() != 1 {
+			continue
+		}
+
+		// Check return type is error
+		returnType := funcDecl.Type.Results.List[0].Type
+		if ident, ok := returnType.(*ast.Ident); ok && ident.Name == "error" {
+			service.HasInitMethod = true
+			return
+		}
+	}
+}
+
+// extractConfigDependencies finds all @InjectCfg annotations and field info
+func extractConfigDependencies(file *FileToProcess, service *ServiceGeneration) error {
+	// Parse file to get field types
+	fset := token.NewFileSet()
+	astFile, err := parser.ParseFile(fset, file.FullPath, nil, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+
+	// Find struct fields for THIS struct only
+	fieldTypes := make(map[string]string)     // fieldName -> fieldType
+	structFieldNames := make(map[string]bool) // fieldName -> true (for THIS struct only)
+
+	for _, decl := range astFile.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok || typeSpec.Name.Name != service.StructName {
+				continue
+			}
+
+			structType, ok := typeSpec.Type.(*ast.StructType)
+			if !ok {
+				continue
+			}
+
+			// Extract field names and types
+			for _, field := range structType.Fields.List {
+				if len(field.Names) == 0 {
+					continue
+				}
+				fieldName := field.Names[0].Name
+				fieldType := exprToString(field.Type)
+				fieldTypes[fieldName] = fieldType
+				structFieldNames[fieldName] = true
+			}
+		}
+	}
+
+	// Now process @InjectCfg annotations - ONLY for fields belonging to THIS struct
+	for _, ann := range file.Annotations {
+		if ann.Name != "InjectCfg" && ann.Name != "injectcfg" {
+			continue
+		}
+
+		// Skip if annotation target is not a field of THIS struct
+		if !structFieldNames[ann.TargetName] {
+			continue
+		}
+
+		// Supported formats:
+		// @InjectCfg "app.jwt-secret"
+		// @InjectCfg key="app.jwt-secret"
+		// @InjectCfg key="app.jwt-secret", default="secret"
+		// @InjectCfg "app.timeout", "30"  (positional: key, default)
+		args, err := ann.ReadArgs("key", "default")
+		if err != nil {
+			return fmt.Errorf("@InjectCfg on line %d: %w", ann.Line, err)
+		}
+
+		var configKey string
+		if key, ok := args["key"].(string); ok {
+			configKey = key
+		}
+
+		// Parse default value (optional) - can be string, int, bool, or float
+		defaultValue := ""
+		if def, ok := args["default"]; ok && def != nil {
+			// Convert any type to string
+			switch v := def.(type) {
+			case string:
+				defaultValue = v
+			case int:
+				defaultValue = fmt.Sprintf("%d", v)
+			case bool:
+				defaultValue = fmt.Sprintf("%t", v)
+			case float64:
+				defaultValue = fmt.Sprintf("%g", v)
+			default:
+				defaultValue = fmt.Sprintf("%v", v)
+			}
+		}
+
+		if configKey != "" && ann.TargetName != "" {
+			// ann.TargetName is field name
+			fieldType := fieldTypes[ann.TargetName]
+
+			service.ConfigDependencies[configKey] = &ConfigInfo{
+				ConfigKey:    configKey,
+				FieldName:    ann.TargetName,
+				FieldType:    fieldType,
+				DefaultValue: defaultValue,
 			}
 		}
 	}
@@ -605,6 +796,12 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 		for _, dep := range service.Dependencies {
 			collectPackagesFromType(dep.FieldType, usedPackages)
 		}
+		// From config dependencies - check if time.Duration is used
+		for _, cfg := range service.ConfigDependencies {
+			if cfg.FieldType == "time.Duration" {
+				usedPackages["time"] = true
+			}
+		}
 	}
 
 	// Also collect packages from preserved sections (unchanged files)
@@ -651,6 +848,11 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 				allImports[importPath] = alias
 			}
 		}
+	}
+
+	// Third, add "time" if time.Duration is used
+	if usedPackages["time"] {
+		allImports["time"] = "time"
 	}
 
 	// Generate code
@@ -795,6 +997,52 @@ func extractStringArray(val any) []string {
 	return []string{}
 }
 
+// convertDurationToGo converts duration string like "24h" to Go duration expression "24*time.Hour"
+func convertDurationToGo(durationStr string) string {
+	if durationStr == "" {
+		return "0"
+	}
+
+	// Parse duration value and unit
+	var value string
+	var unit string
+
+	// Find where the number ends and unit begins
+	for i, ch := range durationStr {
+		if ch >= '0' && ch <= '9' || ch == '.' {
+			continue
+		}
+		value = durationStr[:i]
+		unit = durationStr[i:]
+		break
+	}
+
+	if value == "" || unit == "" {
+		return "0"
+	}
+
+	// Map unit to Go time constant
+	var goUnit string
+	switch unit {
+	case "ns":
+		goUnit = "time.Nanosecond"
+	case "us", "µs":
+		goUnit = "time.Microsecond"
+	case "ms":
+		goUnit = "time.Millisecond"
+	case "s":
+		goUnit = "time.Second"
+	case "m":
+		goUnit = "time.Minute"
+	case "h":
+		goUnit = "time.Hour"
+	default:
+		return "0"
+	}
+
+	return fmt.Sprintf("%s*%s", value, goUnit)
+}
+
 // genTemplate is the template for zz_generated.lokstra.go
 var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 	"hasReturnValue":    hasReturnValue,
@@ -804,6 +1052,39 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 	"trimPrefix":        strings.TrimPrefix,
 	"trimSuffix":        strings.TrimSuffix,
 	"notEmpty":          func(s string) bool { return strings.TrimSpace(s) != "" },
+
+	"getDefaultValue": func(fieldType, defaultValue string) string {
+		if defaultValue != "" {
+			// For string type, add quotes if not already quoted
+			if fieldType == "string" {
+				if !strings.HasPrefix(defaultValue, `"`) {
+					return fmt.Sprintf(`"%s"`, defaultValue)
+				}
+				return defaultValue
+			}
+
+			// For duration type, parse and convert to proper Go syntax
+			if fieldType == "time.Duration" {
+				// defaultValue like "24h", "5m", "30s"
+				// Need to convert to Go duration expression
+				return convertDurationToGo(defaultValue)
+			} // For int/bool/float, return as-is
+			return defaultValue
+		}
+		// Generate type-specific zero values
+		switch fieldType {
+		case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+			return "0"
+		case "bool":
+			return "false"
+		case "float32", "float64":
+			return "0.0"
+		case "time.Duration":
+			return "0"
+		default:
+			return `""`
+		}
+	},
 	"sortedKeys": func(m any) []string {
 		keys := make([]string, 0)
 		switch v := m.(type) {
@@ -815,13 +1096,21 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 			for k := range v {
 				keys = append(keys, k)
 			}
+		case map[string]*DependencyInfo:
+			for k := range v {
+				keys = append(keys, k)
+			}
+		case map[string]*ConfigInfo:
+			for k := range v {
+				keys = append(keys, k)
+			}
 		}
 		sort.Strings(keys)
 		return keys
 	},
 }).Parse(`// AUTO-GENERATED CODE - DO NOT EDIT
 // Generated by lokstra-annotation from annotations in this folder
-// Annotations: @RouterService, @Inject, @Route
+// Annotations: @RouterService, @Service, @Inject, @InjectCfg, @Route
 
 package {{.Package}}
 
@@ -844,7 +1133,50 @@ func init() {
 // ============================================================
 // FILE: {{$service.SourceFile}}
 // ============================================================
-
+{{if $service.IsService}}
+// Register{{$service.StructName}} registers the {{$service.ServiceName}} with the registry
+// Auto-generated from annotations:
+//   - @Service name={{quote $service.ServiceName}}
+{{- if $service.Dependencies}}
+//   - @Inject annotations
+{{- end}}
+{{- if $service.ConfigDependencies}}
+//   - @InjectCfg annotations
+{{- end}}
+func Register{{$service.StructName}}() {
+	lokstra_registry.RegisterLazyService({{quote $service.ServiceName}}, func(deps map[string]any, cfg map[string]any) any {
+		svc := &{{$service.StructName}}{
+{{- range $key := sortedKeys $service.Dependencies }}
+{{- $dep := index $service.Dependencies $key }}
+			{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
+{{- end }}
+{{- range $key := sortedKeys $service.ConfigDependencies }}
+{{- $cfg := index $service.ConfigDependencies $key }}
+			{{$cfg.FieldName}}: cfg[{{quote $cfg.ConfigKey}}].({{$cfg.FieldType}}),
+{{- end }}
+		}
+{{- if $service.HasInitMethod }}
+		
+		// Call Init() for post-initialization
+		if err := svc.Init(); err != nil {
+			panic("failed to initialize {{$service.ServiceName}}: " + err.Error())
+		}
+{{- end }}
+		
+		return svc
+	}, map[string]any{
+{{- if or $service.Dependencies $service.ConfigDependencies }}
+{{- if $service.Dependencies }}
+		"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{quote $dep.ServiceName}}, {{end}}},
+{{- end }}
+{{- range $key := sortedKeys $service.ConfigDependencies }}
+{{- $cfg := index $service.ConfigDependencies $key }}
+		{{quote $cfg.ConfigKey}}: lokstra_registry.GetConfig({{quote $cfg.ConfigKey}}, {{getDefaultValue $cfg.FieldType $cfg.DefaultValue}}),
+{{- end }}
+{{- end }}
+	})
+}
+{{else}}
 // {{$service.RemoteTypeName}} implements {{$service.InterfaceName}} with HTTP proxy
 // Auto-generated from {{$service.StructName}} interface methods
 type {{$service.RemoteTypeName}} struct {
@@ -878,11 +1210,25 @@ func New{{$service.RemoteTypeName}}(proxyService *proxy.Service) *{{$service.Rem
 {{- end}}
 {{end}}
 func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) any {
-	return &{{$service.StructName}}{
-{{- range $svcName, $dep := $service.Dependencies }}
+	svc := &{{$service.StructName}}{
+{{- range $key := sortedKeys $service.Dependencies }}
+{{- $dep := index $service.Dependencies $key }}
 		{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
 {{- end }}
+{{- range $key := sortedKeys $service.ConfigDependencies }}
+{{- $cfg := index $service.ConfigDependencies $key }}
+		{{$cfg.FieldName}}: config[{{quote $cfg.ConfigKey}}].({{$cfg.FieldType}}),
+{{- end }}
 	}
+{{- if $service.HasInitMethod }}
+	
+	// Call Init() for post-initialization
+	if err := svc.Init(); err != nil {
+		panic("failed to initialize {{$service.ServiceName}}: " + err.Error())
+	}
+{{- end }}
+	
+	return svc
 }
 
 // {{$service.RemoteTypeName}}Factory creates a remote HTTP client for {{$service.InterfaceName}}
@@ -898,7 +1244,12 @@ func {{$service.RemoteTypeName}}Factory(deps, config map[string]any) any {
 // Register{{$service.StructName}} registers the {{$service.ServiceName}} with the registry
 // Auto-generated from annotations:
 //   - @RouterService name={{quote $service.ServiceName}}, prefix={{quote $service.Prefix}}
+{{- if $service.Dependencies}}
 //   - @Inject annotations
+{{- end}}
+{{- if $service.ConfigDependencies}}
+//   - @InjectCfg annotations
+{{- end}}
 //   - @Route annotations on methods
 func Register{{$service.StructName}}() {
 	// Register service type with router configuration
@@ -927,9 +1278,16 @@ func Register{{$service.StructName}}() {
 	lokstra_registry.RegisterLazyService({{quote $service.ServiceName}},
 		"{{$service.ServiceName}}-factory",
 		map[string]any{
-			"depends-on": []string{ {{range $svcName, $dep := $service.Dependencies}}{{if ne $svcName ""}}{{quote $dep.ServiceName}}, {{end}}{{end}} },
+{{- if $service.Dependencies }}
+			"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{quote $dep.ServiceName}}, {{end}}},
+{{- end }}
+{{- range $key := sortedKeys $service.ConfigDependencies }}
+{{- $cfg := index $service.ConfigDependencies $key }}
+			{{quote $cfg.ConfigKey}}: lokstra_registry.GetConfig({{quote $cfg.ConfigKey}}, {{getDefaultValue $cfg.FieldType $cfg.DefaultValue}}),
+{{- end }}
 		})
 }
+{{end}}
 {{end}}
 {{range $filename, $code := .PreservedSections}}{{$code}}{{end}}`))
 

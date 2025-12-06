@@ -283,18 +283,21 @@ type GeneratedCode struct {
 
 // ServiceGeneration holds generation data for one service
 type ServiceGeneration struct {
-	ServiceName      string
-	Prefix           string
-	Middlewares      []string
-	Routes           map[string]string           // methodName -> "METHOD /path"
-	RouteMiddlewares map[string][]string         // methodName -> []middleware (per-route middleware)
-	Methods          map[string]*MethodSignature // methodName -> signature
-	Dependencies     map[string]*DependencyInfo  // serviceName -> field info
-	Imports          map[string]string           // alias -> import path (e.g., "domain" -> ".../.../domain")
-	StructName       string
-	InterfaceName    string
-	RemoteTypeName   string
-	SourceFile       string
+	ServiceName        string
+	Prefix             string
+	Middlewares        []string
+	Routes             map[string]string           // methodName -> "METHOD /path"
+	RouteMiddlewares   map[string][]string         // methodName -> []middleware (per-route middleware)
+	Methods            map[string]*MethodSignature // methodName -> signature
+	Dependencies       map[string]*DependencyInfo  // serviceName -> field info
+	ConfigDependencies map[string]*ConfigInfo      // configKey -> config field info (for @InjectCfg)
+	Imports            map[string]string           // alias -> import path (e.g., "domain" -> ".../.../domain")
+	StructName         string
+	InterfaceName      string
+	RemoteTypeName     string
+	SourceFile         string
+	IsService          bool // true if @Service, false if @RouterService
+	HasInitMethod      bool // true if Init() error method exists
 }
 
 // DependencyInfo holds field injection information
@@ -302,6 +305,14 @@ type DependencyInfo struct {
 	ServiceName string // e.g., "user-repository"
 	FieldName   string // e.g., "UserRepo"
 	FieldType   string // e.g., "domain.UserRepository" (interface type)
+}
+
+// ConfigInfo holds config injection information for @InjectCfg
+type ConfigInfo struct {
+	ConfigKey    string // e.g., "auth.jwt-secret"
+	FieldName    string // e.g., "jwtSecret"
+	FieldType    string // e.g., "string", "int", "bool", "time.Duration"
+	DefaultValue string // Default value as string (will be converted based on type)
 }
 
 // MethodSignature holds method signature information
@@ -370,14 +381,14 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 
 		fullPath := filepath.Join(folderPath, file.Name())
 
-		// Quick check: does file contain @RouterService?
-		hasRouterService, err := fileContainsRouterService(fullPath)
+		// Quick check: does file contain @RouterService or @Service?
+		hasAnnotations, err := fileContainsServiceAnnotations(fullPath)
 		if err != nil {
 			// Cleanup before returning error
 			cleanupFolder(folderPath)
 			return nil, nil, nil, err
 		}
-		if !hasRouterService {
+		if !hasAnnotations {
 			continue
 		}
 
@@ -430,11 +441,11 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 	return skipped, updated, deleted, nil
 }
 
-// fileContainsRouterService quickly checks if file contains @RouterService annotation.
+// fileContainsServiceAnnotations quickly checks if file contains @RouterService or @Service annotation.
 // Uses same parsing logic as ParseFileAnnotations for consistency.
-// Only matches when @RouterService is at the start of comment content (after // and spaces).
+// Only matches when annotation is at the start of comment content (after // and spaces).
 // Ignores TAB-indented annotations (Go code examples in documentation).
-func fileContainsRouterService(path string) (bool, error) {
+func fileContainsServiceAnnotations(path string) (bool, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return false, err
@@ -466,7 +477,8 @@ func fileContainsRouterService(path string) (bool, error) {
 				// Check for multiple spaces or single TAB
 				trimmedAfter := bytes.TrimLeft(afterComment, " \t")
 
-				if bytes.HasPrefix(trimmedAfter, []byte("@RouterService")) {
+				// Check for @RouterService or @Service
+				if bytes.HasPrefix(trimmedAfter, []byte("@RouterService")) || bytes.HasPrefix(trimmedAfter, []byte("@Service")) {
 					leadingWhitespace := afterComment[:len(afterComment)-len(trimmedAfter)]
 
 					// Allow single space only (normal comment: "// @RouterService")
@@ -482,7 +494,7 @@ func fileContainsRouterService(path string) (bool, error) {
 
 			// Also check trimmed version for backward compatibility
 			after = bytes.TrimSpace(after)
-			if bytes.HasPrefix(after, []byte("@RouterService")) {
+			if bytes.HasPrefix(after, []byte("@RouterService")) || bytes.HasPrefix(after, []byte("@Service")) {
 				// Double-check: make sure it's not TAB-indented
 				commentPos := bytes.Index(line, []byte("//"))
 				if commentPos != -1 && commentPos+2 < len(line) {
@@ -506,6 +518,13 @@ func fileContainsRouterService(path string) (bool, error) {
 	}
 
 	return false, scanner.Err()
+}
+
+// fileContainsRouterService quickly checks if file contains @RouterService annotation.
+// Deprecated: Use fileContainsServiceAnnotations instead.
+// Kept for backward compatibility with tests.
+func fileContainsRouterService(path string) (bool, error) {
+	return fileContainsServiceAnnotations(path)
 } // TestFileContainsRouterService is exported for testing purposes only.
 // It wraps the internal fileContainsRouterService function.
 func TestFileContainsRouterService(path string) (bool, error) {

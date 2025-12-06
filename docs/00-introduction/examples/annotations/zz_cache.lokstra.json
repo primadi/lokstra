@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "files": {
+    "init_example.go": {
+      "filename": "init_example.go",
+      "checksum": "696a7b4b95565d9f3716cd685310671eb138cf19f86772a58f06e40fe794b61e",
+      "annotations": 3,
+      "last_scan": "2025-12-07T01:49:00.1149164+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-07T01:49:00.1149164+07:00"
+    },
+    "mixed_services_example.go": {
+      "filename": "mixed_services_example.go",
+      "checksum": "7e27d4c1dd03132ad25c2d48a3d9aee10848963897d8e436b950ebcc184f902a",
+      "annotations": 18,
+      "last_scan": "2025-12-07T01:49:00.1149164+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-07T01:49:00.1149164+07:00"
+    },
+    "router_service_with_config_example.go": {
+      "filename": "router_service_with_config_example.go",
+      "checksum": "8615e7b99db57225d9c442e2bcfcdddaceae1d38be692dec2daaf7be3cdfcbe0",
+      "annotations": 16,
+      "last_scan": "2025-12-07T01:49:00.1149164+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-07T01:49:00.1149164+07:00"
+    },
+    "router_with_init_example.go": {
+      "filename": "router_with_init_example.go",
+      "checksum": "0618ae863b04e0d7f1759085749465572e9e41fff1f8c489afaa6de43e69564f",
+      "annotations": 5,
+      "last_scan": "2025-12-07T01:49:00.1149164+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-07T01:49:00.1149164+07:00"
+    },
+    "service_example.go": {
+      "filename": "service_example.go",
+      "checksum": "e1830383b1cab4f69bca409897d06039121f08185bbcbbdb1c869f7e20943e68",
+      "annotations": 12,
+      "last_scan": "2025-12-07T01:49:00.1149164+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-07T01:49:00.1149164+07:00"
+    }
+  },
+  "updated_at": "2025-12-07T01:49:00.1149164+07:00",
+  "generated_checksum": "f900aa878c75bf0f7595877fe58eec0a989cd7a7450fd66ebfcd2cec3a15f507"
+}

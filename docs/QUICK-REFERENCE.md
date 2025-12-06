@@ -162,6 +162,96 @@ configs:
     value: v2
 ```
 
+### Pure Service with @Service (Recommended)
+
+For non-HTTP services (business logic, utilities, infrastructure):
+
+```go
+// @Service name="auth-service"
+type AuthService struct {
+    // Required dependency
+    // @Inject "user-repository"
+    UserRepo UserRepository
+    
+    // Optional dependency
+    // @Inject service="cache-service", optional=true
+    Cache CacheService
+    
+    // Configuration injection
+    // @InjectCfg "auth.jwt-secret"
+    JwtSecret string
+    
+    // @InjectCfg key="auth.token-expiry", default="24h"
+    TokenExpiry time.Duration
+    
+    // @InjectCfg key="auth.max-attempts", default="5"
+    MaxAttempts int
+}
+
+func (s *AuthService) Login(email, password string) (string, error) {
+    // Use cache if available
+    if s.Cache != nil {
+        // Check cache
+    }
+    
+    user, err := s.UserRepo.GetByEmail(email)
+    if err != nil {
+        return "", err
+    }
+    
+    token := s.generateToken(user.ID, s.TokenExpiry)
+    return token, nil
+}
+```
+
+**Config (config.yaml):**
+```yaml
+configs:
+  auth:
+    jwt-secret: "your-secret-key"
+    token-expiry: "48h"
+    max-attempts: 3
+```
+
+**@Service supports:**
+- `@Inject` - Service dependencies (required or optional)
+- `@InjectCfg` - Configuration injection (auto-typed)
+- No HTTP routes (use `@RouterService` for that)
+
+**Generated code:**
+```go
+func RegisterAuthService() {
+    lokstra_registry.RegisterLazyService("auth-service", func(deps map[string]any, cfg map[string]any) any {
+        return &AuthService{
+            UserRepo:    lokstra_registry.GetService[UserRepository]("user-repository"),
+            Cache:       // Optional - returns nil if not found
+            JwtSecret:   lokstra_registry.GetConfig("auth.jwt-secret", ""),
+            TokenExpiry: lokstra_registry.GetConfigDuration("auth.token-expiry", 24*time.Hour),
+            MaxAttempts: lokstra_registry.GetConfigInt("auth.max-attempts", 5),
+        }
+    }, nil)
+}
+```
+
+### Annotation Summary
+
+| Annotation | Purpose | Where |
+|------------|---------|-------|
+| `@RouterService` | HTTP service with routes | Above struct |
+| `@Service` | Pure service (no HTTP) | Above struct |
+| `@Route` | HTTP endpoint | Above method (RouterService only) |
+| `@Inject` | Dependency injection | Above field |
+| `@InjectCfg` | Config injection | Above field |
+
+**@Inject parameters:**
+- `service` (positional or named) - service name
+- `optional` - `true`/`false` (default: `false`)
+
+**@InjectCfg parameters:**
+- `key` (positional or named) - config key
+- `default` - default value (optional)
+- Type auto-detected: `string`, `int`, `bool`, `float64`, `time.Duration`
+
 ### Manual Service Factory (Advanced)
 
 ```go

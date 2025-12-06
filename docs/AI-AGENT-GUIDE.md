@@ -797,9 +797,9 @@ LOKSTRA_DEPLOYMENT=production go run .
 
 ## Annotation System
 
-### @RouterService Annotation
+### @RouterService Annotation (HTTP Controllers)
 
-Generate REST routers automatically from service methods.
+Generate REST routers automatically from service methods. Use for services that expose HTTP endpoints.
 
 ```go
 package application
@@ -813,6 +813,9 @@ import (
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo domain.UserRepository
+    
+    // @Inject service="cache-service", optional=true
+    Cache domain.CacheService
 }
 
 // @Route "GET /users/{id}"
@@ -854,12 +857,79 @@ func Register() {
 }
 ```
 
+### @Service Annotation (Pure Services)
+
+For services without HTTP endpoints (business logic, utilities, infrastructure):
+
+```go
+package application
+
+import (
+    "time"
+    "myapp/domain"
+)
+
+// @Service name="auth-service"
+type AuthService struct {
+    // Required dependency
+    // @Inject "user-repository"
+    UserRepo domain.UserRepository
+    
+    // Optional dependency (nil if not found)
+    // @Inject service="cache-service", optional=true
+    Cache domain.CacheService
+    
+    // Configuration injection (type-safe)
+    // @InjectCfg "auth.jwt-secret"
+    JwtSecret string
+    
+    // @InjectCfg key="auth.token-expiry", default="24h"
+    TokenExpiry time.Duration
+    
+    // @InjectCfg key="auth.max-attempts", default="5"
+    MaxAttempts int
+    
+    // @InjectCfg key="auth.debug-mode", default="false"
+    DebugMode bool
+}
+
+func (s *AuthService) Login(email, password string) (string, error) {
+    // Check cache if available
+    if s.Cache != nil {
+        // Use cache
+    }
+    
+    user, err := s.UserRepo.GetByEmail(email)
+    if err != nil {
+        return "", err
+    }
+    
+    token := s.generateToken(user.ID, s.TokenExpiry)
+    
+    if s.DebugMode {
+        println("Login successful:", email)
+    }
+    
+    return token, nil
+}
+```
+
+**Config (config.yaml):**
+```yaml
+configs:
+  auth:
+    jwt-secret: "your-secret-key"
+    token-expiry: "48h"
+    max-attempts: 3
+    debug-mode: false
+```
+
 ### Generate Code from Annotations
 
 **Recommended: Automatic with Bootstrap**
 ```go
 func main() {
-    lokstra.Bootstrap() // Auto-generates when @RouterService changes detected
+    lokstra.Bootstrap() // Auto-generates when @Service/@RouterService changes detected
     // App code...
 }
 ```
@@ -870,7 +940,7 @@ func main() {
 lokstra autogen .
 
 # Or from specific folder
-lokstra autegen ./modules/user/application
+lokstra autogen ./modules/user/application
 
 # Force rebuild all (useful before deployment)
 go run . --generate-only
@@ -882,8 +952,10 @@ go run . --generate-only
 
 | Annotation | Purpose | Example |
 |------------|---------|---------|
-| `@RouterService` | Define service router | `@RouterService name="user-service", prefix="/api"` |
-| `@Inject` | Dependency injection | `@Inject "user-repository"` |
+| `@RouterService` | HTTP service with routes | `@RouterService name="user-service", prefix="/api"` |
+| `@Service` | Pure service (no HTTP) | `@Service name="auth-service"` |
+| `@Inject` | Dependency injection | `@Inject "user-repository"` or `@Inject service="cache", optional=true` |
+| `@InjectCfg` | Config injection | `@InjectCfg "jwt-secret"` or `@InjectCfg key="timeout", default="30s"` |
 | `@Route` | HTTP route mapping | `@Route "GET /users/{id}"` |
 
 **@RouterService Parameters:**
@@ -891,6 +963,18 @@ go run . --generate-only
 - `prefix`: URL prefix (optional, default: "/")
   - **Supports variables**: `prefix="${api-prefix}"` resolves from config
 - `middlewares`: Middleware list (optional)
+
+**@Service Parameters:**
+- `name`: Service name (required, positional or named)
+
+**@Inject Parameters:**
+- `service`: Service name (required, positional or named)
+- `optional`: Boolean, default `false` - set to `true` for optional dependencies
+
+**@InjectCfg Parameters:**
+- `key`: Config key (required, positional or named)
+- `default`: Default value (optional)
+- Type auto-detected: `string`, `int`, `bool`, `float64`, `time.Duration`
 
 **@Route Parameters:**
 - HTTP method + path pattern
