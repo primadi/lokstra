@@ -389,6 +389,7 @@ func extractMethodSignatures(astFile *ast.File, structName string, service *Serv
 			recvName = ident.Name
 		}
 
+		// Skip if method doesn't belong to our target struct
 		if recvName != structName {
 			continue
 		}
@@ -541,7 +542,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 				continue
 			}
 
-			// Extract field names and types
+			// Extract field names and types ONLY for THIS struct
 			for _, field := range structType.Fields.List {
 				if len(field.Names) == 0 {
 					continue
@@ -551,6 +552,8 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 				fieldTypes[fieldName] = fieldType
 				structFieldNames[fieldName] = true
 			}
+			// Break after finding the target struct to avoid processing other structs
+			break
 		}
 	}
 
@@ -677,7 +680,7 @@ func extractConfigDependencies(file *FileToProcess, service *ServiceGeneration) 
 				continue
 			}
 
-			// Extract field names and types
+			// Extract field names and types ONLY for THIS struct
 			for _, field := range structType.Fields.List {
 				if len(field.Names) == 0 {
 					continue
@@ -687,6 +690,8 @@ func extractConfigDependencies(file *FileToProcess, service *ServiceGeneration) 
 				fieldTypes[fieldName] = fieldType
 				structFieldNames[fieldName] = true
 			}
+			// Break after finding the target struct to avoid processing other structs
+			break
 		}
 	}
 
