@@ -79,10 +79,13 @@ func ProcessComplexAnnotations(rootPath []string, maxWorkers int,
 				codeChanged, err := ProcessPerFolder(folder, onProcessRouterService)
 				if err != nil {
 					errChan <- fmt.Errorf("folder %s: %w", folder, err)
-				} else if codeChanged {
-					changedChan <- true
+				} else {
+					if codeChanged {
+						changedChan <- true
+					}
 
-					// Check if this folder has generated code
+					// Always check if this folder has generated code (regardless of codeChanged)
+					// This ensures we include all packages in import file, even cached ones
 					genPath := filepath.Join(folder, internal.GeneratedFileName)
 					if _, err := os.Stat(genPath); err == nil {
 						// Get package import path for this folder
