@@ -56,7 +56,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  lokstra new <project-name> [flags]")
-	fmt.Println("  lokstra autogen|generate [folder]")
+	fmt.Println("  lokstra autogen|generate [folder] [flags]")
 	fmt.Println("  lokstra migration|migrate <command> [flags]")
 	fmt.Println("  lokstra version")
 	fmt.Println("  lokstra help")
@@ -64,6 +64,9 @@ func printUsage() {
 	fmt.Println("Flags for 'new' command:")
 	fmt.Println("  -template <name>    Template to use (optional, interactive if not specified)")
 	fmt.Println("  -branch <name>      Git branch to download from (default: main)")
+	fmt.Println()
+	fmt.Println("Flags for 'generate' command:")
+	fmt.Println("  -force              Force rebuild by deleting all cache files")
 	fmt.Println()
 	fmt.Println("Migration commands:")
 	fmt.Println("  lokstra migration create <name>        Create new migration files")
@@ -140,20 +143,25 @@ func executeNew(projectName, templatePath, branch string) error {
 }
 
 func autogenCmd() {
+	// Parse flags
+	fs := flag.NewFlagSet("generate", flag.ExitOnError)
+	force := fs.Bool("force", false, "Force rebuild by deleting all cache files")
+	fs.Parse(os.Args[2:])
+
 	// Get target folder (optional, defaults to current directory)
 	targetFolder := "."
-	if len(os.Args) >= 3 {
-		targetFolder = os.Args[2]
+	if fs.NArg() > 0 {
+		targetFolder = fs.Arg(0)
 	}
 
 	// Execute autogen
-	if err := executeAutogen(targetFolder); err != nil {
+	if err := executeAutogen(targetFolder, *force); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func executeAutogen(targetFolder string) error {
+func executeAutogen(targetFolder string, force bool) error {
 	fmt.Printf("🔧 Running code generation in: %s\n\n", targetFolder)
 
 	// Convert to absolute path first
@@ -169,17 +177,22 @@ func executeAutogen(targetFolder string) error {
 
 	// Import annotation processor
 	// Instead of running "go run . --generate-only", call annotation processor directly
-	return generateCodeForFolder(absPath)
+	return generateCodeForFolder(absPath, force)
 }
 
 // generateCodeForFolder calls the annotation processor to generate code
-func generateCodeForFolder(absPath string) error {
-	// Delete all cache files first to force rebuild
-	if err := deleteAllCacheFilesInFolder(absPath); err != nil {
-		return fmt.Errorf("failed to delete cache files: %w", err)
+func generateCodeForFolder(absPath string, force bool) error {
+	// Delete all cache files if --force flag is set
+	if force {
+		fmt.Println("🗑️  Force rebuild: deleting all cache files")
+		fmt.Println()
+		if err := deleteAllCacheFilesInFolder(absPath); err != nil {
+			return fmt.Errorf("failed to delete cache files: %w", err)
+		}
 	}
 
 	// Process the folder recursively using annotation processor
+	// Cache will be used automatically unless files changed or generated code was manually modified
 	_, err := annotation.ProcessComplexAnnotations(
 		[]string{absPath},
 		0, // Use default worker count (CPU * 2)

@@ -789,6 +789,28 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	// Sort struct names for deterministic order in init()
 	sort.Strings(allStructNames)
 
+	// Determine which hardcoded imports are actually needed
+	needsDeploy := false
+	needsProxy := false
+
+	for _, service := range ctx.GeneratedCode.Services {
+		if !service.IsService {
+			// @RouterService needs deploy and proxy
+			needsDeploy = true
+			needsProxy = true
+		}
+	}
+
+	// Also check preserved sections for RouterService usage
+	for _, code := range ctx.GeneratedCode.PreservedSections {
+		if strings.Contains(code, "deploy.ServiceTypeConfig") || strings.Contains(code, "deploy.RouteConfig") {
+			needsDeploy = true
+		}
+		if strings.Contains(code, "proxy.Service") || strings.Contains(code, "proxy.Call") {
+			needsProxy = true
+		}
+	}
+
 	// Collect used packages from method signatures, dependencies, and struct name
 	usedPackages := make(map[string]bool)
 	for _, service := range ctx.GeneratedCode.Services {
@@ -817,18 +839,18 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	// Filter imports to only used packages
 	allImports := make(map[string]string) // path -> alias
 
-	// Hardcoded imports that are always included in template
+	// Hardcoded imports - conditionally included based on usage
 	hardcodedImports := map[string]bool{
-		"github.com/primadi/lokstra/core/deploy":      true,
-		"github.com/primadi/lokstra/core/proxy":       true,
-		"github.com/primadi/lokstra/lokstra_registry": true,
+		"github.com/primadi/lokstra/core/deploy":      needsDeploy,
+		"github.com/primadi/lokstra/core/proxy":       needsProxy,
+		"github.com/primadi/lokstra/lokstra_registry": true, // Always needed
 	}
 
 	// First, add imports from updated services
 	for _, service := range ctx.GeneratedCode.Services {
 		for alias, importPath := range service.Imports {
-			// Skip hardcoded imports
-			if hardcodedImports[importPath] {
+			// Skip hardcoded imports that are conditionally included
+			if _, isHardcoded := hardcodedImports[importPath]; isHardcoded {
 				continue
 			}
 			// Only include if package is actually used in generated code
@@ -843,8 +865,8 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 
 	// Second, add imports from existing generated file if package is still used
 	for alias, importPath := range existingImports {
-		// Skip hardcoded imports
-		if hardcodedImports[importPath] {
+		// Skip hardcoded imports that are conditionally included
+		if _, isHardcoded := hardcodedImports[importPath]; isHardcoded {
 			continue
 		}
 		if usedPackages[alias] {
@@ -868,6 +890,8 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 		"PreservedSections": ctx.GeneratedCode.PreservedSections,
 		"AllImports":        allImports,
 		"AllStructNames":    allStructNames,
+		"NeedsDeploy":       needsDeploy,
+		"NeedsProxy":        needsProxy,
 	}); err != nil {
 		return err
 	}
@@ -1120,8 +1144,12 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 package {{.Package}}
 
 import (
+{{- if .NeedsDeploy }}
 	"github.com/primadi/lokstra/core/deploy"
+{{- end }}
+{{- if .NeedsProxy }}
 	"github.com/primadi/lokstra/core/proxy"
+{{- end }}
 	"github.com/primadi/lokstra/lokstra_registry"
 {{- range $path, $alias := .AllImports }}
 	{{$alias}} "{{$path}}"
