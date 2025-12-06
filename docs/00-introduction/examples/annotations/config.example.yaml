@@ -1,0 +1,92 @@
+# Example configuration for @Service and @RouterService with @InjectCfg
+
+# Configuration for @Service examples (service_example.go)
+configs:
+  # Auth service configuration
+  auth:
+    jwt-secret: "your-super-secret-jwt-key-change-in-production"
+    token-expiry: "48h"      # 48 hours
+    max-attempts: 3
+    debug-mode: false
+  
+  # SMTP configuration for notification service
+  smtp:
+    host: "smtp.gmail.com"
+    port: 587
+    from-email: "noreply@myapp.com"
+  
+  # Notification settings
+  notification:
+    enabled: true
+  
+  # API configuration for @RouterService (router_service_with_config_example.go)
+  api:
+    jwt-secret: "api-jwt-secret-key"
+    token-expiry: "24h"
+    
+    # Rate limiting
+    rate-limit:
+      enabled: true
+      max-requests: 1000
+      window: "1m"
+    
+    # Pagination
+    pagination:
+      default-page-size: 20
+      max-page-size: 100
+    
+    # Response options
+    response:
+      include-metadata: true
+
+# Service definitions
+service-definitions:
+  # Repository layer
+  user-repository:
+    type: user-repository-factory
+  
+  # Optional cache service
+  cache-service:
+    type: redis-cache-factory
+    depends-on: []
+  
+  # @Service examples
+  auth-service:
+    type: auth-service  # Auto-registered by @Service annotation
+  
+  notification-service:
+    type: notification-service  # Auto-registered by @Service annotation
+  
+  # @RouterService example
+  user-api-service:
+    type: user-api-service-factory  # Auto-registered by @RouterService annotation
+    depends-on:
+      - user-repository
+
+# Deployment configuration
+deployments:
+  development:
+    servers:
+      api:
+        addr: ":8080"
+        published-services:
+          - user-api-service
+        middlewares:
+          recovery: {}
+          request-logger:
+            enabled: true
+          cors:
+            allowed-origins: ["*"]
+  
+  production:
+    servers:
+      api:
+        addr: ":8080"
+        published-services:
+          - user-api-service
+        middlewares:
+          recovery: {}
+          request-logger:
+            enabled: true
+          cors:
+            allowed-origins: ["https://myapp.com"]
