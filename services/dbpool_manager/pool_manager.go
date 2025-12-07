@@ -19,9 +19,8 @@ type DsnSchema struct {
 type dsnSchema = DsnSchema
 
 type PoolManager struct {
-	pools       *sync.Map //map[dsn]serviceapi.DbPool
-	tenantPools *sync.Map // map[tenant]dsn, schema
-	namedPools  *sync.Map // map[name]dsn, schema
+	pools       *sync.Map // map[dsn]serviceapi.DbPool
+	aliasPools  *sync.Map // map[alias]dsnSchema (unified tenant and named pools)
 	newPoolFunc func(dsn string) (serviceapi.DbPool, error)
 }
 
@@ -30,17 +29,15 @@ var _ serviceapi.DbPoolManager = (*PoolManager)(nil)
 func NewPoolManager(newPoolFunc func(dsn string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
 	return &PoolManager{
 		pools:       &sync.Map{},
-		tenantPools: &sync.Map{},
-		namedPools:  &sync.Map{},
+		aliasPools:  &sync.Map{},
 		newPoolFunc: newPoolFunc,
 	}
 }
 
 func NewPgxPoolManager() serviceapi.DbPoolManager {
 	return &PoolManager{
-		pools:       &sync.Map{},
-		tenantPools: &sync.Map{},
-		namedPools:  &sync.Map{},
+		pools:      &sync.Map{},
+		aliasPools: &sync.Map{},
 		newPoolFunc: func(dsn string) (serviceapi.DbPool, error) {
 			return dbpool_pg.NewPgxPostgresPool(context.Background(), dsn)
 		},
@@ -49,38 +46,17 @@ func NewPgxPoolManager() serviceapi.DbPoolManager {
 
 // AcquireNamedConn implements serviceapi.DbPoolManager.
 func (m *PoolManager) AcquireNamedConn(ctx context.Context, name string) (serviceapi.DbConn, error) {
-	dsn, schema, err := m.GetNamedDsn(name)
-	if err != nil {
-		return nil, err
-	}
-	pool, err := m.GetDsnPool(dsn)
-	if err != nil {
-		return nil, err
-	}
-	return pool.Acquire(ctx, schema)
+	return m.acquireAliasConn(ctx, "named:"+name, false)
 }
 
 // AcquireTenantConn implements serviceapi.DbPoolManager.
 func (m *PoolManager) AcquireTenantConn(ctx context.Context, tenant string) (serviceapi.DbConn, error) {
-	dsn, schema, err := m.GetTenantDsn(tenant)
-	if err != nil {
-		return nil, err
-	}
-	pool, err := m.GetDsnPool(dsn)
-	if err != nil {
-		return nil, err
-	}
-	return pool.AcquireMultiTenant(ctx, schema, tenant)
+	return m.acquireAliasConn(ctx, "tenant:"+tenant, true)
 }
 
 // GetNamedDsn implements serviceapi.DbPoolManager.
 func (m *PoolManager) GetNamedDsn(name string) (string, string, error) {
-	_ds, ok := m.namedPools.Load(name)
-	if !ok {
-		return "", "", fmt.Errorf("named pool not found: %s", name)
-	}
-	ds := _ds.(dsnSchema)
-	return ds.Dsn, ds.Schema, nil
+	return m.getAliasDsn("named:" + name)
 }
 
 // GetNamedPool implements serviceapi.DbPoolManager.
@@ -98,12 +74,7 @@ func (m *PoolManager) GetNamedPool(name string) (serviceapi.DbPoolWithSchema, er
 
 // GetTenantDsn implements serviceapi.DbPoolManager.
 func (m *PoolManager) GetTenantDsn(tenant string) (string, string, error) {
-	_ds, ok := m.tenantPools.Load(tenant)
-	if !ok {
-		return "", "", fmt.Errorf("tenant pool not found: %s", tenant)
-	}
-	ds := _ds.(dsnSchema)
-	return ds.Dsn, ds.Schema, nil
+	return m.getAliasDsn("tenant:" + tenant)
 }
 
 // GetTenantPool implements serviceapi.DbPoolManager.
@@ -121,22 +92,22 @@ func (m *PoolManager) GetTenantPool(tenant string) (serviceapi.DbPoolWithTenant,
 
 // RemoveNamed implements serviceapi.DbPoolManager.
 func (m *PoolManager) RemoveNamed(name string) {
-	m.namedPools.Delete(name)
+	m.removeAlias("named:" + name)
 }
 
 // RemoveTenant implements serviceapi.DbPoolManager.
 func (m *PoolManager) RemoveTenant(tenant string) {
-	m.tenantPools.Delete(tenant)
+	m.removeAlias("tenant:" + tenant)
 }
 
 // SetNamedDsn implements serviceapi.DbPoolManager.
 func (m *PoolManager) SetNamedDsn(name string, dsn string, schema string) {
-	m.namedPools.Store(name, dsnSchema{Dsn: dsn, Schema: schema})
+	m.setAlias("named:"+name, dsn, schema)
 }
 
 // SetTenantDsn implements serviceapi.DbPoolManager.
 func (m *PoolManager) SetTenantDsn(tenant string, dsn string, schema string) {
-	m.tenantPools.Store(tenant, dsnSchema{Dsn: dsn, Schema: schema})
+	m.setAlias("tenant:"+tenant, dsn, schema)
 }
 
 func (m *PoolManager) GetDsnPool(dsn string) (serviceapi.DbPool, error) {
@@ -163,4 +134,42 @@ func (m *PoolManager) Shutdown() error {
 	})
 
 	return nil
+}
+
+// ========================================
+// Internal helper methods
+// ========================================
+
+func (m *PoolManager) setAlias(alias, dsn, schema string) {
+	m.aliasPools.Store(alias, dsnSchema{Dsn: dsn, Schema: schema})
+}
+
+func (m *PoolManager) getAliasDsn(alias string) (string, string, error) {
+	_ds, ok := m.aliasPools.Load(alias)
+	if !ok {
+		return "", "", fmt.Errorf("alias pool not found: %s", alias)
+	}
+	ds := _ds.(dsnSchema)
+	return ds.Dsn, ds.Schema, nil
+}
+
+func (m *PoolManager) removeAlias(alias string) {
+	m.aliasPools.Delete(alias)
+}
+
+func (m *PoolManager) acquireAliasConn(ctx context.Context, alias string, isTenant bool) (serviceapi.DbConn, error) {
+	dsn, schema, err := m.getAliasDsn(alias)
+	if err != nil {
+		return nil, err
+	}
+	pool, err := m.GetDsnPool(dsn)
+	if err != nil {
+		return nil, err
+	}
+	if isTenant {
+		// Extract tenant ID from alias (remove "tenant:" prefix)
+		tenantID := alias[7:] // len("tenant:") = 7
+		return pool.AcquireMultiTenant(ctx, schema, tenantID)
+	}
+	return pool.Acquire(ctx, schema)
 }

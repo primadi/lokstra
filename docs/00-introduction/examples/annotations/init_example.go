@@ -9,10 +9,10 @@ import (
 
 // @Service name="cache-manager"
 type CacheManager struct {
-	// @InjectCfg key="cache.max-size", default=1000
+	// @InjectCfgValue key="cache.max-size", default=1000
 	MaxSize int
 
-	// @InjectCfg key="cache.ttl-seconds", default=300
+	// @InjectCfgValue key="cache.ttl-seconds", default=300
 	TTLSeconds int
 
 	// Internal state (not injected)

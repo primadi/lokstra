@@ -260,10 +260,9 @@ func autoCreateDbPoolManager() {
 
 	if useSync {
 		// Create SyncMaps for tenant and named pools using syncmap package
-		tenantPools := syncmap.NewSyncMap[*dbpool_manager.DsnSchema]("tenant")
-		namedPools := syncmap.NewSyncMap[*dbpool_manager.DsnSchema]("pool")
+		dbPools := syncmap.NewSyncMap[*dbpool_manager.DsnSchema]("db-pools")
 
-		pm = dbpool_manager.NewPgxSyncPoolManager(tenantPools, namedPools)
+		pm = dbpool_manager.NewPgxSyncPoolManager(dbPools)
 		deploy.LogDebug("[Lokstra] DbPoolManager initialized with distributed sync")
 	} else {
 		// Default: use regular pool manager (local sync.Map)

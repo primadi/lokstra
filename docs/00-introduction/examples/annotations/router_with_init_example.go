@@ -12,7 +12,7 @@ type ProductAPIService struct {
 	// @Inject "product-repository"
 	ProductRepo ProductRepository
 
-	// @InjectCfg key="api.products.max-items", default=100
+	// @InjectCfgValue key="api.products.max-items", default=100
 	MaxItems int
 
 	// Internal cache (initialized in Init())

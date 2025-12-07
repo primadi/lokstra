@@ -12,19 +12,19 @@ import (
 
 // @Service name="email-service"
 type EmailService struct {
-	// @InjectCfg key="smtp.host"
+	// @InjectCfgValue key="smtp.host"
 	SMTPHost string
 
-	// @InjectCfg key="smtp.port", default=587
+	// @InjectCfgValue key="smtp.port", default=587
 	SMTPPort int
 
-	// @InjectCfg key="smtp.username"
+	// @InjectCfgValue key="smtp.username"
 	SMTPUsername string
 
-	// @InjectCfg key="smtp.password"
+	// @InjectCfgValue key="smtp.password"
 	SMTPPassword string
 
-	// @InjectCfg key="email.from", default="noreply@example.com"
+	// @InjectCfgValue key="email.from", default="noreply@example.com"
 	FromEmail string
 }
 
@@ -43,13 +43,13 @@ type BackgroundJobService struct {
 	// @Inject "email-service"
 	EmailService *EmailService
 
-	// @InjectCfg key="jobs.max-workers", default=10
+	// @InjectCfgValue key="jobs.max-workers", default=10
 	MaxWorkers int
 
-	// @InjectCfg key="jobs.retry-limit", default=3
+	// @InjectCfgValue key="jobs.retry-limit", default=3
 	RetryLimit int
 
-	// @InjectCfg key="jobs.retry-delay", default="5s"
+	// @InjectCfgValue key="jobs.retry-delay", default="5s"
 	RetryDelay time.Duration
 }
 
@@ -70,10 +70,10 @@ type AdminAPIService struct {
 	// @Inject service="email-service"
 	EmailService *EmailService
 
-	// @InjectCfg key="admin.allow-job-restart", default=true
+	// @InjectCfgValue key="admin.allow-job-restart", default=true
 	AllowJobRestart bool
 
-	// @InjectCfg key="admin.max-jobs-per-page", default=50
+	// @InjectCfgValue key="admin.max-jobs-per-page", default=50
 	MaxJobsPerPage int
 }
 

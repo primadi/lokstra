@@ -91,16 +91,16 @@ func RegisterAuthService() {
 }
 ```
 
-### 3. Configuration Injection with @InjectCfg
+### 3. Configuration Injection with @InjectCfgValue
 
 **Basic config:**
 ```go
 // @Service name="auth-service"
 type AuthService struct {
-    // @InjectCfg "auth.jwt-secret"
+    // @InjectCfgValue "auth.jwt-secret"
     JwtSecret string
     
-    // @InjectCfg key="auth.token-expiry"
+    // @InjectCfgValue key="auth.token-expiry"
     TokenExpiry time.Duration
 }
 ```
@@ -109,13 +109,13 @@ type AuthService struct {
 ```go
 // @Service name="email-service"
 type EmailService struct {
-    // @InjectCfg key="smtp.host", default="localhost"
+    // @InjectCfgValue key="smtp.host", default="localhost"
     SMTPHost string
     
-    // @InjectCfg key="smtp.port", default="587"
+    // @InjectCfgValue key="smtp.port", default="587"
     SMTPPort int
     
-    // @InjectCfg key="smtp.enabled", default="true"
+    // @InjectCfgValue key="smtp.enabled", default="true"
     Enabled bool
 }
 ```
@@ -163,17 +163,17 @@ type AuthService struct {
     Cache domain.CacheService
     
     // Required config (no default)
-    // @InjectCfg "auth.jwt-secret"
+    // @InjectCfgValue "auth.jwt-secret"
     JwtSecret string
     
     // Config with defaults
-    // @InjectCfg key="auth.token-expiry", default="24h"
+    // @InjectCfgValue key="auth.token-expiry", default="24h"
     TokenExpiry time.Duration
     
-    // @InjectCfg key="auth.max-attempts", default="5"
+    // @InjectCfgValue key="auth.max-attempts", default="5"
     MaxAttempts int
     
-    // @InjectCfg key="auth.debug-mode", default="false"
+    // @InjectCfgValue key="auth.debug-mode", default="false"
     DebugMode bool
 }
 
@@ -248,7 +248,7 @@ func init() {
 // Auto-generated from annotations:
 //   - @Service name="auth-service"
 //   - @Inject annotations
-//   - @InjectCfg annotations
+//   - @InjectCfgValue annotations
 func RegisterAuthService() {
     lokstra_registry.RegisterLazyService("auth-service", func(deps map[string]any, cfg map[string]any) any {
         return &AuthService{
@@ -320,10 +320,10 @@ type PaymentProcessor struct {
 ```go
 // @Service name="sms-service"
 type SMSService struct {
-    // @InjectCfg key="sms.api-key"
+    // @InjectCfgValue key="sms.api-key"
     APIKey string
     
-    // @InjectCfg key="sms.endpoint", default="https://api.sms.com"
+    // @InjectCfgValue key="sms.endpoint", default="https://api.sms.com"
     Endpoint string
 }
 ```
@@ -372,13 +372,13 @@ func (s *UserService) GetUser(id string) (*User, error) {
 ```go
 // @Service name="config-service"
 type ConfigService struct {
-    // @InjectCfg key="server.port", default="8080"
+    // @InjectCfgValue key="server.port", default="8080"
     Port int  // Auto-uses GetConfigInt
     
-    // @InjectCfg key="cache.ttl", default="5m"
+    // @InjectCfgValue key="cache.ttl", default="5m"
     CacheTTL time.Duration  // Auto-uses GetConfigDuration
     
-    // @InjectCfg key="debug", default="false"
+    // @InjectCfgValue key="debug", default="false"
     Debug bool  // Auto-uses GetConfigBool
 }
 ```
@@ -389,7 +389,7 @@ type ConfigService struct {
 |---------|----------|----------------|
 | HTTP Routes | ❌ No | ✅ Yes (@Route) |
 | Dependency Injection | ✅ @Inject | ✅ @Inject |
-| Config Injection | ✅ @InjectCfg | ✅ @InjectCfg |
+| Config Injection | ✅ @InjectCfgValue | ✅ @InjectCfgValue |
 | Optional Dependencies | ✅ Yes | ✅ Yes |
 | Use Case | Business logic, utilities | HTTP controllers |
 | Generated Code | `RegisterLazyService` | `RegisterRouterServiceType` |
@@ -421,5 +421,5 @@ go run . --generate-only
 
 - [@RouterService](05-router-service-annotation.md) - For HTTP endpoints
 - [@Inject](07-inject-annotation.md) - Dependency injection details
-- [@InjectCfg](08-inject-cfg-annotation.md) - Configuration injection
+- [@InjectCfgValue](08-inject-cfg-annotation.md) - Configuration injection
 - [Service Registry](09-service-registry.md) - Manual service registration

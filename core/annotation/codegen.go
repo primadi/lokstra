@@ -278,7 +278,7 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 			return err
 		}
 
-		// Find @InjectCfg annotations for config dependencies
+		// Find @InjectCfgValue annotations for config dependencies
 		if err := extractConfigDependencies(file, service); err != nil {
 			return err
 		}
@@ -569,8 +569,10 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		}
 
 		// Supported formats:
-		// @Inject "user-repository"
-		// @Inject service="user-repository"
+		// @Inject "user-repository"              - Direct service injection
+		// @Inject service="user-repository"      - Direct service injection (named param)
+		// @Inject "cfg:store.implementation"     - Service name from config
+		// @Inject service="cfg:store.implementation" - Service name from config (named param)
 		args, err := ann.ReadArgs("service")
 		if err != nil {
 			return fmt.Errorf("@Inject on line %d: %w", ann.Line, err)
@@ -585,10 +587,25 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 			// ann.TargetName is field name
 			fieldType := fieldTypes[ann.TargetName]
 
-			service.Dependencies[serviceName] = &DependencyInfo{
-				ServiceName: serviceName,
-				FieldName:   ann.TargetName,
-				FieldType:   fieldType,
+			// Check if this is config-based injection (cfg: prefix)
+			if strings.HasPrefix(serviceName, "cfg:") {
+				configKey := strings.TrimPrefix(serviceName, "cfg:")
+				service.Dependencies[configKey] = &DependencyInfo{
+					ServiceName:   "", // Will be resolved from config at runtime
+					FieldName:     ann.TargetName,
+					FieldType:     fieldType,
+					IsConfigBased: true,
+					ConfigKey:     configKey,
+				}
+			} else {
+				// Direct service injection (existing behavior)
+				service.Dependencies[serviceName] = &DependencyInfo{
+					ServiceName:   serviceName,
+					FieldName:     ann.TargetName,
+					FieldType:     fieldType,
+					IsConfigBased: false,
+					ConfigKey:     "",
+				}
 			}
 		}
 	}
@@ -650,7 +667,7 @@ func checkInitMethod(file *FileToProcess, service *ServiceGeneration) {
 	}
 }
 
-// extractConfigDependencies finds all @InjectCfg annotations and field info
+// extractConfigDependencies finds all @InjectCfgValue annotations and field info
 func extractConfigDependencies(file *FileToProcess, service *ServiceGeneration) error {
 	// Parse file to get field types
 	fset := token.NewFileSet()
@@ -695,9 +712,9 @@ func extractConfigDependencies(file *FileToProcess, service *ServiceGeneration) 
 		}
 	}
 
-	// Now process @InjectCfg annotations - ONLY for fields belonging to THIS struct
+	// Now process @InjectCfgValue annotations - ONLY for fields belonging to THIS struct
 	for _, ann := range file.Annotations {
-		if ann.Name != "InjectCfg" && ann.Name != "injectcfg" {
+		if ann.Name != "InjectCfgValue" && ann.Name != "injectcfgvalue" {
 			continue
 		}
 
@@ -707,13 +724,13 @@ func extractConfigDependencies(file *FileToProcess, service *ServiceGeneration) 
 		}
 
 		// Supported formats:
-		// @InjectCfg "app.jwt-secret"
-		// @InjectCfg key="app.jwt-secret"
-		// @InjectCfg key="app.jwt-secret", default="secret"
-		// @InjectCfg "app.timeout", "30"  (positional: key, default)
+		// @InjectCfgValue "app.jwt-secret"
+		// @InjectCfgValue key="app.jwt-secret"
+		// @InjectCfgValue key="app.jwt-secret", default="secret"
+		// @InjectCfgValue "app.timeout", "30"  (positional: key, default)
 		args, err := ann.ReadArgs("key", "default")
 		if err != nil {
-			return fmt.Errorf("@InjectCfg on line %d: %w", ann.Line, err)
+			return fmt.Errorf("@InjectCfgValue on line %d: %w", ann.Line, err)
 		}
 
 		var configKey string
@@ -814,12 +831,12 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	// Collect used packages from method signatures, dependencies, and struct name
 	usedPackages := make(map[string]bool)
 	for _, service := range ctx.GeneratedCode.Services {
-		// From method signatures
+		// From method signatures - ONLY from actual method parameters/returns
 		for _, method := range service.Methods {
 			collectPackagesFromType(method.ParamType, usedPackages)
 			collectPackagesFromType(method.ReturnType, usedPackages)
 		}
-		// From dependencies
+		// From dependencies - ONLY injected fields
 		for _, dep := range service.Dependencies {
 			collectPackagesFromType(dep.FieldType, usedPackages)
 		}
@@ -829,6 +846,8 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 				usedPackages["time"] = true
 			}
 		}
+		// From struct name itself (e.g., if service struct is domain.UserService)
+		collectPackagesFromType(service.StructName, usedPackages)
 	}
 
 	// Also collect packages from preserved sections (unchanged files)
@@ -854,6 +873,7 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 				continue
 			}
 			// Only include if package is actually used in generated code
+			// This filters out imports from source file that are not used in handlers/dependencies
 			if usedPackages[alias] {
 				// Use path as key to deduplicate, prefer shorter alias
 				if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
@@ -941,15 +961,20 @@ func collectPackagesFromType(typeStr string, packages map[string]bool) {
 		return
 	}
 
-	// Handle generics first: Type[Param1, Param2]
-	if start := strings.Index(typeStr, "["); start != -1 {
-		if end := strings.LastIndex(typeStr, "]"); end > start {
+	// Remove pointer and array prefixes FIRST before checking for generics
+	// This handles: []*domain.User, *[]domain.User, etc.
+	cleanType := strings.TrimLeft(typeStr, "*[]")
+
+	// Handle generics: Type[Param1, Param2]
+	// Generic brackets appear AFTER the type name, not at the start
+	if start := strings.Index(cleanType, "["); start != -1 {
+		if end := strings.LastIndex(cleanType, "]"); end > start {
 			// Process the base type (before '[')
-			baseType := typeStr[:start]
+			baseType := cleanType[:start]
 			collectPackagesFromType(baseType, packages)
 
 			// Process inner type parameters
-			innerTypes := typeStr[start+1 : end]
+			innerTypes := cleanType[start+1 : end]
 			// Split by comma for multiple type params
 			for _, inner := range strings.Split(innerTypes, ",") {
 				collectPackagesFromType(strings.TrimSpace(inner), packages)
@@ -958,12 +983,9 @@ func collectPackagesFromType(typeStr string, packages map[string]bool) {
 		}
 	}
 
-	// Remove pointer and array prefixes
-	typeStr = strings.TrimLeft(typeStr, "*[]")
-
 	// Extract package prefix (everything before last dot)
-	if idx := strings.LastIndex(typeStr, "."); idx != -1 {
-		pkg := typeStr[:idx]
+	if idx := strings.LastIndex(cleanType, "."); idx != -1 {
+		pkg := cleanType[:idx]
 		// Handle nested packages (e.g., "github.com/user/repo.Type" -> "repo")
 		// Only take the last segment as the alias
 		if lastSlash := strings.LastIndex(pkg, "/"); lastSlash != -1 {
@@ -1139,7 +1161,7 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 	},
 }).Parse(`// AUTO-GENERATED CODE - DO NOT EDIT
 // Generated by lokstra-annotation from annotations in this folder
-// Annotations: @RouterService, @Service, @Inject, @InjectCfg, @Route
+// Annotations: @RouterService, @Service, @Inject, @InjectCfgValue, @Route
 
 package {{.Package}}
 
@@ -1174,14 +1196,18 @@ func init() {
 //   - @Inject annotations
 {{- end}}
 {{- if $service.ConfigDependencies}}
-//   - @InjectCfg annotations
+//   - @InjectCfgValue annotations
 {{- end}}
 func Register{{$service.StructName}}() {
 	lokstra_registry.RegisterLazyService({{quote $service.ServiceName}}, func(deps map[string]any, cfg map[string]any) any {
 		svc := &{{$service.StructName}}{
 {{- range $key := sortedKeys $service.Dependencies }}
 {{- $dep := index $service.Dependencies $key }}
+{{- if $dep.IsConfigBased }}
+			{{$dep.FieldName}}: deps[cfg[{{quote $dep.ConfigKey}}].(string)].({{$dep.FieldType}}),
+{{- else }}
 			{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
+{{- end }}
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
@@ -1200,7 +1226,13 @@ func Register{{$service.StructName}}() {
 	}, map[string]any{
 {{- if or $service.Dependencies $service.ConfigDependencies }}
 {{- if $service.Dependencies }}
-		"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{quote $dep.ServiceName}}, {{end}}},
+		"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{if not $dep.IsConfigBased}}{{quote $dep.ServiceName}}, {{end}}{{end}}},
+{{- end }}
+{{- range $key := sortedKeys $service.Dependencies }}
+{{- $dep := index $service.Dependencies $key }}
+{{- if $dep.IsConfigBased }}
+		{{quote $dep.ConfigKey}}: lokstra_registry.GetConfig({{quote $dep.ConfigKey}}, ""),
+{{- end }}
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
@@ -1246,7 +1278,11 @@ func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) 
 	svc := &{{$service.StructName}}{
 {{- range $key := sortedKeys $service.Dependencies }}
 {{- $dep := index $service.Dependencies $key }}
+{{- if $dep.IsConfigBased }}
+		{{$dep.FieldName}}: deps[config[{{quote $dep.ConfigKey}}].(string)].({{$dep.FieldType}}),
+{{- else }}
 		{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
+{{- end }}
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
@@ -1281,7 +1317,7 @@ func {{$service.RemoteTypeName}}Factory(deps, config map[string]any) any {
 //   - @Inject annotations
 {{- end}}
 {{- if $service.ConfigDependencies}}
-//   - @InjectCfg annotations
+//   - @InjectCfgValue annotations
 {{- end}}
 //   - @Route annotations on methods
 func Register{{$service.StructName}}() {
@@ -1312,7 +1348,13 @@ func Register{{$service.StructName}}() {
 		"{{$service.ServiceName}}-factory",
 		map[string]any{
 {{- if $service.Dependencies }}
-			"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{quote $dep.ServiceName}}, {{end}}},
+			"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{if not $dep.IsConfigBased}}{{quote $dep.ServiceName}}, {{end}}{{end}}},
+{{- end }}
+{{- range $key := sortedKeys $service.Dependencies }}
+{{- $dep := index $service.Dependencies $key }}
+{{- if $dep.IsConfigBased }}
+			{{quote $dep.ConfigKey}}: lokstra_registry.GetConfig({{quote $dep.ConfigKey}}, ""),
+{{- end }}
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
