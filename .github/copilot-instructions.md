@@ -51,11 +51,15 @@ func main() {
 ```go
 // @RouterService name="user-service", prefix="/api/users"
 type UserService struct {
-    // @Inject "user-repository"
+    // @Inject "user-repository"               - Direct service injection
     UserRepo UserRepository
-}
 
-// @Route "GET /{id}"
+    // @Inject "cfg:store.implementation"      - Service from config (NEW!)
+    Store Store  // Injected service name from config: store.implementation = "postgres-store"
+
+    // @InjectCfgValue "app.name"              - Config value injection
+    AppName string
+}// @Route "GET /{id}"
 func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
     return s.UserRepo.GetByID(p.ID)
 }
@@ -89,7 +93,92 @@ go run . --generate-only # Force rebuild all
 
 **Per-route middleware:** Add `middlewares=["mw1", "mw2"]` to `@Route`
 
-### 3. Manual Registration (Advanced/Infrastructure Services)
+### 3. Interface Injection Pattern (Config-Based Selection)
+
+**Use case:** Multiple implementations of an interface, selectable via config.
+
+**Domain interface:**
+
+```go
+// domain/store.go
+type Store interface {
+    GetUser(id string) (*User, error)
+    SaveUser(user *User) error
+}
+```
+
+**Implementations with @Service:**
+
+```go
+// infrastructure/postgres_store.go
+// @Service "postgres-store"
+type PostgresStore struct {
+    // @Inject "db-pool"
+    DB *sql.DB
+}
+
+var _ Store = (*PostgresStore)(nil)
+
+func (s *PostgresStore) GetUser(id string) (*User, error) { /* ... */ }
+
+// infrastructure/mysql_store.go
+// @Service "mysql-store"
+type MySQLStore struct {
+    // @Inject "db-pool"
+    DB *sql.DB
+}
+
+var _ Store = (*MySQLStore)(nil)
+
+func (s *MySQLStore) GetUser(id string) (*User, error) { /* ... */ }
+```
+
+**Business service using config-based injection:**
+
+```go
+// application/user_service.go
+// @RouterService name="user-service", prefix="/api/users"
+type UserService struct {
+    // @Inject "cfg:store.implementation"
+    Store Store  // Actual service injected based on config!
+}
+
+// @Route "GET /{id}"
+func (s *UserService) GetUser(id string) (*User, error) {
+    return s.Store.GetUser(id)
+}
+```
+
+**config.yaml:**
+
+```yaml
+configs:
+  store:
+    implementation: "postgres-store" # Switch to "mysql-store" here!
+
+service-definitions:
+  postgres-store:
+    type: postgres-store
+
+  mysql-store:
+    type: mysql-store
+
+deployments:
+  development:
+    servers:
+      api:
+        addr: ":8080"
+        published-services: [user-service]
+```
+
+**Benefits:**
+
+- Switch implementation by changing ONE line in config
+- No code changes needed
+- Type-safe (compile-time interface checking)
+- Perfect for: database drivers, cache providers, storage backends
+
+### 4. Manual Registration (Advanced/Infrastructure Services)
 
 **For infrastructure services or custom factories:**
 
@@ -135,7 +224,7 @@ deployments:
         published-services: [user-service]
 ```
 
-### 4. Handler Signatures (29+ supported)
+### 5. Handler Signatures (29+ supported)
 
 ```go
 // Simple
@@ -155,16 +244,7 @@ func(ctx *request.Context, id string, params *UpdateParams) error {
 }
 ```
 
-### 4. Domain Models
-
-```go
-type CreateUserParams struct {
-    Name  string `json:"name" validate:"required,min=3,max=50"`
-    Email string `json:"email" validate:"required,email"`
-}
-```
-
-### 5. Domain Models
+### 6. Domain Models
 
 ```go
 type CreateUserParams struct {

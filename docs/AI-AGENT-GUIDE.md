@@ -880,16 +880,16 @@ type AuthService struct {
     Cache domain.CacheService
     
     // Configuration injection (type-safe)
-    // @InjectCfg "auth.jwt-secret"
+    // @InjectCfgValue "auth.jwt-secret"
     JwtSecret string
     
-    // @InjectCfg key="auth.token-expiry", default="24h"
+    // @InjectCfgValue key="auth.token-expiry", default="24h"
     TokenExpiry time.Duration
     
-    // @InjectCfg key="auth.max-attempts", default="5"
+    // @InjectCfgValue key="auth.max-attempts", default="5"
     MaxAttempts int
     
-    // @InjectCfg key="auth.debug-mode", default="false"
+    // @InjectCfgValue key="auth.debug-mode", default="false"
     DebugMode bool
 }
 
@@ -955,7 +955,7 @@ go run . --generate-only
 | `@RouterService` | HTTP service with routes | `@RouterService name="user-service", prefix="/api"` |
 | `@Service` | Pure service (no HTTP) | `@Service name="auth-service"` |
 | `@Inject` | Dependency injection | `@Inject "user-repository"` or `@Inject service="cache", optional=true` |
-| `@InjectCfg` | Config injection | `@InjectCfg "jwt-secret"` or `@InjectCfg key="timeout", default="30s"` |
+| `@InjectCfgValue` | Config injection | `@InjectCfgValue "jwt-secret"` or `@InjectCfgValue key="timeout", default="30s"` |
 | `@Route` | HTTP route mapping | `@Route "GET /users/{id}"` |
 
 **@RouterService Parameters:**
@@ -971,7 +971,7 @@ go run . --generate-only
 - `service`: Service name (required, positional or named)
 - `optional`: Boolean, default `false` - set to `true` for optional dependencies
 
-**@InjectCfg Parameters:**
+**@InjectCfgValue Parameters:**
 - `key`: Config key (required, positional or named)
 - `default`: Default value (optional)
 - Type auto-detected: `string`, `int`, `bool`, `float64`, `time.Duration`

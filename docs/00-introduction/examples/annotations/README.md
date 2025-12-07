@@ -10,16 +10,16 @@ Pure services without HTTP endpoints, demonstrating:
 
 **AuthService:**
 - ✅ Required dependencies: `@Inject "user-repository"`, `@Inject "cache-service"`
-- ✅ String config: `@InjectCfg "auth.jwt-secret"`
-- ✅ Duration config: `@InjectCfg key="auth.token-expiry", default="24h"`
-- ✅ Int config: `@InjectCfg key="auth.max-attempts", default=5`
-- ✅ Bool config: `@InjectCfg key="auth.debug-mode", default=false`
+- ✅ String config: `@InjectCfgValue "auth.jwt-secret"`
+- ✅ Duration config: `@InjectCfgValue key="auth.token-expiry", default="24h"`
+- ✅ Int config: `@InjectCfgValue key="auth.max-attempts", default=5`
+- ✅ Bool config: `@InjectCfgValue key="auth.debug-mode", default=false`
 
 **NotificationService:**
-- ✅ String config: `@InjectCfg "smtp.host"`
-- ✅ Int config with default: `@InjectCfg key="smtp.port", default=587`
-- ✅ String config with default: `@InjectCfg key="smtp.from-email", default="noreply@example.com"`
-- ✅ Bool config with default: `@InjectCfg key="notification.enabled", default=true`
+- ✅ String config: `@InjectCfgValue "smtp.host"`
+- ✅ Int config with default: `@InjectCfgValue key="smtp.port", default=587`
+- ✅ String config with default: `@InjectCfgValue key="smtp.from-email", default="noreply@example.com"`
+- ✅ Bool config with default: `@InjectCfgValue key="notification.enabled", default=true`
 
 ### 2. `router_service_with_config_example.go` - @RouterService Example
 
@@ -37,7 +37,7 @@ HTTP service with routes, demonstrating:
 Service with post-initialization setup:
 
 **CacheManager:**
-- ✅ Config injection: `@InjectCfg key="cache.max-size", default=1000`
+- ✅ Config injection: `@InjectCfgValue key="cache.max-size", default=1000`
 - ✅ `Init() error` method called after dependency injection
 - ✅ Internal state initialization (maps, slices)
 - ✅ Configuration validation
@@ -49,7 +49,7 @@ HTTP service with initialization:
 
 **ProductAPIService:**
 - ✅ Dependency injection: `@Inject "product-repository"`
-- ✅ Config injection: `@InjectCfg key="api.products.max-items", default=100`
+- ✅ Config injection: `@InjectCfgValue key="api.products.max-items", default=100`
 - ✅ `Init() error` method for cache setup
 - ✅ HTTP routes with internal state
 
@@ -203,20 +203,20 @@ Field ServiceType
 - **All dependencies are mandatory** - framework panics if not found
 - Generates: `deps["service-name"].(ServiceType)`
 
-### @InjectCfg
+### @InjectCfgValue
 ```go
 // Required config
-// @InjectCfg "config.key"
+// @InjectCfgValue "config.key"
 Field string
 
 // With default (unquoted for non-string types)
-// @InjectCfg key="config.key", default=100
+// @InjectCfgValue key="config.key", default=100
 Field int
 
-// @InjectCfg key="config.key", default=true
+// @InjectCfgValue key="config.key", default=true
 Field bool
 
-// @InjectCfg key="config.key", default="24h"
+// @InjectCfgValue key="config.key", default="24h"
 Field time.Duration
 ```
 - Injects configuration from `config.yaml`
@@ -241,7 +241,7 @@ func (s *Service) Method(p *Params) (*Result, error)
 ```go
 // @Service name="my-service"
 type MyService struct {
-    // @InjectCfg key="max-size", default=100
+    // @InjectCfgValue key="max-size", default=100
     MaxSize int
     
     // Internal state (not injected)
@@ -317,7 +317,7 @@ func (s *MyService) Init() error {
 ```go
 // @Service name="email-service"
 type EmailService struct {
-    // @InjectCfg "smtp.host"
+    // @InjectCfgValue "smtp.host"
     SMTPHost string
 }
 ```
@@ -329,7 +329,7 @@ type AuthService struct {
     // @Inject "user-repository"
     UserRepo UserRepository
     
-    // @InjectCfg "auth.jwt-secret"
+    // @InjectCfgValue "auth.jwt-secret"
     JwtSecret string
 }
 ```
@@ -338,7 +338,7 @@ type AuthService struct {
 ```go
 // @Service name="cache-manager"
 type CacheManager struct {
-    // @InjectCfg key="cache.max-size", default=1000
+    // @InjectCfgValue key="cache.max-size", default=1000
     MaxSize int
     
     cache map[string]any
@@ -477,14 +477,14 @@ Field ServiceType  // nil if not found
 - Injects service dependencies
 - Works with both `@Service` and `@RouterService`
 
-### @InjectCfg
+### @InjectCfgValue
 ```go
 // Required
-// @InjectCfg "config.key"
+// @InjectCfgValue "config.key"
 Field string
 
 // With default
-// @InjectCfg key="config.key", default="value"
+// @InjectCfgValue key="config.key", default="value"
 Field string
 ```
 - Injects configuration from `config.yaml`

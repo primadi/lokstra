@@ -406,5 +406,5 @@ type B struct {
 
 - [@Service](06-service-annotation.md) - Service registration
 - [@RouterService](05-router-service-annotation.md) - HTTP services
-- [@InjectCfg](08-inject-cfg-annotation.md) - Configuration injection
+- [@InjectCfgValue](08-inject-cfg-annotation.md) - Configuration injection
 - [Service Registry](09-service-registry.md) - Manual service registration

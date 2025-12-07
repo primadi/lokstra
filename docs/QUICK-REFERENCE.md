@@ -178,13 +178,13 @@ type AuthService struct {
     Cache CacheService
     
     // Configuration injection
-    // @InjectCfg "auth.jwt-secret"
+    // @InjectCfgValue "auth.jwt-secret"
     JwtSecret string
     
-    // @InjectCfg key="auth.token-expiry", default="24h"
+    // @InjectCfgValue key="auth.token-expiry", default="24h"
     TokenExpiry time.Duration
     
-    // @InjectCfg key="auth.max-attempts", default="5"
+    // @InjectCfgValue key="auth.max-attempts", default="5"
     MaxAttempts int
 }
 
@@ -215,7 +215,7 @@ configs:
 
 **@Service supports:**
 - `@Inject` - Service dependencies (required or optional)
-- `@InjectCfg` - Configuration injection (auto-typed)
+- `@InjectCfgValue` - Configuration injection (auto-typed)
 - No HTTP routes (use `@RouterService` for that)
 
 **Generated code:**
@@ -241,13 +241,13 @@ func RegisterAuthService() {
 | `@Service` | Pure service (no HTTP) | Above struct |
 | `@Route` | HTTP endpoint | Above method (RouterService only) |
 | `@Inject` | Dependency injection | Above field |
-| `@InjectCfg` | Config injection | Above field |
+| `@InjectCfgValue` | Config injection | Above field |
 
 **@Inject parameters:**
 - `service` (positional or named) - service name
 - `optional` - `true`/`false` (default: `false`)
 
-**@InjectCfg parameters:**
+**@InjectCfgValue parameters:**
 - `key` (positional or named) - config key
 - `default` - default value (optional)
 - Type auto-detected: `string`, `int`, `bool`, `float64`, `time.Duration`

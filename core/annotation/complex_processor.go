@@ -317,7 +317,7 @@ type ServiceGeneration struct {
 	RouteMiddlewares   map[string][]string         // methodName -> []middleware (per-route middleware)
 	Methods            map[string]*MethodSignature // methodName -> signature
 	Dependencies       map[string]*DependencyInfo  // serviceName -> field info
-	ConfigDependencies map[string]*ConfigInfo      // configKey -> config field info (for @InjectCfg)
+	ConfigDependencies map[string]*ConfigInfo      // configKey -> config field info (for @InjectCfgValue)
 	Imports            map[string]string           // alias -> import path (e.g., "domain" -> ".../.../domain")
 	StructName         string
 	InterfaceName      string
@@ -329,12 +329,14 @@ type ServiceGeneration struct {
 
 // DependencyInfo holds field injection information
 type DependencyInfo struct {
-	ServiceName string // e.g., "user-repository"
-	FieldName   string // e.g., "UserRepo"
-	FieldType   string // e.g., "domain.UserRepository" (interface type)
+	ServiceName   string // e.g., "user-repository" (direct injection)
+	FieldName     string // e.g., "UserRepo"
+	FieldType     string // e.g., "domain.UserRepository" (interface type)
+	IsConfigBased bool   // true if service name comes from config (cfg: prefix)
+	ConfigKey     string // e.g., "store.implementation" (only if IsConfigBased=true)
 }
 
-// ConfigInfo holds config injection information for @InjectCfg
+// ConfigInfo holds config injection information for @InjectCfgValue
 type ConfigInfo struct {
 	ConfigKey    string // e.g., "auth.jwt-secret"
 	FieldName    string // e.g., "jwtSecret"
@@ -722,8 +724,18 @@ func generateImportFile(startPath string, packages []string) error {
 	}
 	buf.WriteString(")\n")
 
-	// Write file
-	if err := os.WriteFile(importFilePath, buf.Bytes(), 0644); err != nil {
+	newContent := buf.Bytes()
+
+	// Check if file exists and content is identical (lightweight cache)
+	if existingContent, err := os.ReadFile(importFilePath); err == nil {
+		if bytes.Equal(existingContent, newContent) {
+			// Content identical - skip write to avoid unnecessary file modification
+			return nil
+		}
+	}
+
+	// Write file only if content changed
+	if err := os.WriteFile(importFilePath, newContent, 0644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", importFilePath, err)
 	}
 
