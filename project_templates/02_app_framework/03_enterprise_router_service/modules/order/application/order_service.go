@@ -9,7 +9,7 @@ import (
 
 // @RouterService name="order-service", prefix="/api", middlewares=["recovery", "request-logger"]
 type OrderServiceImpl struct {
-	// @Inject "order-repository"
+	// @Inject "@store.order-repository"
 	OrderRepo domain.OrderRepository
 	// @Inject "user-service"
 	UserService userDomain.UserService

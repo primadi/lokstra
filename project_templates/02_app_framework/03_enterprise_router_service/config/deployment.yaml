@@ -2,7 +2,14 @@
 
 configs:
   server: ${SERVER}
+  store:
+    order-repository: order-repository
 
+named-db-pools:
+  global-db:
+    dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
+    schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
+    
 deployments:
   development:
     servers:

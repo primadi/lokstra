@@ -571,8 +571,8 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		// Supported formats:
 		// @Inject "user-repository"              - Direct service injection
 		// @Inject service="user-repository"      - Direct service injection (named param)
-		// @Inject "cfg:store.implementation"     - Service name from config
-		// @Inject service="cfg:store.implementation" - Service name from config (named param)
+		// @Inject "@store.implementation"     - Service name from config
+		// @Inject service="@store.implementation" - Service name from config (named param)
 		args, err := ann.ReadArgs("service")
 		if err != nil {
 			return fmt.Errorf("@Inject on line %d: %w", ann.Line, err)
@@ -587,9 +587,9 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 			// ann.TargetName is field name
 			fieldType := fieldTypes[ann.TargetName]
 
-			// Check if this is config-based injection (cfg: prefix)
-			if strings.HasPrefix(serviceName, "cfg:") {
-				configKey := strings.TrimPrefix(serviceName, "cfg:")
+			// Check if this is config-based injection (@ prefix)
+			if strings.HasPrefix(serviceName, "@") {
+				configKey := strings.TrimPrefix(serviceName, "@")
 				service.Dependencies[configKey] = &DependencyInfo{
 					ServiceName:   "", // Will be resolved from config at runtime
 					FieldName:     ann.TargetName,
@@ -1207,7 +1207,7 @@ func Register{{$service.StructName}}() {
 {{- range $key := sortedKeys $service.Dependencies }}
 {{- $dep := index $service.Dependencies $key }}
 {{- if $dep.IsConfigBased }}
-			{{$dep.FieldName}}: deps[cfg[{{quote $dep.ConfigKey}}].(string)].({{$dep.FieldType}}),
+			{{$dep.FieldName}}: deps["@{{$dep.ConfigKey}}"].({{$dep.FieldType}}),
 {{- else }}
 			{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
 {{- end }}
@@ -1229,13 +1229,7 @@ func Register{{$service.StructName}}() {
 	}, map[string]any{
 {{- if or $service.Dependencies $service.ConfigDependencies }}
 {{- if $service.Dependencies }}
-		"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{if not $dep.IsConfigBased}}{{quote $dep.ServiceName}}, {{end}}{{end}}},
-{{- end }}
-{{- range $key := sortedKeys $service.Dependencies }}
-{{- $dep := index $service.Dependencies $key }}
-{{- if $dep.IsConfigBased }}
-		{{quote $dep.ConfigKey}}: lokstra_registry.GetConfig({{quote $dep.ConfigKey}}, ""),
-{{- end }}
+		"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{if $dep.IsConfigBased}}"@{{$dep.ConfigKey}}", {{else}}{{quote $dep.ServiceName}}, {{end}}{{end}}},
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
@@ -1282,7 +1276,7 @@ func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) 
 {{- range $key := sortedKeys $service.Dependencies }}
 {{- $dep := index $service.Dependencies $key }}
 {{- if $dep.IsConfigBased }}
-		{{$dep.FieldName}}: deps[config[{{quote $dep.ConfigKey}}].(string)].({{$dep.FieldType}}),
+		{{$dep.FieldName}}: deps["@{{$dep.ConfigKey}}"].({{$dep.FieldType}}),
 {{- else }}
 		{{$dep.FieldName}}: deps[{{quote $dep.ServiceName}}].({{$dep.FieldType}}),
 {{- end }}
@@ -1351,17 +1345,13 @@ func Register{{$service.StructName}}() {
 		"{{$service.ServiceName}}-factory",
 		map[string]any{
 {{- if $service.Dependencies }}
-			"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{if not $dep.IsConfigBased}}{{quote $dep.ServiceName}}, {{end}}{{end}}},
+			"depends-on": []string{ {{range $key := sortedKeys $service.Dependencies}}{{$dep := index $service.Dependencies $key}}{{if $dep.IsConfigBased}}"@{{$dep.ConfigKey}}", {{else}}{{quote $dep.ServiceName}}, {{end}}{{end}}},
 {{- end }}
-{{- range $key := sortedKeys $service.Dependencies }}
-{{- $dep := index $service.Dependencies $key }}
-{{- if $dep.IsConfigBased }}
-			{{quote $dep.ConfigKey}}: lokstra_registry.GetConfig({{quote $dep.ConfigKey}}, ""),
-{{- end }}
-{{- end }}
+{{- if $service.ConfigDependencies }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
 			{{quote $cfg.ConfigKey}}: lokstra_registry.GetConfig({{quote $cfg.ConfigKey}}, {{getDefaultValue $cfg.FieldType $cfg.DefaultValue}}),
+{{- end }}
 {{- end }}
 		})
 }
