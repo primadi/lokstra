@@ -71,3 +71,26 @@ func AppendSortedOptimize[T any](slice []T, value T, less func(a, b T) bool) []T
 
 	return slice
 }
+
+// create a new slice by appending value(s) to existing slice
+func NewSliceAndAppend[T any](slice []T, value ...T) []T {
+	newSlice := make([]T, len(slice)+len(value))
+	copy(newSlice, slice)
+	copy(newSlice[len(slice):], value)
+	return newSlice
+}
+
+// create a new slice by concatenating multiple slices
+func SliceConcat[T any](slices ...[]T) []T {
+	total := 0
+	for _, s := range slices {
+		total += len(s)
+	}
+	result := make([]T, total)
+	off := 0
+	for _, s := range slices {
+		copy(result[off:], s)
+		off += len(s)
+	}
+	return result
+}
