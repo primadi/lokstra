@@ -549,6 +549,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			deps := make(map[string]string)
 			for _, depStr := range svc.DependsOn {
 				// Parse "paramName:serviceName" or just "serviceName"
+				// Note: serviceName can be "@config.key" for config-based resolution
 				parts := strings.SplitN(depStr, ":", 2)
 				if len(parts) == 2 {
 					deps[parts[0]] = parts[1]

@@ -855,6 +855,26 @@ func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, d
 	// Normalize factory using reflection-based normalizer
 	normFactory := normalizeServiceFactory(factory, name, "lazy service")
 
+	// If deps is nil OR empty, try to extract from config["depends-on"]
+	// This handles RegisterLazyService calls where deps=nil
+	if deps == nil && config != nil {
+		if depsRaw, ok := config["depends-on"]; ok {
+			deps = make(map[string]string)
+			switch depsArray := depsRaw.(type) {
+			case []string:
+				for _, serviceName := range depsArray {
+					deps[serviceName] = serviceName
+				}
+			case []any:
+				for _, d := range depsArray {
+					if serviceName, ok := d.(string); ok {
+						deps[serviceName] = serviceName
+					}
+				}
+			}
+		}
+	}
+
 	entry := &LazyServiceEntry{
 		Factory: normFactory,
 		Config:  config,
@@ -874,6 +894,25 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 
 // getServiceAnyWithStack is internal version with circular dependency detection
 func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []string) (any, bool) {
+	// Handle @ prefix - resolve actual service name from config
+	// Example: "@store.order-repository" reads config key "store.order-repository"
+	// and gets the actual service name to inject
+	if after, ok := strings.CutPrefix(name, "@"); ok {
+		configKey := after
+		configValue, ok := g.GetConfig(configKey)
+		if !ok {
+			return nil, false
+		}
+
+		actualServiceName, ok := configValue.(string)
+		if !ok || actualServiceName == "" {
+			return nil, false
+		}
+
+		// Recursively resolve the actual service (add to stack to detect circular deps)
+		return g.getServiceAnyWithStack(actualServiceName, append(resolutionStack, name))
+	}
+
 	// Check for circular dependency
 	for _, svcName := range resolutionStack {
 		if svcName == name {
@@ -936,13 +975,15 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 		var resolvedDeps map[string]any
 		if len(entry.Deps) > 0 {
 			resolvedDeps = make(map[string]any, len(entry.Deps))
-			for key, serviceName := range entry.Deps {
+			for factoryKey, serviceName := range entry.Deps {
 				// Recursively resolve dependency with circular detection
+				// @ prefix is handled automatically by getServiceAnyWithStack
 				depSvc, ok := g.getServiceAnyWithStack(serviceName, newStack)
 				if !ok {
-					panic(fmt.Sprintf("lazy service %s: dependency %s (service %s) not found", name, key, serviceName))
+					panic(fmt.Sprintf("lazy service %s: dependency %s not found", name, serviceName))
 				}
-				resolvedDeps[key] = depSvc
+				// Use factoryKey (may include @ prefix) as key for factory lookup
+				resolvedDeps[factoryKey] = depSvc
 			}
 		}
 

@@ -71,9 +71,9 @@ Expected generated code in zz_generated.lokstra.go:
 
 func UserServiceFactory(deps map[string]any, config map[string]any) any {
 	svc := &UserService{
-		// Config-based: reads config["store.implementation"] -> "postgres-store"
-		// Then injects deps["postgres-store"]
-		Store: deps[config["store.implementation"].(string)].(Store),
+		// Config-based: registry resolves config["store.implementation"] -> "postgres-store"
+		// Then auto-injects deps["cfg:store.implementation"] (already resolved!)
+		Store: deps["cfg:store.implementation"].(Store),
 
 		// Direct injection (as before)
 		Logger: deps["logger"].(any),
@@ -93,10 +93,10 @@ func RegisterUserService() {
 	lokstra_registry.RegisterLazyService("user-service",
 		"user-service-factory",
 		map[string]any{
-			// Only direct dependencies
-			"depends-on": []string{"logger"},
+			// Both direct and config-based dependencies in depends-on
+			"depends-on": []string{"cfg:store.implementation", "logger"},
 
-			// Config-based dependency resolved at runtime
+			// Config value that specifies which service to inject
 			"store.implementation": lokstra_registry.GetConfig("store.implementation", ""),
 
 			// Config values
