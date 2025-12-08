@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/primadi/lokstra/common/utils"
 )
 
 // ChiRouter wraps go-chi router to implement RouterEngine interface
@@ -99,7 +100,7 @@ func (c *ChiRouter) addToAllowMethods(path string, newMethods ...string) {
 	}
 
 	// Add new methods
-	allMethods := append(currentMethods, newMethods...)
+	allMethods := utils.NewSliceAndAppend(currentMethods, newMethods...)
 
 	// Remove duplicates and update
 	uniqueMethods := removeDuplicates(allMethods)

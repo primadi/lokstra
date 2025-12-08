@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/core/request"
@@ -917,7 +918,7 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 	for _, svcName := range resolutionStack {
 		if svcName == name {
 			// Build dependency chain for error message
-			chain := append(resolutionStack, name)
+			chain := utils.NewSliceAndAppend(resolutionStack, name)
 			panic(fmt.Sprintf("circular dependency detected: %s", strings.Join(chain, " → ")))
 		}
 	}
@@ -928,7 +929,7 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 	}
 
 	// Add to resolution stack
-	newStack := append(resolutionStack, name)
+	newStack := utils.NewSliceAndAppend(resolutionStack, name)
 
 	// Check lazy registry and create if needed
 	onceAny, hasOnce := g.lazyServiceOnce.Load(name)

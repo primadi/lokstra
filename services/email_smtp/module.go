@@ -49,9 +49,7 @@ func (e *emailSMTP) Send(ctx context.Context, message *serviceapi.EmailMessage) 
 	}
 
 	// Prepare recipients
-	recipients := append([]string{}, message.To...)
-	recipients = append(recipients, message.Cc...)
-	recipients = append(recipients, message.Bcc...)
+	recipients := utils.SliceConcat(message.To, message.Cc, message.Bcc)
 
 	if len(recipients) == 0 {
 		return fmt.Errorf("no recipients specified")
