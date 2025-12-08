@@ -831,10 +831,13 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	// Collect used packages from method signatures, dependencies, and struct name
 	usedPackages := make(map[string]bool)
 	for _, service := range ctx.GeneratedCode.Services {
-		// From method signatures - ONLY from actual method parameters/returns
-		for _, method := range service.Methods {
-			collectPackagesFromType(method.ParamType, usedPackages)
-			collectPackagesFromType(method.ReturnType, usedPackages)
+		// From method signatures - ONLY for @RouterService (not @Service)
+		// @Service doesn't generate proxy methods, so method signatures are not in generated code
+		if !service.IsService {
+			for _, method := range service.Methods {
+				collectPackagesFromType(method.ParamType, usedPackages)
+				collectPackagesFromType(method.ReturnType, usedPackages)
+			}
 		}
 		// From dependencies - ONLY injected fields
 		for _, dep := range service.Dependencies {
