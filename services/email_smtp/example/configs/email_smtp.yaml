@@ -17,18 +17,12 @@ service-definitions:
   email_smtp:
     type: email_smtp
     config:
-      host: ${@cfg:email_smtp.host}                      # Reference from configs!
+      host: ${@cfg:email_smtp.host}                       # Reference from configs!
       port: ${@cfg:email_smtp.port}
       username: ${@cfg:email_smtp.username}
       password: ${@cfg:email_smtp.password}
       from_email: ${@cfg:email_smtp.from_email}
       from_name: ${@cfg:email_smtp.from_name}
-      # host: ${EMAIL_HOST:smtp.ethereal.email}              # SMTP server host
-      # port: ${EMAIL_PORT:587}                              # SMTP server port
-      # username: ${EMAIL_USERNAME:friedrich.greenholt@ethereal.email}   # SMTP username
-      # password: ${EMAIL_PASSWORD:1PGbyeXyvEEFUMAqhs}        # SMTP password
-      # from_email: ${EMAIL_FROM_ADDRESS:admin@example.com}   # Default from email
-      # from_name: ${EMAIL_FROM_NAME:no-reply}                # Default from name  
 
       use_tls: ${EMAIL_USE_TLS:false}                       # Use TLS encryption
       skip_verify: ${EMAIL_SKIP_VERIFY:false}               # Skip TLS certificate verification

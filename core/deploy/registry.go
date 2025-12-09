@@ -188,6 +188,14 @@ func NewGlobalRegistry() *GlobalRegistry {
 	}
 }
 
+// ResetGlobalRegistryForTesting resets the global registry singleton to a fresh state.
+// WARNING: This function is ONLY for testing purposes!
+// Do NOT use in production code as it will clear all registered services, middlewares, and configs.
+func ResetGlobalRegistryForTesting() {
+	globalRegistry = NewGlobalRegistry()
+	registry.SetGlobal(globalRegistry)
+}
+
 // ===== FACTORY REGISTRATION (CODE) =====
 
 // Factory signatures (auto-wrapped by framework):
@@ -905,10 +913,19 @@ func (g *GlobalRegistry) RegisterLazyService(name string, factory any, config ma
 		}
 
 		// Create deps map: key = service name, value = service name
+		// Support "paramName:serviceName" notation (e.g., "cfg:@store.implementation")
 		if len(dependsOn) > 0 {
 			deps = make(map[string]string, len(dependsOn))
 			for _, dep := range dependsOn {
-				deps[dep] = dep
+				// Parse "paramName:serviceName" or just "serviceName"
+				parts := strings.SplitN(dep, ":", 2)
+				if len(parts) == 2 {
+					// "cfg:@store.implementation" -> deps["cfg"] = "@store.implementation"
+					deps[parts[0]] = parts[1]
+				} else {
+					// "logger" -> deps["logger"] = "logger"
+					deps[dep] = dep
+				}
 			}
 			LogDebug("📦 RegisterLazyService '%s': extracted %d dependencies from config: %v", name, len(deps), dependsOn)
 		}
@@ -1349,6 +1366,14 @@ func (g *GlobalRegistry) MergeRegistryServicesToConfig(config *schema.DeployConf
 
 		// Skip if already exists in config (YAML takes priority)
 		if _, exists := config.ServiceDefinitions[serviceName]; exists {
+			return true // continue iteration
+		}
+
+		// Skip if already resolved (has inline factory function)
+		// Resolved entries don't need to be merged to config because they already have
+		// the factory function ready to instantiate - no factory type lookup needed
+		if entry.resolved {
+			LogDebug("⏭️  Skipping merge for '%s': already resolved with inline factory", serviceName)
 			return true // continue iteration
 		}
 

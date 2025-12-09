@@ -569,6 +569,13 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	// Register/Resolve service definitions with remote/local logic
 	// Iterate through all services (published + dependencies)
 	for _, serviceName := range servicesToRegister {
+		// Check if service already registered with inline factory (e.g., from annotations)
+		if existingEntry := registry.GetLazyServiceEntry(serviceName); existingEntry != nil && existingEntry.IsResolved() {
+			// Service already has inline factory - skip config-based resolution
+			log.Printf("⏭️  Skipping config resolution for '%s': already resolved with inline factory", serviceName)
+			continue
+		}
+
 		svc, exists := getServiceDef(config.ServiceDefinitions, serviceName)
 		if !exists {
 			return fmt.Errorf("service %s in topology not found in service definitions", serviceName)
