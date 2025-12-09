@@ -4,6 +4,7 @@
 
 @baseUrl = http://localhost:3000
 @contentType = application/json
+@authToken = demo-user123
 
 ################################################################################
 # HEALTH CHECK - Manual Router Example
@@ -17,19 +18,27 @@ GET {{baseUrl}}/ready
 
 ################################################################################
 # USER MODULE - User Management Operations
+# NOTE: All endpoints require simple-auth middleware (Bearer token)
 ################################################################################
 
-### Get all users
+### Get all users (Authenticated)
+GET {{baseUrl}}/api/users
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+### Get all users (Unauthenticated - should fail with 401)
 GET {{baseUrl}}/api/users
 Content-Type: {{contentType}}
 
 ### Get user by ID
 GET {{baseUrl}}/api/users/1
 Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
 
 ### Create new user
 POST {{baseUrl}}/api/users
 Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
 
 {
   "name": "Alice Johnson",
@@ -40,6 +49,7 @@ Content-Type: {{contentType}}
 ### Update user
 PUT {{baseUrl}}/api/users/2
 Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
 
 {
   "name": "John Updated",

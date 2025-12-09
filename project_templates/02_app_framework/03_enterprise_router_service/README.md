@@ -12,6 +12,7 @@ This template demonstrates how to structure a **large enterprise application** (
 - [Architecture Overview](#architecture-overview)
 - [Project Structure](#project-structure)
 - [Module Structure](#module-structure)
+- [Middleware](#middleware)
 - [Configuration Strategy](#configuration-strategy)
 - [Getting Started](#getting-started)
 - [Adding New Modules](#adding-new-modules)
@@ -199,6 +200,115 @@ func (r *UserRepositoryImpl) Create(user *domain.User) (*domain.User, error) {
 - ✅ Contains database, cache, external API code
 - ❌ Does not contain business logic
 - ❌ Only accessed through interfaces
+
+---
+
+## 🔒 Middleware
+
+This template includes custom middleware for authentication and logging.
+
+### Built-in Middlewares
+
+1. **`recovery`** - Panic recovery (from lokstra/middleware)
+2. **`request-logger`** - HTTP request/response logging
+3. **`simple-auth`** - Simple Bearer token authentication
+4. **`mw-test`** - Example parameterized middleware
+
+### Simple Auth Middleware
+
+The `simple-auth` middleware provides basic Bearer token authentication:
+
+**How it works:**
+- Checks for `Authorization: Bearer <token>` header
+- Validates token format: must start with `demo-`
+- Extracts user ID from token (e.g., `demo-user123` → user ID: `user123`)
+- Stores user info in request context
+
+**Usage in @RouterService:**
+```go
+// @RouterService name="user-service", prefix="/api", middlewares=["recovery", "request-logger", "simple-auth"]
+type UserServiceImpl struct {
+    UserRepo domain.UserRepository
+}
+```
+
+**Testing with HTTP client:**
+```http
+### Authenticated request
+GET http://localhost:3000/api/users
+Authorization: Bearer demo-user123
+
+### Unauthenticated request (will fail with 401)
+GET http://localhost:3000/api/users
+```
+
+**Valid tokens:**
+- `demo-user123` ✅
+- `demo-admin` ✅
+- `demo-john.doe` ✅
+- `invalid-token` ❌ (doesn't start with `demo-`)
+- `` ❌ (missing header)
+
+**Implementation** (`register.go`):
+```go
+func simpleAuthFactory(config map[string]any) request.HandlerFunc {
+    return func(ctx *request.Context) error {
+        authHeader := ctx.R.Header.Get("Authorization")
+        if authHeader == "" {
+            return ctx.Api.Unauthorized("Missing Authorization header")
+        }
+        
+        // Extract Bearer token
+        token := strings.TrimPrefix(authHeader, "Bearer ")
+        if !strings.HasPrefix(token, "demo-") {
+            return ctx.Api.Unauthorized("Invalid token")
+        }
+        
+        // Store user info in context
+        userID := token[5:]
+        ctx.Set("user_id", userID)
+        ctx.Set("authenticated", true)
+        
+        return ctx.Next()
+    }
+}
+```
+
+### Adding Custom Middleware
+
+**Step 1:** Register middleware factory in `register.go`:
+```go
+func registerMiddlewareTypes() {
+    lokstra_registry.RegisterMiddlewareFactory("my-middleware", func(config map[string]any) request.HandlerFunc {
+        return func(ctx *request.Context) error {
+            // Before request
+            log.Println("Before:", ctx.R.URL.Path)
+            
+            // Process request
+            err := ctx.Next()
+            
+            // After request
+            log.Println("After:", ctx.Resp.RespStatusCode)
+            
+            return err
+        }
+    })
+}
+```
+
+**Step 2:** Use in `@RouterService` annotation:
+```go
+// @RouterService name="my-service", middlewares=["recovery", "my-middleware"]
+type MyService struct {}
+```
+
+**Step 3:** Or use per-route:
+```go
+// @Route "POST /sensitive", middlewares=["auth", "admin-only"]
+func (s *MyService) SensitiveAction() error {
+    return nil
+}
+```
 
 ---
 

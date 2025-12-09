@@ -31,6 +31,7 @@ func registerMiddlewareTypes() {
 
 	// Register custom middleware
 	lokstra_registry.RegisterMiddlewareFactory("request-logger", requestLoggerFactory)
+	lokstra_registry.RegisterMiddlewareFactory("simple-auth", simpleAuthFactory)
 	lokstra_registry.RegisterMiddlewareFactory("mw-test", func(config map[string]any) request.HandlerFunc {
 		return func(ctx *request.Context) error {
 			log.Printf("→ [mw-test] Before request | Param1: %v, Param2: %v", config["param1"], config["param2"])
@@ -59,5 +60,48 @@ func requestLoggerFactory(config map[string]any) request.HandlerFunc {
 		}
 
 		return err
+	}
+}
+
+// simpleAuthFactory creates a simple authentication middleware
+// Checks for "Authorization" header with Bearer token
+// For demo purposes, accepts any token that starts with "demo-"
+func simpleAuthFactory(config map[string]any) request.HandlerFunc {
+	return func(ctx *request.Context) error {
+		// Get Authorization header
+		authHeader := ctx.R.Header.Get("Authorization")
+
+		// Check if Authorization header exists
+		if authHeader == "" {
+			log.Printf("🔒 [simple-auth] Missing Authorization header")
+			return ctx.Api.Unauthorized("Missing Authorization header")
+		}
+
+		// Check Bearer token format
+		const bearerPrefix = "Bearer "
+		if len(authHeader) < len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+			log.Printf("🔒 [simple-auth] Invalid Authorization format")
+			return ctx.Api.Unauthorized("Invalid Authorization format. Use 'Bearer <token>'")
+		}
+
+		// Extract token
+		token := authHeader[len(bearerPrefix):]
+
+		// Simple validation: accept tokens starting with "demo-"
+		// In production, validate against database or JWT
+		if len(token) < 5 || token[:5] != "demo-" {
+			log.Printf("🔒 [simple-auth] Invalid token: %s", token)
+			return ctx.Api.Unauthorized("Invalid token")
+		}
+
+		// Token is valid - store user info in context
+		userID := token[5:] // Extract user ID from "demo-{userID}"
+		ctx.Set("user_id", userID)
+		ctx.Set("authenticated", true)
+
+		log.Printf("✅ [simple-auth] Authenticated user: %s", userID)
+
+		// Continue to next handler
+		return ctx.Next()
 	}
 }
