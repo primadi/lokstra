@@ -102,8 +102,16 @@ func (g *GlobalRegistry) CreateMiddleware(name string) request.HandlerFunc {
 			// Merge inline params with registered config (inline takes precedence)
 			config := internal.MergeConfig(entry.Config, inlineParams)
 			mw := factory(config)
+
+			// Try type assertion first (named type)
 			if handlerFunc, ok := mw.(request.HandlerFunc); ok {
-				// Cache it
+				g.middlewareInstances.Store(cacheKey, handlerFunc)
+				return handlerFunc
+			}
+
+			// Fallback: Try converting from unnamed func signature
+			if fnErr, ok := mw.(func(*request.Context) error); ok {
+				handlerFunc := request.HandlerFunc(fnErr)
 				g.middlewareInstances.Store(cacheKey, handlerFunc)
 				return handlerFunc
 			}
@@ -120,8 +128,16 @@ func (g *GlobalRegistry) CreateMiddleware(name string) request.HandlerFunc {
 			config = inlineParams
 		}
 		mw := factory(config)
+
+		// Try type assertion first (named type)
 		if handlerFunc, ok := mw.(request.HandlerFunc); ok {
-			// Cache it
+			g.middlewareInstances.Store(cacheKey, handlerFunc)
+			return handlerFunc
+		}
+
+		// Fallback: Try converting from unnamed func signature
+		if fnErr, ok := mw.(func(*request.Context) error); ok {
+			handlerFunc := request.HandlerFunc(fnErr)
 			g.middlewareInstances.Store(cacheKey, handlerFunc)
 			return handlerFunc
 		}

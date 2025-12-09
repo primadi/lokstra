@@ -106,7 +106,8 @@ func RegisterMiddlewareFactory(mwType string, factory any, opts ...RegisterOptio
 	case func(map[string]any) func(*request.Context) error:
 		// Same as request.HandlerFunc, but explicit signature
 		deployFactory = func(cfg map[string]any) any {
-			return f(cfg)
+			f := f(cfg)
+			return request.HandlerFunc(f)
 		}
 	case func(map[string]any) any:
 		deployFactory = f
@@ -117,7 +118,8 @@ func RegisterMiddlewareFactory(mwType string, factory any, opts ...RegisterOptio
 	case func() func(*request.Context) error:
 		// Same as request.HandlerFunc, but explicit signature
 		deployFactory = func(cfg map[string]any) any {
-			return f()
+			f := f()
+			return request.HandlerFunc(f)
 		}
 	case func() any:
 		deployFactory = func(cfg map[string]any) any {
