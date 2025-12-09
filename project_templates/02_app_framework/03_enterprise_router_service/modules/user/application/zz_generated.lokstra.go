@@ -106,7 +106,7 @@ func RegisterUserServiceImpl() {
 		UserServiceImplRemoteFactory,
 		&deploy.ServiceTypeConfig{
 			PathPrefix:  "/api",
-			Middlewares: []string{ "recovery", "request-logger" },
+			Middlewares: []string{ "recovery", "request-logger", "simple-auth" },
 			RouteOverrides: map[string]deploy.RouteConfig{
 				"Activate": {
 					Path: "POST /users/{id}/activate",

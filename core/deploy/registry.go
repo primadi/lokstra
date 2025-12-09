@@ -795,8 +795,12 @@ func (g *GlobalRegistry) GetRouter(name string) router.Router {
 					}
 				}
 
+				// Convert router-level middleware names to string slice
+				routerMiddlewares := metadata.MiddlewareNames
+
 				opts := &router.ServiceRouterOptions{
 					Prefix:         finalPrefix,
+					Middlewares:    routerMiddlewares,
 					RouteOverrides: routeOverrides,
 				}
 

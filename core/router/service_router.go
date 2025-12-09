@@ -55,6 +55,15 @@ func NewFromServiceWithEngine(service any, engineType string, opts *ServiceRoute
 	// Create router
 	r := NewWithEngine(routerName, engineType)
 
+	// Apply router-level middlewares if specified
+	if len(opts.Middlewares) > 0 {
+		middlewares := make([]any, len(opts.Middlewares))
+		for i, mw := range opts.Middlewares {
+			middlewares[i] = mw
+		}
+		r.Use(middlewares...)
+	}
+
 	// Scan all methods and register routes
 	// IMPORTANT: Use the original serviceType (pointer) to get all methods
 	// because methods with pointer receivers are only visible on the pointer type

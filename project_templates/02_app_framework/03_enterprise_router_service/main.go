@@ -12,7 +12,7 @@ import (
 // This flow separates config loading from service registration,
 // allowing services to access config during registration.
 func main() {
-	// lokstra.SetLogLevel(lokstra.LogLevelDebug)
+	lokstra.SetLogLevel(lokstra.LogLevelDebug)
 
 	lokstra.Bootstrap()
 
