@@ -90,7 +90,7 @@
         "type": {
           "type": "string",
           "description": "Service factory type identifier",
-          "pattern": "^[a-z][a-z0-9-]*$"
+          "pattern": "^[a-z][a-z0-9_-]*$"
         },
         "depends-on": {
           "type": "array",
