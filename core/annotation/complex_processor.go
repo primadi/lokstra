@@ -90,9 +90,12 @@ func ProcessComplexAnnotations(rootPath []string, maxWorkers int,
 					if _, err := os.Stat(genPath); err == nil {
 						// Get package import path for this folder
 						if pkgPath := getPackageImportPath(folder); pkgPath != "" {
-							packageMutex.Lock()
-							packagesWithServices = append(packagesWithServices, pkgPath)
-							packageMutex.Unlock()
+							// Skip package main to avoid circular import
+							if !isMainPackage(folder) {
+								packageMutex.Lock()
+								packagesWithServices = append(packagesWithServices, pkgPath)
+								packageMutex.Unlock()
+							}
 						}
 					}
 				}
@@ -694,6 +697,57 @@ func findMainGoFolder(startPath string) string {
 		}
 		dir = parent
 	}
+}
+
+// isMainPackage checks if a folder contains package main by reading .go files
+func isMainPackage(folderPath string) bool {
+	// Read all .go files in folder (excluding test and generated files)
+	files, err := os.ReadDir(folderPath)
+	if err != nil {
+		return false
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		fileName := file.Name()
+		if !strings.HasSuffix(fileName, ".go") {
+			continue
+		}
+
+		// Skip test files and generated files
+		if strings.HasSuffix(fileName, "_test.go") ||
+			strings.HasPrefix(fileName, "zz_") {
+			continue
+		}
+
+		// Read file and check package declaration
+		filePath := filepath.Join(folderPath, fileName)
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			continue
+		}
+
+		// Parse package declaration (first non-comment line)
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "/*") {
+				continue
+			}
+
+			// Found first non-comment line
+			if strings.HasPrefix(line, "package ") {
+				pkgName := strings.TrimSpace(strings.TrimPrefix(line, "package"))
+				return pkgName == "main"
+			}
+			break
+		}
+	}
+
+	return false
 }
 
 // generateImportFile creates zz_lokstra_imports.go in the same folder as main.go

@@ -1,19 +1,22 @@
 package main
 
-// This is a standalone example showing how to use the email SMTP service
-// Run with: go run example_standalone.go
-// Make sure MailHog is running on localhost:1025 for testing
-
 import (
 	"context"
 	"fmt"
-	"time"
+	"net/http"
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/core/request"
+	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
-	"github.com/primadi/lokstra/services/email_smtp"
 )
+
+// EmailService provides email API endpoints
+// @Service "email-api-service"
+type EmailService struct {
+	// @Inject "email_smtp"
+	EmailSender serviceapi.EmailSender
+}
 
 type SendEmailRequest struct {
 	To      string `json:"to" validate:"required,email"`
@@ -22,28 +25,20 @@ type SendEmailRequest struct {
 	IsHTML  bool   `json:"is_html"`
 }
 
-type SendBatchRequest struct {
-	Emails []struct {
-		To      string `json:"to" validate:"required,email"`
-		Subject string `json:"subject" validate:"required"`
-		Message string `json:"message" validate:"required"`
-	} `json:"emails" validate:"required,min=1"`
+type BatchEmailItem struct {
+	To      string `json:"to" validate:"required,email"`
+	Subject string `json:"subject" validate:"required"`
+	Message string `json:"message" validate:"required"`
+	IsHTML  bool   `json:"is_html"`
 }
 
-func main() {
-	fmt.Println("Starting Email SMTP Service Example...")
+type SendBatchRequest struct {
+	Emails []BatchEmailItem `json:"emails" validate:"required,min=1,dive"`
+}
 
-	// Create email sender service
-	// For testing, use MailHog: docker run -p 1025:1025 -p 8025:8025 mailhog/mailhog
-	emailSender := email_smtp.Service(&email_smtp.Config{
-		Host:      "localhost",
-		Port:      1025, // MailHog SMTP port
-		FromEmail: "noreply@example.com",
-		FromName:  "Email Service Demo",
-	})
-
-	// Create router
-	r := lokstra.NewRouter("api")
+// GetRouter returns router with all email endpoints
+func (s *EmailService) GetRouter() lokstra.Router {
+	r := lokstra.NewRouter("email-api")
 
 	// Endpoint: Send single email
 	r.POST("/send-email", func(ctx *request.Context, req *SendEmailRequest) error {
@@ -58,9 +53,9 @@ func main() {
 			msg.Body = req.Message
 		}
 
-		err := emailSender.Send(context.Background(), msg)
+		err := s.EmailSender.Send(context.Background(), msg)
 		if err != nil {
-			return ctx.Api.InternalServerError(err.Error())
+			return ctx.Api.InternalError(err.Error())
 		}
 
 		return ctx.Api.Ok(map[string]string{
@@ -115,9 +110,9 @@ func main() {
 			HTMLBody: htmlBody,
 		}
 
-		err := emailSender.Send(context.Background(), msg)
+		err := s.EmailSender.Send(context.Background(), msg)
 		if err != nil {
-			return ctx.Api.InternalServerError(err.Error())
+			return ctx.Api.InternalError(err.Error())
 		}
 
 		return ctx.Api.Ok(map[string]any{
@@ -143,9 +138,9 @@ func main() {
 			Body:    req.Message,
 		}
 
-		err := emailSender.Send(context.Background(), msg)
+		err := s.EmailSender.Send(context.Background(), msg)
 		if err != nil {
-			return ctx.Api.InternalServerError(err.Error())
+			return ctx.Api.InternalError(err.Error())
 		}
 
 		return ctx.Api.Ok(map[string]any{
@@ -157,26 +152,40 @@ func main() {
 		})
 	})
 
-	// Endpoint: Send batch emails
+	// Endpoint: Send batch emails (with goroutine for better performance)
 	r.POST("/send-batch", func(ctx *request.Context, req *SendBatchRequest) error {
-		messages := make([]*serviceapi.EmailMessage, len(req.Emails))
-		for i, email := range req.Emails {
-			messages[i] = &serviceapi.EmailMessage{
-				To:      []string{email.To},
-				Subject: email.Subject,
-				Body:    email.Message,
+		total := len(req.Emails)
+
+		// Send batch emails in goroutine for faster response
+		go func() {
+			messages := make([]*serviceapi.EmailMessage, total)
+			for i, email := range req.Emails {
+				msg := &serviceapi.EmailMessage{
+					To:      []string{email.To},
+					Subject: email.Subject,
+				}
+
+				if email.IsHTML {
+					msg.HTMLBody = email.Message
+				} else {
+					msg.Body = email.Message
+				}
+
+				messages[i] = msg
 			}
-		}
 
-		err := emailSender.SendBatch(context.Background(), messages)
-		if err != nil {
-			return ctx.Api.InternalServerError(err.Error())
-		}
+			if err := s.EmailSender.SendBatch(context.Background(), messages); err != nil {
+				fmt.Printf("❌ Batch email failed: %v\n", err)
+			} else {
+				fmt.Printf("✅ Successfully sent %d batch emails\n", total)
+			}
+		}()
 
-		return ctx.Api.Ok(map[string]any{
-			"status":     "success",
-			"message":    "Batch emails sent successfully",
-			"total_sent": len(messages),
+		// Return 202 Accepted for async operation
+		return ctx.Resp.WithStatus(http.StatusAccepted).Json(map[string]any{
+			"status":  "queued",
+			"message": fmt.Sprintf("%d emails queued for sending", total),
+			"total":   total,
 		})
 	})
 
@@ -202,9 +211,9 @@ func main() {
 			},
 		}
 
-		err := emailSender.Send(context.Background(), msg)
+		err := s.EmailSender.Send(context.Background(), msg)
 		if err != nil {
-			return ctx.Api.InternalServerError(err.Error())
+			return ctx.Api.InternalError(err.Error())
 		}
 
 		return ctx.Api.Ok(map[string]any{
@@ -222,22 +231,12 @@ func main() {
 		}
 	})
 
-	// Create and run app
-	app := lokstra.NewApp("email-demo", ":8080", r)
+	r.GET("/info", func() map[string]string {
+		return map[string]string{
+			"host":    lokstra_registry.GetConfig("email_smtp.host", ""),
+			"version": "1.0.0",
+		}
+	})
 
-	fmt.Println("\n===========================================")
-	fmt.Println("Email SMTP Service is running on :8080")
-	fmt.Println("===========================================")
-	fmt.Println("\nAvailable endpoints:")
-	fmt.Println("  POST /api/send-email          - Send simple email")
-	fmt.Println("  POST /api/send-welcome        - Send welcome email (HTML)")
-	fmt.Println("  POST /api/send-with-cc        - Send email with CC/BCC")
-	fmt.Println("  POST /api/send-batch          - Send batch emails")
-	fmt.Println("  POST /api/send-with-attachment - Send email with attachment")
-	fmt.Println("  GET  /api/health              - Health check")
-	fmt.Println("\nNote: Make sure MailHog is running on localhost:1025")
-	fmt.Println("View emails at: http://localhost:8025")
-	fmt.Println("===========================================\n")
-
-	app.Run(30 * time.Second)
+	return r
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
-	"github.com/primadi/lokstra/core/service"
 	"github.com/primadi/lokstra/internal/registry"
 )
 
@@ -37,14 +36,14 @@ type GlobalRegistry struct {
 	lazyServiceFactories sync.Map // map[string]*LazyServiceEntry
 	lazyServiceOnce      sync.Map // map[string]*sync.Once
 
-	// Deferred service definitions (string factory type - instantiated on access)
-	serviceDefs sync.Map // map[string]*deferredServiceDef
+	// Lazy router factories (for deferred router creation)
+	lazyRouterFactories sync.Map // map[string]func() router.Router
 
 	// Definitions (YAML or code-defined)
 	routers map[string]*schema.RouterDef
 	// Note: routerOverrides removed - overrides are now inline in RouterDef
 	// Note: middlewares map removed - use middlewareEntries sync.Map (unified API)
-	// Note: services map removed - use serviceDefs sync.Map (unified API - Opsi 2)
+	// Note: serviceDefs removed - unified with lazyServiceFactories (2-phase resolution)
 	// Note: configs map removed - use resolvedConfigs only (simplified)
 
 	// Config values (runtime and YAML-loaded configs)
@@ -66,13 +65,6 @@ type GlobalRegistry struct {
 // deferredServiceDef holds service definition for deferred instantiation
 // Used when RegisterLazyService is called with string factory type
 // Instantiation is deferred until first access, allowing auto-detect LOCAL/REMOTE
-type deferredServiceDef struct {
-	Name        string
-	FactoryType string
-	DependsOn   []string
-	Config      map[string]any
-}
-
 // ServiceFactoryEntry holds local and remote factory functions plus metadata
 type ServiceFactoryEntry struct {
 	Local    ServiceFactory
@@ -81,10 +73,28 @@ type ServiceFactoryEntry struct {
 }
 
 // LazyServiceEntry holds a lazy service factory and its config
+// Supports 2-phase resolution: unresolved (FactoryType) → resolved (Factory)
 type LazyServiceEntry struct {
+	// Phase 1: Set by LoadConfig (unresolved)
+	FactoryType string // Service factory type (e.g., "email_smtp")
+
+	// Phase 2: Set by RegisterDefinitionsForRuntime (resolved)
 	Factory func(deps, config map[string]any) any
-	Config  map[string]any
-	Deps    map[string]string // Dependency mapping: key in factory -> service name in registry
+
+	Config   map[string]any
+	Deps     map[string]string // Dependency mapping: key in factory -> service name in registry
+	resolved bool              // Has factory been resolved from FactoryType?
+}
+
+// IsResolved returns true if the factory has been resolved from FactoryType
+func (e *LazyServiceEntry) IsResolved() bool {
+	return e.resolved
+}
+
+// ResolveFactory sets the factory function and marks the entry as resolved
+func (e *LazyServiceEntry) ResolveFactory(factory func(deps, config map[string]any) any) {
+	e.Factory = factory
+	e.resolved = true
 }
 
 // ServiceMetadata holds metadata for service auto-generation
@@ -125,12 +135,13 @@ type DeploymentTopology struct {
 // ServerTopology holds server-level topology
 // Services and RemoteServices are at SERVER level (shared across all apps)
 type ServerTopology struct {
-	Name           string
-	DeploymentName string
-	BaseURL        string
-	Services       []string          // Service names (server-level, shared)
-	RemoteServices map[string]string // serviceName -> remoteBaseURL (empty string if local)
-	Apps           []*AppTopology
+	Name            string
+	DeploymentName  string
+	BaseURL         string
+	ConfigOverrides map[string]any    // Server-level config overrides (highest priority)
+	Services        []string          // Service names (server-level, shared)
+	RemoteServices  map[string]string // serviceName -> remoteBaseURL (empty string if local)
+	Apps            []*AppTopology
 }
 
 // AppTopology holds app-level topology
@@ -173,7 +184,7 @@ func NewGlobalRegistry() *GlobalRegistry {
 		middlewareFactories: make(map[string]MiddlewareFactory),
 		routers:             make(map[string]*schema.RouterDef),
 		resolvedConfigs:     make(map[string]any),
-		// Topology maps, serviceDefs, and middlewareEntries use sync.Map, no initialization needed
+		// Topology maps and middlewareEntries use sync.Map, no initialization needed
 	}
 }
 
@@ -615,18 +626,182 @@ func (g *GlobalRegistry) SimpleResolver(input string) string {
 // ===== RUNTIME INSTANCE REGISTRATION =====
 
 // RegisterRouter registers a router instance
+// If a RouterDef with the same name exists and has a PathPrefix, it will be applied
 func (g *GlobalRegistry) RegisterRouter(name string, r router.Router) {
 	if _, exists := g.routerInstances.Load(name); exists {
 		panic(fmt.Sprintf("router %s already registered", name))
 	}
+
+	// Check if RouterDef exists with PathPrefix
+	if routerDef := g.GetRouterDef(name); routerDef != nil {
+		if routerDef.PathPrefix != "" {
+			// Apply PathPrefix from RouterDef (YAML router-definitions)
+			LogDebug("🔧 Applying PathPrefix '%s' to router '%s' from router-definitions", routerDef.PathPrefix, name)
+			r = r.SetPathPrefix(routerDef.PathPrefix)
+		}
+
+		// Apply PathRewrites if defined
+		if len(routerDef.PathRewrites) > 0 {
+			rewrites := make(map[string]string)
+			for _, rewrite := range routerDef.PathRewrites {
+				rewrites[rewrite.Pattern] = rewrite.Replacement
+			}
+			r = r.SetPathRewrites(rewrites)
+		}
+	}
+
+	LogDebug("🔧 RegisterRouter: storing router '%s' at %p (type=%T)", name, r, r)
 	g.routerInstances.Store(name, r)
 }
 
+// RegisterRouterFactory registers a lazy router factory that will be instantiated
+// when the runtime is ready (after all services are resolved).
+// This allows router registration to depend on services that need runtime resolution.
+//
+// Example:
+//
+//	lokstra_registry.RegisterRouterFactory("email-router", func() lokstra.Router {
+//	    emailService := lokstra_registry.GetService[EmailService]("email-api-service")
+//	    return emailService.GetRouter()
+//	})
+func (g *GlobalRegistry) RegisterRouterFactory(name string, factory func() router.Router) {
+	LogDebug("🔧 RegisterRouterFactory: registering lazy router '%s'", name)
+	g.lazyRouterFactories.Store(name, factory)
+}
+
+// instantiateLazyRouters creates router instances from registered factories
+// func (g *GlobalRegistry) InstantiateLazyRouters() {
+// 	LogDebug("🔧 InstantiateLazyRouters: starting lazy router instantiation")
+// 	count := 0
+// 	g.lazyRouterFactories.Range(func(nameAny, factoryAny any) bool {
+// 		name := nameAny.(string)
+// 		factory := factoryAny.(func() router.Router)
+
+// 		// Skip if already instantiated
+// 		if _, exists := g.routerInstances.Load(name); exists {
+// 			LogDebug("🔧 Lazy router '%s': already instantiated, skipping", name)
+// 			return true
+// 		}
+
+// 		LogDebug("🔧 Instantiating lazy router: '%s'", name)
+// 		r := factory()
+// 		LogDebug("🔧 Lazy router '%s': factory returned %T, registering", name, r)
+// 		g.RegisterRouter(name, r)
+// 		count++
+// 		return true
+// 	})
+// 	LogDebug("🔧 InstantiateLazyRouters: completed, instantiated %d routers", count)
+// }
+
 // GetRouter retrieves a router instance by name
+// If not found in routerInstances, checks lazyRouterFactories and instantiates if needed
 func (g *GlobalRegistry) GetRouter(name string) router.Router {
+	// Check if already instantiated
 	if v, ok := g.routerInstances.Load(name); ok {
-		return v.(router.Router)
+		r := v.(router.Router)
+		LogDebug("🔍 GetRouter('%s'): found router %p (type=%T)", name, r, r)
+		return r
 	}
+
+	// Check lazy router factories and instantiate if found
+	if factoryAny, ok := g.lazyRouterFactories.Load(name); ok {
+		factory := factoryAny.(func() router.Router)
+		LogDebug("🔍 GetRouter('%s'): found lazy factory, instantiating...", name)
+		r := factory()
+		LogDebug("🔍 GetRouter('%s'): lazy factory returned %T, registering", name, r)
+		g.RegisterRouter(name, r)
+		return r
+	}
+
+	// Check if this is a service router (format: "serviceName-router")
+	// If so, try to instantiate the service first
+	if strings.HasSuffix(name, "-router") {
+		serviceName := strings.TrimSuffix(name, "-router")
+
+		// Check if service exists (lazy or instance)
+		if g.HasService(serviceName) {
+			// Try to instantiate service (this will trigger router creation in the service factory)
+			LogDebug("🔍 GetRouter('%s'): service '%s' exists, attempting to instantiate...", name, serviceName)
+
+			// Get service instance (this will instantiate if lazy)
+			serviceInstance, ok := g.GetServiceAny(serviceName)
+			LogDebug("🔍 GetRouter('%s'): GetServiceAny returned ok=%v, instance=%v", name, ok, serviceInstance != nil)
+
+			if ok && serviceInstance != nil {
+				LogDebug("🔍 GetRouter('%s'): service '%s' instantiated successfully, checking router again...", name, serviceName)
+
+				// Check if router was created during service instantiation
+				if v, ok := g.routerInstances.Load(name); ok {
+					r := v.(router.Router)
+					LogDebug("🔍 GetRouter('%s'): router created during service instantiation", name)
+					return r
+				}
+
+				// Service instantiated but router not found - may need to create manually
+				LogDebug("🔍 GetRouter('%s'): service instantiated but router not auto-created, checking metadata...", name)
+
+				// Get service definition
+				serviceDef := g.GetDeferredServiceDef(serviceName)
+				if serviceDef == nil {
+					LogDebug("🔍 GetRouter('%s'): service definition not found", name)
+					return nil
+				}
+
+				// Get service metadata
+				metadata := g.GetServiceMetadata(serviceDef.Type)
+				if metadata == nil {
+					LogDebug("🔍 GetRouter('%s'): service metadata not found", name)
+					return nil
+				}
+
+				// Check if service has router config
+				hasRouterConfig := len(metadata.RouteOverrides) > 0 || metadata.PathPrefix != ""
+				if !hasRouterConfig {
+					LogDebug("🔍 GetRouter('%s'): service has no router configuration", name)
+					return nil
+				}
+
+				// Create router from service using autogen
+				LogDebug("🔍 GetRouter('%s'): creating router from service instance", name)
+
+				// Get RouterDef if exists
+				routerDef := g.GetRouterDef(name)
+				finalPrefix := metadata.PathPrefix
+				if routerDef != nil && routerDef.PathPrefix != "" {
+					finalPrefix = routerDef.PathPrefix
+				}
+
+				// Build ServiceRouterOptions
+				// Convert RouteMetadata to RouteMeta
+				routeOverrides := make(map[string]router.RouteMeta)
+				for methodName, routeMeta := range metadata.RouteOverrides {
+					middlewares := make([]any, len(routeMeta.Middlewares))
+					for i, mw := range routeMeta.Middlewares {
+						middlewares[i] = mw
+					}
+
+					routeOverrides[methodName] = router.RouteMeta{
+						HTTPMethod:  routeMeta.Method,
+						Path:        routeMeta.Path,
+						Middlewares: middlewares,
+					}
+				}
+
+				opts := &router.ServiceRouterOptions{
+					Prefix:         finalPrefix,
+					RouteOverrides: routeOverrides,
+				}
+
+				// Create router using NewFromService
+				r := router.NewFromService(serviceInstance, opts)
+				g.RegisterRouter(name, r)
+				LogDebug("🔍 GetRouter('%s'): router created and registered", name)
+				return r
+			}
+		}
+	}
+
+	LogDebug("🔍 GetRouter('%s'): NOT FOUND", name)
 	return nil
 }
 
@@ -714,8 +889,31 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 //	    },
 //	    map[string]any{"addr": "localhost:6379"})
 func (g *GlobalRegistry) RegisterLazyService(name string, factory any, config map[string]any) {
-	// Delegate to RegisterLazyServiceWithDeps with nil deps
-	g.RegisterLazyServiceWithDeps(name, factory, nil, config)
+	// Extract depends-on from config if present
+	var deps map[string]string
+	if depsRaw, ok := config["depends-on"]; ok {
+		var dependsOn []string
+		switch depsVal := depsRaw.(type) {
+		case []string:
+			dependsOn = depsVal
+		case []any:
+			// Handle YAML unmarshaling []any
+			dependsOn = make([]string, len(depsVal))
+			for i, d := range depsVal {
+				dependsOn[i] = d.(string)
+			}
+		}
+
+		// Create deps map: key = service name, value = service name
+		if len(dependsOn) > 0 {
+			deps = make(map[string]string, len(dependsOn))
+			for _, dep := range dependsOn {
+				deps[dep] = dep
+			}
+			LogDebug("📦 RegisterLazyService '%s': extracted %d dependencies from config: %v", name, len(deps), dependsOn)
+		}
+	} // Delegate to RegisterLazyServiceWithDeps
+	g.RegisterLazyServiceWithDeps(name, factory, deps, config)
 }
 
 // registerDeferredService stores a service definition using a factory type name.
@@ -737,15 +935,25 @@ func (g *GlobalRegistry) registerDeferredService(name, factoryType string, confi
 		}
 	}
 
-	// Store deferred definition
-	def := &deferredServiceDef{
-		Name:        name,
-		FactoryType: factoryType,
-		DependsOn:   dependsOn,
-		Config:      config,
+	// Create unresolved lazy service entry (Phase 1: store FactoryType string)
+	// Will be resolved to actual Factory function in RegisterDefinitionsForRuntime
+	depsMap := make(map[string]string)
+	for _, dep := range dependsOn {
+		depsMap[dep] = dep
 	}
 
-	g.serviceDefs.Store(name, def)
+	entry := &LazyServiceEntry{
+		FactoryType: factoryType,
+		Factory:     nil, // Unresolved - will be set in Phase 2
+		Config:      config,
+		Deps:        depsMap,
+		resolved:    false,
+	}
+
+	g.lazyServiceFactories.Store(name, entry)
+	// NOTE: Do NOT create sync.Once here!
+	// sync.Once will be created in GetServiceAny when entry is resolved
+	// This prevents premature instantiation before factory is available
 }
 
 // LazyServiceRegistrationMode defines how to handle duplicate registrations
@@ -863,13 +1071,32 @@ func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, d
 			deps = make(map[string]string)
 			switch depsArray := depsRaw.(type) {
 			case []string:
-				for _, serviceName := range depsArray {
-					deps[serviceName] = serviceName
+				for _, depStr := range depsArray {
+					// Parse "paramName:serviceName" or just "serviceName"
+					// serviceName can be "@config.key" for config-based resolution
+					parts := strings.SplitN(depStr, ":", 2)
+					if len(parts) == 2 {
+						paramName := parts[0]
+						serviceName := parts[1]
+						deps[paramName] = serviceName
+					} else {
+						// No explicit param name - use service name as key
+						deps[depStr] = depStr
+					}
 				}
 			case []any:
 				for _, d := range depsArray {
-					if serviceName, ok := d.(string); ok {
-						deps[serviceName] = serviceName
+					if depStr, ok := d.(string); ok {
+						// Parse "paramName:serviceName" or just "serviceName"
+						parts := strings.SplitN(depStr, ":", 2)
+						if len(parts) == 2 {
+							paramName := parts[0]
+							serviceName := parts[1]
+							deps[paramName] = serviceName
+						} else {
+							// No explicit param name - use service name as key
+							deps[depStr] = depStr
+						}
 					}
 				}
 			}
@@ -877,13 +1104,43 @@ func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, d
 	}
 
 	entry := &LazyServiceEntry{
-		Factory: normFactory,
-		Config:  config,
-		Deps:    deps, // Store dependency mapping
+		Factory:  normFactory,
+		Config:   config,
+		Deps:     deps, // Store dependency mapping
+		resolved: true, // Already has Factory function
+	}
+
+	LogDebug("📦 RegisterLazyServiceWithDeps '%s': stored with %d dependencies: %v", name, len(deps), deps)
+	g.lazyServiceFactories.Store(name, entry)
+	g.lazyServiceOnce.Store(name, &sync.Once{})
+}
+
+// RegisterLazyServiceUnresolved stores an unresolved lazy service entry
+// This is called during config loading when we only have the factory type name
+// The actual factory function will be resolved later in RegisterDefinitionsForRuntime
+func (g *GlobalRegistry) RegisterLazyServiceUnresolved(name, factoryType string, deps map[string]string, config map[string]any) {
+	if name == "" || factoryType == "" {
+		panic(fmt.Sprintf("service name and factory type must not be empty (name=%s, type=%s)", name, factoryType))
+	}
+
+	entry := &LazyServiceEntry{
+		FactoryType: factoryType,
+		Factory:     nil, // Will be resolved later
+		Config:      config,
+		Deps:        deps,
+		resolved:    false, // Mark as unresolved
 	}
 
 	g.lazyServiceFactories.Store(name, entry)
 	g.lazyServiceOnce.Store(name, &sync.Once{})
+}
+
+// GetLazyServiceEntry retrieves a lazy service entry by name (for resolution checking)
+func (g *GlobalRegistry) GetLazyServiceEntry(name string) *LazyServiceEntry {
+	if entryAny, ok := g.lazyServiceFactories.Load(name); ok {
+		return entryAny.(*LazyServiceEntry)
+	}
+	return nil
 }
 
 // GetServiceAny retrieves a service instance by name as any
@@ -895,21 +1152,27 @@ func (g *GlobalRegistry) GetServiceAny(name string) (any, bool) {
 
 // getServiceAnyWithStack is internal version with circular dependency detection
 func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []string) (any, bool) {
+	LogDebug("🔍 GetServiceAny('%s'): starting resolution, stack=%v", name, resolutionStack)
+
 	// Handle @ prefix - resolve actual service name from config
 	// Example: "@store.order-repository" reads config key "store.order-repository"
 	// and gets the actual service name to inject
 	if after, ok := strings.CutPrefix(name, "@"); ok {
+		LogDebug("🔍 GetServiceAny('%s'): has @ prefix, resolving from config key '%s'", name, after)
 		configKey := after
 		configValue, ok := g.GetConfig(configKey)
 		if !ok {
+			LogDebug("🔍 GetServiceAny('%s'): config key '%s' NOT FOUND", name, configKey)
 			return nil, false
 		}
 
 		actualServiceName, ok := configValue.(string)
 		if !ok || actualServiceName == "" {
+			LogDebug("🔍 GetServiceAny('%s'): config value is not string or empty: %v", name, configValue)
 			return nil, false
 		}
 
+		LogDebug("🔍 GetServiceAny('%s'): resolved to actual service '%s'", name, actualServiceName)
 		// Recursively resolve the actual service (add to stack to detect circular deps)
 		return g.getServiceAnyWithStack(actualServiceName, append(resolutionStack, name))
 	}
@@ -925,6 +1188,7 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 
 	// Check eager registry first
 	if svc, ok := g.serviceInstances.Load(name); ok {
+		LogDebug("🔍 GetServiceAny('%s'): found in eager registry (already instantiated)", name)
 		return svc, true
 	}
 
@@ -934,29 +1198,67 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 	// Check lazy registry and create if needed
 	onceAny, hasOnce := g.lazyServiceOnce.Load(name)
 	if !hasOnce {
-		// Not in lazy registry - check if in deferred service definitions
-		if defAny, exists := g.serviceDefs.Load(name); exists {
-			deferredDef := defAny.(*deferredServiceDef)
+		LogDebug("🔍 GetServiceAny('%s'): NOT in lazyServiceOnce, checking lazyServiceFactories...", name)
 
-			// Convert deferred definition to schema.ServiceDef for auto-registration
-			serviceDef := &schema.ServiceDef{
-				Name:      deferredDef.Name,
-				Type:      deferredDef.FactoryType,
-				DependsOn: deferredDef.DependsOn,
-				Config:    deferredDef.Config,
+		// Not in lazy registry - check if in lazyServiceFactories with unresolved entry
+		if entryAny, exists := g.lazyServiceFactories.Load(name); exists {
+			LogDebug("🔍 GetServiceAny('%s'): found in lazyServiceFactories", name)
+			entry := entryAny.(*LazyServiceEntry)
+
+			// If unresolved (Phase 1 - from registerDeferredService), resolve it now
+			if !entry.resolved {
+				LogDebug("🔍 GetServiceAny('%s'): entry UNRESOLVED, resolving factory type '%s'...", name, entry.FactoryType)
+				// Get factory for the service type
+				factory := g.GetServiceFactory(entry.FactoryType, true) // true = local factory
+				if factory == nil {
+					LogDebug("🔍 GetServiceAny('%s'): factory '%s' NOT FOUND!", name, entry.FactoryType)
+					panic(fmt.Sprintf("service factory '%s' not registered for service '%s'", entry.FactoryType, name))
+				}
+
+				// Resolve the factory (modifies the entry in-place since it's a pointer)
+				entry.Factory = factory
+				entry.resolved = true
 			}
 
-			// Auto-create lazy service from definition
-			g.autoRegisterLazyService(name, serviceDef)
+			// Create sync.Once if not exists (handles case where entry was resolved externally)
+			if _, hasOnceAlready := g.lazyServiceOnce.Load(name); !hasOnceAlready {
+				LogDebug("🔍 GetServiceAny('%s'): creating sync.Once (entry was resolved=%v)", name, entry.resolved)
+				g.lazyServiceOnce.Store(name, &sync.Once{})
+			}
 
-			// Now try again
+			// Now proceed with instantiation below
 			onceAny, hasOnce = g.lazyServiceOnce.Load(name)
-			if !hasOnce {
-				return nil, false
-			}
 		} else {
+			// Not in lazy registry - try auto-registration from serviceFactories
+			// Convention: service name = factory type (e.g., "email-smtp" service uses "email-smtp" factory)
+			g.mu.RLock()
+			factoryEntry, hasFactory := g.serviceFactories[name]
+			g.mu.RUnlock()
+
+			if hasFactory && factoryEntry.Local != nil {
+				// Auto-register as lazy service with default config
+				LogDebug("🔧 Auto-registering service '%s' from factory type '%s' (default config)", name, name)
+				entry := &LazyServiceEntry{
+					FactoryType: name,
+					Factory:     factoryEntry.Local,
+					Config:      make(map[string]any), // Empty config
+					Deps:        make(map[string]string),
+					resolved:    true,
+				}
+
+				g.lazyServiceFactories.Store(name, entry)
+				g.lazyServiceOnce.Store(name, &sync.Once{})
+
+				onceAny, hasOnce = g.lazyServiceOnce.Load(name)
+			}
+		}
+
+		if !hasOnce {
+			LogDebug("🔍 GetServiceAny('%s'): NOT FOUND in any registry, returning false", name)
 			return nil, false
 		}
+	} else {
+		LogDebug("🔍 GetServiceAny('%s'): found in lazyServiceOnce, will instantiate", name)
 	}
 
 	once := onceAny.(*sync.Once)
@@ -972,20 +1274,36 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 
 		entry := entryAny.(*LazyServiceEntry)
 
+		// If unresolved inside once.Do, resolve now (handles race condition)
+		if !entry.resolved {
+			factory := g.GetServiceFactory(entry.FactoryType, true)
+			if factory == nil {
+				panic(fmt.Sprintf("service factory '%s' not registered for service '%s'", entry.FactoryType, name))
+			}
+			entry.Factory = factory
+			entry.resolved = true
+		}
+
 		// Resolve dependencies if specified
 		var resolvedDeps map[string]any
 		if len(entry.Deps) > 0 {
+			LogDebug("📦 Service '%s': resolving %d dependencies: %v", name, len(entry.Deps), entry.Deps)
 			resolvedDeps = make(map[string]any, len(entry.Deps))
 			for factoryKey, serviceName := range entry.Deps {
 				// Recursively resolve dependency with circular detection
 				// @ prefix is handled automatically by getServiceAnyWithStack
+				LogDebug("📦 Service '%s': resolving dependency '%s' -> '%s'", name, factoryKey, serviceName)
 				depSvc, ok := g.getServiceAnyWithStack(serviceName, newStack)
 				if !ok {
 					panic(fmt.Sprintf("lazy service %s: dependency %s not found", name, serviceName))
 				}
+				LogDebug("📦 Service '%s': dependency '%s' resolved to: %T", name, factoryKey, depSvc)
 				// Use factoryKey (may include @ prefix) as key for factory lookup
 				resolvedDeps[factoryKey] = depSvc
 			}
+			LogDebug("📦 Service '%s': all dependencies resolved, calling factory", name)
+		} else {
+			LogDebug("📦 Service '%s': no dependencies, calling factory directly", name)
 		}
 
 		// Call factory with resolved deps or nil
@@ -996,6 +1314,7 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 			LogDebug("📦 Creating service instance: '%s'", name)
 		}
 		instance := entry.Factory(resolvedDeps, entry.Config)
+		LogDebug("📦 Service '%s' created: instance=%p, type=%T", name, instance, instance)
 		g.serviceInstances.Store(name, instance)
 	})
 
@@ -1005,15 +1324,10 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 }
 
 // HasService checks if a service is registered in the lazy service registry
-// or defined in the deferred service definitions (from YAML or code).
+// or instantiated in the eager registry.
 func (g *GlobalRegistry) HasService(name string) bool {
-	// Check if already instantiated in lazy registry
+	// Check if defined in lazy registry (resolved or unresolved)
 	if _, ok := g.lazyServiceFactories.Load(name); ok {
-		return true
-	}
-
-	// Check if defined but not yet instantiated
-	if _, ok := g.serviceDefs.Load(name); ok {
 		return true
 	}
 
@@ -1029,40 +1343,53 @@ func (g *GlobalRegistry) HasService(name string) bool {
 // into config.ServiceDefinitions. This allows services registered via code to be
 // available in config for dependency resolution and topology checks.
 func (g *GlobalRegistry) MergeRegistryServicesToConfig(config *schema.DeployConfig) {
-	g.serviceDefs.Range(func(key, value any) bool {
+	g.lazyServiceFactories.Range(func(key, value any) bool {
 		serviceName := key.(string)
-		deferredDef := value.(*deferredServiceDef)
+		entry := value.(*LazyServiceEntry)
 
 		// Skip if already exists in config (YAML takes priority)
 		if _, exists := config.ServiceDefinitions[serviceName]; exists {
 			return true // continue iteration
 		}
 
+		// Convert Deps map to DependsOn slice
+		dependsOn := make([]string, 0, len(entry.Deps))
+		for dep := range entry.Deps {
+			dependsOn = append(dependsOn, dep)
+		}
+
 		// Add to config.ServiceDefinitions
 		config.ServiceDefinitions[serviceName] = &schema.ServiceDef{
-			Name:      deferredDef.Name,
-			Type:      deferredDef.FactoryType,
-			DependsOn: deferredDef.DependsOn,
-			Config:    deferredDef.Config,
+			Name:      serviceName,
+			Type:      entry.FactoryType,
+			DependsOn: dependsOn,
+			Config:    entry.Config,
 		}
 
 		return true // continue iteration
 	})
 }
 
-// GetDeferredServiceDef retrieves a deferred service definition by name.
-// Returns the definition if found in serviceDefs, or nil if not found.
+// GetDeferredServiceDef retrieves a service definition by name.
+// Returns the definition if found in lazyServiceFactories, or nil if not found.
 // This is primarily used by wrapper functions that need access to service metadata.
 func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
 	LogDebug("[GetDeferredServiceDef] looking for '%s'", name)
-	if defAny, ok := g.serviceDefs.Load(name); ok {
-		deferredDef := defAny.(*deferredServiceDef)
-		LogDebug("[GetDeferredServiceDef] FOUND '%s': Type=%s", name, deferredDef.FactoryType)
+	if entryAny, ok := g.lazyServiceFactories.Load(name); ok {
+		entry := entryAny.(*LazyServiceEntry)
+		LogDebug("[GetDeferredServiceDef] FOUND '%s': Type=%s", name, entry.FactoryType)
+
+		// Convert Deps map to DependsOn slice
+		dependsOn := make([]string, 0, len(entry.Deps))
+		for dep := range entry.Deps {
+			dependsOn = append(dependsOn, dep)
+		}
+
 		return &schema.ServiceDef{
-			Name:      deferredDef.Name,
-			Type:      deferredDef.FactoryType,
-			DependsOn: deferredDef.DependsOn,
-			Config:    deferredDef.Config,
+			Name:      name,
+			Type:      entry.FactoryType,
+			DependsOn: dependsOn,
+			Config:    entry.Config,
 		}
 	}
 	LogDebug("[GetDeferredServiceDef] NOT FOUND '%s'", name)
@@ -1072,82 +1399,82 @@ func (g *GlobalRegistry) GetDeferredServiceDef(name string) *schema.ServiceDef {
 // autoRegisterLazyService auto-registers a service from service-definitions as a lazy service
 // This enables zero-config pattern - services are created on-demand from YAML definitions
 // Logic: Check if published on another server → REMOTE, else → LOCAL from service-definitions
-func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.ServiceDef) {
-	// Get current deployment context
-	currentKey := g.GetCurrentCompositeKey()
-	LogDebug("[autoRegisterLazyService] service '%s', currentKey='%s'", name, currentKey)
-	if currentKey == "" {
-		// No current context - default to LOCAL
-		LogDebug("[autoRegisterLazyService] No currentKey - registering '%s' as LOCAL", name)
-		g.autoRegisterLocalService(name, def)
-		return
-	}
+// func (g *GlobalRegistry) autoRegisterLazyService(name string, def *schema.ServiceDef) {
+// 	// Get current deployment context
+// 	currentKey := g.GetCurrentCompositeKey()
+// 	LogDebug("[autoRegisterLazyService] service '%s', currentKey='%s'", name, currentKey)
+// 	if currentKey == "" {
+// 		// No current context - default to LOCAL
+// 		LogDebug("[autoRegisterLazyService] No currentKey - registering '%s' as LOCAL", name)
+// 		g.autoRegisterLocalService(name, def)
+// 		return
+// 	}
 
-	// Get current server topology
-	currentServerTopo, ok := g.GetServerTopology(currentKey)
-	if !ok {
-		// No topology found - default to LOCAL
-		LogDebug("[autoRegisterLazyService] No topology found for '%s' - registering '%s' as LOCAL", currentKey, name)
-		g.autoRegisterLocalService(name, def)
-		return
-	}
+// 	// Get current server topology
+// 	currentServerTopo, ok := g.GetServerTopology(currentKey)
+// 	if !ok {
+// 		// No topology found - default to LOCAL
+// 		LogDebug("[autoRegisterLazyService] No topology found for '%s' - registering '%s' as LOCAL", currentKey, name)
+// 		g.autoRegisterLocalService(name, def)
+// 		return
+// 	}
 
-	// Check if service is published on another server (REMOTE)
-	remoteBaseURL, isRemote := currentServerTopo.RemoteServices[name]
-	LogDebug("[autoRegisterLazyService] service '%s': isRemote=%v, remoteBaseURL='%s'", name, isRemote, remoteBaseURL)
-	if isRemote {
-		// Register as REMOTE service (HTTP proxy)
-		LogDebug("[autoRegisterLazyService] Registering '%s' as REMOTE -> %s", name, remoteBaseURL)
-		g.AutoRegisterRemoteService(name, def, remoteBaseURL)
-		return
-	}
+// 	// Check if service is published on another server (REMOTE)
+// 	remoteBaseURL, isRemote := currentServerTopo.RemoteServices[name]
+// 	LogDebug("[autoRegisterLazyService] service '%s': isRemote=%v, remoteBaseURL='%s'", name, isRemote, remoteBaseURL)
+// 	if isRemote {
+// 		// Register as REMOTE service (HTTP proxy)
+// 		LogDebug("[autoRegisterLazyService] Registering '%s' as REMOTE -> %s", name, remoteBaseURL)
+// 		g.AutoRegisterRemoteService(name, def, remoteBaseURL)
+// 		return
+// 	}
 
-	// Not remote - register as LOCAL
-	LogDebug("[autoRegisterLazyService] Registering '%s' as LOCAL", name)
-	g.autoRegisterLocalService(name, def)
-}
+// 	// Not remote - register as LOCAL
+// 	LogDebug("[autoRegisterLazyService] Registering '%s' as LOCAL", name)
+// 	g.autoRegisterLocalService(name, def)
+// }
 
 // autoRegisterLocalService registers a service as LOCAL (from factory)
-func (g *GlobalRegistry) autoRegisterLocalService(name string, def *schema.ServiceDef) {
-	// Get factory
-	factory := g.GetServiceFactory(def.Type, true) // true = local factory
-	if factory == nil {
-		panic(fmt.Sprintf("service factory '%s' not registered for service '%s'", def.Type, name))
-	}
+// func (g *GlobalRegistry) autoRegisterLocalService(name string, def *schema.ServiceDef) {
+// 	// Get factory
+// 	factory := g.GetServiceFactory(def.Type, true) // true = local factory
+// 	if factory == nil {
+// 		panic(fmt.Sprintf("service factory '%s' not registered for service '%s'", def.Type, name))
+// 	}
 
-	// Parse dependencies from DependsOn field
-	deps := make(map[string]string)
-	if len(def.DependsOn) > 0 {
-		for _, depStr := range def.DependsOn {
-			// Format: "paramName:serviceName" or just "serviceName"
-			parts := strings.Split(depStr, ":")
-			if len(parts) == 2 {
-				paramName := parts[0]
-				serviceName := parts[1]
-				deps[paramName] = serviceName
-			} else {
-				// No explicit param name - use service name as key
-				deps[depStr] = depStr
-			}
-		}
-	}
+// 	// Parse dependencies from DependsOn field
+// 	deps := make(map[string]string)
+// 	if len(def.DependsOn) > 0 {
+// 		for _, depStr := range def.DependsOn {
+// 			// Format: "paramName:serviceName" or just "serviceName"
+// 			parts := strings.Split(depStr, ":")
+// 			if len(parts) == 2 {
+// 				paramName := parts[0]
+// 				serviceName := parts[1]
+// 				deps[paramName] = serviceName
+// 			} else {
+// 				// No explicit param name - use service name as key
+// 				deps[depStr] = depStr
+// 			}
+// 		}
+// 	}
 
-	// Register as lazy service with wrapper factory
-	// Factory expects service.Cached for dependencies, so we wrap resolved deps
-	g.RegisterLazyServiceWithDeps(name, func(resolvedDeps, cfg map[string]any) any {
-		// Wrap resolved dependencies as service.Cached
-		// This allows factories to use service.Cast[T](deps["key"])
-		lazyDeps := make(map[string]any)
-		for key, depSvc := range resolvedDeps {
-			depSvcCopy := depSvc // Capture for closure
-			lazyDeps[key] = service.LazyLoadWith(func() any { return depSvcCopy })
-		}
+// 	// Register as lazy service with wrapper factory
+// 	// Factory expects service.Cached for dependencies, so we wrap resolved deps
+// 	g.RegisterLazyServiceWithDeps(name, func(resolvedDeps, cfg map[string]any) any {
+// 		// Wrap resolved dependencies as service.Cached
+// 		// This allows factories to use service.Cast[T](deps["key"])
+// 		lazyDeps := make(map[string]any)
+// 		for key, depSvc := range resolvedDeps {
+// 			depSvcCopy := depSvc // Capture for closure
+// 			lazyDeps[key] = service.LazyLoadWith(func() any { return depSvcCopy })
+// 		}
 
-		// Call original factory
-		LogDebug("📦 Creating service instance: '%s' (type: %s)", name, def.Type)
-		return factory(lazyDeps, cfg)
-	}, deps, def.Config)
-}
+// 		// Call original factory
+// 		LogDebug("📦 Creating service instance: '%s' (type: %s)", name, def.Type)
+// 		return factory(lazyDeps, cfg)
+// 	}, deps, def.Config)
+// }
 
 // AutoRegisterRemoteService registers a service as REMOTE (HTTP proxy)
 func (g *GlobalRegistry) AutoRegisterRemoteService(name string, def *schema.ServiceDef, remoteBaseURL string) {
@@ -1220,6 +1547,7 @@ type DeploymentConfig interface {
 // ServerConfig interface for deployment registration
 type ServerConfig interface {
 	GetBaseURL() string
+	GetConfigOverrides() map[string]any
 	GetApps() []AppConfig
 	GetAddr() string
 	GetRouters() []string
@@ -1350,12 +1678,13 @@ func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config Deploy
 	// Build server topologies
 	for serverName, serverConfig := range config.GetServers() {
 		serverTopo := &ServerTopology{
-			Name:           serverName,
-			DeploymentName: deploymentName,
-			BaseURL:        serverConfig.GetBaseURL(),
-			Services:       make([]string, 0),
-			RemoteServices: make(map[string]string),
-			Apps:           make([]*AppTopology, 0),
+			Name:            serverName,
+			DeploymentName:  deploymentName,
+			BaseURL:         serverConfig.GetBaseURL(),
+			ConfigOverrides: serverConfig.GetConfigOverrides(),
+			Services:        make([]string, 0),
+			RemoteServices:  make(map[string]string),
+			Apps:            make([]*AppTopology, 0),
 		}
 
 		// Collect apps (from Apps slice + shorthand fields)
@@ -1450,6 +1779,9 @@ type shorthandAppConfig struct {
 func (a *shorthandAppConfig) GetAddr() string                { return a.addr }
 func (a *shorthandAppConfig) GetRouters() []string           { return a.routers }
 func (a *shorthandAppConfig) GetPublishedServices() []string { return a.publishedServices }
+
+// Implement ServerConfig interface for code-based config (not used in shorthandAppConfig)
+func (a *shorthandAppConfig) GetConfigOverrides() map[string]any { return nil }
 
 var FirstServer string
 

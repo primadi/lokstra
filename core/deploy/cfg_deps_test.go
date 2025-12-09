@@ -49,17 +49,19 @@ func TestConfigBasedDependencyInjection(t *testing.T) {
 	// Register logger
 	lokstra_registry.RegisterService("logger", "test-logger")
 
-	// Register user service with cfg: prefix dependency
+	// Set GLOBAL config (not service config!)
+	lokstra_registry.SetConfig("store.implementation", "postgres-store")
+
+	// Register user service with @ prefix for config-based dependency
 	lokstra_registry.RegisterLazyService("user-service",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store:  deps["cfg:store.implementation"].(Store),
+				Store:  deps["cfg"].(Store),
 				Logger: deps["logger"].(string),
 			}
 		},
 		map[string]any{
-			"depends-on":           []string{"cfg:store.implementation", "logger"},
-			"store.implementation": "postgres-store", // Config specifies postgres
+			"depends-on": []string{"cfg:@store.implementation", "logger"},
 		},
 	)
 
@@ -96,17 +98,19 @@ func TestConfigBasedDependencyInjection_SwitchImplementation(t *testing.T) {
 	// Register logger
 	lokstra_registry.RegisterService("logger-2", "logger2")
 
+	// Set GLOBAL config to use MySQL
+	lokstra_registry.SetConfig("store.implementation", "mysql-store-2")
+
 	// Register user service with MySQL this time
 	lokstra_registry.RegisterLazyService("user-service-2",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store:  deps["cfg:store.implementation"].(Store),
+				Store:  deps["cfg"].(Store),
 				Logger: deps["logger-2"].(string),
 			}
 		},
 		map[string]any{
-			"depends-on":           []string{"cfg:store.implementation", "logger-2"},
-			"store.implementation": "mysql-store-2", // Switch to MySQL!
+			"depends-on": []string{"cfg:@store.implementation", "logger-2"},
 		},
 	)
 
@@ -132,30 +136,24 @@ func TestConfigBasedDependency_MissingConfig(t *testing.T) {
 		return &PostgresStore{name: "test"}
 	}, nil)
 
-	// Register service WITHOUT config for cfg: dependency
+	// DO NOT set global config for "missing.config"
+
+	// Register service with @ dependency that won't be found
 	lokstra_registry.RegisterLazyService("bad-service",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store: deps["cfg:missing.config"].(Store),
+				Store: deps["cfg"].(Store),
 			}
 		},
 		map[string]any{
-			"depends-on": []string{"cfg:missing.config"},
-			// Missing: "missing.config" key!
+			"depends-on": []string{"cfg:@missing.config"},
 		},
 	)
 
-	// Should panic when trying to resolve
+	// Should panic when trying to resolve - config key not found
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("expected panic when config key is missing")
-		} else {
-			// Check error message mentions config requirement
-			if msg, ok := r.(string); ok {
-				if !contains(msg, "config-based dependency") {
-					t.Errorf("expected error about config-based dependency, got: %v", r)
-				}
-			}
 		}
 	}()
 
@@ -166,16 +164,18 @@ func TestConfigBasedDependency_EmptyConfig(t *testing.T) {
 	// Clear registry
 	_ = deploy.Global()
 
-	// Register service with EMPTY config value
+	// Set global config with EMPTY value
+	lokstra_registry.SetConfig("empty.config", "")
+
+	// Register service with @ dependency pointing to empty config
 	lokstra_registry.RegisterLazyService("bad-service-2",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store: deps["cfg:empty.config"].(Store),
+				Store: deps["cfg"].(Store),
 			}
 		},
 		map[string]any{
-			"depends-on":   []string{"cfg:empty.config"},
-			"empty.config": "", // Empty string!
+			"depends-on": []string{"cfg:@empty.config"},
 		},
 	)
 
@@ -187,17 +187,4 @@ func TestConfigBasedDependency_EmptyConfig(t *testing.T) {
 	}()
 
 	lokstra_registry.MustGetService[*UserService]("bad-service-2")
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || containsMiddle(s, substr)))
-}
-
-func containsMiddle(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

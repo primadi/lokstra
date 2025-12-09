@@ -1,0 +1,138 @@
+### Email SMTP Service - HTTP Tests
+### Base URL
+@baseUrl = http://localhost:9090/api
+
+### 0. Info
+GET {{baseUrl}}/info
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Send Simple Email
+POST {{baseUrl}}/send-email
+Content-Type: application/json
+
+{
+  "to": "user@example.com",
+  "subject": "Test Email",
+  "message": "This is a test email sent from the Email SMTP Service.",
+  "is_html": false
+}
+
+### 3. Send Simple HTML Email
+POST {{baseUrl}}/send-email
+Content-Type: application/json
+
+{
+  "to": "user@example.com",
+  "subject": "Test HTML Email",
+  "message": "<h1>Hello!</h1><p>This is a <strong>HTML</strong> email.</p>",
+  "is_html": true
+}
+
+### 4. Send Welcome Email
+POST {{baseUrl}}/send-welcome
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "name": "John Doe"
+}
+
+### 5. Send Email with CC and BCC
+POST {{baseUrl}}/send-with-cc
+Content-Type: application/json
+
+{
+  "to": ["recipient1@example.com", "recipient2@example.com"],
+  "cc": ["cc1@example.com", "cc2@example.com"],
+  "bcc": ["bcc1@example.com"],
+  "subject": "Email with CC and BCC",
+  "message": "This email is sent to multiple recipients with CC and BCC."
+}
+
+### 6. Send Batch Emails
+POST {{baseUrl}}/send-batch
+Content-Type: application/json
+
+{
+  "emails": [
+    {
+      "to": "user1@example.com",
+      "subject": "Batch Email 1",
+      "message": "Hello User 1, this is your personalized message."
+    },
+    {
+      "to": "user2@example.com",
+      "subject": "Batch Email 2",
+      "message": "Hello User 2, this is your personalized message."
+    },
+    {
+      "to": "user3@example.com",
+      "subject": "Batch Email 3",
+      "message": "Hello User 3, this is your personalized message."
+    }
+  ]
+}
+
+### 7. Send Email with Attachment
+POST {{baseUrl}}/send-with-attachment
+Content-Type: application/json
+
+{
+  "to": "recipient@example.com",
+  "subject": "Email with Attachment",
+  "message": "Please find the attached file."
+}
+
+### 8. Test Validation Error - Missing Required Field
+POST {{baseUrl}}/send-email
+Content-Type: application/json
+
+{
+  "to": "user@example.com",
+  "subject": "Test"
+  // Missing "message" field
+}
+
+### 9. Test Validation Error - Invalid Email
+POST {{baseUrl}}/send-email
+Content-Type: application/json
+
+{
+  "to": "invalid-email",
+  "subject": "Test Email",
+  "message": "This should fail validation."
+}
+
+### 10. Send Multiple Recipients (Plain Text)
+POST {{baseUrl}}/send-with-cc
+Content-Type: application/json
+
+{
+  "to": ["team1@example.com", "team2@example.com", "team3@example.com"],
+  "subject": "Team Update",
+  "message": "Hi team,\n\nThis is an important update for everyone.\n\nBest regards,\nManagement"
+}
+
+### 11. Send Newsletter Style Email
+POST {{baseUrl}}/send-email
+Content-Type: application/json
+
+{
+  "to": "subscriber@example.com",
+  "subject": "Monthly Newsletter - December 2025",
+  "message": "<html><body><h1>Newsletter</h1><p>Check out our latest updates!</p><ul><li>Feature 1</li><li>Feature 2</li><li>Feature 3</li></ul></body></html>",
+  "is_html": true
+}
+
+### 12. Send Password Reset Email (Example)
+POST {{baseUrl}}/send-email
+Content-Type: application/json
+
+{
+  "to": "user@example.com",
+  "subject": "Password Reset Request",
+  "message": "<html><body><h2>Password Reset</h2><p>Click the link below to reset your password:</p><a href='https://example.com/reset?token=abc123'>Reset Password</a><p>If you didn't request this, please ignore this email.</p></body></html>",
+  "is_html": true
+}

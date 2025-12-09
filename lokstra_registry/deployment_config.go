@@ -28,8 +28,9 @@ func (d *DeploymentConfig) GetServers() map[string]deploy.ServerConfig {
 
 // ServerConfig defines a server in a deployment
 type ServerConfig struct {
-	BaseURL string
-	Apps    []*AppConfig
+	BaseURL         string
+	ConfigOverrides map[string]any // Server-level config overrides
+	Apps            []*AppConfig
 
 	// Shorthand: If only one app, you can define it directly here
 	// If set, a new app will be created and prepended to Apps array
@@ -41,6 +42,14 @@ type ServerConfig struct {
 // GetBaseURL implements deploy.ServerConfig interface
 func (s *ServerConfig) GetBaseURL() string {
 	return s.BaseURL
+}
+
+// GetConfigOverrides implements deploy.ServerConfig interface
+func (s *ServerConfig) GetConfigOverrides() map[string]any {
+	if s.ConfigOverrides == nil {
+		return make(map[string]any)
+	}
+	return s.ConfigOverrides
 }
 
 // GetApps implements deploy.ServerConfig interface

@@ -5,6 +5,51 @@ import (
 	"strings"
 )
 
+// ResolveSingleValue resolves a single value (not YAML content)
+// Used for resolving configs.server before applying overrides
+// Only resolves ${ENV:...} and ${@provider:...}, NOT ${@cfg:...}
+func ResolveSingleValue(value string) string {
+	if !strings.Contains(value, "${") {
+		return value
+	}
+
+	// Find and replace all ${...} placeholders (except ${@cfg:...})
+	result := value
+	pos := 0
+	for {
+		start := strings.Index(result[pos:], "${")
+		if start == -1 {
+			break
+		}
+		start += pos
+
+		end := strings.Index(result[start:], "}")
+		if end == -1 {
+			break
+		}
+		end += start
+
+		placeholder := result[start+2 : end]
+
+		// Skip @cfg placeholders
+		if strings.HasPrefix(placeholder, "@cfg:") {
+			pos = end + 1
+			continue
+		}
+
+		// Resolve using provider registry
+		resolved := resolvePlaceholder(placeholder)
+
+		// Replace placeholder with resolved value
+		result = result[:start] + resolved + result[end+1:]
+
+		// Update position to after the resolved value
+		pos = start + len(resolved)
+	}
+
+	return result
+}
+
 // resolveYAMLBytesStep1 resolves all ${...} placeholders EXCEPT ${@cfg:...}
 // This is STEP 1 of 2-step resolution process
 // Resolves: ${ENV_VAR}, ${@env:VAR}, ${@aws-secret:key}, ${@vault:path}, etc.
@@ -13,11 +58,14 @@ func ResolveYAMLBytesStep1(data []byte) []byte {
 	content := string(data)
 
 	// Find and replace all ${...} placeholders (except ${@cfg:...})
+	// Track position to avoid re-processing
+	pos := 0
 	for {
-		start := strings.Index(content, "${")
+		start := strings.Index(content[pos:], "${")
 		if start == -1 {
 			break
 		}
+		start += pos
 
 		end := strings.Index(content[start:], "}")
 		if end == -1 {
@@ -30,12 +78,8 @@ func ResolveYAMLBytesStep1(data []byte) []byte {
 
 		// Skip @cfg placeholders (will be resolved in step 2)
 		if strings.HasPrefix(placeholder, "@cfg:") {
-			// Continue searching after this placeholder
-			nextStart := strings.Index(content[end+1:], "${")
-			if nextStart == -1 {
-				break
-			}
-			content = content[:end+1] + content[end+1:]
+			// Move position past this placeholder and continue
+			pos = end + 1
 			continue
 		}
 
@@ -44,6 +88,9 @@ func ResolveYAMLBytesStep1(data []byte) []byte {
 
 		// Replace placeholder with resolved value
 		content = content[:start] + resolved + content[end+1:]
+
+		// Update position to after the resolved value
+		pos = start + len(resolved)
 	}
 
 	return []byte(content)
@@ -54,7 +101,7 @@ func ResolveYAMLBytesStep1(data []byte) []byte {
 //
 // Format: ${@cfg:KEY} or ${@cfg:KEY:default}
 //
-// IMPORTANT: Config keys CANNOT contain ':' character (use '.' for nesting)
+// Supports nested keys using dot notation: email_smtp.host
 //
 // Examples:
 //
@@ -91,17 +138,18 @@ func ResolveYAMLBytesStep2(data []byte, configs map[string]any) []byte {
 			configKey = key
 		}
 
-		// Lookup in configs (case-insensitive)
+		// Lookup in configs - support nested keys with dot notation
 		var resolved string
-		if val, ok := configs[strings.ToLower(configKey)]; ok {
-			resolved = fmt.Sprintf("%v", val)
-		} else if val, ok := configs[configKey]; ok {
+		val := getNestedConfig(configs, configKey)
+		if val != nil {
 			resolved = fmt.Sprintf("%v", val)
 		} else if defaultValue != "" {
+			// User provided explicit default value
 			resolved = defaultValue
 		} else {
-			// Not found - keep original for debugging
-			resolved = "${@cfg:" + key + "}"
+			// Key not found and no explicit default - use empty string
+			// This is safer than panic, allows app to continue
+			resolved = ""
 		}
 
 		// Replace placeholder with resolved value
@@ -110,6 +158,74 @@ func ResolveYAMLBytesStep2(data []byte, configs map[string]any) []byte {
 
 	return []byte(content)
 }
+
+// getNestedConfig retrieves a value from nested config map using dot notation
+// Example: "email_smtp.host" -> configs["email_smtp"]["host"]
+func getNestedConfig(configs map[string]any, key string) any {
+	parts := strings.Split(key, ".")
+
+	var current any = configs
+	for i, part := range parts {
+		// Try case-insensitive lookup at current level
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+
+		// Try exact match first
+		val, found := m[part]
+		if !found {
+			// Try lowercase
+			val, found = m[strings.ToLower(part)]
+			if !found {
+				// Debug: show what keys are available
+				if i == 0 {
+					fmt.Printf("   Available keys at root: %v\n", getMapKeys(m))
+				}
+				return nil
+			}
+		}
+
+		current = val
+	}
+
+	return current
+}
+
+// getMapKeys returns all keys from a map (for debugging)
+func getMapKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// getConfigKeysDebug recursively lists all available config keys for debugging
+// func getConfigKeysDebug(configs map[string]any, prefix string) []string {
+// 	var keys []string
+// 	for k, v := range configs {
+// 		fullKey := k
+// 		if prefix != "" {
+// 			fullKey = prefix + "." + k
+// 		}
+// 		keys = append(keys, fullKey)
+
+// 		// If value is a map, recurse
+// 		if nested, ok := v.(map[string]any); ok {
+// 			nestedKeys := getConfigKeysDebug(nested, fullKey)
+// 			keys = append(keys, nestedKeys...)
+// 		}
+// 	}
+// 	return keys
+// }
+
+// func min(a, b int) int {
+// 	if a < b {
+// 		return a
+// 	}
+// 	return b
+// }
 
 // resolvePlaceholder resolves a placeholder using provider registry
 // Formats supported:

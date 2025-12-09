@@ -30,7 +30,14 @@ func getFirstServerCompositeKey() string {
 
 // SetCurrentServer sets the current server using composite key: "deploymentName.serverName"
 // If compositeKey is empty, it will automatically use the first deployment and server available
-// Example: SetCurrentServer("order-service.order-api")
+//
+// Shorthand support: If compositeKey has no dot (e.g., "api"), it's treated as "default.api"
+// This works when using top-level 'servers' in config.yaml instead of 'deployments'
+//
+// Examples:
+//   - SetCurrentServer("order-service.order-api") - explicit deployment.server
+//   - SetCurrentServer("api") - shorthand for "default.api"
+//   - SetCurrentServer("") - auto-select first available server
 func SetCurrentServer(compositeKey string) error {
 	// If compositeKey is empty, get the first deployment and server
 	if compositeKey == "" {
@@ -42,9 +49,14 @@ func SetCurrentServer(compositeKey string) error {
 		log.Printf("🎯 Auto-selected first server: %s", compositeKey)
 	}
 
+	// Shorthand support: "api" → "default.api"
 	parts := strings.Split(compositeKey, ".")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid server key format, expected 'deployment.server', got: %s", compositeKey)
+	if len(parts) == 1 {
+		// No dot - assume shorthand for "default.{serverName}"
+		compositeKey = "default." + compositeKey
+		log.Printf("🎯 Using shorthand: %s", compositeKey)
+	} else if len(parts) != 2 {
+		return fmt.Errorf("invalid server key format, expected 'deployment.server' or 'server', got: %s", compositeKey)
 	}
 
 	// Validate that server topology exists in Global registry
@@ -157,13 +169,16 @@ func RunCurrentServer(timeout time.Duration) error {
 		return fmt.Errorf("server topology '%s' not found in global registry", currentCompositeKey)
 	}
 
+	// Extract deployment and server names from composite key
+	deploymentName := GetCurrentDeploymentName()
+	serverName := GetCurrentServerName()
+
+	// NOTE: Config overrides already applied in LoadConfig and stored via flattenAndStoreConfigs
+	// No need to apply again here - this was redundant
+
 	// Get original config for inline definitions normalization
 	config := registry.GetDeployConfig()
 	if config != nil {
-		// Extract deployment and server names from composite key
-		deploymentName := GetCurrentDeploymentName()
-		serverName := GetCurrentServerName()
-
 		// Perform lazy normalization of inline definitions for this server only
 		// This updates the config structure (moves inline definitions to global with normalized names)
 		err := loader.NormalizeInlineDefinitionsForServer(config, deploymentName, serverName)
@@ -180,13 +195,6 @@ func RunCurrentServer(timeout time.Duration) error {
 
 		log.Printf("📝 Normalized and registered definitions for server %s.%s", deploymentName, serverName)
 	}
-
-	// NOTE: registerLazyServicesForServer is NO LONGER NEEDED
-	// All service registration (including remote/local logic) is now handled in RegisterDefinitionsForRuntime
-
-	// Extract deployment and server names for handler configurations
-	deploymentName := GetCurrentDeploymentName()
-	serverName := GetCurrentServerName()
 
 	// Get apps from topology
 	if len(serverTopo.Apps) == 0 {
