@@ -158,6 +158,20 @@ func RegisterRouter(name string, r router.Router) {
 	deploy.Global().RegisterRouter(name, r)
 }
 
+// RegisterRouterFactory registers a lazy router factory that will be instantiated
+// when the runtime is ready (after all services are resolved).
+// This allows router registration to depend on services that need runtime resolution.
+//
+// Example:
+//
+//	lokstra_registry.RegisterRouterFactory("email-router", func() lokstra.Router {
+//	    emailService := lokstra_registry.GetService[EmailService]("email-api-service")
+//	    return emailService.GetRouter()
+//	})
+func RegisterRouterFactory(name string, factory func() router.Router) {
+	deploy.Global().RegisterRouterFactory(name, factory)
+}
+
 // GetRouter retrieves a router instance from the runtime registry
 func GetRouter(name string) router.Router {
 	return deploy.Global().GetRouter(name)

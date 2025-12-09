@@ -1,6 +1,103 @@
 # Email SMTP Service - Standalone Example
 
-This folder contains a complete standalone example demonstrating the Email SMTP service.
+This example demonstrates how to use the Email SMTP service in a **standalone** application (without full deployment framework).
+
+## Key Differences: Standalone vs Framework Mode
+
+### Framework Mode (Production)
+
+```go
+func main() {
+    lokstra.Bootstrap()
+    
+    // Load config
+    lokstra.LoadConfig("config.yaml")
+    
+    // Services auto-registered when server runs
+    lokstra_registry.InitAndRunServer()
+}
+```
+
+**Config (config.yaml):**
+```yaml
+configs:
+  server: development.api
+
+service-definitions:
+  email_sender:
+    type: email-smtp
+    config:
+      host: smtp.example.com
+      # ...
+
+deployments:
+  development:
+    servers:
+      api:
+        addr: ":8080"
+        published-services: [email_sender]  # Auto-registered!
+```
+
+### Framework Mode (This Example - Recommended)
+
+```go
+func main() {
+    lokstra.Bootstrap()
+    
+    // Register service types
+    email_smtp.Register()
+    lokstra_registry.RegisterServiceType("email-api-service", EmailAPIServiceFactory)
+    
+    // Load config and run (auto-registers services from deployments)
+    lokstra.LoadConfigFromFolder("configs")
+    lokstra_registry.InitAndRunServer()
+}
+```
+
+**Config (configs/email_smtp.yaml):**
+```yaml
+configs:
+  server: development.api
+
+service-definitions:
+  email-sender:                   # Service instance name
+    type: email-smtp              # Service type (from email_smtp.Register())
+    config:
+      host: smtp.example.com
+      # ...
+
+  email-api-service:              # Router service
+    type: email-api-service
+    depends-on:
+      - EmailSender:email-sender  # Inject email-sender as EmailSender field
+
+deployments:
+  development:
+    servers:
+      api:
+        addr: ":8080"
+        routers: [email-router]
+        published-services: [email-sender, email-api-service]  # Auto-registered!
+```
+
+**How it works:**
+1. ✅ `LoadConfig()` loads YAML and stores service definitions
+2. ✅ `InitAndRunServer()` reads `deployments.development.api.published-services`
+3. ✅ Auto-registers `email-sender` and `email-api-service` with dependency injection
+4. ✅ Mounts `email-router` to server
+5. ✅ Server starts on `:8080`
+
+## Why Manual Registration?
+
+**Important:** `LoadConfig()` **DOES NOT** automatically register services. It only:
+1. ✅ Loads YAML files
+2. ✅ Stores config values
+3. ✅ Stores service **definitions** (metadata)
+4. ❌ Does NOT instantiate services
+
+**Service registration happens during `RunServer()`** when deployment topology is analyzed.
+
+For standalone apps (no deployment), you must **manually register** services.
 
 ## Quick Start
 

@@ -289,6 +289,12 @@ func LoadConfig(filePath string) error {
 	return lokstra_registry.LoadConfig(filePath)
 }
 
+// SetupNamedDbPools sets up database pools from loaded config.
+// Must be called AFTER LoadConfig() if you use named-db-pools in config.
+func SetupNamedDbPools() error {
+	return lokstra_registry.SetupNamedDbPools()
+}
+
 // InitAndRunServer initializes and runs the server based on loaded configuration.
 func InitAndRunServer() error {
 	return lokstra_registry.InitAndRunServer()

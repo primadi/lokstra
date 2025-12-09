@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
+
+# using https://ethereal.email/messages
+
+configs:
+  server: ${SERVER:api}                      # Shorthand: 'api' = 'default.api'
+  shutdown_timeout: 30s                      # Graceful shutdown timeout
+  email_smtp:
+    host: ${EMAIL_HOST:smtp.ethereal.email}              # SMTP server host
+    port: ${EMAIL_PORT:587}                              # SMTP server port
+    username: ${EMAIL_USERNAME:friedrich.greenholt@ethereal.email}   # SMTP username
+    password: ${EMAIL_PASSWORD:1PGbyeXyvEEFUMAqhs}        # SMTP password
+    from_email: ${EMAIL_FROM_ADDRESS:admin@example.com}   # Default from email
+    from_name: ${EMAIL_FROM_NAME:no-reply}                # Default from name
+
+service-definitions:
+  email_smtp:
+    type: email_smtp
+    config:
+      host: ${@cfg:email_smtp.host}                      # Reference from configs!
+      port: ${@cfg:email_smtp.port}
+      username: ${@cfg:email_smtp.username}
+      password: ${@cfg:email_smtp.password}
+      from_email: ${@cfg:email_smtp.from_email}
+      from_name: ${@cfg:email_smtp.from_name}
+      # host: ${EMAIL_HOST:smtp.ethereal.email}              # SMTP server host
+      # port: ${EMAIL_PORT:587}                              # SMTP server port
+      # username: ${EMAIL_USERNAME:friedrich.greenholt@ethereal.email}   # SMTP username
+      # password: ${EMAIL_PASSWORD:1PGbyeXyvEEFUMAqhs}        # SMTP password
+      # from_email: ${EMAIL_FROM_ADDRESS:admin@example.com}   # Default from email
+      # from_name: ${EMAIL_FROM_NAME:no-reply}                # Default from name  
+
+      use_tls: ${EMAIL_USE_TLS:false}                       # Use TLS encryption
+      skip_verify: ${EMAIL_SKIP_VERIFY:false}               # Skip TLS certificate verification
+      use_starttls: ${EMAIL_USE_STARTTLS:false}             # Use STARTTLS
+      auth_method: ${EMAIL_AUTH_METHOD:plain}               # Auth method: "plain", "login", "crammd5"
+      pool_size: ${EMAIL_POOL_SIZE:5}                       # Connection pool size
+      max_batch_size: ${EMAIL_MAX_BATCH_SIZE:50}            # Maximum batch size
+
+
+router-definitions:
+  email-router:
+    path-prefix: /api
+
+# Shorthand: top-level servers (auto-creates 'default' deployment)
+# No need to write deployments.development.servers when you only have one deployment
+servers:
+  api:
+    base-url: http://localhost
+    addr: ":9090"
+    routers: [email-router]

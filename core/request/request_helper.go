@@ -555,10 +555,13 @@ func (h *RequestHelper) BindAll(v any) error {
 			if err := h.bindHeaderField(fieldMeta, rv, header); err != nil {
 				return err
 			}
-		default: //case "path":
+		case "path":
 			if err := h.bindPathField(fieldMeta, rv); err != nil {
 				return err
 			}
+		// Skip json fields - they will be handled by BindBody
+		case "json":
+			continue
 		}
 	}
 

@@ -3,6 +3,7 @@ package lokstra
 import (
 	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/app"
+	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/core/server"
@@ -41,4 +42,16 @@ func NewServer(name string, apps ...*app.App) *server.Server {
 func FetchAndCast[T any](client *api_client.ClientRouter, path string,
 	opts ...api_client.FetchOption) (T, error) {
 	return api_client.FetchAndCast[T](client, path, opts...)
+}
+
+type LogLevel = deploy.LogLevel
+
+const LogLevelDebug = deploy.LogLevelDebug
+const LogLevelInfo = deploy.LogLevelInfo
+const LogLevelWarn = deploy.LogLevelWarn
+const LogLevelError = deploy.LogLevelError
+const LogLevelSilent = deploy.LogLevelSilent
+
+func SetLogLevel(level LogLevel) {
+	deploy.SetLogLevel(level)
 }

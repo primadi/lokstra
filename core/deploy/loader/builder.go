@@ -48,6 +48,26 @@ func getRouterDef(defs map[string]*schema.RouterDef, name string) (*schema.Route
 	return rtr, ok
 }
 
+func getDeploymentDef(config *schema.DeployConfig, name string) (*schema.DeploymentDefMap, bool) {
+	// Try lowercase first
+	if dep, ok := config.Deployments[strings.ToLower(name)]; ok {
+		return dep, true
+	}
+	// Fallback to original case
+	dep, ok := config.Deployments[name]
+	return dep, ok
+}
+
+func getServerDef(deployment *schema.DeploymentDefMap, name string) (*schema.ServerDefMap, bool) {
+	// Try lowercase first
+	if srv, ok := deployment.Servers[strings.ToLower(name)]; ok {
+		return srv, true
+	}
+	// Fallback to original case
+	srv, ok := deployment.Servers[name]
+	return srv, ok
+}
+
 // flattenAndStoreConfigs flattens configs and stores them to registry.resolvedConfigs
 // This populates the config registry that GetConfig() reads from
 func flattenAndStoreConfigs(registry *deploy.GlobalRegistry, configs map[string]any, prefix string) {
@@ -68,6 +88,55 @@ func flattenAndStoreConfigs(registry *deploy.GlobalRegistry, configs map[string]
 			registry.SetConfig(fullKey, value)
 		}
 	}
+}
+
+// normalizeShorthandServers converts top-level 'servers' field to 'default' deployment
+// This provides a shorthand syntax for single-deployment configs:
+//
+//	servers:
+//	  api:
+//	    base-url: http://localhost
+//	    addr: ":8080"
+//	    routers: [email-router]
+//
+// Becomes:
+//
+//	deployments:
+//	  default:
+//	    servers:
+//	      api:
+//	        base-url: http://localhost
+//	        addr: ":8080"
+//	        routers: [email-router]
+//
+// This makes current server "api" equivalent to "default.api"
+func normalizeShorthandServers(config *schema.DeployConfig) {
+	// Skip if no top-level servers defined
+	if len(config.Servers) == 0 {
+		return
+	}
+
+	// Initialize Deployments if needed
+	if config.Deployments == nil {
+		config.Deployments = make(map[string]*schema.DeploymentDefMap)
+	}
+
+	// Check if 'default' deployment already exists
+	if _, exists := config.Deployments["default"]; exists {
+		// Merge servers into existing 'default' deployment
+		for serverName, serverDef := range config.Servers {
+			config.Deployments["default"].Servers[serverName] = serverDef
+		}
+	} else {
+		// Create new 'default' deployment with the servers
+		config.Deployments["default"] = &schema.DeploymentDefMap{
+			ConfigOverrides: make(map[string]any),
+			Servers:         config.Servers,
+		}
+	}
+
+	// Clear top-level servers (moved to deployment)
+	config.Servers = nil
 }
 
 // normalizeServerDefinitions converts server-level helper fields to a new app
@@ -169,26 +238,16 @@ func NormalizeInlineDefinitionsForServer(
 	config *schema.DeployConfig,
 	deploymentName, serverName string,
 ) error {
-	// Case-insensitive lookup: try lowercase version first
-	lowerDeploymentName := strings.ToLower(deploymentName)
-	depDef, ok := config.Deployments[lowerDeploymentName]
+	// Case-insensitive deployment lookup
+	depDef, ok := getDeploymentDef(config, deploymentName)
 	if !ok {
-		// Fallback to original case for backward compatibility
-		depDef, ok = config.Deployments[deploymentName]
-		if !ok {
-			return fmt.Errorf("deployment %s not found", deploymentName)
-		}
+		return fmt.Errorf("deployment %s not found", deploymentName)
 	}
 
 	// Case-insensitive server lookup
-	lowerServerName := strings.ToLower(serverName)
-	serverDef, ok := depDef.Servers[lowerServerName]
+	serverDef, ok := getServerDef(depDef, serverName)
 	if !ok {
-		// Fallback to original case for backward compatibility
-		serverDef, ok = depDef.Servers[serverName]
-		if !ok {
-			return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
-		}
+		return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
 	}
 
 	// Initialize global maps if nil
@@ -407,35 +466,25 @@ func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.
 	// Middlewares will be registered in RegisterDefinitionsForRuntime
 	// For now, we don't need to store them - they're in config.MiddlewareDefinitions
 
-	// Store service definitions to registry as deferred (no runtime registration yet)
-	// This allows GetDeferredServiceDef to work during RegisterDefinitionsForRuntime
+	// Store service definitions as unresolved lazy service entries
+	// Factory will be resolved later in RegisterDefinitionsForRuntime
 	for name, svc := range config.ServiceDefinitions {
 		svc.Name = name
-		// Convert ServiceDef to config map for registerDeferredService
-		svcConfig := svc.Config
-		if svcConfig == nil {
-			svcConfig = make(map[string]any)
+
+		// Create unresolved LazyServiceEntry (FactoryType not yet resolved to actual function)
+		// This allows services to be registered before service type factories are available
+		deps := make(map[string]string)
+		for _, depStr := range svc.DependsOn {
+			// Parse "paramName:serviceName" or just "serviceName"
+			parts := strings.SplitN(depStr, ":", 2)
+			if len(parts) == 2 {
+				deps[parts[0]] = parts[1]
+			} else {
+				deps[depStr] = depStr
+			}
 		}
 
-		// Add depends-on to config (required by registerDeferredService)
-		if len(svc.DependsOn) > 0 {
-			svcConfig["depends-on"] = svc.DependsOn
-		}
-
-		// Call internal method via reflection or expose public method
-		// For now, we'll use a workaround: store directly via RegisterLazyService with nil factory
-		// Actually, let's use the fact that registry has serviceDefs field
-		// But that's private... so we need to expose a public method
-		//
-		// WORKAROUND: Call RegisterLazyService with mode=Skip so it doesn't error on duplicates
-		// But we DON'T want to register yet, just store definition
-		//
-		// BETTER: Don't store now - GetDeferredServiceDef will be called in RegisterDefinitionsForRuntime
-		// But the problem is GetDeferredServiceDef reads from serviceDefs which is populated by registerDeferredService
-		// And registerDeferredService is private!
-		//
-		// SOLUTION: We need to expose a public method in registry to store deferred service definitions
-		// OR: We can skip storing here and directly use config.ServiceDefinitions in RegisterDefinitionsForRuntime
+		registry.RegisterLazyServiceUnresolved(name, svc.Type, deps, svc.Config)
 	}
 
 	// Store router definitions to registry (deferred)
@@ -491,26 +540,16 @@ func collectAllServiceDependencies(config *schema.DeployConfig, publishedService
 // This is called in RunCurrentServer AFTER normalization
 // It registers middlewares, services (with remote/local logic), and auto-generates routers for published services
 func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *schema.DeployConfig, deploymentName, serverName string, serverTopo *deploy.ServerTopology) error {
-	// Case-insensitive lookup: try lowercase version first
-	lowerDeploymentName := strings.ToLower(deploymentName)
-	depDef, ok := config.Deployments[lowerDeploymentName]
+	// Case-insensitive deployment lookup
+	depDef, ok := getDeploymentDef(config, deploymentName)
 	if !ok {
-		// Fallback to original case for backward compatibility
-		depDef, ok = config.Deployments[deploymentName]
-		if !ok {
-			return fmt.Errorf("deployment %s not found", deploymentName)
-		}
+		return fmt.Errorf("deployment %s not found", deploymentName)
 	}
 
 	// Case-insensitive server lookup
-	lowerServerName := strings.ToLower(serverName)
-	serverDef, ok := depDef.Servers[lowerServerName]
+	serverDef, ok := getServerDef(depDef, serverName)
 	if !ok {
-		// Fallback to original case for backward compatibility
-		serverDef, ok = depDef.Servers[serverName]
-		if !ok {
-			return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
-		}
+		return fmt.Errorf("server %s not found in deployment %s", serverName, deploymentName)
 	}
 
 	// Register middlewares
@@ -527,7 +566,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	// Collect all services needed for this server (published services + their dependencies)
 	servicesToRegister := collectAllServiceDependencies(config, serverTopo.Services)
 
-	// Register service definitions with remote/local logic
+	// Register/Resolve service definitions with remote/local logic
 	// Iterate through all services (published + dependencies)
 	for _, serviceName := range servicesToRegister {
 		svc, exists := getServiceDef(config.ServiceDefinitions, serviceName)
@@ -544,33 +583,48 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			// Register REMOTE service
 			registry.AutoRegisterRemoteService(serviceName, svc, remoteURL)
 		} else {
-			// Register LOCAL service with dependency resolution
-			// Convert DependsOn to deps map
-			deps := make(map[string]string)
-			for _, depStr := range svc.DependsOn {
-				// Parse "paramName:serviceName" or just "serviceName"
-				// Note: serviceName can be "@config.key" for config-based resolution
-				parts := strings.SplitN(depStr, ":", 2)
-				if len(parts) == 2 {
-					deps[parts[0]] = parts[1]
-				} else {
-					deps[depStr] = depStr
+			// Check if already stored as unresolved entry from StoreDefinitionsToRegistry
+			if existingEntry := registry.GetLazyServiceEntry(serviceName); existingEntry != nil && !existingEntry.IsResolved() {
+				// Resolve existing unresolved entry
+				serviceType := svc.Type
+				factory := registry.GetServiceFactory(serviceType, true) // true = local factory
+				if factory == nil {
+					return fmt.Errorf("service factory %s (local) not registered for service %s", serviceType, serviceName)
 				}
-			}
 
-			// Get service type factory (LOCAL)
-			serviceType := svc.Type
-			factory := registry.GetServiceFactory(serviceType, true) // true = local factory
-			if factory == nil {
-				return fmt.Errorf("service factory %s (local) not registered for service %s", serviceType, serviceName)
-			}
+				// Resolve the entry by setting the factory
+				existingEntry.ResolveFactory(func(resolvedDeps, cfg map[string]any) any {
+					return factory(resolvedDeps, cfg)
+				})
+			} else {
+				// Not in unresolved registry - register as new LOCAL service with dependency resolution
+				// Convert DependsOn to deps map
+				deps := make(map[string]string)
+				for _, depStr := range svc.DependsOn {
+					// Parse "paramName:serviceName" or just "serviceName"
+					// Note: serviceName can be "@config.key" for config-based resolution
+					parts := strings.SplitN(depStr, ":", 2)
+					if len(parts) == 2 {
+						deps[parts[0]] = parts[1]
+					} else {
+						deps[depStr] = depStr
+					}
+				}
 
-			// Register as lazy service with wrapper factory
-			// Use Skip mode to allow idempotent calls
-			registry.RegisterLazyServiceWithDeps(serviceName, func(resolvedDeps, cfg map[string]any) any {
-				// Call original factory with resolved dependencies (eager injection)
-				return factory(resolvedDeps, cfg)
-			}, deps, svc.Config, deploy.WithRegistrationMode(deploy.LazyServiceSkip))
+				// Get service type factory (LOCAL)
+				serviceType := svc.Type
+				factory := registry.GetServiceFactory(serviceType, true) // true = local factory
+				if factory == nil {
+					return fmt.Errorf("service factory %s (local) not registered for service %s", serviceType, serviceName)
+				}
+
+				// Register as lazy service with wrapper factory
+				// Use Skip mode to allow idempotent calls
+				registry.RegisterLazyServiceWithDeps(serviceName, func(resolvedDeps, cfg map[string]any) any {
+					// Call original factory with resolved dependencies (eager injection)
+					return factory(resolvedDeps, cfg)
+				}, deps, svc.Config, deploy.WithRegistrationMode(deploy.LazyServiceSkip))
+			}
 		}
 	}
 
@@ -579,6 +633,17 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	for _, appDef := range serverDef.Apps {
 		for _, serviceName := range appDef.PublishedServices {
 			publishedServicesMap[serviceName] = true
+		}
+	}
+
+	// IMPORTANT: Force instantiate all published services BEFORE creating routers
+	// This ensures all service dependencies are resolved before router creation
+	for serviceName := range publishedServicesMap {
+		_, ok := registry.GetServiceAny(serviceName)
+		if !ok {
+			log.Printf("⚠️  Warning: Published service '%s' failed to instantiate (dependencies may be missing)", serviceName)
+		} else {
+			log.Printf("✅ Instantiated published service: %s", serviceName)
 		}
 	}
 
@@ -706,17 +771,65 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			continue
 		}
 
-		// Get service instance
-		serviceInstance, ok := registry.GetServiceAny(serviceName)
+		// Force instantiate service by calling GetService with type assertion
+		// This will trigger dependency resolution and instantiation
+		// We use a generic approach since we don't know the service type at compile time
+		var serviceInstance any
+		var ok bool
+
+		// Try to get service instance (this should trigger instantiation if lazy)
+		serviceInstance, ok = registry.GetServiceAny(serviceName)
 		if !ok || serviceInstance == nil {
-			// Service not yet instantiated - this shouldn't happen but handle gracefully
-			log.Printf("⚠️  Warning: Service '%s' not instantiated, skipping router creation", serviceName)
+			// Service failed to instantiate - log detailed error
+			log.Printf("⚠️  Warning: Service '%s' failed to instantiate (dependencies may not be ready), creating lazy router factory instead", serviceName)
+
+			// Create a lazy router factory that will try again when GetRouter is called
+			registry.RegisterRouterFactory(routerName, func() router.Router {
+				// Try to get service instance again
+				svcInst, ok := registry.GetServiceAny(serviceName)
+				if !ok || svcInst == nil {
+					panic(fmt.Sprintf("Service '%s' still not instantiated when router '%s' requested", serviceName, routerName))
+				}
+
+				// Build router from service
+				routerDef := registry.GetRouterDef(routerName)
+				finalPrefix := metadata.PathPrefix
+				if routerDef != nil && routerDef.PathPrefix != "" {
+					finalPrefix = routerDef.PathPrefix
+				}
+
+				opts := &router.ServiceRouterOptions{
+					Prefix:         finalPrefix,
+					Middlewares:    metadata.MiddlewareNames,
+					RouteOverrides: make(map[string]router.RouteMeta),
+				}
+
+				for methodName, routeMeta := range metadata.RouteOverrides {
+					opts.RouteOverrides[methodName] = router.RouteMeta{
+						HTTPMethod: routeMeta.Method,
+						Path:       routeMeta.Path,
+					}
+				}
+
+				return router.NewFromService(svcInst, opts)
+			})
+
+			log.Printf("🔧 Registered lazy router factory for '%s' (will instantiate service on-demand)", routerName)
 			continue
 		}
 
-		// Build ServiceRouterOptions from metadata
+		// Get RouterDef (may have PathPrefix from router-definitions YAML)
+		routerDef := registry.GetRouterDef(routerName)
+
+		// Determine final PathPrefix (priority: RouterDef > Metadata)
+		finalPrefix := metadata.PathPrefix
+		if routerDef != nil && routerDef.PathPrefix != "" {
+			finalPrefix = routerDef.PathPrefix
+		}
+
+		// Build ServiceRouterOptions from metadata + RouterDef
 		opts := &router.ServiceRouterOptions{
-			Prefix:         metadata.PathPrefix,
+			Prefix:         finalPrefix, // Use final prefix (YAML overrides annotation)
 			Middlewares:    metadata.MiddlewareNames,
 			RouteOverrides: make(map[string]router.RouteMeta),
 		}
@@ -734,7 +847,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 
 		// Register router instance
 		registry.RegisterRouter(routerName, r)
-		log.Printf("🔧 Auto-created router '%s' from service '%s' (type: %s)", routerName, serviceName, serviceDef.Type)
+		log.Printf("🔧 Auto-created router '%s' from service '%s' (type: %s, prefix: %s)", routerName, serviceName, serviceDef.Type, finalPrefix)
 	}
 
 	return nil
@@ -753,8 +866,8 @@ func LoadAndBuild(configPaths []string) error {
 	// Store original config for inline definitions normalization
 	registry.StoreDeployConfig(config)
 
-	// Normalize server definitions (convert helper fields to apps)
-	normalizeServerDefinitions(config)
+	// NOTE: normalizeServerDefinitions already called in LoadConfig STEP 9
+	// No need to call again here
 
 	// Store definitions to registry (NO runtime registration, just store data)
 	// Runtime registration will happen in RunCurrentServer
@@ -794,12 +907,13 @@ func LoadAndBuild(configPaths []string) error {
 		// Build server topologies
 		for serverName, serverDef := range depDef.Servers {
 			serverTopo := &deploy.ServerTopology{
-				Name:           serverName,
-				DeploymentName: deploymentName,
-				BaseURL:        serverDef.BaseURL,
-				Services:       make([]string, 0),
-				RemoteServices: make(map[string]string),
-				Apps:           make([]*deploy.AppTopology, 0, len(serverDef.Apps)),
+				Name:            serverName,
+				DeploymentName:  deploymentName,
+				BaseURL:         serverDef.BaseURL,
+				ConfigOverrides: serverDef.ConfigOverrides,
+				Services:        make([]string, 0),
+				RemoteServices:  make(map[string]string),
+				Apps:            make([]*deploy.AppTopology, 0, len(serverDef.Apps)),
 			}
 
 			// Collect SERVER-LEVEL services (published services only)
@@ -854,16 +968,19 @@ func LoadAndBuild(configPaths []string) error {
 	}
 
 	// Auto-discover and setup named DB pools
-	if err := setupNamedDbPools(registry, config); err != nil {
-		return fmt.Errorf("failed to setup named DB pools: %w", err)
-	}
+	// if err := SetupNamedDbPools(registry, config); err != nil {
+	// 	return fmt.Errorf("failed to setup named DB pools: %w", err)
+	// }
 
 	return nil
 }
 
-// setupNamedDbPools auto-discovers and sets up named DB pools from config
+// SetupNamedDbPools auto-discovers and sets up named DB pools from config
 // Requires dbpool-manager service to be already registered
-func setupNamedDbPools(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
+func SetupNamedDbPools() error {
+	registry := deploy.Global()
+	config := registry.GetDeployConfig()
+
 	// Check if named-db-pools section exists
 	if len(config.NamedDbPools) == 0 {
 		internal.AutoCreateDbPoolManager()

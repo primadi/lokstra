@@ -25,14 +25,15 @@ func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
 	var merged *schema.DeployConfig
 
 	basePath := utils.GetBasePath()
-	// Load and merge each file
+
+	// STEP 1: Load and merge all files (RAW, no resolution yet)
 	for _, path := range paths {
 		// If path is already absolute, use it directly; otherwise join with basePath
 		normPath := path
 		if !filepath.IsAbs(path) {
 			normPath = filepath.Join(basePath, path)
 		}
-		config, err := loadSingleFile(normPath)
+		config, err := loadSingleFileRaw(normPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load %s: %w", path, err)
 		}
@@ -44,29 +45,29 @@ func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
 		}
 	}
 
-	// Normalize server definitions (convert helper fields to apps) BEFORE validation
-	normalizeServerDefinitions(merged)
+	// STEP 2: Normalize shorthand servers (must be before getting server key)
+	normalizeShorthandServers(merged)
 
-	// Validate merged config
-	if err := ValidateConfig(merged); err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
+	// STEP 3: Resolve configs.server to know which deployment/server to use
+	if serverKeyRaw, ok := merged.Configs["server"]; ok {
+		if serverKeyStr, ok := serverKeyRaw.(string); ok {
+			resolved := resolver.ResolveSingleValue(serverKeyStr)
+			merged.Configs["server"] = resolved
+		}
 	}
 
-	return merged, nil
-}
+	// STEP 4: Apply config overrides (deployment → server)
+	applyConfigOverrides(merged)
 
-// loadSingleFile loads and parses a single YAML file
-func loadSingleFile(path string) (*schema.DeployConfig, error) {
-	data, err := os.ReadFile(path)
+	// STEP 5: Marshal back to YAML for 2-phase resolution
+	dataWithOverrides, err := yaml.Marshal(merged)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, fmt.Errorf("failed to marshal merged config: %w", err)
 	}
 
-	// STEP 1: Resolve all ${...} EXCEPT ${@cfg:...} at YAML byte level
-	// This resolves: ${ENV_VAR}, ${@env:VAR}, ${@aws-secret:key}, etc.
-	step1Data := resolver.ResolveYAMLBytesStep1(data)
+	// STEP 6: Resolve all ${...} EXCEPT ${@cfg:...}
+	step1Data := resolver.ResolveYAMLBytesStep1(dataWithOverrides)
 
-	// Decode to get configs first (needed for step 2)
 	var tempConfig schema.DeployConfig
 	decoder := yaml.NewDecoder(bytes.NewReader(step1Data))
 	decoder.KnownFields(true)
@@ -74,8 +75,7 @@ func loadSingleFile(path string) (*schema.DeployConfig, error) {
 		return nil, fmt.Errorf("failed to parse YAML (step 1): %w", err)
 	}
 
-	// STEP 2: Resolve ${@cfg:...} using configs from step 1
-	// Re-marshal to YAML, resolve @cfg, then unmarshal again
+	// STEP 7: Resolve ${@cfg:...} using configs from step 1
 	step1Bytes, err := yaml.Marshal(&tempConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal config for step 2: %w", err)
@@ -83,15 +83,89 @@ func loadSingleFile(path string) (*schema.DeployConfig, error) {
 
 	step2Data := resolver.ResolveYAMLBytesStep2(step1Bytes, tempConfig.Configs)
 
-	// Final decode with all values resolved
-	var config schema.DeployConfig
+	// STEP 8: Final decode with all values resolved
+	var finalConfig schema.DeployConfig
 	decoder2 := yaml.NewDecoder(bytes.NewReader(step2Data))
 	decoder2.KnownFields(true)
-	if err := decoder2.Decode(&config); err != nil {
+	if err := decoder2.Decode(&finalConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML (step 2): %w", err)
 	}
 
+	// STEP 9: Normalize server definitions (convert helper fields to apps)
+	normalizeServerDefinitions(&finalConfig)
+
+	// STEP 10: Validate final config
+	if err := ValidateConfig(&finalConfig); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	return &finalConfig, nil
+}
+
+// loadSingleFileRaw loads a single YAML file WITHOUT any resolution
+// Just parse the raw YAML structure
+func loadSingleFileRaw(path string) (*schema.DeployConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var config schema.DeployConfig
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&config); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
 	return &config, nil
+}
+
+// applyConfigOverrides applies deployment and server config overrides to configs
+func applyConfigOverrides(config *schema.DeployConfig) {
+	if config.Configs == nil {
+		return
+	}
+
+	// Get target server from configs.server
+	serverKey, ok := config.Configs["server"].(string)
+	if !ok || serverKey == "" {
+		return
+	}
+
+	// Parse deployment.server
+	var deploymentName, serverName string
+	parts := strings.Split(serverKey, ".")
+	if len(parts) == 2 {
+		deploymentName = strings.ToLower(parts[0])
+		serverName = strings.ToLower(parts[1])
+	} else if len(parts) == 1 {
+		deploymentName = "default"
+		serverName = strings.ToLower(parts[0])
+	} else {
+		return
+	}
+
+	// Find deployment
+	depDef, ok := config.Deployments[deploymentName]
+	if !ok {
+		return
+	}
+
+	// Apply deployment-level overrides
+	for key, value := range depDef.ConfigOverrides {
+		config.Configs[key] = value
+	}
+
+	// Find server
+	serverDef, ok := depDef.Servers[serverName]
+	if !ok {
+		return
+	}
+
+	// Apply server-level overrides (highest priority)
+	for key, value := range serverDef.ConfigOverrides {
+		config.Configs[key] = value
+	}
 }
 
 // mergeConfigs merges two configurations (target <- source)

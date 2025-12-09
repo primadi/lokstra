@@ -19,6 +19,10 @@ type DeployConfig struct {
 	ServiceDefinitions    map[string]*ServiceDef       `yaml:"service-definitions" json:"service-definitions"`
 	RouterDefinitions     map[string]*RouterDef        `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"` // Renamed from Routers
 	Deployments           map[string]*DeploymentDefMap `yaml:"deployments" json:"deployments"`
+
+	// Shorthand: top-level servers (auto-creates 'default' deployment)
+	// Use this when you only need one deployment
+	Servers map[string]*ServerDefMap `yaml:"servers,omitempty" json:"servers,omitempty"`
 }
 
 // DbPoolConfig defines configuration for a named database pool
@@ -86,6 +90,9 @@ type DeploymentDefMap struct {
 // ServerDefMap is a server using map structure
 type ServerDefMap struct {
 	BaseURL string `yaml:"base-url" json:"base-url"`
+
+	// Server-level config overrides (highest priority)
+	ConfigOverrides map[string]any `yaml:"config-overrides,omitempty" json:"config-overrides,omitempty"`
 
 	// Inline definitions at server level (will be normalized to {deployment}.{server}.{name})
 	InlineMiddlewares map[string]*MiddlewareDef `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`

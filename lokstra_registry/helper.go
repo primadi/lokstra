@@ -126,6 +126,22 @@ func LoadConfigFromFolder(configFolder string) error {
 	return LoadConfig(files...)
 }
 
+// SetupNamedDbPools sets up database pools from loaded config.
+// Must be called AFTER LoadConfig() if you use named-db-pools in config.
+// Call this explicitly only if you need DB pools.
+//
+// Example:
+//
+//	if err := lokstra_registry.LoadConfig("config.yaml"); err != nil {
+//	    log.Fatal(err)
+//	}
+//	if err := lokstra_registry.SetupNamedDbPools(); err != nil {
+//	    log.Fatal(err)
+//	}
+func SetupNamedDbPools() error {
+	return loader.SetupNamedDbPools()
+}
+
 // InitAndRunServer initializes and runs the server based on loaded config.
 // Must be called after LoadConfig() and service/middleware registration.
 //

@@ -224,6 +224,77 @@
       },
       "additionalProperties": false
     },
+    "serverDefinition": {
+      "type": "object",
+      "required": ["base-url"],
+      "description": "Server definition",
+      "properties": {
+        "base-url": {
+          "type": "string",
+          "description": "Server base URL",
+          "oneOf": [
+            { "pattern": "^https?://" },
+            { "pattern": "^\\$\\{[^}]+\\}$" }
+          ]
+        },
+        "config-overrides": {
+          "type": "object",
+          "description": "Server-level configuration overrides (highest priority)",
+          "additionalProperties": true
+        },
+        "middleware-definitions": {
+          "type": "object",
+          "description": "Server-level middleware definitions",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/middlewareDefinition" }
+          }
+        },
+        "service-definitions": {
+          "type": "object",
+          "description": "Server-level service definitions",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/serviceDefinition" }
+          }
+        },
+        "router-definitions": {
+          "type": "object",
+          "description": "Server-level router definitions",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/routerDefinition" }
+          }
+        },
+        "apps": {
+          "type": "array",
+          "description": "Applications on this server",
+          "items": { "$ref": "#/definitions/appDefinition" }
+        },
+        "addr": {
+          "type": "string",
+          "description": "Shorthand: Application address",
+          "oneOf": [
+            { "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$" },
+            { "pattern": "^\\$\\{.*\\}$" }
+          ]
+        },
+        "routers": {
+          "type": "array",
+          "description": "Shorthand: Routers",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]*$"
+          }
+        },
+        "published-services": {
+          "type": "array",
+          "description": "Shorthand: Services to auto-generate routers for",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]*$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "dbPoolConfig": {
       "type": "object",
       "description": "Database pool configuration",
@@ -379,76 +450,19 @@
               "type": "object",
               "description": "Server definitions",
               "patternProperties": {
-                "^[a-z][a-z0-9-]*$": {
-                  "type": "object",
-                  "required": ["base-url"],
-                  "properties": {
-                    "base-url": {
-                      "type": "string",
-                      "description": "Server base URL",
-                      "oneOf": [
-                        { "pattern": "^https?://" },
-                        { "pattern": "^\\$\\{[^}]+\\}$" }
-                      ]
-                    },
-                    "middleware-definitions": {
-                      "type": "object",
-                      "description": "Server-level middleware definitions",
-                      "patternProperties": {
-                        "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/middlewareDefinition" }
-                      }
-                    },
-                    "service-definitions": {
-                      "type": "object",
-                      "description": "Server-level service definitions",
-                      "patternProperties": {
-                        "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/serviceDefinition" }
-                      }
-                    },
-                    "router-definitions": {
-                      "type": "object",
-                      "description": "Server-level router definitions",
-                      "patternProperties": {
-                        "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/routerDefinition" }
-                      }
-                    },
-                    "apps": {
-                      "type": "array",
-                      "description": "Applications on this server",
-                      "items": { "$ref": "#/definitions/appDefinition" }
-                    },
-                    "addr": {
-                      "type": "string",
-                      "description": "Shorthand: Application address",
-                      "oneOf": [
-                        { "pattern": "^(:[0-9]+|[0-9.]+:[0-9]+|unix:.+)$" },
-                        { "pattern": "^\\$\\{.*\\}$" }
-                      ]
-                    },
-                    "routers": {
-                      "type": "array",
-                      "description": "Shorthand: Routers",
-                      "items": {
-                        "type": "string",
-                        "pattern": "^[a-z][a-z0-9.-]*$"
-                      }
-                    },
-                    "published-services": {
-                      "type": "array",
-                      "description": "Shorthand: Services to auto-generate routers for",
-                      "items": {
-                        "type": "string",
-                        "pattern": "^[a-z][a-z0-9.-]*$"
-                      }
-                    }
-                  },
-                  "additionalProperties": false
-                }
+                "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/serverDefinition" }
               }
             }
           },
           "additionalProperties": false
         }
+      }
+    },
+    "servers": {
+      "type": "object",
+      "description": "Shorthand: Top-level servers (auto-creates 'default' deployment). Use this when you only need one deployment.",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/serverDefinition" }
       }
     }
   },
