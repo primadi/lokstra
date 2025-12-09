@@ -34,8 +34,8 @@ type UserService struct {
 }
 
 func TestConfigBasedDependencyInjection(t *testing.T) {
-	// Clear registry
-	_ = deploy.Global()
+	// Clear registry for isolated test
+	deploy.ResetGlobalRegistryForTesting()
 
 	// Register store implementations
 	lokstra_registry.RegisterLazyService("postgres-store", func() any {
@@ -51,6 +51,13 @@ func TestConfigBasedDependencyInjection(t *testing.T) {
 
 	// Set GLOBAL config (not service config!)
 	lokstra_registry.SetConfig("store.implementation", "postgres-store")
+
+	// DEBUG: Verify config is set
+	if val, ok := deploy.Global().GetConfig("store.implementation"); ok {
+		t.Logf("✅ Config set successfully: store.implementation = %v", val)
+	} else {
+		t.Fatalf("❌ Config NOT set: store.implementation")
+	}
 
 	// Register user service with @ prefix for config-based dependency
 	lokstra_registry.RegisterLazyService("user-service",
@@ -83,8 +90,8 @@ func TestConfigBasedDependencyInjection(t *testing.T) {
 }
 
 func TestConfigBasedDependencyInjection_SwitchImplementation(t *testing.T) {
-	// Clear registry
-	_ = deploy.Global()
+	// Clear registry for isolated test
+	deploy.ResetGlobalRegistryForTesting()
 
 	// Register store implementations
 	lokstra_registry.RegisterLazyService("postgres-store-2", func() any {
@@ -128,8 +135,8 @@ func TestConfigBasedDependencyInjection_SwitchImplementation(t *testing.T) {
 }
 
 func TestConfigBasedDependency_MissingConfig(t *testing.T) {
-	// Clear registry
-	_ = deploy.Global()
+	// Clear registry for isolated test
+	deploy.ResetGlobalRegistryForTesting()
 
 	// Register store
 	lokstra_registry.RegisterLazyService("some-store", func() any {
@@ -161,8 +168,8 @@ func TestConfigBasedDependency_MissingConfig(t *testing.T) {
 }
 
 func TestConfigBasedDependency_EmptyConfig(t *testing.T) {
-	// Clear registry
-	_ = deploy.Global()
+	// Clear registry for isolated test
+	deploy.ResetGlobalRegistryForTesting()
 
 	// Set global config with EMPTY value
 	lokstra_registry.SetConfig("empty.config", "")
