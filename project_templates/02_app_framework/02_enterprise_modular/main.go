@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/logger"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 	fmt.Println("╚═══════════════════════════════════════════════╝")
 	fmt.Println("")
 
-	deploy.SetLogLevelFromEnv()
+	logger.SetLogLevelFromEnv()
 
 	// 1. Register service types from all modules
 	registerServiceTypes()
@@ -25,5 +25,11 @@ func main() {
 
 	// 3. Run server from config folder
 	// Lokstra will automatically merge all YAML files in config/ folder
-	lokstra_registry.RunServerFromConfigFolder("config")
+	if err := lokstra.LoadConfigFromFolder("config"); err != nil {
+		logger.LogPanic("❌ Failed to load config:", err)
+	}
+
+	if err := lokstra.RunConfiguredServer(); err != nil {
+		logger.LogPanic("❌ Failed to run server:", err)
+	}
 }

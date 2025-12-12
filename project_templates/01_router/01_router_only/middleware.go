@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/request"
 )
 
@@ -19,7 +19,7 @@ func customLoggingMiddleware() request.HandlerFunc {
 		path := c.R.URL.Path
 
 		// Log the incoming request
-		log.Printf("[CUSTOM] Incoming request: %s %s", method, path)
+		logger.LogInfo("[CUSTOM] Incoming request: %s %s", method, path)
 
 		// Continue processing the request
 		// Call Next() to pass the request to the next handler in the chain
@@ -29,7 +29,7 @@ func customLoggingMiddleware() request.HandlerFunc {
 		duration := time.Since(startTime)
 
 		// Log the completed request with timing
-		log.Printf("[CUSTOM] Completed request: %s %s - took %v", method, path, duration)
+		logger.LogInfo("[CUSTOM] Completed request: %s %s - took %v", method, path, duration)
 
 		return err
 	})

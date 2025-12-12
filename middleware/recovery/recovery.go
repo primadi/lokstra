@@ -2,9 +2,9 @@ package recovery
 
 import (
 	"fmt"
-	"log"
 	"runtime/debug"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
@@ -54,14 +54,14 @@ func Middleware(cfg *Config) request.HandlerFunc {
 
 				// Log panic if enabled
 				if cfg.EnableLogging {
-					log.Printf("[PANIC RECOVERY] %v\n%s", r, stack)
+					logger.LogError("[PANIC RECOVERY] %v\n%s", r, stack)
 				}
 
 				// Use custom handler if provided
 				if cfg.CustomHandler != nil {
 					err := cfg.CustomHandler(c, r, stack)
 					if err != nil {
-						log.Printf("[RECOVERY] Custom handler error: %v", err)
+						logger.LogError("[RECOVERY] Custom handler error: %v", err)
 					}
 					return
 				}

@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/app/listener"
 	listener_utils "github.com/primadi/lokstra/core/app/listener/utils"
@@ -68,7 +69,7 @@ func (s *Http3) Shutdown(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	fmt.Printf("[HTTP3] Initiating graceful shutdown for app at %s\n", s.server.Addr)
+	logger.LogInfo("[HTTP3] Initiating graceful shutdown for app at %s\n", s.server.Addr)
 	shutdownErr := s.server.Shutdown(ctx)
 
 	done := make(chan struct{})

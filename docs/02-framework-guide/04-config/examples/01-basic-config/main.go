@@ -24,7 +24,7 @@ func main() {
 	registerMiddlewareTypes()
 
 	// STEP 4: Initialize and Run Server
-	if err := lokstra.InitAndRunServer(); err != nil {
+	if err := lokstra.RunConfiguredServer(); err != nil {
 		log.Fatal("Failed to run server:", err)
 	}
 }

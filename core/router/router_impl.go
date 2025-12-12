@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/route"
 	"github.com/primadi/lokstra/core/router/engine"
@@ -448,7 +449,7 @@ func (r *routerImpl) PrintRoutes() {
 		if routerNameDisplay == "" {
 			routerNameDisplay = r.name
 		}
-		fmt.Printf("[%s] %s %s -> %s%s\n", routerNameDisplay, rt.Method, rt.FullPath, rt.Name, mwDescr)
+		logger.LogInfo("[%s] %s %s -> %s%s", routerNameDisplay, rt.Method, rt.FullPath, rt.Name, mwDescr)
 	})
 }
 

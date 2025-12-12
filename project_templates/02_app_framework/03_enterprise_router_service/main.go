@@ -2,56 +2,32 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/deploy"
 )
 
 // NEW RECOMMENDED FLOW
 // This flow separates config loading from service registration,
 // allowing services to access config during registration.
 func main() {
-	lokstra.SetLogLevel(lokstra.LogLevelDebug)
+	if err := lokstra.BootstrapAndRun(
+		// lokstra.WithLogLevel(logger.LogLevelDebug),
+		lokstra.WithoutDbMigrations(),
+		lokstra.WithServerInitFunc(func() error {
+			fmt.Println("")
+			fmt.Println("╔═══════════════════════════════════════════════╗")
+			fmt.Println("║   LOKSTRA ENTERPRISE MODULAR TEMPLATE         ║")
+			fmt.Println("║   Domain-Driven Design with Bounded Contexts  ║")
+			fmt.Println("║   [Config First]                              ║")
+			fmt.Println("╚═══════════════════════════════════════════════╝")
+			fmt.Println("")
 
-	lokstra.Bootstrap()
+			registerServiceTypes()
+			registerRouters()
+			registerMiddlewareTypes()
 
-	fmt.Println("")
-	fmt.Println("╔═══════════════════════════════════════════════╗")
-	fmt.Println("║   LOKSTRA ENTERPRISE MODULAR TEMPLATE         ║")
-	fmt.Println("║   Domain-Driven Design with Bounded Contexts  ║")
-	fmt.Println("║   [Config First]                              ║")
-	fmt.Println("╚═══════════════════════════════════════════════╝")
-	fmt.Println("")
-
-	deploy.SetLogLevelFromEnv()
-
-	// ===== STEP 1: Load Config =====
-	// Config is loaded first, making it available for service/middleware registration
-	// This registers lazy load services and deployment structure from YAML
-	if err := lokstra.LoadConfigFromFolder("config"); err != nil {
-		log.Fatal("❌ Failed to load config:", err)
-	}
-
-	// ===== STEP 2: Register Service Types =====
-	// At this point, config is already loaded and available
-	// Service factories can now access config via lokstra_registry.GetConfig()
-	registerServiceTypes()
-
-	// ===== STEP 3: Register Manual Routers =====
-	// Register routers that are not generated from @RouterService annotations
-	registerRouters()
-
-	// ===== STEP 4: Register Middleware Types =====
-	// Middleware factories can also access config if needed
-	registerMiddlewareTypes()
-
-	// ===== STEP 5: Initialize and Run Server =====
-	// This will:
-	// - Select server based on config (or auto-select first server)
-	// - Read shutdown timeout from config
-	// - Start the server
-	if err := lokstra.InitAndRunServer(); err != nil {
-		log.Fatal("❌ Failed to run server:", err)
+			return nil
+		})); err != nil {
+		panic("❌ Failed to initialize lokstra:" + err.Error())
 	}
 }

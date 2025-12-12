@@ -50,7 +50,7 @@ lokstra_registry.RegisterService("order-service", orderService)
 // 3. func() any                          - no params (simplest!)
 
 // Multiple DB instances with different DSN (config only - mode 2)
-lokstra_registry.RegisterLazyService("db-main", func(cfg map[string]any) any {
+lokstra_registry.RegisterLazyService("db_main", func(cfg map[string]any) any {
     return db.NewConnection(cfg["dsn"].(string))
 }, map[string]any{
     "dsn": "postgresql://localhost/main",
@@ -64,7 +64,7 @@ lokstra_registry.RegisterLazyService("db-analytics", func(cfg map[string]any) an
 
 // Services without params - simplest! (mode 3)
 lokstra_registry.RegisterLazyService("user-repo", func() any {
-    db := lokstra_registry.MustGetService[*DB]("db-main")
+    db := lokstra_registry.MustGetService[*DB]("db_main")
     return NewUserRepository(db)
 }, nil)
 
@@ -205,7 +205,7 @@ func main() {
     // Can register in any order!
     
     // Multiple DB instances with different config
-    lokstra_registry.RegisterLazyService("db-main", func(cfg map[string]any) any {
+    lokstra_registry.RegisterLazyService("db_main", func(cfg map[string]any) any {
         return db.NewConnection(cfg["dsn"].(string))
     }, map[string]any{
         "dsn": "postgresql://localhost/main",
@@ -231,12 +231,12 @@ func main() {
     }, nil)
     
     lokstra_registry.RegisterLazyService("order-repo", func(cfg map[string]any) any {
-        db := lokstra_registry.MustGetService[*DB]("db-main")
+        db := lokstra_registry.MustGetService[*DB]("db_main")
         return repository.NewOrderRepository(db)
     }, nil)
     
     lokstra_registry.RegisterLazyService("user-repo", func(cfg map[string]any) any {
-        db := lokstra_registry.MustGetService[*DB]("db-main")
+        db := lokstra_registry.MustGetService[*DB]("db_main")
         return repository.NewUserRepository(db)
     }, nil)
     
@@ -248,7 +248,7 @@ func main() {
     // 1. order-service factory called
     // 2. Needs user-service -> user-service factory called
     // 3. Needs user-repo -> user-repo factory called
-    // 4. Needs db-main -> db-main factory called
+    // 4. Needs db_main -> db_main factory called
     // 5. All cached for future use
     orderSvc := lokstra_registry.MustGetService[*service.OrderService]("order-service")
     

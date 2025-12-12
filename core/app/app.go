@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/app/listener"
 	"github.com/primadi/lokstra/core/router"
 	"github.com/primadi/lokstra/lokstra_handler"
@@ -101,7 +102,7 @@ func (a *App) AddReverseProxies(proxies []*ReverseProxyConfig) {
 		return
 	}
 
-	fmt.Printf("📦 [%s] Adding %d reverse proxy(ies)...\n", a.name, len(proxies))
+	logger.LogInfo("📦 [%s] Adding %d reverse proxy(ies)...\n", a.name, len(proxies))
 
 	// Create a dedicated router for reverse proxies
 	proxyRouter := router.New(a.name + "-reverse-proxy")
@@ -119,10 +120,10 @@ func (a *App) AddReverseProxies(proxies []*ReverseProxyConfig) {
 				From: proxy.Rewrite.From,
 				To:   proxy.Rewrite.To,
 			}
-			fmt.Printf("   🔄 %s -> %s (strip: %v, rewrite: %s -> %s)\n",
+			logger.LogInfo("   🔄 %s -> %s (strip: %v, rewrite: %s -> %s)",
 				proxy.Prefix, proxy.Target, proxy.StripPrefix, proxy.Rewrite.From, proxy.Rewrite.To)
 		} else {
-			fmt.Printf("   🔄 %s -> %s (strip: %v)\n",
+			logger.LogInfo("   🔄 %s -> %s (strip: %v)",
 				proxy.Prefix, proxy.Target, proxy.StripPrefix)
 		}
 
@@ -143,7 +144,7 @@ func (a *App) AddReverseProxies(proxies []*ReverseProxyConfig) {
 		a.mainRouter = proxyRouter
 	}
 
-	fmt.Printf("✅ [%s] Reverse proxies added successfully\n", a.name)
+	logger.LogInfo("✅ [%s] Reverse proxies added successfully\n", a.name)
 }
 
 func (a *App) numRouters() int {
@@ -163,16 +164,12 @@ func (a *App) numRouters() int {
 
 // Print app start information, including the number of routers and their routes
 func (a *App) PrintStartInfo() {
-	if a.mainRouter == nil {
-		// App may have no routers (e.g., static file server only)
-		fmt.Println("Starting [" + a.name + "] with 0 router(s) on address " +
-			a.listenerConfig["addr"].(string))
-		return
-	}
+	logger.LogInfo("Starting [%s] with %d router(s) on address %s",
+		a.name, a.numRouters(), a.listenerConfig["addr"])
 
-	fmt.Println("Starting ["+a.name+"] with", a.numRouters(), "router(s) on address",
-		a.listenerConfig["addr"])
-	a.mainRouter.PrintRoutes()
+	if a.mainRouter != nil {
+		a.mainRouter.PrintRoutes()
+	}
 }
 
 // Start the app. It blocks until the app stops or returns an error.
@@ -207,7 +204,7 @@ func (a *App) Run(timeout time.Duration) error {
 
 	select {
 	case sig := <-stop:
-		fmt.Println("Received shutdown signal:", sig)
+		logger.LogInfo("Received shutdown signal: %v", sig)
 		if err := a.Shutdown(timeout); err != nil {
 			return fmt.Errorf("shutdown error: %w", err)
 		}

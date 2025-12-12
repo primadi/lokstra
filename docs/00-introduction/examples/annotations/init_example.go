@@ -2,7 +2,8 @@ package application
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/primadi/lokstra/common/logger"
 )
 
 // Example with Init() method
@@ -33,7 +34,7 @@ func (c *CacheManager) Init() error {
 		return fmt.Errorf("cache TTL must be positive, got %d", c.TTLSeconds)
 	}
 
-	log.Printf("✅ CacheManager initialized: max_size=%d, ttl=%ds", c.MaxSize, c.TTLSeconds)
+	logger.LogInfo("✅ CacheManager initialized: max_size=%d, ttl=%ds", c.MaxSize, c.TTLSeconds)
 	return nil
 }
 

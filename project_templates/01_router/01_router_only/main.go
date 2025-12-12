@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
 	"net/http"
+
+	"github.com/primadi/lokstra/common/logger"
 )
 
 func main() {
@@ -10,10 +11,10 @@ func main() {
 	router := setupRouter()
 
 	// Start the HTTP server
-	log.Println("Starting server on :3000")
+	logger.LogInfo("Starting server on :3000")
 
 	router.PrintRoutes()
 	if err := http.ListenAndServe(":3000", router); err != nil {
-		log.Fatal("Server failed to start:", err)
+		logger.LogPanic("Server failed to start: %v", err)
 	}
 }

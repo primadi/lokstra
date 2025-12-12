@@ -1,10 +1,10 @@
 package main
 
 import (
-	"log"
 	"time"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/logger"
 )
 
 func main() {
@@ -21,11 +21,11 @@ func main() {
 
 	// Run the app with graceful shutdown (30 second timeout)
 	// This handles SIGINT/SIGTERM signals automatically
-	log.Println("Starting application...")
-	log.Println("Press Ctrl+C to gracefully shutdown")
+	logger.LogInfo("Starting application...")
+	logger.LogInfo("Press Ctrl+C to gracefully shutdown")
 	if err := app.Run(30 * time.Second); err != nil {
-		log.Fatal("Failed to start the app:", err)
+		logger.LogPanic("Failed to start the app: %v", err)
 	}
 
-	log.Println("Application stopped gracefully")
+	logger.LogInfo("Application stopped gracefully")
 }

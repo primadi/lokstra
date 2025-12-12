@@ -6,35 +6,25 @@ import (
 
 type DbPoolManager interface {
 	// get or create DbPool for the given dsn
-	GetDsnPool(dsn string) (DbPool, error)
+	GetDbPool(dsn, schema, rlsID string) (DbPool, error)
 
-	// ---------------------------------------
-	// Tenant based pool management
-	//----------------------------------------
-
-	// set dsn and schema for the given tenant
-	SetTenantDsn(tenant string, dsn string, schema string)
-	// get dsn and schema for the given tenant
-	GetTenantDsn(tenant string) (string, string, error)
-	// get DbPool for the given tenant
-	GetTenantPool(tenant string) (DbPoolWithTenant, error)
-	// remove tenant mapping
-	RemoveTenant(tenant string)
-	// acquire connection for the given tenant
-	AcquireTenantConn(ctx context.Context, tenant string) (DbConn, error)
+	// acquire connection for the given dsn, schema, and rlsID
+	// if pool for dsn does not exist, create it
+	// if schema and rlsID are provided, set them accordingly
+	AcquireConn(ctx context.Context, dsn string, schema string, rlsID string) (DbConn, error)
 
 	// ---------------------------------------
 	// Named based pool management
 	//----------------------------------------
 
-	// set dsn and schema for the given name
-	SetNamedDsn(name string, dsn string, schema string)
-	// get dsn and schema for the given name
-	GetNamedDsn(name string) (string, string, error)
+	// set name for the given dsn, schema, and rlsID
+	SetNamedDbPool(name string, dsn string, schema string, rlsID string)
+	// get dsn, schema, rlsID for the given name
+	GetNamedDbPoolInfo(name string) (string, string, string, error)
 	// get DbPool for the given name
-	GetNamedPool(name string) (DbPoolWithSchema, error)
+	GetNamedDbPool(name string) (DbPool, error)
 	// remove name mapping
-	RemoveNamed(name string)
+	RemoveNamedDbPool(name string)
 	// acquire connection for the given name
 	AcquireNamedConn(ctx context.Context, name string) (DbConn, error)
 

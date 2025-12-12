@@ -2,8 +2,8 @@ package repository
 
 import (
 	"fmt"
-	"log"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/model"
 )
@@ -33,7 +33,7 @@ var _ OrderRepository = (*OrderRepositoryMemory)(nil)
 // NewOrderRepositoryMemory creates a new in-memory order repository with seed data
 func NewOrderRepositoryMemory(config map[string]any) *OrderRepositoryMemory {
 	dsn := utils.GetValueFromMap(config, "dsn", "")
-	log.Printf("⚙️  Initializing OrderRepositoryMemory with DSN: %s\n", dsn)
+	logger.LogInfo("⚙️  Initializing OrderRepositoryMemory with DSN: %s\n", dsn)
 
 	repo := &OrderRepositoryMemory{
 		orders: make(map[int]*model.Order),

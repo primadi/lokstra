@@ -21,5 +21,5 @@ func RegisterAllServices() {
 	metrics_prometheus.Register()
 	dbpool_pg.Register()
 	email_smtp.Register()
-	sync_config_pg.Register()
+	sync_config_pg.Register("db_main")
 }

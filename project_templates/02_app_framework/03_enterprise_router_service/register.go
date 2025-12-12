@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"github.com/google/uuid"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/middleware/recovery"
@@ -22,7 +21,7 @@ func registerRouters() {
 	// Register manual routers (not generated from @RouterService)
 	healthRouter := NewHealthRouter()
 	lokstra_registry.RegisterRouter("health-router", healthRouter)
-	log.Println("✅ Registered manual router: health-router")
+	logger.LogInfo("✅ Registered manual router: health-router")
 }
 
 func registerMiddlewareTypes() {
@@ -34,9 +33,9 @@ func registerMiddlewareTypes() {
 	lokstra_registry.RegisterMiddlewareFactory("simple-auth", simpleAuthFactory)
 	lokstra_registry.RegisterMiddlewareFactory("mw-test", func(config map[string]any) request.HandlerFunc {
 		return func(ctx *request.Context) error {
-			log.Printf("→ [mw-test] Before request | Param1: %v, Param2: %v", config["param1"], config["param2"])
+			logger.LogInfo("→ [mw-test] Before request | Param1: %v, Param2: %v", config["param1"], config["param2"])
 			err := ctx.Next()
-			log.Println("← [mw-test] After request")
+			logger.LogInfo("← [mw-test] After request")
 			return err
 		}
 	})
@@ -46,7 +45,7 @@ func requestLoggerFactory(config map[string]any) request.HandlerFunc {
 	return func(ctx *request.Context) error {
 		// Before request
 		reqID := uuid.New().String()
-		log.Printf("→ [%s] %s %s", reqID, ctx.R.Method, ctx.R.URL.Path)
+		logger.LogInfo("→ [%s] %s %s", reqID, ctx.R.Method, ctx.R.URL.Path)
 		ctx.Set("request_id", reqID)
 
 		// Process request
@@ -54,9 +53,9 @@ func requestLoggerFactory(config map[string]any) request.HandlerFunc {
 
 		// After request
 		if err != nil {
-			log.Printf("← [%s] ERROR: %v", reqID, err)
+			logger.LogInfo("← [%s] ERROR: %v", reqID, err)
 		} else {
-			log.Printf("← [%s] SUCCESS (status: %d)", reqID, ctx.Resp.RespStatusCode)
+			logger.LogInfo("← [%s] SUCCESS (status: %d)", reqID, ctx.Resp.RespStatusCode)
 		}
 
 		return err
@@ -73,14 +72,14 @@ func simpleAuthFactory(config map[string]any) request.HandlerFunc {
 
 		// Check if Authorization header exists
 		if authHeader == "" {
-			log.Printf("🔒 [simple-auth] Missing Authorization header")
+			logger.LogInfo("🔒 [simple-auth] Missing Authorization header")
 			return ctx.Api.Unauthorized("Missing Authorization header")
 		}
 
 		// Check Bearer token format
 		const bearerPrefix = "Bearer "
 		if len(authHeader) < len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
-			log.Printf("🔒 [simple-auth] Invalid Authorization format")
+			logger.LogInfo("🔒 [simple-auth] Invalid Authorization format")
 			return ctx.Api.Unauthorized("Invalid Authorization format. Use 'Bearer <token>'")
 		}
 
@@ -90,7 +89,7 @@ func simpleAuthFactory(config map[string]any) request.HandlerFunc {
 		// Simple validation: accept tokens starting with "demo-"
 		// In production, validate against database or JWT
 		if len(token) < 5 || token[:5] != "demo-" {
-			log.Printf("🔒 [simple-auth] Invalid token: %s", token)
+			logger.LogInfo("🔒 [simple-auth] Invalid token: %s", token)
 			return ctx.Api.Unauthorized("Invalid token")
 		}
 
@@ -99,7 +98,7 @@ func simpleAuthFactory(config map[string]any) request.HandlerFunc {
 		ctx.Set("user_id", userID)
 		ctx.Set("authenticated", true)
 
-		log.Printf("✅ [simple-auth] Authenticated user: %s", userID)
+		logger.LogInfo("✅ [simple-auth] Authenticated user: %s", userID)
 
 		// Continue to next handler
 		return ctx.Next()

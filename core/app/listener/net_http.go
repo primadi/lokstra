@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	listener_utils "github.com/primadi/lokstra/core/app/listener/utils"
 )
@@ -77,14 +78,14 @@ func (s *NetHttp) ListenAndServe() error {
 		if err != nil {
 			return fmt.Errorf("failed to listen on unix socket: %w", err)
 		}
-		// fmt.Printf("[NETHTTP] Starting server on Unix socket %s\n", socketPath)
+		logger.LogInfo("[NETHTTP] Starting server on Unix socket %s\n", socketPath)
 	} else {
 		var err error
 		listener, err = net.Listen("tcp", s.server.Addr)
 		if err != nil {
 			return listener_utils.WrapListenError(s.server.Addr, err)
 		}
-		// fmt.Printf("[NETHTTP] Starting server on TCP %s\n", addr)
+		logger.LogInfo("[NETHTTP] Starting server on TCP %s\n", s.server.Addr)
 	}
 
 	if s.secure {
@@ -112,9 +113,9 @@ func (s *NetHttp) Shutdown(timeout time.Duration) error {
 	defer cancel()
 
 	if s.secure {
-		fmt.Printf("[NETHTTP] Initiating graceful shutdown for secure app at %s\n", s.server.Addr)
+		logger.LogInfo("[NETHTTP] Initiating graceful shutdown for secure app at %s\n", s.server.Addr)
 	} else {
-		fmt.Printf("[NETHTTP] Initiating graceful shutdown for app at %s\n", s.server.Addr)
+		logger.LogInfo("[NETHTTP] Initiating graceful shutdown for app at %s\n", s.server.Addr)
 	}
 	shutdownErr := s.server.Shutdown(ctx)
 

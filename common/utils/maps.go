@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"fmt"
 	"maps"
 	"time"
+
+	"github.com/primadi/lokstra/common/logger"
 )
 
 func GetValueFromMap[T any](settings map[string]any, key string, defaultValue T) T {
@@ -31,7 +32,7 @@ func GetDurationFromMap(settings map[string]any, key string, defaultValue any) t
 			if d, err := time.ParseDuration(v); err == nil {
 				return d
 			} else {
-				fmt.Printf("Invalid duration string for key %q: %v\n", key, err)
+				logger.LogInfo("Invalid duration string for key %q: %v\n", key, err)
 			}
 		case float64: // jika YAML sudah diparse jadi angka (ms, s, dst)
 			return time.Duration(v) * time.Second
@@ -42,7 +43,7 @@ func GetDurationFromMap(settings map[string]any, key string, defaultValue any) t
 		case time.Duration:
 			return v
 		default:
-			fmt.Printf("Unsupported duration type for key %q: %T\n", key, val)
+			logger.LogInfo("Unsupported duration type for key %q: %T\n", key, val)
 		}
 	}
 
@@ -51,7 +52,7 @@ func GetDurationFromMap(settings map[string]any, key string, defaultValue any) t
 		if d, err := time.ParseDuration(v); err == nil {
 			return d
 		} else {
-			fmt.Printf("Invalid duration string for key %q: %v\n", key, err)
+			logger.LogInfo("Invalid duration string for key %q: %v\n", key, err)
 		}
 	case float64: // jika YAML sudah diparse jadi angka (ms, s, dst)
 		return time.Duration(v) * time.Second
@@ -62,7 +63,7 @@ func GetDurationFromMap(settings map[string]any, key string, defaultValue any) t
 	case time.Duration:
 		return v
 	default:
-		fmt.Printf("Unsupported default duration type for key %q: %T\n",
+		logger.LogInfo("Unsupported default duration type for key %q: %T\n",
 			key, defaultValue)
 	}
 

@@ -5,33 +5,16 @@ import (
 )
 
 // DbPool defines a connection pool interface
-// supporting schema-aware connection acquisition
+// supporting schema-aware or rlsID-aware connection acquisition
 // and future multi-backend support.
 type DbPool interface {
-	// Acquire a connection for the specified schema.
-	// If schema is empty, no search_path is set.
-	// For multi-tenant, use AcquireMultiTenant with tenantID.
-	Acquire(ctx context.Context, schema string) (DbConn, error)
-
-	// Acquires a connection for the specified schema and tenantID.
-	// If schema is empty, no search_path is set.
-	// If tenantID is empty, no LOCAL app.current_tenant is set.
-	// This is useful for multi-tenant applications.
-	AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (DbConn, error)
-
-	Shutdownable
-}
-
-type DbPoolWithSchema interface {
 	Acquire(ctx context.Context) (DbConn, error)
 
 	Shutdownable
 }
 
-type DbPoolWithTenant interface {
-	Acquire(ctx context.Context) (DbConn, error)
-
-	Shutdownable
+type DbPoolSchemaRls interface {
+	SetSchemaRls(schema string, rlsID string)
 }
 
 type RowMap = map[string]any

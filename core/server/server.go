@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/app"
 )
 
@@ -45,16 +46,16 @@ func New(name string, apps ...*app.App) *Server {
 // Print server start information, including each app's details
 func (s *Server) PrintStartInfo() {
 	s.build()
-	fmt.Printf("Server '%s' starting with %d app(s):\n", s.Name, len(s.Apps))
+	logger.LogInfo("Server '%s' starting with %d app(s):\n", s.Name, len(s.Apps))
 	for _, a := range s.Apps {
 		a.PrintStartInfo()
 	}
-	fmt.Println("Press CTRL+C to stop the server...")
+	logger.LogInfo("Press CTRL+C to stop the server...")
 }
 
 func (s *Server) AddApp(a *app.App) {
 	if s.built {
-		panic("Cannot add app after server is built")
+		logger.LogPanic("Cannot add app after server is built")
 	}
 	s.Apps = append(s.Apps, a)
 }
@@ -147,10 +148,10 @@ func (s *Server) shutdown(timeout time.Duration) error {
 		go func(a *app.App) {
 			defer wg.Done()
 			if err := a.Shutdown(timeout); err != nil {
-				fmt.Printf("Failed to shutdown app '%s': %v\n", a.GetName(), err)
+				logger.LogError("Failed to shutdown app '%s': %v\n", a.GetName(), err)
 				errCh <- fmt.Errorf("app '%s': %w", a.GetName(), err)
 			} else {
-				fmt.Printf("App '%s' has been gracefully shutdown.\n", a.GetName())
+				logger.LogInfo("App '%s' has been gracefully shutdown.\n", a.GetName())
 			}
 		}(ap)
 	}
@@ -192,7 +193,7 @@ func (s *Server) Run(timeout time.Duration) error {
 
 	select {
 	case sig := <-stop:
-		fmt.Println("Received shutdown signal:", sig)
+		logger.LogInfo("Received shutdown signal:", sig)
 		if err := s.shutdown(timeout); err != nil {
 			return fmt.Errorf("shutdown error: %w", err)
 		}

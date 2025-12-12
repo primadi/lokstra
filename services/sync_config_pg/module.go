@@ -43,7 +43,7 @@ type subscriber struct {
 
 type syncConfigPG struct {
 	cfg         *Config
-	dbPool      serviceapi.DbPoolWithSchema
+	dbPool      serviceapi.DbPool
 	listenerDB  *pgxpool.Pool
 	mu          sync.RWMutex
 	cache       map[string]any
@@ -105,7 +105,7 @@ func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
 	// Create context with cancel for goroutine management
 	ctx, cancel := context.WithCancel(context.Background())
 
-	pool, err := dbpool_pg.NewPgxPostgresPool(ctx, dsn)
+	dbPool, err := dbpool_pg.NewPgxPostgresPool(dsn, schema, "")
 	if err != nil {
 		if listenerDB != nil {
 			listenerDB.Close()
@@ -114,7 +114,6 @@ func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
 		return nil, fmt.Errorf("failed to create db pool: %w", err)
 	}
 
-	dbPool := dbpool_pg.NewDbPoolWithSchema(pool, schema)
 	service := &syncConfigPG{
 		cfg:         cfg,
 		dbPool:      dbPool,
@@ -557,7 +556,7 @@ func Service(cfg *Config) (serviceapi.SyncConfig, error) {
 // ServiceFactory creates a SyncConfig service from configuration map
 func ServiceFactory(mapCfg map[string]any) any {
 	cfg := &Config{
-		DbPoolName:         utils.GetValueFromMap(mapCfg, "db_pool_name", "global-db"),
+		DbPoolName:         utils.GetValueFromMap(mapCfg, "db_pool_name", "db_main"),
 		TableName:          utils.GetValueFromMap(mapCfg, "table_name", "sync_config"),
 		Channel:            utils.GetValueFromMap(mapCfg, "channel", "config_changes"),
 		HeartbeatInterval:  utils.GetValueFromMap(mapCfg, "heartbeat_interval", 5*time.Minute),
@@ -575,20 +574,20 @@ func ServiceFactory(mapCfg map[string]any) any {
 }
 
 // Register registers the SyncConfig service type
-func Register() {
+func Register(dbPoolName string) {
 	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory)
-	SetDefaultSyncConfigPG()
+	SetDefaultSyncConfigPG(dbPoolName)
 }
 
 // registers the default SyncConfigPG service
-func SetDefaultSyncConfigPG() {
+func SetDefaultSyncConfigPG(syncDbPoolName string) {
 	if lokstra_registry.HasService("sync-config") {
 		return // Already registered
 	}
 
 	lokstra_registry.RegisterLazyService("sync-config", func() any {
 		cfg := &Config{
-			DbPoolName:         "global-db",
+			DbPoolName:         syncDbPoolName,
 			TableName:          "sync_config",
 			Channel:            "config_changes",
 			SyncOnMismatch:     true,

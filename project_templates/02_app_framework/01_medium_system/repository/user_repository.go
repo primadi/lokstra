@@ -2,9 +2,9 @@ package repository
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/project_templates/02_app_framework/01_medium_system/domain/user"
 )
@@ -21,7 +21,7 @@ var _ user.UserRepository = (*UserRepositoryMemory)(nil)
 // NewUserRepositoryMemory creates a new in-memory user repository with seed data
 func NewUserRepositoryMemory(config map[string]any) *UserRepositoryMemory {
 	dsn := utils.GetValueFromMap(config, "dsn", "memory://users")
-	log.Printf("⚙️  Initializing UserRepositoryMemory with DSN: %s", dsn)
+	logger.LogInfo("⚙️  Initializing UserRepositoryMemory with DSN: %s", dsn)
 
 	repo := &UserRepositoryMemory{
 		users:  make(map[int]*user.User),

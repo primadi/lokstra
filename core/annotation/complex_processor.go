@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/annotation/internal"
 )
@@ -131,7 +132,7 @@ func ProcessComplexAnnotations(rootPath []string, maxWorkers int,
 	if len(packagesWithServices) > 0 && len(rootPath) > 0 {
 		if err := generateImportFile(rootPath[0], packagesWithServices); err != nil {
 			// Log warning but don't fail the whole operation
-			fmt.Printf("⚠️  Warning: Failed to generate import file: %v\n", err)
+			logger.LogWarn("⚠️  Warning: Failed to generate import file: %v\n", err)
 		}
 	}
 
@@ -793,6 +794,6 @@ func generateImportFile(startPath string, packages []string) error {
 		return fmt.Errorf("failed to write %s: %w", importFilePath, err)
 	}
 
-	fmt.Printf("✅ Generated: %s\n", importFilePath)
+	logger.LogInfo("✅ Generated: %s\n", importFilePath)
 	return nil
 }

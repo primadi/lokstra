@@ -22,15 +22,15 @@ type ServerConfig struct {
 func TestGetConfig_FlatAccess(t *testing.T) {
 	// Setup
 	registry := deploy.Global()
-	registry.SetConfig("global-db.dsn", "postgres://localhost/test")
-	registry.SetConfig("global-db.schema", "public")
+	registry.SetConfig("db_main.dsn", "postgres://localhost/test")
+	registry.SetConfig("db_main.schema", "public")
 	// Test flat access
-	dsn := lokstra_registry.GetConfig("global-db.dsn", "default")
+	dsn := lokstra_registry.GetConfig("db_main.dsn", "default")
 	if dsn != "postgres://localhost/test" {
 		t.Errorf("Expected 'postgres://localhost/test', got '%s'", dsn)
 	}
 
-	schema := lokstra_registry.GetConfig("global-db.schema", "default")
+	schema := lokstra_registry.GetConfig("db_main.schema", "default")
 	if schema != "public" {
 		t.Errorf("Expected 'public', got '%s'", schema)
 	}

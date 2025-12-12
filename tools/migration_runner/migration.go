@@ -23,14 +23,14 @@ type Migration struct {
 
 // Runner manages database migrations
 type Runner struct {
-	dbPool        serviceapi.DbPoolWithSchema
+	dbPool        serviceapi.DbPool
 	migrationsDir string
 	migrations    []*Migration
 	schemaTable   string
 }
 
 // New creates a new migration runner
-func New(dbPool serviceapi.DbPoolWithSchema, migrationsDir string) *Runner {
+func New(dbPool serviceapi.DbPool, migrationsDir string) *Runner {
 	return &Runner{
 		dbPool:        dbPool,
 		migrationsDir: migrationsDir,

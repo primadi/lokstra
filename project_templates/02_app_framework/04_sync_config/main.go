@@ -22,7 +22,7 @@ func main() {
 	registerRouters()
 
 	// 5. Run the server
-	if err := lokstra.InitAndRunServer(); err != nil {
+	if err := lokstra.RunConfiguredServer(); err != nil {
 		panic(err)
 	}
 }

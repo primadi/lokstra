@@ -156,6 +156,51 @@ func (sm *SyncMap[V]) Get(ctx context.Context, key string) (V, error) {
 	return typedVal, nil
 }
 
+func (sm *SyncMap[V]) Load(key string) (V, bool) {
+	var zero V
+	fullKey := sm.makeFullKey(key)
+	val, err := sm.config.Get(context.Background(), fullKey)
+	if err != nil {
+		return zero, false
+	}
+	typedVal, err := sm.convertValue(val)
+	if err != nil {
+		return zero, false
+	}
+	return typedVal, true
+}
+
+func (sm *SyncMap[V]) Store(key string, value V) error {
+	fullKey := sm.makeFullKey(key)
+	return sm.config.Set(context.Background(), fullKey, value)
+}
+
+func (sm *SyncMap[V]) LoadOrStore(key string, newFunc func() (V, error)) (V, bool, error) {
+	var zero V
+	fullKey := sm.makeFullKey(key)
+	val, err := sm.config.Get(context.Background(), fullKey)
+	if err == nil {
+		typedVal, err := sm.convertValue(val)
+		if err != nil {
+			return zero, false, err
+		}
+		return typedVal, true, nil
+	}
+
+	// If not found, call newFunc to create a new value
+	newVal, err := newFunc()
+	if err != nil {
+		return zero, false, err
+	}
+
+	// Store the new value
+	if err := sm.Store(key, newVal); err != nil {
+		return zero, false, err
+	}
+
+	return newVal, false, nil
+}
+
 // deletes a key from the SyncMap
 func (sm *SyncMap[V]) Delete(ctx context.Context, key string) error {
 	fullKey := sm.makeFullKey(key)

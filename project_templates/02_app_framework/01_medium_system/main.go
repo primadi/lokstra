@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/logger"
 )
 
 func main() {
@@ -18,12 +18,12 @@ func main() {
 	// Set log level from environment variable LOKSTRA_LOG_LEVEL
 	// Supported values: silent, error, warn, info, debug
 	// Default: info
-	deploy.SetLogLevelFromEnv()
+	logger.SetLogLevelFromEnv()
 
 	// Or set manually:
-	// deploy.SetLogLevel(deploy.LogLevelDebug)  // Show all debug logs
-	// deploy.SetLogLevel(deploy.LogLevelInfo)   // Default
-	// deploy.SetLogLevel(deploy.LogLevelSilent) // No logs
+	// logger.SetLogLevel(logger.LogLevelDebug)  // Show all debug logs
+	// logger.SetLogLevel(logger.LogLevelInfo)   // Default
+	// logger.SetLogLevel(logger.LogLevelSilent) // No logs
 
 	// 1. Register service types
 	registerServiceTypes()
@@ -32,5 +32,11 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. Run server from config
-	lokstra_registry.RunServerFromConfig()
+	if err := lokstra.LoadConfig(); err != nil {
+		logger.LogPanic("❌ Failed to load config:", err)
+	}
+
+	if err := lokstra.RunConfiguredServer(); err != nil {
+		logger.LogPanic("❌ Failed to run server:", err)
+	}
 }

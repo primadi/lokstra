@@ -6,75 +6,10 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/primadi/lokstra/serviceapi"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/primadi/lokstra/serviceapi"
 )
-
-type pgxPostgresPool struct {
-	dsn  string
-	pool *pgxpool.Pool
-}
-
-var _ serviceapi.DbPool = (*pgxPostgresPool)(nil)
-
-func (p *pgxPostgresPool) GetSetting(key string) any {
-	if key == "dsn" {
-		return p.dsn
-	}
-	return nil
-}
-
-func NewPgxPostgresPool(ctx context.Context, dsn string) (*pgxPostgresPool, error) {
-	pool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		return nil, err
-	}
-	if err := pool.Ping(ctx); err != nil {
-		return nil, err
-	}
-	return &pgxPostgresPool{
-		dsn:  dsn,
-		pool: pool,
-	}, nil
-}
-
-// Shutdown implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Shutdown() error {
-	p.pool.Close()
-	return nil
-}
-
-func (p *pgxPostgresPool) Acquire(ctx context.Context, schema string) (serviceapi.DbConn, error) {
-	return p.AcquireMultiTenant(ctx, schema, "")
-}
-
-func (p *pgxPostgresPool) AcquireMultiTenant(ctx context.Context, schema string, tenantID string) (serviceapi.DbConn, error) {
-	conn, err := p.pool.Acquire(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(schema) > 0 {
-		stmt := "SET search_path TO " + pgx.Identifier{schema}.Sanitize()
-		if _, err := conn.Exec(ctx, stmt); err != nil {
-			conn.Release()
-			return nil, err
-		}
-	}
-
-	if tenantID != "" {
-		// set RLS context
-		stmt := "SET LOCAL app.current_tenant = " + pgx.Identifier{tenantID}.Sanitize()
-		if _, err := conn.Exec(ctx, stmt); err != nil {
-			conn.Release()
-			return nil, err
-		}
-	}
-
-	return &pgxConnWrapper{conn: conn}, nil
-}
 
 type pgxConnWrapper struct {
 	conn *pgxpool.Conn
@@ -167,32 +102,6 @@ func pgxSelectMany(ctx context.Context,
 	defer rows.Close()
 
 	return pgx.CollectRows(rows, pgx.RowToMap)
-	// var resultSlice []map[string]any
-	// for rows.Next() {
-	// 	columns := rows.FieldDescriptions()
-	// 	values := make([]any, len(columns))
-	// 	valuePtrs := make([]any, len(columns))
-
-	// 	for i := range columns {
-	// 		valuePtrs[i] = &values[i]
-	// 	}
-
-	// 	if err := rows.Scan(valuePtrs...); err != nil {
-	// 		return nil, fmt.Errorf("failed to scan row: %w", err)
-	// 	}
-
-	// 	rowMap := make(map[string]any)
-	// 	for i, col := range columns {
-	// 		rowMap[string(col.Name)] = values[i]
-	// 	}
-	// 	resultSlice = append(resultSlice, rowMap)
-	// }
-
-	// if err := rows.Err(); err != nil {
-	// 	return nil, fmt.Errorf("error iterating rows: %w", err)
-	// }
-
-	// return resultSlice, nil
 }
 
 func (c *pgxConnWrapper) SelectManyWithMapper(ctx context.Context,
@@ -261,3 +170,5 @@ func (c *pgxConnWrapper) Release() error {
 	c.conn.Release()
 	return nil
 }
+
+var _ serviceapi.DbConn = (*pgxConnWrapper)(nil)
