@@ -7,14 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/annotation"
-	"github.com/primadi/lokstra/core/deploy"
-	"github.com/primadi/lokstra/internal"
 	"github.com/primadi/lokstra/lokstra_registry"
-	"github.com/primadi/lokstra/serviceapi"
-	"github.com/primadi/lokstra/services/dbpool_manager"
-	"github.com/primadi/lokstra/services/sync_config_pg"
-	"github.com/primadi/lokstra/syncmap"
 )
 
 type RunMode string
@@ -114,18 +109,18 @@ func Bootstrap(scanPath ...string) {
 func DetectRunMode() RunMode {
 	exe, err := os.Executable()
 	if err != nil {
-		deploy.LogDebug("[Lokstra] Warning: cannot get executable path:", err)
+		logger.LogDebug("[Lokstra] Warning: cannot get executable path:", err)
 		return RunModeProd
 	}
 
 	exePath := filepath.ToSlash(exe)
 	exeName := filepath.Base(exe)
-	deploy.LogDebug("[Lokstra] Executable: %s\n", exePath)
+	logger.LogDebug("[Lokstra] Executable: %s\n", exePath)
 
 	// 1️⃣ Check if running under Delve debugger
 	// Delve wraps the binary with __debug_bin
 	if strings.Contains(exeName, "__debug_bin") {
-		deploy.LogDebug("[Lokstra] Detected: Delve debugger (debug binary)")
+		logger.LogDebug("[Lokstra] Detected: Delve debugger (debug binary)")
 		return RunModeDebug
 	}
 
@@ -133,7 +128,7 @@ func DetectRunMode() RunMode {
 	// "go run" creates temporary executables in go-build cache directory
 	if strings.Contains(exePath, "go-build") ||
 		strings.Contains(exePath, os.TempDir()) {
-		deploy.LogDebug("[Lokstra] Detected: go run (temporary build)")
+		logger.LogDebug("[Lokstra] Detected: go run (temporary build)")
 		return RunModeDev
 	}
 
@@ -141,7 +136,7 @@ func DetectRunMode() RunMode {
 	// Windows: .exe extension confirms it's a compiled binary
 	// Linux/Mac: no .exe, but also not in temp/go-build, so it's compiled
 	// Default to production mode for all compiled binaries
-	deploy.LogDebug("[Lokstra] Detected: compiled binary (production mode)")
+	logger.LogDebug("[Lokstra] Detected: compiled binary (production mode)")
 	return RunModeProd
 }
 
@@ -236,45 +231,11 @@ func relaunchWithDlv() {
 	fmt.Println("╚════════════════════════════════════════════════════════════════╝")
 	fmt.Println("")
 	fmt.Println("⚠️  Code generation detected changes.")
-	fmt.Println("⚠️  Please STOP and RESTART your debugger to load the new code.")
-	fmt.Println("")
-	fmt.Println("Press Ctrl+C or stop the debugger, then press F5 to restart.")
+	fmt.Println("⚠️  Please RESTART your debugger to load the new code.")
 	fmt.Println("")
 
 	// Exit cleanly so debugger can be restarted
 	os.Exit(0)
-}
-
-// auto create dbpool-manager service if not exists
-func autoCreateDbPoolManager() {
-	// Register SyncConfigPG service type
-	sync_config_pg.Register()
-
-	pm := lokstra_registry.GetService[serviceapi.DbPoolManager]("dbpool-manager")
-	if pm != nil {
-		return // Already registered
-	}
-
-	// Check if sync mode is enabled via config
-	useSync := lokstra_registry.GetConfig("dbpool-manager.use_sync", true)
-
-	if useSync {
-		// Create SyncMaps for tenant and named pools using syncmap package
-		dbPools := syncmap.NewSyncMap[*dbpool_manager.DsnSchema]("db-pools")
-
-		pm = dbpool_manager.NewPgxSyncPoolManager(dbPools)
-		deploy.LogDebug("[Lokstra] DbPoolManager initialized with distributed sync")
-	} else {
-		// Default: use regular pool manager (local sync.Map)
-		pm = dbpool_manager.NewPgxPoolManager()
-		deploy.LogDebug("[Lokstra] DbPoolManager initialized with local sync")
-	}
-
-	lokstra_registry.RegisterService("dbpool-manager", pm)
-}
-
-func init() {
-	internal.AutoCreateDbPoolManager = autoCreateDbPoolManager
 }
 
 // LoadConfigFromFolder loads configuration from the specified folder path.
@@ -285,17 +246,17 @@ func LoadConfigFromFolder(folderPath string) error {
 
 // LoadConfig loads configuration from the specified file path.
 // It also ensures that the dbpool-manager service is registered before loading config.
-func LoadConfig(filePath string) error {
-	return lokstra_registry.LoadConfig(filePath)
+func LoadConfig(filePath ...string) error {
+	return lokstra_registry.LoadConfig(filePath...)
 }
 
-// SetupNamedDbPools sets up database pools from loaded config.
+// LoadNamedDbPoolsFromConfig sets up database pools from loaded config.
 // Must be called AFTER LoadConfig() if you use named-db-pools in config.
-func SetupNamedDbPools() error {
-	return lokstra_registry.SetupNamedDbPools()
+func LoadNamedDbPoolsFromConfig() error {
+	return lokstra_registry.LoadNamedDbPoolsFromConfig()
 }
 
-// InitAndRunServer initializes and runs the server based on loaded configuration.
-func InitAndRunServer() error {
-	return lokstra_registry.InitAndRunServer()
+// RunConfiguredServer initializes and runs the server based on loaded configuration.
+func RunConfiguredServer() error {
+	return lokstra_registry.RunConfiguredServer()
 }

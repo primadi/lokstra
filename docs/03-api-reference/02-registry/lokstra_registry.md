@@ -164,7 +164,7 @@ func(cfg map[string]any) any  // With config
 **Example:**
 ```go
 // With config
-lokstra_registry.RegisterLazyService("db-main", func(cfg map[string]any) any {
+lokstra_registry.RegisterLazyService("db_main", func(cfg map[string]any) any {
     dsn := cfg["dsn"].(string)
     return db.NewConnection(dsn)
 }, map[string]any{
@@ -173,7 +173,7 @@ lokstra_registry.RegisterLazyService("db-main", func(cfg map[string]any) any {
 
 // Without params (resolve deps manually)
 lokstra_registry.RegisterLazyService("user-repo", func() any {
-    db := lokstra_registry.MustGetService[*DB]("db-main")
+    db := lokstra_registry.MustGetService[*DB]("db_main")
     return repository.NewUserRepository(db)
 }, nil)
 ```

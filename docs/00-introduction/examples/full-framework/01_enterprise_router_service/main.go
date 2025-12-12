@@ -1,41 +1,39 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/core/deploy"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
 	lokstra.Bootstrap()
 
-	fmt.Println("")
-	fmt.Println("╔═══════════════════════════════════════════════╗")
-	fmt.Println("║   LOKSTRA ENTERPRISE MODULAR TEMPLATE         ║")
-	fmt.Println("║   Domain-Driven Design with Bounded Contexts  ║")
-	fmt.Println("╚═══════════════════════════════════════════════╝")
-	fmt.Println("")
+	logger.LogInfo("")
+	logger.LogInfo("╔═══════════════════════════════════════════════╗")
+	logger.LogInfo("║   LOKSTRA ENTERPRISE MODULAR TEMPLATE         ║")
+	logger.LogInfo("║   Domain-Driven Design with Bounded Contexts  ║")
+	logger.LogInfo("╚═══════════════════════════════════════════════╝")
+	logger.LogInfo("")
 
-	deploy.SetLogLevelFromEnv()
+	logger.SetLogLevelFromEnv()
 
 	lokstra.LoadConfigFromFolder("config")
 
-	dsn := lokstra_registry.GetConfig("global-db.dsn", "")
-	schema := lokstra_registry.GetConfig("global-db.schema", "public")
+	dsn := lokstra_registry.GetConfig("db_main.dsn", "")
+	schema := lokstra_registry.GetConfig("db_main.schema", "public")
 
 	// Just to show that we can access nested config values
-	fmt.Printf("Using Global DB DSN: %s, Schema: %s\n", dsn, schema)
+	logger.LogInfo("Using Global DB DSN: %s, Schema: %s", dsn, schema)
 
 	type dbConfig struct {
 		DSN    string `json:"dsn"`
 		Schema string `json:"schema"`
 	}
-	fullDBConfig := lokstra_registry.GetConfig("global-db", dbConfig{})
+	fullDBConfig := lokstra_registry.GetConfig("db_main", dbConfig{})
 
 	// Print full nested config struct
-	fmt.Printf("Full Global DB Config: %+v\n", fullDBConfig)
+	logger.LogInfo("Full Global DB Config: %+v", fullDBConfig)
 
 	// 1. Register service types from all modules
 	registerServiceTypes()
@@ -44,7 +42,7 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. Run server from config folder
-	if err := lokstra.InitAndRunServer(); err != nil {
+	if err := lokstra.RunConfiguredServer(); err != nil {
 		panic(err)
 	}
 }

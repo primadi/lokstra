@@ -1,8 +1,7 @@
 package main
 
 import (
-	"log"
-
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -73,7 +72,7 @@ func loadconfigFromCode() {
 			},
 		})
 	if err != nil {
-		log.Fatal("❌ Failed to register monolith deployment:", err)
+		logger.LogInfo("❌ Failed to register monolith deployment:", err)
 	}
 
 	// Microservice: Each service in its own process
@@ -105,6 +104,6 @@ func loadconfigFromCode() {
 			},
 		})
 	if err != nil {
-		log.Fatal("❌ Failed to register microservice deployment:", err)
+		logger.LogPanic("❌ Failed to register microservice deployment:", err)
 	}
 }

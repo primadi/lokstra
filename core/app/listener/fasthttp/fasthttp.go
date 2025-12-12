@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/app/listener"
 	listener_utils "github.com/primadi/lokstra/core/app/listener/utils"
@@ -70,14 +71,14 @@ func (s *FastHttp) ListenAndServe() error {
 		if err != nil {
 			return fmt.Errorf("failed to listen on unix socket: %w", err)
 		}
-		// fmt.Printf("[FastHttp] Starting server on Unix socket %s\n", socketPath)
+		logger.LogInfo("[FastHttp] Starting server on Unix socket %s\n", socketPath)
 	} else {
 		var err error
 		listener, err = net.Listen("tcp", s.addr)
 		if err != nil {
 			return listener_utils.WrapListenError(s.addr, err)
 		}
-		// fmt.Printf("[FastHttp] Starting server on TCP %s\n", addr)
+		logger.LogInfo("[FastHttp] Starting server on TCP %s\n", s.addr)
 	}
 
 	if s.secure {
@@ -105,9 +106,9 @@ func (s *FastHttp) Shutdown(timeout time.Duration) error {
 	defer cancel()
 
 	if s.secure {
-		fmt.Printf("[FastHttp] Initiating graceful shutdown for secure app at %s\n", s.addr)
+		logger.LogInfo("[FastHttp] Initiating graceful shutdown for secure app at %s\n", s.addr)
 	} else {
-		fmt.Printf("[FastHttp] Initiating graceful shutdown for app at %s\n", s.addr)
+		logger.LogInfo("[FastHttp] Initiating graceful shutdown for app at %s\n", s.addr)
 	}
 	shutdownErr := s.server.ShutdownWithContext(ctx)
 

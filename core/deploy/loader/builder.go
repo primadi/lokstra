@@ -2,16 +2,15 @@ package loader
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/router"
-	"github.com/primadi/lokstra/internal"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
@@ -572,7 +571,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 		// Check if service already registered with inline factory (e.g., from annotations)
 		if existingEntry := registry.GetLazyServiceEntry(serviceName); existingEntry != nil && existingEntry.IsResolved() {
 			// Service already has inline factory - skip config-based resolution
-			log.Printf("⏭️  Skipping config resolution for '%s': already resolved with inline factory", serviceName)
+			logger.LogDebug("⏭️  Skipping config resolution for '%s': already resolved with inline factory", serviceName)
 			continue
 		}
 
@@ -648,9 +647,9 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	for serviceName := range publishedServicesMap {
 		_, ok := registry.GetServiceAny(serviceName)
 		if !ok {
-			log.Printf("⚠️  Warning: Published service '%s' failed to instantiate (dependencies may be missing)", serviceName)
+			logger.LogWarn("⚠️  Warning: Published service '%s' failed to instantiate (dependencies may be missing)", serviceName)
 		} else {
-			log.Printf("✅ Instantiated published service: %s", serviceName)
+			logger.LogInfo("✅ Instantiated published service: %s", serviceName)
 		}
 	}
 
@@ -788,7 +787,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 		serviceInstance, ok = registry.GetServiceAny(serviceName)
 		if !ok || serviceInstance == nil {
 			// Service failed to instantiate - log detailed error
-			log.Printf("⚠️  Warning: Service '%s' failed to instantiate (dependencies may not be ready), creating lazy router factory instead", serviceName)
+			logger.LogWarn("⚠️  Warning: Service '%s' failed to instantiate (dependencies may not be ready), creating lazy router factory instead", serviceName)
 
 			// Create a lazy router factory that will try again when GetRouter is called
 			registry.RegisterRouterFactory(routerName, func() router.Router {
@@ -821,7 +820,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 				return router.NewFromService(svcInst, opts)
 			})
 
-			log.Printf("🔧 Registered lazy router factory for '%s' (will instantiate service on-demand)", routerName)
+			logger.LogDebug("🔧 Registered lazy router factory for '%s' (will instantiate service on-demand)", routerName)
 			continue
 		}
 
@@ -854,7 +853,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 
 		// Register router instance
 		registry.RegisterRouter(routerName, r)
-		log.Printf("🔧 Auto-created router '%s' from service '%s' (type: %s, prefix: %s)", routerName, serviceName, serviceDef.Type, finalPrefix)
+		logger.LogDebug("🔧 Auto-created router '%s' from service '%s' (type: %s, prefix: %s)", routerName, serviceName, serviceDef.Type, finalPrefix)
 	}
 
 	return nil
@@ -982,20 +981,17 @@ func LoadAndBuild(configPaths []string) error {
 	return nil
 }
 
-// SetupNamedDbPools auto-discovers and sets up named DB pools from config
+// LoadNamedDbPoolsFromConfig auto-discovers and sets up named DB pools from config
 // Requires dbpool-manager service to be already registered
-func SetupNamedDbPools() error {
+func LoadNamedDbPoolsFromConfig() error {
 	registry := deploy.Global()
 	config := registry.GetDeployConfig()
 
 	// Check if named-db-pools section exists
 	if len(config.NamedDbPools) == 0 {
-		internal.AutoCreateDbPoolManager()
 		// No named-db-pools section, skip
 		return nil
 	}
-
-	internal.AutoCreateDbPoolManager()
 
 	dpm, ok := deploy.Global().GetServiceAny("dbpool-manager")
 	if !ok || dpm == nil {
@@ -1088,10 +1084,10 @@ func SetupNamedDbPools() error {
 		}
 
 		// Set DSN and Schema for poolName
-		dbPoolManager.SetNamedDsn(poolName, dsn, schema)
+		dbPoolManager.SetNamedDbPool(poolName, dsn, schema, "")
 
 		// Create the pool
-		dbPool, err := dbPoolManager.GetNamedPool(poolName)
+		dbPool, err := dbPoolManager.GetNamedDbPool(poolName)
 		if err != nil {
 			return fmt.Errorf("failed to create pool '%s': %w", poolName, err)
 		}
@@ -1099,7 +1095,7 @@ func SetupNamedDbPools() error {
 		// Register pool as a service
 		registry.RegisterService(poolName, dbPool)
 
-		deploy.LogDebug("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
+		logger.LogDebug("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
 	}
 
 	return nil

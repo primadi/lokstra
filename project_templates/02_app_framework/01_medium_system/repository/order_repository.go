@@ -2,10 +2,10 @@ package repository
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/project_templates/02_app_framework/01_medium_system/domain/order"
 )
@@ -22,7 +22,7 @@ var _ order.OrderRepository = (*OrderRepositoryMemory)(nil)
 // NewOrderRepositoryMemory creates a new in-memory order repository with seed data
 func NewOrderRepositoryMemory(config map[string]any) *OrderRepositoryMemory {
 	dsn := utils.GetValueFromMap(config, "dsn", "memory://orders")
-	log.Printf("⚙️  Initializing OrderRepositoryMemory with DSN: %s", dsn)
+	logger.LogInfo("⚙️  Initializing OrderRepositoryMemory with DSN: %s", dsn)
 
 	repo := &OrderRepositoryMemory{
 		orders: make(map[int]*order.Order),

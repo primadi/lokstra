@@ -2,7 +2,8 @@ package application
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/primadi/lokstra/common/logger"
 )
 
 // Example RouterService with Init() method
@@ -30,7 +31,7 @@ func (s *ProductAPIService) Init() error {
 	}
 
 	// Pre-load data if needed
-	log.Printf("✅ ProductAPIService initialized: max_items=%d", s.MaxItems)
+	logger.LogInfo("✅ ProductAPIService initialized: max_items=%d", s.MaxItems)
 	return nil
 }
 

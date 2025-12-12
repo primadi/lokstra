@@ -301,7 +301,7 @@ func HasService(name string) bool {
 //
 // Example with config:
 //
-//	lokstra_registry.RegisterLazyService("db-main", func(cfg map[string]any) any {
+//	lokstra_registry.RegisterLazyService("db_main", func(cfg map[string]any) any {
 //	    return db.NewConnection(cfg["dsn"].(string))
 //	}, map[string]any{
 //	    "dsn": "postgresql://localhost/main",
@@ -310,7 +310,7 @@ func HasService(name string) bool {
 // Example without params:
 //
 //	lokstra_registry.RegisterLazyService("user-repo", func() any {
-//	    db := lokstra_registry.MustGetService[*DB]("db-main")
+//	    db := lokstra_registry.MustGetService[*DB]("db_main")
 //	    return repository.NewUserRepository(db)
 //	}, nil)
 //
@@ -492,18 +492,18 @@ func SetConfig(key string, value any) {
 // Usage examples:
 //
 //	// Simple types (direct type assertion)
-//	dsn := GetConfig("global-db.dsn", "")
+//	dsn := GetConfig("db_main.dsn", "")
 //	port := GetConfig("server.port", 8080)
 //
 //	// Map access
-//	dbConfig := GetConfig[map[string]any]("global-db", nil)
+//	dbConfig := GetConfig[map[string]any]("db_main", nil)
 //
 //	// Struct binding (automatic conversion from map)
 //	type DBConfig struct {
 //	    DSN    string `json:"dsn"`
 //	    Schema string `json:"schema"`
 //	}
-//	dbConfig := GetConfig[DBConfig]("global-db", DBConfig{})
+//	dbConfig := GetConfig[DBConfig]("db_main", DBConfig{})
 func GetConfig[T any](name string, defaultValue T) T {
 	value, ok := deploy.Global().GetConfig(name)
 	if !ok {

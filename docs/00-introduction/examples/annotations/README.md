@@ -259,7 +259,7 @@ func (s *MyService) Init() error {
     }
     
     // Pre-load data, setup connections, etc.
-    log.Println("Service initialized")
+    logger.LogInfo("Service initialized")
     return nil
 }
 ```

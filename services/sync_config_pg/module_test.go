@@ -24,7 +24,7 @@ func TestServiceFactory(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -79,7 +79,7 @@ func TestSyncConfig_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -167,7 +167,7 @@ func TestSubscribeAndCRC_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -241,7 +241,7 @@ func TestSync(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -267,7 +267,7 @@ func TestComplexDataTypes_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -366,7 +366,7 @@ func TestUpdateExistingKey_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -435,7 +435,7 @@ func TestUnsubscribe_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -504,7 +504,7 @@ func TestConcurrentOperations_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -562,7 +562,7 @@ func TestGetIntEdgeCases_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -602,7 +602,7 @@ func TestSyncReloadsData_Integration(t *testing.T) {
 	loadConfig(t)
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  1 * time.Minute,
@@ -659,7 +659,7 @@ func TestSingleton_Integration(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config",
 		Channel:            "config_changes",
 		HeartbeatInterval:  5 * time.Minute,
@@ -704,7 +704,7 @@ func TestSingleton_Integration(t *testing.T) {
 
 	// Create third instance with different config (different table)
 	cfg3 := &sync_config_pg.Config{
-		DbPoolName:         "global-db",
+		DbPoolName:         "db_main",
 		TableName:          "sync_config_different", // Different table
 		Channel:            "config_changes",
 		HeartbeatInterval:  5 * time.Minute,

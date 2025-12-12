@@ -12,7 +12,7 @@ type MockDbPoolWithSchema struct {
 	executions []string // Track executed SQL
 }
 
-var _ serviceapi.DbPoolWithSchema = (*MockDbPoolWithSchema)(nil)
+var _ serviceapi.DbPool = (*MockDbPoolWithSchema)(nil)
 
 func (m *MockDbPoolWithSchema) Acquire(ctx context.Context) (serviceapi.DbConn, error) {
 	return &MockDbConn{pool: m}, nil

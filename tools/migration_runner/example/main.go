@@ -44,19 +44,18 @@ func MainTest() {
 	lokstra_registry.LoadConfigFromFolder("config")
 
 	// Get database pool
-	dbPool, ok := lokstra_registry.GetServiceAny(*dbName)
+	pool, ok := lokstra_registry.GetServiceAny(*dbName)
 	if !ok {
 		log.Fatalf("❌ Database pool '%s' not found. Check your config.yaml named-db-pools section", *dbName)
 	}
 
-	dbPoolWithSchema, ok := dbPool.(serviceapi.DbPoolWithSchema)
+	dbPool, ok := pool.(serviceapi.DbPool)
 	if !ok {
-		log.Fatalf("❌ Service '%s' is not a DbPoolWithSchema", *dbName)
+		log.Fatalf("❌ Service '%s' is not a DbPool", *dbName)
 	}
 
 	// Create migration runner
-	runner := migration_runner.New(dbPoolWithSchema, *migrationsDir)
-
+	runner := migration_runner.New(dbPool, *migrationsDir)
 	ctx := context.Background()
 
 	// Execute command

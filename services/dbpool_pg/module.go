@@ -1,7 +1,6 @@
 package dbpool_pg
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -69,7 +68,7 @@ func (cfg *Config) GetFinalDSN() string {
 func Service(cfg *Config) *pgxPostgresPool {
 	dsn := cfg.GetFinalDSN()
 
-	svc, err := NewPgxPostgresPool(context.Background(), dsn)
+	svc, err := NewPgxPostgresPool(dsn, "", "")
 	if err != nil {
 		return nil
 	}

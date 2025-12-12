@@ -2,17 +2,21 @@ package main
 
 import (
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/common/logger"
 )
 
 func main() {
 	lokstra.Bootstrap()
 
-	// Load multiple config files in order
-	// Later files override earlier ones
-	// Base config + environment-specific config
-	lokstra_registry.RunServerFromConfig(
+	if err := lokstra.LoadConfig(
 		"config/base.yaml",
 		"config/dev.yaml", // or production.yaml for prod
-	)
+	); err != nil {
+		logger.LogPanic("❌ Failed to load config:", err)
+	}
+
+	if err := lokstra.RunConfiguredServer(); err != nil {
+		logger.LogPanic("❌ Failed to run server:", err)
+	}
+
 }

@@ -35,7 +35,7 @@ func migrationCmd() {
 	migrationFlags := flag.NewFlagSet("migration", flag.ExitOnError)
 	configFileFlag := migrationFlags.String("config", "config.yaml", "Lokstra config file")
 	migDirFlag := migrationFlags.String("dir", "migrations", "Migrations directory")
-	dbFlag := migrationFlags.String("db", "global-db", "Database pool name")
+	dbFlag := migrationFlags.String("db", "db_main", "Database pool name")
 	stepsFlag := migrationFlags.Int("steps", 1, "Number of migrations to rollback")
 
 	// Handle create command separately (doesn't need DB connection)
@@ -134,9 +134,9 @@ func executeMigration(subCmd, configFile, migrationDir, dbPoolName string, steps
 		return fmt.Errorf("database pool '%s' not found in registry", dbPoolName)
 	}
 
-	pool, ok := poolAny.(serviceapi.DbPoolWithSchema)
+	pool, ok := poolAny.(serviceapi.DbPool)
 	if !ok {
-		return fmt.Errorf("database pool '%s' does not implement DbPoolWithSchema interface", dbPoolName)
+		return fmt.Errorf("database pool '%s' does not implement DbPool interface", dbPoolName)
 	}
 
 	// Create migration runner

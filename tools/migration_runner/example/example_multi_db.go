@@ -17,6 +17,11 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	lokstra.UsePgxDbPoolManager(true)
+
+	lokstra.UsePgxSyncConfig("db_main")
+	lokstra.LoadNamedDbPoolsFromConfig()
+
 	// OPTION 1: Auto-scan all migration folders (RECOMMENDED)
 	// Scans multi_db/ for subdirectories, runs them in alphabetical order
 	// Each folder loads its own migration.yaml configuration
@@ -52,7 +57,7 @@ func main() {
 	// lokstra migration status -dir multi_db/ledger-db
 
 	// Start your application servers
-	if err := lokstra.InitAndRunServer(); err != nil {
+	if err := lokstra.RunConfiguredServer(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

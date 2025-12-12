@@ -13,11 +13,15 @@ func main() {
 	// 2. Load application config
 	lokstra.LoadConfig("config.yaml")
 
+	lokstra.UsePgxDbPoolManager(true)
+	lokstra.UsePgxSyncConfig("db_main")
+	lokstra.LoadNamedDbPoolsFromConfig()
+
 	// 3. Register routers
 	registerRouters()
 
 	// 4. Run the server
-	if err := lokstra.InitAndRunServer(); err != nil {
+	if err := lokstra.RunConfiguredServer(); err != nil {
 		panic(err)
 	}
 }

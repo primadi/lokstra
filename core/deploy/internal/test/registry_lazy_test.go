@@ -143,7 +143,7 @@ func TestRegisterLazyService_MultipleInstances(t *testing.T) {
 	g := deploy.NewGlobalRegistry()
 
 	// Register multiple DB instances with different DSN
-	g.RegisterLazyService("db-main", func(cfg map[string]any) any {
+	g.RegisterLazyService("db_main", func(cfg map[string]any) any {
 		return "Connection to " + cfg["dsn"].(string)
 	}, map[string]any{"dsn": "main-db"})
 
@@ -156,9 +156,9 @@ func TestRegisterLazyService_MultipleInstances(t *testing.T) {
 	}, map[string]any{"dsn": "cache-db"})
 
 	// Access each instance
-	main, _ := g.GetServiceAny("db-main")
+	main, _ := g.GetServiceAny("db_main")
 	if main != "Connection to main-db" {
-		t.Errorf("unexpected db-main: %v", main)
+		t.Errorf("unexpected db_main: %v", main)
 	}
 
 	analytics, _ := g.GetServiceAny("db-analytics")

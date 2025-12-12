@@ -6,9 +6,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/services/email_smtp"
 )
@@ -32,7 +32,7 @@ func main() {
 
 	// Load config and run server (auto-registers services from deployments)
 	if err := lokstra.LoadConfigFromFolder("configs"); err != nil {
-		log.Fatal(err)
+		logger.LogPanic(err.Error())
 	}
 
 	// Register email_smtp service type
@@ -44,7 +44,7 @@ func main() {
 		return emailService.GetRouter()
 	})
 
-	if err := lokstra_registry.InitAndRunServer(); err != nil {
-		log.Fatal(err)
+	if err := lokstra_registry.RunConfiguredServer(); err != nil {
+		logger.LogPanic(err.Error())
 	}
 }

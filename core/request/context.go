@@ -114,3 +114,22 @@ func (c *Context) GetContextValue(key string) any {
 	}
 	return c.Context.Value(contextKey(key))
 }
+
+// StatusCode returns the HTTP status code from the response
+// It checks multiple sources in order of priority:
+// 1. Writer's status code (if manually written)
+// 2. Response helper's status code (if set via Api/Resp)
+// 3. Default 200 OK
+func (c *Context) StatusCode() int {
+	// First check writer's status code (manual writes)
+	ret := c.W.StatusCode()
+	if ret == 0 {
+		// Then check response helper's status code
+		ret = c.Resp.RespStatusCode
+	}
+	if ret == 0 {
+		// Default to 200 OK
+		ret = 200
+	}
+	return ret
+}

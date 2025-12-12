@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/annotation"
 )
 
@@ -16,7 +16,7 @@ func main() {
 
 	annotations, err := annotation.ParseFileAnnotations(filePath)
 	if err != nil {
-		log.Fatalf("Error parsing file: %v", err)
+		logger.LogPanic("Error parsing file: %v", err)
 	}
 
 	fmt.Printf("\nFound %d annotations:\n\n", len(annotations))

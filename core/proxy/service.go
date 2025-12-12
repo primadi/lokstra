@@ -2,12 +2,12 @@ package proxy
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/request"
 )
 
@@ -41,7 +41,7 @@ func NewService(baseURL string, routeMap map[string]RouteMapping) *Service {
 		Timeout: 30 * time.Second,
 	}
 
-	log.Printf("🌐 Created remote service proxy: %s with %d routes", baseURL, len(routeMap))
+	logger.LogDebug("🌐 Created remote service proxy: %s with %d routes", baseURL, len(routeMap))
 
 	return &Service{
 		client:        client,
@@ -89,7 +89,7 @@ func Call(s *Service, methodName string, params ...any) error {
 	// Replace path parameters from context
 	path := s.replacePathParameters(pathTemplate, ctx, structParam)
 
-	log.Printf("🌐 proxy.Call: %s → %s %s", methodName, httpMethod, s.baseURL+path)
+	logger.LogDebug("🌐 proxy.Call: %s → %s %s", methodName, httpMethod, s.baseURL+path)
 
 	// Build request options
 	opts := s.buildRequestOptions(httpMethod, structParam, ctx)
@@ -97,11 +97,11 @@ func Call(s *Service, methodName string, params ...any) error {
 	// Make HTTP call - use empty response type for error-only handlers
 	_, err = api_client.FetchAndCast[any](s.client, path, opts...)
 	if err != nil {
-		log.Printf("❌ proxy.Call error: %v", err)
+		logger.LogError("❌ proxy.Call error: %v", err)
 		return err
 	}
 
-	log.Printf("✅ proxy.Call success")
+	logger.LogDebug("✅ proxy.Call success")
 	return nil
 }
 
@@ -138,7 +138,7 @@ func CallWithData[T any](s *Service, methodName string, params ...any) (T, error
 	// Replace path parameters from context
 	path := s.replacePathParameters(pathTemplate, ctx, structParam)
 
-	log.Printf("🌐 proxy.CallWithData: %s → %s %s", methodName, httpMethod, s.baseURL+path)
+	logger.LogDebug("🌐 proxy.CallWithData: %s → %s %s", methodName, httpMethod, s.baseURL+path)
 
 	// Build request options
 	opts := s.buildRequestOptions(httpMethod, structParam, ctx)
@@ -146,11 +146,11 @@ func CallWithData[T any](s *Service, methodName string, params ...any) (T, error
 	// Make HTTP call and get typed response
 	data, err := api_client.FetchAndCast[T](s.client, path, opts...)
 	if err != nil {
-		log.Printf("❌ proxy.CallWithData error: %v", err)
+		logger.LogError("❌ proxy.CallWithData error: %v", err)
 		return zero, err
 	}
 
-	log.Printf("✅ proxy.CallWithData success: %T", data)
+	logger.LogDebug("✅ proxy.CallWithData success: %T", data)
 	return data, nil
 }
 

@@ -2,9 +2,9 @@ package request_logger
 
 import (
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
@@ -24,7 +24,7 @@ type Config struct {
 	SkipPaths []string
 
 	// CustomLogger is a custom logging function
-	// If nil, uses default log.Printf
+	// If nil, uses default logger.LogInfo
 	CustomLogger func(format string, args ...any)
 }
 
@@ -54,7 +54,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 		cfg.SkipPaths = defConfig.SkipPaths
 	}
 	if cfg.CustomLogger == nil {
-		cfg.CustomLogger = log.Printf
+		cfg.CustomLogger = logger.LogInfo
 	}
 
 	return request.HandlerFunc(func(c *request.Context) error {
@@ -75,11 +75,8 @@ func Middleware(cfg *Config) request.HandlerFunc {
 		// Calculate duration
 		duration := time.Since(start)
 
-		// Get status code from writer wrapper
-		statusCode := c.W.StatusCode()
-		if statusCode == 0 {
-			statusCode = 200 // Default if not set
-		}
+		// Get status code using helper function
+		statusCode := c.StatusCode()
 
 		// Format and log request
 		if cfg.EnableColors {

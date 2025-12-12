@@ -2,10 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -15,12 +14,11 @@ func main() {
 		"Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
 	flag.Parse()
 
-	fmt.Println("")
-	fmt.Println("╔═════════════════════════════════════════════╗")
-	fmt.Println("║   LOKSTRA MULTI-DEPLOYMENT DEMO             ║")
-	fmt.Println("╚═════════════════════════════════════════════╝")
-	fmt.Println("")
-
+	logger.LogInfo("")
+	logger.LogInfo("╔═════════════════════════════════════════════╗")
+	logger.LogInfo("║   LOKSTRA MULTI-DEPLOYMENT DEMO             ║")
+	logger.LogInfo("╚═════════════════════════════════════════════╝")
+	logger.LogInfo("")
 	// 1. Register service types
 	registerServiceTypes()
 
@@ -33,6 +31,6 @@ func main() {
 
 	// 3. Run server (no more YAML needed!)
 	if err := lokstra_registry.RunServer(*server, 30*time.Second); err != nil {
-		log.Fatal("❌ Failed to run server:", err)
+		logger.LogPanic("❌ Failed to run server:", err)
 	}
 }

@@ -2,12 +2,12 @@ package lokstra_registry
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/loader"
@@ -46,7 +46,7 @@ func SetCurrentServer(compositeKey string) error {
 			return fmt.Errorf("no server topologies found in global registry")
 		}
 		compositeKey = firstKey
-		log.Printf("🎯 Auto-selected first server: %s", compositeKey)
+		logger.LogDebug("🎯 Auto-selected first server: %s", compositeKey)
 	}
 
 	// Shorthand support: "api" → "default.api"
@@ -54,7 +54,7 @@ func SetCurrentServer(compositeKey string) error {
 	if len(parts) == 1 {
 		// No dot - assume shorthand for "default.{serverName}"
 		compositeKey = "default." + compositeKey
-		log.Printf("🎯 Using shorthand: %s", compositeKey)
+		logger.LogDebug("🎯 Using shorthand: %s", compositeKey)
 	} else if len(parts) != 2 {
 		return fmt.Errorf("invalid server key format, expected 'deployment.server' or 'server', got: %s", compositeKey)
 	}
@@ -156,8 +156,8 @@ func PrintCurrentServerInfo() error {
 	return nil
 }
 
-// RunCurrentServer builds and runs the current server based on deployment config
-func RunCurrentServer(timeout time.Duration) error {
+// runCurrentServer builds and runs the current server based on deployment config
+func runCurrentServer(timeout time.Duration) error {
 	if currentCompositeKey == "" {
 		return fmt.Errorf("no server set - call SetCurrentServer first")
 	}
@@ -193,7 +193,7 @@ func RunCurrentServer(timeout time.Duration) error {
 			return fmt.Errorf("failed to register definitions for runtime: %w", err)
 		}
 
-		log.Printf("📝 Normalized and registered definitions for server %s.%s", deploymentName, serverName)
+		logger.LogDebug("📝 Normalized and registered definitions for server %s.%s", deploymentName, serverName)
 	}
 
 	// Get apps from topology
@@ -228,7 +228,7 @@ func RunCurrentServer(timeout time.Duration) error {
 						rewrites[rw.Pattern] = rw.Replacement
 					}
 					r.SetPathRewrites(rewrites)
-					log.Printf("🔧 Applied %d path rewrite rule(s) to router '%s'\n", len(rewrites), routerName)
+					logger.LogDebug("🔧 Applied %d path rewrite rule(s) to router '%s'\n", len(rewrites), routerName)
 				}
 
 				// Apply router-level middleware overrides if specified
@@ -240,7 +240,7 @@ func RunCurrentServer(timeout time.Duration) error {
 					}
 					// Apply middleware overrides from YAML config
 					router.ApplyMiddlewares(r, middlewares...)
-					log.Printf("🔧 Applied router-level middlewares to '%s': %v\n", routerName, routerDef.Middlewares)
+					logger.LogDebug("🔧 Applied router-level middlewares to '%s': %v\n", routerName, routerDef.Middlewares)
 				}
 
 				// Apply route-level overrides (custom routes)
@@ -258,7 +258,7 @@ func RunCurrentServer(timeout time.Duration) error {
 								if mw != nil {
 									options = append(options, mw)
 								} else {
-									log.Printf("⚠️  Warning: Middleware '%s' not found for route '%s'\n",
+									logger.LogWarning("⚠️  Warning: Middleware '%s' not found for route '%s'\n",
 										mwName, customRoute.Name)
 								}
 							}
@@ -268,10 +268,10 @@ func RunCurrentServer(timeout time.Duration) error {
 						if len(options) > 0 {
 							err := r.UpdateRoute(customRoute.Name, options...)
 							if err != nil {
-								log.Printf("⚠️  Warning: Failed to update route '%s' in router '%s': %v\n",
+								logger.LogWarning("⚠️  Warning: Failed to update route '%s' in router '%s': %v\n",
 									customRoute.Name, routerName, err)
 							} else {
-								log.Printf("🔧 Applied route-level middlewares to '%s.%s': %v\n",
+								logger.LogDebug("🔧 Applied route-level middlewares to '%s.%s': %v\n",
 									routerName, customRoute.Name, customRoute.Middlewares)
 							}
 						}
@@ -371,7 +371,7 @@ func applyAppHandlerConfigurations(coreApp *app.App, config *schema.DeployConfig
 			spaRouter.ANYPrefix(spaDef.Prefix, handler)
 			coreApp.AddRouter(spaRouter)
 
-			log.Printf("📦 [%s] Mounted SPA: %s -> %s\n", coreApp.GetName(), spaDef.Prefix, spaDef.Dir)
+			logger.LogDebug("📦 [%s] Mounted SPA: %s -> %s\n", coreApp.GetName(), spaDef.Prefix, spaDef.Dir)
 		}
 	}
 
@@ -389,7 +389,7 @@ func applyAppHandlerConfigurations(coreApp *app.App, config *schema.DeployConfig
 			staticRouter.ANYPrefix(staticDef.Prefix, handler)
 			coreApp.AddRouter(staticRouter)
 
-			log.Printf("📦 [%s] Mounted Static: %s -> %s\n", coreApp.GetName(), staticDef.Prefix, staticDef.Dir)
+			logger.LogDebug("📦 [%s] Mounted Static: %s -> %s\n", coreApp.GetName(), staticDef.Prefix, staticDef.Dir)
 		}
 	}
 
@@ -411,5 +411,5 @@ func RunServer(compositeKey string, timeout time.Duration) error {
 	}
 
 	// Run the server
-	return RunCurrentServer(timeout)
+	return runCurrentServer(timeout)
 }

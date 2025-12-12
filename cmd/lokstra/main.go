@@ -8,15 +8,15 @@ import (
 	"slices"
 
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/annotation"
-	"github.com/primadi/lokstra/core/deploy"
 )
 
 const version = "1.0.2"
 
 func main() {
-	deploy.SetLogLevel(deploy.LogLevelInfo)
+	logger.SetLogLevel(logger.LogLevelInfo)
 
 	// for debugging purpose
 	if lokstra.DetectRunMode() != lokstra.RunModeProd {

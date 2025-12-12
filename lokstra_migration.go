@@ -3,10 +3,10 @@ package lokstra
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
@@ -175,24 +175,24 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 	// Skip if should not run
 	if !shouldRun {
 		if !cfg.Silent {
-			log.Printf("[Lokstra] Skipping migrations (mode=%s, force=%s)", mode, cfg.Force)
+			logger.LogInfo("[Lokstra] Skipping migrations (mode=%s, force=%s)", mode, cfg.Force)
 		}
 		return nil
 	}
 
 	// Get database pool
-	dbPool, ok := lokstra_registry.GetServiceAny(cfg.DbPoolName)
+	pool, ok := lokstra_registry.GetServiceAny(cfg.DbPoolName)
 	if !ok {
 		return fmt.Errorf("database pool '%s' not found - check your config.yaml named-db-pools section", cfg.DbPoolName)
 	}
 
-	dbPoolWithSchema, ok := dbPool.(serviceapi.DbPoolWithSchema)
+	dbPool, ok := pool.(serviceapi.DbPool)
 	if !ok {
 		return fmt.Errorf("service '%s' is not a DbPoolWithSchema", cfg.DbPoolName)
 	}
 
 	// Create migration runner with custom schema table if specified
-	runner := migration_runner.New(dbPoolWithSchema, cfg.MigrationsDir)
+	runner := migration_runner.New(dbPool, cfg.MigrationsDir)
 	if cfg.SchemaTable != "" && cfg.SchemaTable != "schema_migrations" {
 		runner = runner.WithSchemaTable(cfg.SchemaTable)
 	}
@@ -200,7 +200,7 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 	// Run migrations
 	ctx := context.Background()
 	if !cfg.Silent {
-		log.Printf("[Lokstra] Running migrations (mode=%s, force=%s, dir=%s, db=%s, schema=%s)",
+		logger.LogInfo("[Lokstra] Running migrations (mode=%s, force=%s, dir=%s, db=%s, schema=%s)",
 			mode, cfg.Force, cfg.MigrationsDir, cfg.DbPoolName, cfg.SchemaTable)
 	}
 
@@ -209,7 +209,7 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 	}
 
 	if !cfg.Silent {
-		log.Printf("[Lokstra] Migrations completed successfully")
+		logger.LogInfo("[Lokstra] Migrations completed successfully")
 	}
 
 	return nil
@@ -262,11 +262,18 @@ func loadMigrationYaml(path string) (*MigrationYamlConfig, error) {
 //
 //	    // Auto-scan and run all database migrations
 //	    if err := lokstra.CheckDbMigrationsAuto("migrations"); err != nil {
-//	        log.Fatalf("Migrations failed: %v", err)
+//	        logger.LogPanic("Migrations failed: %v", err)
 //	    }
 //
 //	    lokstra_registry.RunServerFromConfig()
 //	}
+//
+// Example migration.yaml:
+//
+// dbpool-name: main-db
+// schema-table: schema_migrations
+// force: auto
+// description: Main application database with users, orders, products
 func CheckDbMigrationsAuto(configFolder string) error {
 	// Read all subdirectories sorted alphabetically
 	basePath := utils.GetBasePath()
@@ -304,7 +311,7 @@ func CheckDbMigrationsAuto(configFolder string) error {
 	for _, folder := range migrationFolders {
 		folderPath := filepath.Join(rootDir, folder)
 
-		log.Printf("[Lokstra] Processing migration folder: %s", folder)
+		logger.LogInfo("[Lokstra] Processing migration folder: %s", folder)
 
 		// Run migration for this folder
 		err := CheckDbMigration(&MigrationConfig{
@@ -345,6 +352,6 @@ func CheckDbMigrationsAuto(configFolder string) error {
 		}
 	}
 
-	log.Printf("[Lokstra] Multi-database migrations completed: %d successful, %d skipped", successCount, skippedCount)
+	logger.LogInfo("[Lokstra] Multi-database migrations completed: %d successful, %d skipped", successCount, skippedCount)
 	return nil
 }

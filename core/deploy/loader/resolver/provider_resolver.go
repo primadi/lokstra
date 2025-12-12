@@ -3,6 +3,8 @@ package resolver
 import (
 	"fmt"
 	"strings"
+
+	"github.com/primadi/lokstra/common/logger"
 )
 
 // ResolveSingleValue resolves a single value (not YAML content)
@@ -180,7 +182,7 @@ func getNestedConfig(configs map[string]any, key string) any {
 			if !found {
 				// Debug: show what keys are available
 				if i == 0 {
-					fmt.Printf("   Available keys at root: %v\n", getMapKeys(m))
+					logger.LogDebug("   Available keys at root: %v\n", getMapKeys(m))
 				}
 				return nil
 			}

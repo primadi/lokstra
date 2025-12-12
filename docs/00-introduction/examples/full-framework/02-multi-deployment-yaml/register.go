@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"github.com/google/uuid"
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/repository"
@@ -53,7 +52,7 @@ func beforeAfterLoggerFactory() request.HandlerFunc {
 	return func(ctx *request.Context) error {
 		// 1. Before request
 		reqId := uuid.New().String()
-		log.Printf("Starting request id=%s %s %s\n", reqId, ctx.R.Method, ctx.R.URL.Path)
+		logger.LogInfo("Starting request id=%s %s %s", reqId, ctx.R.Method, ctx.R.URL.Path)
 		ctx.Set("request_id", reqId)
 
 		// 2. Proceed to next middleware/handler
@@ -61,9 +60,9 @@ func beforeAfterLoggerFactory() request.HandlerFunc {
 
 		// 3. After request
 		if err != nil {
-			log.Printf("Request id=%s failed: %v\n", reqId, err)
+			logger.LogError("Request id=%s failed: %v", reqId, err)
 		} else {
-			log.Printf("Request id=%s completed successfully\n", reqId)
+			logger.LogInfo("Request id=%s completed successfully", reqId)
 		}
 		return err
 	}

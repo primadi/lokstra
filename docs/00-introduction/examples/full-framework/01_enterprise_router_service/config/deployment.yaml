@@ -3,7 +3,7 @@
 configs:
   server: ${SERVER:}
   db_dsn: ${DB_DSN:postgres://localhost/enterprise_router_service}
-  global-db:
+  db_main:
     dsn: ${@cfg:db_dsn}
     schema: "public"
 

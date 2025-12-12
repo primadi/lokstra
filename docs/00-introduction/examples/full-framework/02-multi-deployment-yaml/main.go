@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/logger"
 )
 
 func main() {
@@ -12,12 +11,11 @@ func main() {
 	// 	"Server to run (monolith.api-server or microservice.user-server, microservice.user-server, or microservice.order-server)")
 	// flag.Parse()
 
-	fmt.Println("")
-	fmt.Println("╔═════════════════════════════════════════════╗")
-	fmt.Println("║   LOKSTRA MULTI-DEPLOYMENT DEMO             ║")
-	fmt.Println("╚═════════════════════════════════════════════╝")
-	fmt.Println("")
-
+	logger.LogInfo("")
+	logger.LogInfo("╔═════════════════════════════════════════════╗")
+	logger.LogInfo("║   LOKSTRA MULTI-DEPLOYMENT DEMO             ║")
+	logger.LogInfo("╚═════════════════════════════════════════════╝")
+	logger.LogInfo("")
 	// 1. Register service types
 	registerServiceTypes()
 
@@ -25,5 +23,11 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. RunServerFromConfig
-	lokstra_registry.RunServerFromConfig()
+	if err := lokstra.LoadConfig(); err != nil {
+		logger.LogPanic("❌ Failed to load config:", err)
+	}
+
+	if err := lokstra.RunConfiguredServer(); err != nil {
+		logger.LogPanic("❌ Failed to run server:", err)
+	}
 }

@@ -1,9 +1,9 @@
 package service
 
 import (
-	"log"
 	"sync"
 
+	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/internal/registry"
@@ -77,7 +77,7 @@ func (l *Cached[T]) Get() T {
 
 			// Log when service is loaded
 			if l.serviceName != "" && !utils.IsNil(l.cache) {
-				log.Printf("🔧 Lazy loaded service: '%s'", l.serviceName)
+				logger.LogDebug("🔧 Lazy loaded service: '%s'", l.serviceName)
 			}
 		} else {
 			// No loader provided - return zero value
