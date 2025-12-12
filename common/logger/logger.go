@@ -28,7 +28,9 @@ type LoggerBackend interface {
 	Info(msg string, args ...any)
 	Warn(msg string, args ...any)
 	Error(msg string, args ...any)
-	Panic(msg string, args ...any)
+	Panic(args ...any)
+	PanicF(format string, args ...any)
+	Fatal(format string, args ...any)
 	SetLogLevel(level LogLevel)
 	GetLogLevel() LogLevel
 }
@@ -75,4 +77,5 @@ func LogInfo(format string, args ...any)    { activeBackend.Info(format, args...
 func LogWarn(format string, args ...any)    { activeBackend.Warn(format, args...) }
 func LogWarning(format string, args ...any) { activeBackend.Warn(format, args...) }
 func LogError(format string, args ...any)   { activeBackend.Error(format, args...) }
-func LogPanic(format string, args ...any)   { activeBackend.Panic(format, args...) }
+func LogPanic(format string, args ...any)   { activeBackend.PanicF(format, args...) }
+func LogFatal(format string, args ...any)   { activeBackend.Fatal(format, args...) }
