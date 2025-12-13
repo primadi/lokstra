@@ -1084,7 +1084,7 @@ func LoadNamedDbPoolsFromConfig() error {
 		}
 
 		// Set DSN and Schema for poolName
-		dbPoolManager.SetNamedDbPool(poolName, dsn, schema, "")
+		dbPoolManager.SetNamedDbPool(poolName, dsn, schema, nil)
 
 		// Create the pool
 		dbPool, err := dbPoolManager.GetNamedDbPool(poolName)

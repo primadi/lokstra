@@ -5,16 +5,16 @@ import (
 )
 
 // DbPool defines a connection pool interface
-// supporting schema-aware or rlsID-aware connection acquisition
+// supporting schema-aware or RLS context-aware connection acquisition
 // and future multi-backend support.
 type DbPool interface {
 	Acquire(ctx context.Context) (DbConn, error)
 
-	Shutdownable
+	DbConn
 }
 
 type DbPoolSchemaRls interface {
-	SetSchemaRls(schema string, rlsID string)
+	SetSchemaRls(schema string, rlsContext map[string]string)
 }
 
 type RowMap = map[string]any

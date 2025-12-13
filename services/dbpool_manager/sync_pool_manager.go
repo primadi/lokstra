@@ -14,18 +14,18 @@ type SyncDbPoolManager struct {
 	pools       map[string]serviceapi.DbPool  // key: dsn
 	namedPools  *syncmap.SyncMap[*DbPoolInfo] // key: name
 	mu          sync.RWMutex
-	newPoolFunc func(dsn, schema, rlsID string) (serviceapi.DbPool, error)
+	newPoolFunc func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)
 }
 
 // AcquireConn implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) AcquireConn(ctx context.Context, dsn string, schema string, rlsID string) (serviceapi.DbConn, error) {
+func (p *SyncDbPoolManager) AcquireConn(ctx context.Context, dsn string, schema string, rlsContext map[string]string) (serviceapi.DbConn, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	dbPool, ok := p.pools[dsn]
 	if !ok {
 		var err error
-		dbPool, err = p.newPoolFunc(dsn, schema, rlsID)
+		dbPool, err = p.newPoolFunc(dsn, schema, rlsContext)
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +36,7 @@ func (p *SyncDbPoolManager) AcquireConn(ctx context.Context, dsn string, schema 
 	if !ok {
 		return nil, errors.New("dbpool: pool does not support schema or RLS")
 	}
-	dbPoolWithRls.SetSchemaRls(schema, rlsID)
+	dbPoolWithRls.SetSchemaRls(schema, rlsContext)
 
 	return dbPool.Acquire(ctx)
 }
@@ -47,11 +47,11 @@ func (p *SyncDbPoolManager) AcquireNamedConn(ctx context.Context, name string) (
 	if !ok {
 		return nil, errors.New("dbpool: named pool not found: " + name)
 	}
-	return p.AcquireConn(ctx, dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsId)
+	return p.AcquireConn(ctx, dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext)
 }
 
 // GetDbPool implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) GetDbPool(dsn string, schema string, rlsID string) (serviceapi.DbPool, error) {
+func (p *SyncDbPoolManager) GetDbPool(dsn string, schema string, rlsContext map[string]string) (serviceapi.DbPool, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -59,7 +59,7 @@ func (p *SyncDbPoolManager) GetDbPool(dsn string, schema string, rlsID string) (
 	if ok {
 		return dbPool, nil
 	}
-	newPool, err := p.newPoolFunc(dsn, schema, rlsID)
+	newPool, err := p.newPoolFunc(dsn, schema, rlsContext)
 	if err != nil {
 		return nil, err
 	}
@@ -73,16 +73,16 @@ func (p *SyncDbPoolManager) GetNamedDbPool(name string) (serviceapi.DbPool, erro
 	if !ok {
 		return nil, errors.New("dbpool: named pool not found: " + name)
 	}
-	return p.GetDbPool(dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsId)
+	return p.GetDbPool(dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext)
 }
 
 // GetNamedDbPoolInfo implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) GetNamedDbPoolInfo(name string) (string, string, string, error) {
+func (p *SyncDbPoolManager) GetNamedDbPoolInfo(name string) (string, string, map[string]string, error) {
 	dbPoolInfo, ok := p.namedPools.Load(name)
 	if !ok {
-		return "", "", "", errors.New("dbpool: named pool not found: " + name)
+		return "", "", nil, errors.New("dbpool: named pool not found: " + name)
 	}
-	return dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsId, nil
+	return dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext, nil
 }
 
 // RemoveNamedDbPool implements serviceapi.DbPoolManager.
@@ -91,11 +91,11 @@ func (p *SyncDbPoolManager) RemoveNamedDbPool(name string) {
 }
 
 // SetNamedDbPool implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) SetNamedDbPool(name string, dsn string, schema string, rlsID string) {
+func (p *SyncDbPoolManager) SetNamedDbPool(name string, dsn string, schema string, rlsContext map[string]string) {
 	p.namedPools.Store(name, &DbPoolInfo{
-		Dsn:    dsn,
-		Schema: schema,
-		RlsId:  rlsID,
+		Dsn:        dsn,
+		Schema:     schema,
+		RlsContext: rlsContext,
 	})
 }
 
@@ -113,7 +113,7 @@ func (p *SyncDbPoolManager) Shutdown() error {
 
 var _ serviceapi.DbPoolManager = (*SyncDbPoolManager)(nil)
 
-func NewSyncDbPoolManager(syncName string, newPoolFunc func(dsn, schema, rlsID string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
+func NewSyncDbPoolManager(syncName string, newPoolFunc func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
 	return &SyncDbPoolManager{
 		pools:       make(map[string]serviceapi.DbPool),
 		namedPools:  syncmap.NewSyncMap[*DbPoolInfo](syncName),
@@ -123,7 +123,7 @@ func NewSyncDbPoolManager(syncName string, newPoolFunc func(dsn, schema, rlsID s
 
 func NewPgxSyncDbPoolManager() serviceapi.DbPoolManager {
 	return NewSyncDbPoolManager("dbpool",
-		func(dsn, schema, rlsID string) (serviceapi.DbPool, error) {
-			return dbpool_pg.NewPgxPostgresPool(dsn, schema, rlsID)
+		func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error) {
+			return dbpool_pg.NewPgxPostgresPool(dsn, schema, rlsContext)
 		})
 }

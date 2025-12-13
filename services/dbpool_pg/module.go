@@ -68,7 +68,7 @@ func (cfg *Config) GetFinalDSN() string {
 func Service(cfg *Config) *pgxPostgresPool {
 	dsn := cfg.GetFinalDSN()
 
-	svc, err := NewPgxPostgresPool(dsn, "", "")
+	svc, err := NewPgxPostgresPool(dsn, "", nil)
 	if err != nil {
 		return nil
 	}

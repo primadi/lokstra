@@ -57,10 +57,21 @@ func (b *SlogBackend) Error(format string, args ...any) {
 	}
 }
 
-func (b *SlogBackend) Panic(format string, args ...any) {
-	msg := fmt.Sprintf(format, args...)
+func (b *SlogBackend) Panic(v ...any) {
+	msg := fmt.Sprint(v...)
 	b.logger.Error(msg)
 	panic(msg)
+}
+
+func (b *SlogBackend) PanicF(format string, v ...any) {
+	msg := fmt.Sprintf(format, v...)
+	b.logger.Error(msg)
+	panic(msg)
+}
+
+func (b *SlogBackend) Fatal(format string, v ...any) {
+	b.logger.Error(fmt.Sprintf(format, v...))
+	os.Exit(1)
 }
 
 func (b *SlogBackend) rebuildLogger() {
