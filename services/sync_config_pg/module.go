@@ -105,7 +105,7 @@ func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
 	// Create context with cancel for goroutine management
 	ctx, cancel := context.WithCancel(context.Background())
 
-	dbPool, err := dbpool_pg.NewPgxPostgresPool(dsn, schema, "")
+	dbPool, err := dbpool_pg.NewPgxPostgresPool(dsn, schema, nil)
 	if err != nil {
 		if listenerDB != nil {
 			listenerDB.Close()

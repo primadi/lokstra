@@ -6,21 +6,21 @@ import (
 
 type DbPoolManager interface {
 	// get or create DbPool for the given dsn
-	GetDbPool(dsn, schema, rlsID string) (DbPool, error)
+	GetDbPool(dsn, schema string, rlsContext map[string]string) (DbPool, error)
 
-	// acquire connection for the given dsn, schema, and rlsID
+	// acquire connection for the given dsn, schema, and rlsContext
 	// if pool for dsn does not exist, create it
-	// if schema and rlsID are provided, set them accordingly
-	AcquireConn(ctx context.Context, dsn string, schema string, rlsID string) (DbConn, error)
+	// if schema and rlsContext are provided, set them accordingly
+	AcquireConn(ctx context.Context, dsn string, schema string, rlsContext map[string]string) (DbConn, error)
 
 	// ---------------------------------------
 	// Named based pool management
 	//----------------------------------------
 
-	// set name for the given dsn, schema, and rlsID
-	SetNamedDbPool(name string, dsn string, schema string, rlsID string)
-	// get dsn, schema, rlsID for the given name
-	GetNamedDbPoolInfo(name string) (string, string, string, error)
+	// set name for the given dsn, schema, and rlsContext
+	SetNamedDbPool(name string, dsn string, schema string, rlsContext map[string]string)
+	// get dsn, schema, rlsContext for the given name
+	GetNamedDbPoolInfo(name string) (string, string, map[string]string, error)
 	// get DbPool for the given name
 	GetNamedDbPool(name string) (DbPool, error)
 	// remove name mapping

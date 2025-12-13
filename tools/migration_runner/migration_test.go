@@ -12,6 +12,76 @@ type MockDbPoolWithSchema struct {
 	executions []string // Track executed SQL
 }
 
+// Begin implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) Begin(ctx context.Context) (serviceapi.DbTx, error) {
+	panic("unimplemented")
+}
+
+// Exec implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) Exec(ctx context.Context, query string, args ...any) (serviceapi.CommandResult, error) {
+	panic("unimplemented")
+}
+
+// IsErrorNoRows implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) IsErrorNoRows(err error) bool {
+	panic("unimplemented")
+}
+
+// IsExists implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) IsExists(ctx context.Context, query string, args ...any) (bool, error) {
+	panic("unimplemented")
+}
+
+// Ping implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) Ping(context context.Context) error {
+	panic("unimplemented")
+}
+
+// Query implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) Query(ctx context.Context, query string, args ...any) (serviceapi.Rows, error) {
+	panic("unimplemented")
+}
+
+// QueryRow implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) QueryRow(ctx context.Context, query string, args ...any) serviceapi.Row {
+	panic("unimplemented")
+}
+
+// Release implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) Release() error {
+	panic("unimplemented")
+}
+
+// SelectManyRowMap implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) SelectManyRowMap(ctx context.Context, query string, args ...any) ([]serviceapi.RowMap, error) {
+	panic("unimplemented")
+}
+
+// SelectManyWithMapper implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) SelectManyWithMapper(ctx context.Context, fnScan func(serviceapi.Row) (any, error), query string, args ...any) (any, error) {
+	panic("unimplemented")
+}
+
+// SelectMustOne implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) SelectMustOne(ctx context.Context, query string, args []any, dest ...any) error {
+	panic("unimplemented")
+}
+
+// SelectOne implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) SelectOne(ctx context.Context, query string, args []any, dest ...any) error {
+	panic("unimplemented")
+}
+
+// SelectOneRowMap implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) SelectOneRowMap(ctx context.Context, query string, args ...any) (serviceapi.RowMap, error) {
+	panic("unimplemented")
+}
+
+// Transaction implements serviceapi.DbPool.
+func (m *MockDbPoolWithSchema) Transaction(ctx context.Context, fn func(tx serviceapi.DbExecutor) error) error {
+	panic("unimplemented")
+}
+
 var _ serviceapi.DbPool = (*MockDbPoolWithSchema)(nil)
 
 func (m *MockDbPoolWithSchema) Acquire(ctx context.Context) (serviceapi.DbConn, error) {
