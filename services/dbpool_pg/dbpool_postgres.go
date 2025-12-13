@@ -21,6 +21,44 @@ func (e *errorRow) Scan(dest ...any) error {
 	return e.err
 }
 
+// rowsWrapper wraps serviceapi.Rows and auto-releases connection on Close
+type rowsWrapper struct {
+	rows serviceapi.Rows
+	conn serviceapi.DbConn
+}
+
+var _ serviceapi.Rows = (*rowsWrapper)(nil)
+
+func (r *rowsWrapper) Next() bool {
+	return r.rows.Next()
+}
+
+func (r *rowsWrapper) Scan(dest ...any) error {
+	return r.rows.Scan(dest...)
+}
+
+func (r *rowsWrapper) Close() error {
+	defer r.conn.Release()
+	return r.rows.Close()
+}
+
+func (r *rowsWrapper) Err() error {
+	return r.rows.Err()
+}
+
+// rowWrapper wraps serviceapi.Row and auto-releases connection on Scan
+type rowWrapper struct {
+	row  serviceapi.Row
+	conn serviceapi.DbConn
+}
+
+var _ serviceapi.Row = (*rowWrapper)(nil)
+
+func (r *rowWrapper) Scan(dest ...any) error {
+	defer r.conn.Release()
+	return r.row.Scan(dest...)
+}
+
 type pgxPostgresPool struct {
 	pool       *pgxpool.Pool
 	dsn        string
@@ -74,8 +112,13 @@ func (p *pgxPostgresPool) Query(ctx context.Context, query string, args ...any) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire connection: %w", err)
 	}
-	defer cn.Release()
-	return cn.Query(ctx, query, args...)
+	rows, err := cn.Query(ctx, query, args...)
+	if err != nil {
+		cn.Release()
+		return nil, err
+	}
+	// Wrap rows to auto-release connection on Close()
+	return &rowsWrapper{rows: rows, conn: cn}, nil
 }
 
 // QueryRow implements serviceapi.DbPool.
@@ -84,8 +127,9 @@ func (p *pgxPostgresPool) QueryRow(ctx context.Context, query string, args ...an
 	if err != nil {
 		return &errorRow{err: err}
 	}
-	defer cn.Release()
-	return cn.QueryRow(ctx, query, args...)
+	row := cn.QueryRow(ctx, query, args...)
+	// Wrap row to auto-release connection on Scan()
+	return &rowWrapper{row: row, conn: cn}
 }
 
 // Release implements serviceapi.DbPool.
