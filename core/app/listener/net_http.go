@@ -78,14 +78,14 @@ func (s *NetHttp) ListenAndServe() error {
 		if err != nil {
 			return fmt.Errorf("failed to listen on unix socket: %w", err)
 		}
-		logger.LogInfo("[NETHTTP] Starting server on Unix socket %s\n", socketPath)
+		// logger.LogInfo("[NETHTTP] Starting server on Unix socket %s\n", socketPath)
 	} else {
 		var err error
 		listener, err = net.Listen("tcp", s.server.Addr)
 		if err != nil {
 			return listener_utils.WrapListenError(s.server.Addr, err)
 		}
-		logger.LogInfo("[NETHTTP] Starting server on TCP %s\n", s.server.Addr)
+		// logger.LogInfo("[NETHTTP] Starting server on TCP %s\n", s.server.Addr)
 	}
 
 	if s.secure {

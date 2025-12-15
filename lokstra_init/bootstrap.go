@@ -1,4 +1,4 @@
-package lokstra
+package lokstra_init
 
 import (
 	"fmt"
@@ -27,8 +27,6 @@ var (
 
 // Bootstrap initializes Lokstra environment and regenerates routes if needed.
 // It must be called at the very beginning of main().
-// It will auto create dbpool-manager service using PgxPoolManager if not exists.
-//
 // scanPath specifies additional paths to scan for annotations (besides current working directory).
 // If --generate-only flag is present, it will only run code generation and exit.
 // Example:
@@ -238,25 +236,7 @@ func relaunchWithDlv() {
 	os.Exit(0)
 }
 
-// LoadConfigFromFolder loads configuration from the specified folder path.
-// It also ensures that the dbpool-manager service is registered before loading config.
-func LoadConfigFromFolder(folderPath string) error {
-	return lokstra_registry.LoadConfigFromFolder(folderPath)
-}
-
-// LoadConfig loads configuration from the specified file path.
-// It also ensures that the dbpool-manager service is registered before loading config.
-func LoadConfig(filePath ...string) error {
-	return lokstra_registry.LoadConfig(filePath...)
-}
-
-// LoadNamedDbPoolsFromConfig sets up database pools from loaded config.
-// Must be called AFTER LoadConfig() if you use named-db-pools in config.
-func LoadNamedDbPoolsFromConfig() error {
-	return lokstra_registry.LoadNamedDbPoolsFromConfig()
-}
-
-// RunConfiguredServer initializes and runs the server based on loaded configuration.
-func RunConfiguredServer() error {
-	return lokstra_registry.RunConfiguredServer()
+// return runtime mode: dev, debug, or prod
+func GetRuntimeMode() string {
+	return lokstra_registry.GetRuntimeMode()
 }

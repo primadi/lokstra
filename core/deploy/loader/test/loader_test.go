@@ -109,7 +109,7 @@ func TestLoadMultipleFiles(t *testing.T) {
 }
 
 func TestLoadFromDirectory(t *testing.T) {
-	config, err := loader.LoadConfigFromDir("testdata")
+	config, err := loader.LoadConfig("testdata")
 	if err != nil {
 		t.Fatalf("failed to load from directory: %v", err)
 	}

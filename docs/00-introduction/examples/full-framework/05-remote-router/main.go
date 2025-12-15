@@ -22,7 +22,7 @@ func main() {
 		svc.WeatherServiceFactory)
 
 	// Load config and build deployment topology
-	if err := loader.LoadAndBuild([]string{"config.yaml"}); err != nil {
+	if _, err := loader.LoadConfig("config.yaml"); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 

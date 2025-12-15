@@ -1,9 +1,7 @@
 package main
 
-import (
-	"github.com/primadi/lokstra"
-)
+import "github.com/primadi/lokstra/lokstra_init"
 
 func main() {
-	lokstra.Bootstrap()
+	lokstra_init.Bootstrap()
 }

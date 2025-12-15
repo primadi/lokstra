@@ -20,7 +20,7 @@ lokstra_registry.RunServerFromConfigFolder("config")
 
 ### New Flow
 ```go
-lokstra.LoadConfigFromFolder("config")
+lokstra_registry.LoadConfigFromFolder("config")
 registerServiceTypes()    // Config available here!
 registerMiddlewareTypes() // Config available here!
 lokstra.InitAndRunServer()

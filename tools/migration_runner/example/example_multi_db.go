@@ -2,30 +2,33 @@ package main
 
 import (
 	"log"
+	"time"
 
-	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/lokstra_init"
+	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/services/sync_config_pg"
 )
 
 // Example: Multi-database migration setup
 // This demonstrates how to use migration.yaml for different databases
 func main() {
 	// Bootstrap Lokstra (loads config, detects runtime mode)
-	lokstra.Bootstrap()
+	lokstra_init.Bootstrap()
 
 	// load database and other configurations
-	if err := lokstra.LoadConfigFromFolder("config"); err != nil {
+	if err := lokstra_registry.LoadConfig("config"); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	lokstra.UsePgxDbPoolManager(true)
+	lokstra_init.UsePgxDbPoolManager(true)
 
-	lokstra.UsePgxSyncConfig("db_main")
-	lokstra.LoadNamedDbPoolsFromConfig()
+	sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
+	lokstra_registry.LoadNamedDbPoolsFromConfig()
 
 	// OPTION 1: Auto-scan all migration folders (RECOMMENDED)
 	// Scans multi_db/ for subdirectories, runs them in alphabetical order
 	// Each folder loads its own migration.yaml configuration
-	if err := lokstra.CheckDbMigrationsAuto("multi_db"); err != nil {
+	if err := lokstra_init.CheckDbMigrationsAuto("multi_db"); err != nil {
 		log.Fatalf("Multi-database migrations failed: %v", err)
 	}
 
@@ -57,7 +60,7 @@ func main() {
 	// lokstra migration status -dir multi_db/ledger-db
 
 	// Start your application servers
-	if err := lokstra.RunConfiguredServer(); err != nil {
+	if err := lokstra_registry.RunConfiguredServer(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

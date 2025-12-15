@@ -277,6 +277,11 @@ func RegisterService(name string, instance any) {
 	deploy.Global().RegisterService(name, instance)
 }
 
+// UnregisterService removes a service from the runtime registry
+func UnregisterService(name string) {
+	deploy.Global().UnregisterService(name)
+}
+
 // check if a service is registered in the global registry
 func HasService(name string) bool {
 	return deploy.Global().HasService(name)

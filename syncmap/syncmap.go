@@ -51,7 +51,18 @@ func NewSyncMapWithConfig[V any](config serviceapi.SyncConfig, prefix string) *S
 		subs:   make(map[string]func(key string, value V)),
 	}
 
-	// Subscribe to config changes and filter by prefix
+	// Load initial data from SyncConfig (data that already exists in database)
+	// This ensures existing database entries are available in the SyncMap
+	if allData, err := config.GetAll(context.Background()); err == nil {
+		for fullKey, value := range allData {
+			if _, ok := sm.stripPrefix(fullKey); ok {
+				// This key belongs to our prefix - process it
+				sm.handleNotification(fullKey, value)
+			}
+		}
+	}
+
+	// Subscribe to config changes and filter by prefix (for future changes)
 	config.Subscribe(func(fullKey string, value any) {
 		sm.handleNotification(fullKey, value)
 	})
@@ -64,6 +75,9 @@ func NewSyncMapWithConfig[V any](config serviceapi.SyncConfig, prefix string) *S
 // The backend implementation (PostgreSQL, Redis, etc.) is determined by the SyncConfig instance
 func NewSyncMap[V any](prefix string) *SyncMap[V] {
 	syncConfigService := lokstra_registry.GetService[serviceapi.SyncConfig]("sync-config")
+	if syncConfigService == nil {
+		panic("SyncConfig service not found in registry")
+	}
 	return NewSyncMapWithConfig[V](syncConfigService, prefix)
 }
 

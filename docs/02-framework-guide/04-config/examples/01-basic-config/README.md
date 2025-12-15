@@ -89,7 +89,7 @@ func main() {
     lokstra.Bootstrap()
 
     // STEP 2: Load Config - loads YAML configuration
-    lokstra.LoadConfig("config.yaml")
+    lokstra_registry.LoadConfig("config.yaml")
 
     // STEP 3: Register Service Types - map factory names to functions
     registerServiceTypes()

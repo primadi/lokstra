@@ -31,6 +31,9 @@ type Config struct {
 	MaxIdleTime time.Duration `json:"max-idle-time" yaml:"max-idle-time"`
 	MaxLifetime time.Duration `json:"max-lifetime" yaml:"max-lifetime"`
 	SSLMode     string        `json:"sslmode" yaml:"sslmode"`
+
+	Schema     string            `json:"schema" yaml:"schema"`
+	RlsContext map[string]string `json:"rls-context" yaml:"rls-context"`
 }
 
 func (cfg *Config) buildDSN() string {
@@ -68,7 +71,7 @@ func (cfg *Config) GetFinalDSN() string {
 func Service(cfg *Config) *pgxPostgresPool {
 	dsn := cfg.GetFinalDSN()
 
-	svc, err := NewPgxPostgresPool(dsn, "", nil)
+	svc, err := NewPgxPostgresPool(dsn, cfg.Schema, cfg.RlsContext)
 	if err != nil {
 		return nil
 	}
@@ -88,6 +91,8 @@ func ServiceFactory(params map[string]any) any {
 		MaxIdleTime: utils.GetValueFromMap(params, "max_idle_time", 30*time.Minute),
 		MaxLifetime: utils.GetValueFromMap(params, "max_lifetime", time.Hour),
 		SSLMode:     utils.GetValueFromMap(params, "sslmode", "disable"),
+		Schema:      utils.GetValueFromMap(params, "schema", "public"),
+		RlsContext:  utils.GetValueFromMap(params, "rls_context", map[string]string{}),
 	}
 	return Service(cfg)
 }

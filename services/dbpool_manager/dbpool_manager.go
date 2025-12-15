@@ -5,20 +5,19 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/dbpool_pg"
 )
 
-// DbPoolInfo holds database DSN, schema name, and RLS context
-type DbPoolInfo struct {
-	Dsn        string
-	Schema     string
-	RlsContext map[string]string
+// Helper to get global registry (avoid circular import)
+func getGlobalRegistry() *deploy.GlobalRegistry {
+	return deploy.Global()
 }
 
 type DbPoolManager struct {
-	pools       map[string]serviceapi.DbPool // key: dsn
-	namedPools  map[string]*DbPoolInfo       // key: name
+	pools       map[string]serviceapi.DbPool      // key: dsn
+	namedPools  map[string]*serviceapi.DbPoolInfo // key: name
 	mu          sync.RWMutex
 	newPoolFunc func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)
 }
@@ -100,18 +99,32 @@ func (p *DbPoolManager) GetNamedDbPoolInfo(name string) (string, string, map[str
 // RemoveNamedDbPool implements serviceapi.DbPoolManager.
 func (p *DbPoolManager) RemoveNamedDbPool(name string) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	delete(p.namedPools, name)
+	p.mu.Unlock()
+
+	// Unregister service from registry
+	if registry := getGlobalRegistry(); registry != nil {
+		registry.UnregisterService(name)
+	}
 }
 
 // SetNamedDbPool implements serviceapi.DbPoolManager.
 func (p *DbPoolManager) SetNamedDbPool(name string, dsn string, schema string, rlsContext map[string]string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.namedPools[name] = &DbPoolInfo{
+	p.namedPools[name] = &serviceapi.DbPoolInfo{
 		Dsn:        dsn,
 		Schema:     schema,
 		RlsContext: rlsContext,
+	}
+
+	// Auto-register pool as a service (lazy, created on first access)
+	// This makes pools accessible via lokstra_registry.GetService[DbPool](name)
+	if registry := getGlobalRegistry(); registry != nil {
+		registry.RegisterLazyService(name, func() any {
+			pool, _ := p.GetNamedDbPool(name)
+			return pool
+		}, nil)
 	}
 }
 
@@ -127,12 +140,22 @@ func (p *DbPoolManager) Shutdown() error {
 	return nil
 }
 
+func (p *DbPoolManager) GetAllNamedDbPools() map[string]*serviceapi.DbPoolInfo {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	result := make(map[string]*serviceapi.DbPoolInfo)
+	for name, info := range p.namedPools {
+		result[name] = info
+	}
+	return result
+}
+
 var _ serviceapi.DbPoolManager = (*DbPoolManager)(nil)
 
 func NewPoolManager(newPoolFunc func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
 	return &DbPoolManager{
 		pools:       make(map[string]serviceapi.DbPool),
-		namedPools:  make(map[string]*DbPoolInfo),
+		namedPools:  make(map[string]*serviceapi.DbPoolInfo),
 		newPoolFunc: newPoolFunc,
 	}
 }

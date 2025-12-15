@@ -1,7 +1,6 @@
 package lokstra
 
 import (
-	"github.com/primadi/lokstra/api_client"
 	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/core/router"
@@ -37,10 +36,4 @@ func NewAppWithConfig(name string, addr string, listenerType string,
 // Create a new Server instance with given apps
 func NewServer(name string, apps ...*app.App) *server.Server {
 	return server.New(name, apps...)
-}
-
-// FetchAndCast performs an API fetch and casts the result to the specified type T
-func FetchAndCast[T any](client *api_client.ClientRouter, path string,
-	opts ...api_client.FetchOption) (T, error) {
-	return api_client.FetchAndCast[T](client, path, opts...)
 }

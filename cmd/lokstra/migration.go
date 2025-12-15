@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
@@ -124,7 +123,7 @@ func executeMigration(subCmd, configFile, migrationDir, dbPoolName string, steps
 	}
 
 	// load named-db-pools from config file
-	if err := lokstra.LoadConfig(cfgFile); err != nil {
+	if err := lokstra_registry.LoadConfig(cfgFile); err != nil {
 		return fmt.Errorf("failed to load config file '%s': %w", filepath.Base(cfgFile), err)
 	}
 

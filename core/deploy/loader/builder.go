@@ -2,8 +2,6 @@ package loader
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -859,12 +857,12 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 	return nil
 }
 
-// LoadAndBuild loads config and builds ALL deployments into Global registry
+// LoadConfig loads config and builds ALL deployments into Global registry
 // Returns error only - deployments are stored in deploy.Global()
-func LoadAndBuild(configPaths []string) error {
-	config, err := LoadConfig(configPaths...)
+func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
+	config, err := loadConfig(configPaths...)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
 	registry := deploy.Global()
@@ -878,7 +876,7 @@ func LoadAndBuild(configPaths []string) error {
 	// Store definitions to registry (NO runtime registration, just store data)
 	// Runtime registration will happen in RunCurrentServer
 	if err := StoreDefinitionsToRegistry(registry, config); err != nil {
-		return fmt.Errorf("failed to store definitions: %w", err)
+		return nil, fmt.Errorf("failed to store definitions: %w", err)
 	}
 
 	// Build ALL deployments (2-Layer Architecture: YAML -> Topology only)
@@ -978,7 +976,7 @@ func LoadAndBuild(configPaths []string) error {
 	// 	return fmt.Errorf("failed to setup named DB pools: %w", err)
 	// }
 
-	return nil
+	return config, nil
 }
 
 // LoadNamedDbPoolsFromConfig auto-discovers and sets up named DB pools from config
@@ -1084,48 +1082,11 @@ func LoadNamedDbPoolsFromConfig() error {
 		}
 
 		// Set DSN and Schema for poolName
-		dbPoolManager.SetNamedDbPool(poolName, dsn, schema, nil)
-
-		// Create the pool
-		dbPool, err := dbPoolManager.GetNamedDbPool(poolName)
-		if err != nil {
-			return fmt.Errorf("failed to create pool '%s': %w", poolName, err)
-		}
-
-		// Register pool as a service
-		registry.RegisterService(poolName, dbPool)
+		// This also auto-registers the pool as a lazy service
+		dbPoolManager.SetNamedDbPool(poolName, dsn, schema, poolConfig.RlsContext)
 
 		logger.LogDebug("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
 	}
 
 	return nil
-}
-
-// LoadAndBuildFromDir loads all YAML files from a directory and builds ALL deployments
-func LoadAndBuildFromDir(dirPath string) error {
-	// Scan directory for YAML files
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return fmt.Errorf("failed to read directory: %w", err)
-	}
-
-	var paths []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		name := entry.Name()
-		ext := filepath.Ext(name)
-		if ext == ".yaml" || ext == ".yml" {
-			paths = append(paths, filepath.Join(dirPath, name))
-		}
-	}
-
-	if len(paths) == 0 {
-		return fmt.Errorf("no YAML files found in directory: %s", dirPath)
-	}
-
-	// Delegate to LoadAndBuild
-	return LoadAndBuild(paths)
 }

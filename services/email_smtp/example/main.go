@@ -9,6 +9,7 @@ import (
 
 	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/services/email_smtp"
 )
@@ -16,7 +17,7 @@ import (
 func main() {
 	// lokstra.SetLogLevel(lokstra.LogLevelDebug)
 
-	lokstra.Bootstrap()
+	lokstra_init.Bootstrap()
 
 	fmt.Println("\n===========================================")
 	fmt.Println("Email SMTP Service Example")
@@ -31,7 +32,7 @@ func main() {
 	fmt.Println("===========================================")
 
 	// Load config and run server (auto-registers services from deployments)
-	if err := lokstra.LoadConfigFromFolder("configs"); err != nil {
+	if err := lokstra_registry.LoadConfig("configs"); err != nil {
 		logger.LogPanic(err.Error())
 	}
 

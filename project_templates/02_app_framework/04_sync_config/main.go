@@ -1,28 +1,19 @@
 package main
 
 import (
-	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/lokstra_init"
 )
 
 func main() {
-	// 1. Bootstrap Lokstra framework
-	lokstra.Bootstrap()
-
-	// 2. Load application config
-	if err := lokstra.LoadConfigFromFolder("config"); err != nil {
-		panic(err)
-	}
-
-	// 3. auto db migrations
-	if err := lokstra.CheckDbMigrationsAuto("migrations"); err != nil {
-		panic(err)
-	}
-
-	// 4. Register routers
-	registerRouters()
-
-	// 5. Run the server
-	if err := lokstra.RunConfiguredServer(); err != nil {
-		panic(err)
-	}
+	lokstra_init.BootstrapAndRun(
+		lokstra_init.WithAnnotations(true),
+		lokstra_init.WithYAMLConfigPath(true, "config"),
+		lokstra_init.WithPgSyncMap(true, "db_main"),
+		lokstra_init.WithDbPoolManager(true, true),
+		lokstra_init.WithDbMigrations(true, "migrations"),
+		lokstra_init.WithServerInitFunc(func() error {
+			registerRouters()
+			return nil
+		}),
+	)
 }

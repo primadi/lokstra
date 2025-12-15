@@ -107,35 +107,6 @@ func (l *Cached[T]) IsLoaded() bool {
 	return !utils.IsNil(l.cache)
 }
 
-// creates a lazy service loader from factory service configuration map.
-func LazyLoadFromConfig[T any](cfg map[string]any, key string) *Cached[T] {
-	if cfg == nil {
-		return nil
-	}
-
-	val, ok := cfg[key]
-	if !ok {
-		return nil
-	}
-
-	if svcName, ok := val.(string); ok {
-		return LazyLoad[T](svcName)
-	}
-
-	// Not a valid service reference
-	return nil
-}
-
-// creates a lazy service loader from factory service configuration map.
-// It panics if the key is missing or invalid.
-func MustLazyLoadFromConfig[T any](cfg map[string]any, key string) *Cached[T] {
-	lazy := LazyLoadFromConfig[T](cfg, key)
-	if lazy == nil {
-		panic("missing required dependency '" + key + "'")
-	}
-	return lazy
-}
-
 // LazyLoadWith creates a lazy service loader with a custom loader function.
 // The loader function is called on first Get() and the result is cached.
 // This is useful for dependency injection frameworks that manage their own service resolution.

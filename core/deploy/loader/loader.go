@@ -15,9 +15,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LoadConfig loads a deployment configuration from YAML file(s)
+// loadConfig loads a deployment configuration from YAML file(s)
 // Supports single file or multiple files that will be merged
-func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
+// Paths can be files or folders - folders will be expanded to all *.yaml files
+// This is a private function - external code should use LoadAndBuild instead
+func loadConfig(paths ...string) (*schema.DeployConfig, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("no config files specified")
 	}
@@ -26,16 +28,42 @@ func LoadConfig(paths ...string) (*schema.DeployConfig, error) {
 
 	basePath := utils.GetBasePath()
 
-	// STEP 1: Load and merge all files (RAW, no resolution yet)
+	// STEP 0: Expand folders to files
+	var expandedPaths []string
 	for _, path := range paths {
 		// If path is already absolute, use it directly; otherwise join with basePath
 		normPath := path
 		if !filepath.IsAbs(path) {
 			normPath = filepath.Join(basePath, path)
 		}
+
+		// Check if path is a directory
+		info, err := os.Stat(normPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to access %s: %w", path, err)
+		}
+
+		if info.IsDir() {
+			// Expand directory to *.yaml files
+			yamlFiles, err := filepath.Glob(filepath.Join(normPath, "*.yaml"))
+			if err != nil {
+				return nil, fmt.Errorf("failed to scan directory %s: %w", path, err)
+			}
+			if len(yamlFiles) == 0 {
+				return nil, fmt.Errorf("no YAML files found in directory: %s", path)
+			}
+			expandedPaths = append(expandedPaths, yamlFiles...)
+		} else {
+			// It's a file, use as is
+			expandedPaths = append(expandedPaths, normPath)
+		}
+	}
+
+	// STEP 1: Load and merge all files (RAW, no resolution yet)
+	for _, normPath := range expandedPaths {
 		config, err := loadSingleFileRaw(normPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", path, err)
+			return nil, fmt.Errorf("failed to load %s: %w", normPath, err)
 		}
 
 		if merged == nil {
@@ -243,31 +271,4 @@ func ValidateConfig(config *schema.DeployConfig) error {
 	}
 
 	return nil
-}
-
-// LoadConfigFromDir loads all .yaml and .yml files from a directory and merges them
-func LoadConfigFromDir(dirPath string) (*schema.DeployConfig, error) {
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read directory: %w", err)
-	}
-
-	var paths []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		name := entry.Name()
-		ext := filepath.Ext(name)
-		if ext == ".yaml" || ext == ".yml" {
-			paths = append(paths, filepath.Join(dirPath, name))
-		}
-	}
-
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("no YAML files found in directory: %s", dirPath)
-	}
-
-	return LoadConfig(paths...)
 }

@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/annotation"
+	"github.com/primadi/lokstra/lokstra_init"
 )
 
 const version = "1.0.2"
@@ -19,7 +19,7 @@ func main() {
 	logger.SetLogLevel(logger.LogLevelInfo)
 
 	// for debugging purpose
-	if lokstra.DetectRunMode() != lokstra.RunModeProd {
+	if lokstra_init.DetectRunMode() != lokstra_init.RunModeProd {
 		// use 04_sync_config template for testing
 		os.Chdir(filepath.Join(utils.GetBasePath(), "../../project_templates/02_app_framework/04_sync_config"))
 		// os.Args = slices.Concat(os.Args[:1], []string{"migration", "status"})

@@ -4,6 +4,8 @@ package services
 
 import (
 	// Core services
+	"time"
+
 	"github.com/primadi/lokstra/services/dbpool_pg"
 	"github.com/primadi/lokstra/services/email_smtp"
 	"github.com/primadi/lokstra/services/kvstore_redis"
@@ -21,5 +23,5 @@ func RegisterAllServices() {
 	metrics_prometheus.Register()
 	dbpool_pg.Register()
 	email_smtp.Register()
-	sync_config_pg.Register("db_main")
+	sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
 }

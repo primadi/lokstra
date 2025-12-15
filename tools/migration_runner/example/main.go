@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/tools/migration_runner"
@@ -40,8 +40,8 @@ func MainTest() {
 	}
 
 	// Bootstrap and load config for other commands
-	lokstra.Bootstrap()
-	lokstra_registry.LoadConfigFromFolder("config")
+	lokstra_init.Bootstrap()
+	lokstra_registry.LoadConfig("config")
 
 	// Get database pool
 	pool, ok := lokstra_registry.GetServiceAny(*dbName)

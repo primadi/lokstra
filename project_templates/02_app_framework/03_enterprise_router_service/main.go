@@ -3,17 +3,17 @@ package main
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/lokstra_init"
 )
 
 // NEW RECOMMENDED FLOW
 // This flow separates config loading from service registration,
 // allowing services to access config during registration.
 func main() {
-	if err := lokstra.BootstrapAndRun(
+	if err := lokstra_init.BootstrapAndRun(
 		// lokstra.WithLogLevel(logger.LogLevelDebug),
-		lokstra.WithoutDbMigrations(),
-		lokstra.WithServerInitFunc(func() error {
+		lokstra_init.WithDbMigrations(false, "migrations"),
+		lokstra_init.WithServerInitFunc(func() error {
 			fmt.Println("")
 			fmt.Println("╔═══════════════════════════════════════════════╗")
 			fmt.Println("║   LOKSTRA ENTERPRISE MODULAR TEMPLATE         ║")

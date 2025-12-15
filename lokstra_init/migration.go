@@ -1,4 +1,4 @@
-package lokstra
+package lokstra_init
 
 import (
 	"context"
@@ -14,21 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// MigrationForce controls when migrations should run
-type MigrationForce string
-
-const (
-	// MigrationForceTrue always runs migrations regardless of mode
-	MigrationForceTrue MigrationForce = "true"
-
-	// MigrationForceFalse never runs migrations
-	MigrationForceFalse MigrationForce = "false"
-
-	// MigrationForceAuto runs migrations in dev/debug, skips in prod
-	// This is the recommended setting for development
-	MigrationForceAuto MigrationForce = "auto"
-)
-
 // MigrationYamlConfig represents the migration.yaml file structure
 // This file is optional and located in the migrations directory
 type MigrationYamlConfig struct {
@@ -39,9 +24,11 @@ type MigrationYamlConfig struct {
 	// Default: "schema_migrations"
 	SchemaTable string `yaml:"schema-table"`
 
-	// Force controls migration execution mode
-	// Values: "auto" (default), "on", "off"
-	Force string `yaml:"force"`
+	// Enabled controls whether migrations are enabled
+	// nil = enabled by default (true)
+	// true = explicitly enabled
+	// false = explicitly disabled
+	Enabled *bool `yaml:"enabled"`
 
 	// Description for documentation purposes
 	Description string `yaml:"description"`
@@ -62,20 +49,6 @@ type MigrationConfig struct {
 	// Default: "schema_migrations"
 	// Can be overridden by migration.yaml
 	SchemaTable string
-
-	// Force controls when migrations run:
-	//   - "true" or MigrationForceTrue: Always run (even in prod)
-	//   - "false" or MigrationForceFalse: Never run (use CLI instead)
-	//   - "auto" or MigrationForceAuto: Auto-detect based on runtime.mode
-	//       * dev/debug → run migrations
-	//       * prod → skip migrations
-	// Default: "auto" (recommended for development)
-	// Can be overridden by migration.yaml
-	Force MigrationForce
-
-	// Silent suppresses migration output
-	// Default: false
-	Silent bool
 }
 
 // CheckDbMigration runs database migrations based on runtime mode
@@ -121,26 +94,13 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 
 	// Try to load migration.yaml from migrations directory
 	yamlPath := filepath.Join(cfg.MigrationsDir, "migration.yaml")
-	if yamlCfg, err := loadMigrationYaml(yamlPath); err == nil {
+	if yamlCfg, err := LoadMigrationYaml(yamlPath); err == nil {
 		// Merge YAML config with provided config (YAML takes precedence if not set)
 		if cfg.DbPoolName == "" && yamlCfg.DbPoolName != "" {
 			cfg.DbPoolName = yamlCfg.DbPoolName
 		}
 		if cfg.SchemaTable == "" && yamlCfg.SchemaTable != "" {
 			cfg.SchemaTable = yamlCfg.SchemaTable
-		}
-		if cfg.Force == "" && yamlCfg.Force != "" {
-			// Convert YAML force values: "on" -> "true", "off" -> "false"
-			switch yamlCfg.Force {
-			case "on":
-				cfg.Force = MigrationForceTrue
-			case "off":
-				cfg.Force = MigrationForceFalse
-			case "auto":
-				cfg.Force = MigrationForceAuto
-			default:
-				cfg.Force = MigrationForce(yamlCfg.Force)
-			}
 		}
 	}
 
@@ -150,34 +110,6 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 	}
 	if cfg.SchemaTable == "" {
 		cfg.SchemaTable = "schema_migrations"
-	}
-	if cfg.Force == "" {
-		cfg.Force = MigrationForceAuto // Default to auto
-	}
-
-	// Get current runtime mode
-	mode := lokstra_registry.GetConfig("runtime.mode", "prod")
-
-	// Determine if migrations should run
-	shouldRun := false
-	switch cfg.Force {
-	case MigrationForceTrue:
-		shouldRun = true
-	case MigrationForceFalse:
-		shouldRun = false
-	case MigrationForceAuto, "":
-		// Auto mode: run in dev/debug, skip in prod
-		shouldRun = (mode == "dev" || mode == "debug")
-	default:
-		return fmt.Errorf("invalid Force value: %s (must be 'true', 'false', or 'auto')", cfg.Force)
-	}
-
-	// Skip if should not run
-	if !shouldRun {
-		if !cfg.Silent {
-			logger.LogInfo("[Lokstra] Skipping migrations (mode=%s, force=%s)", mode, cfg.Force)
-		}
-		return nil
 	}
 
 	// Get database pool
@@ -199,25 +131,22 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 
 	// Run migrations
 	ctx := context.Background()
-	if !cfg.Silent {
-		logger.LogInfo("[Lokstra] Running migrations (mode=%s, force=%s, dir=%s, db=%s, schema=%s)",
-			mode, cfg.Force, cfg.MigrationsDir, cfg.DbPoolName, cfg.SchemaTable)
-	}
+
+	logger.LogInfo("[Lokstra] Running migrations (dir=%s, db=%s, schema=%s)",
+		cfg.MigrationsDir, cfg.DbPoolName, cfg.SchemaTable)
 
 	if err := runner.Up(ctx); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
 
-	if !cfg.Silent {
-		logger.LogInfo("[Lokstra] Migrations completed successfully")
-	}
+	logger.LogInfo("[Lokstra] Migrations completed successfully")
 
 	return nil
 }
 
-// loadMigrationYaml loads and parses migration.yaml file
+// LoadMigrationYaml loads and parses migration.yaml file
 // Returns error if file doesn't exist or cannot be parsed
-func loadMigrationYaml(path string) (*MigrationYamlConfig, error) {
+func LoadMigrationYaml(path string) (*MigrationYamlConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err // File doesn't exist or cannot be read
@@ -305,53 +234,47 @@ func CheckDbMigrationsAuto(configFolder string) error {
 
 	// Run migrations for each folder in order
 	successCount := 0
+	errorCount := 0
 	skippedCount := 0
 
-	mode := lokstra_registry.GetConfig("runtime.mode", "prod")
 	for _, folder := range migrationFolders {
 		folderPath := filepath.Join(rootDir, folder)
 
 		logger.LogInfo("[Lokstra] Processing migration folder: %s", folder)
 
+		// Check if migration is enabled (default: true if not specified)
+		yamlPath := filepath.Join(folderPath, "migration.yaml")
+		yamlCfg, _ := LoadMigrationYaml(yamlPath)
+
+		// Default enabled to true if not explicitly set to false
+		enabled := true
+		if yamlCfg != nil && yamlCfg.Enabled != nil {
+			enabled = *yamlCfg.Enabled
+		}
+
+		if !enabled {
+			logger.LogInfo("[Lokstra] Skipping disabled migration folder: %s", folder)
+			skippedCount++
+			continue
+		}
+
 		// Run migration for this folder
 		err := CheckDbMigration(&MigrationConfig{
 			MigrationsDir: folderPath,
+			DbPoolName:    yamlCfg.DbPoolName,
+			SchemaTable:   yamlCfg.SchemaTable,
 		})
 
 		if err != nil {
-			return fmt.Errorf("migration failed for '%s': %w", folder, err)
+			errorCount++
+			logger.LogError("[Lokstra] Migration failed for '%s': %v", folder, err)
+			// Continue with other folders instead of returning error
+			continue
 		}
 
-		// Count success/skipped based on yaml config
-		yamlPath := filepath.Join(folderPath, "migration.yaml")
-		if yamlCfg, _ := loadMigrationYaml(yamlPath); yamlCfg != nil {
-			shouldRun := false
-
-			switch yamlCfg.Force {
-			case "on":
-				shouldRun = true
-			case "off":
-				shouldRun = false
-			case "auto", "":
-				shouldRun = (mode == "dev" || mode == "debug")
-			}
-
-			if shouldRun {
-				successCount++
-			} else {
-				skippedCount++
-			}
-		} else {
-			// If no yaml config, assume auto mode
-			shouldRun := (mode == "dev" || mode == "debug")
-			if shouldRun {
-				successCount++
-			} else {
-				skippedCount++
-			}
-		}
+		successCount++
 	}
 
-	logger.LogInfo("[Lokstra] Multi-database migrations completed: %d successful, %d skipped", successCount, skippedCount)
+	logger.LogInfo("[Lokstra] Multi-database migrations completed: %d successful, %d errors, %d skipped", successCount, errorCount, skippedCount)
 	return nil
 }

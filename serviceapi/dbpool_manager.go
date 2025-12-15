@@ -4,7 +4,17 @@ import (
 	"context"
 )
 
+// DbPoolInfo holds database DSN, schema name, and RLS context
+type DbPoolInfo struct {
+	Dsn        string
+	Schema     string
+	RlsContext map[string]string
+}
+
 type DbPoolManager interface {
+	// Get all named DbPools
+	GetAllNamedDbPools() map[string]*DbPoolInfo
+
 	// get or create DbPool for the given dsn
 	GetDbPool(dsn, schema string, rlsContext map[string]string) (DbPool, error)
 
