@@ -1,4 +1,4 @@
-package lokstra
+package lokstra_init
 
 import (
 	"github.com/primadi/lokstra/common/logger"

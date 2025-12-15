@@ -3,7 +3,6 @@ package main
 import (
 	"strings"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/deploy"
 	svc "github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/04-external-services/service"
@@ -34,11 +33,11 @@ func main() {
 
 	printStartInfo()
 
-	if err := lokstra.LoadConfig(); err != nil {
+	if err := lokstra_registry.LoadConfig(); err != nil {
 		logger.LogPanic("❌ Failed to load config:", err)
 	}
 
-	if err := lokstra.RunConfiguredServer(); err != nil {
+	if err := lokstra_registry.RunConfiguredServer(); err != nil {
 		logger.LogPanic("❌ Failed to run server:", err)
 	}
 

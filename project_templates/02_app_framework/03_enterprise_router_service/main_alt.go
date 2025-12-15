@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/lokstra_init"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 func AltMain() {
-	lokstra.Bootstrap()
+	lokstra_init.Bootstrap()
 
 	fmt.Println("")
 	fmt.Println("╔═══════════════════════════════════════════════╗")
@@ -27,11 +28,11 @@ func AltMain() {
 
 	// 3. Run server from config folder
 	// Lokstra will automatically merge all YAML files in config/ folder
-	if err := lokstra.LoadConfigFromFolder("config"); err != nil {
+	if err := lokstra_registry.LoadConfig("config"); err != nil {
 		logger.LogPanic("❌ Failed to load config:", err)
 	}
 
-	if err := lokstra.RunConfiguredServer(); err != nil {
+	if err := lokstra_registry.RunConfiguredServer(); err != nil {
 		logger.LogPanic("❌ Failed to run server:", err)
 	}
 }

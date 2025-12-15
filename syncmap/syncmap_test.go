@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/syncmap"
 )
 
@@ -15,7 +15,7 @@ var once sync.Once
 
 func loadConfig(t *testing.T) {
 	once.Do(func() {
-		if err := lokstra.LoadConfig("../services/sync_config_pg/config_test.yaml"); err != nil {
+		if err := lokstra_registry.LoadConfig("../services/sync_config_pg/config_test.yaml"); err != nil {
 			t.Fatalf("Failed to load config: %v", err)
 		}
 	})

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
@@ -32,11 +32,11 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. Run server from config
-	if err := lokstra.LoadConfig(); err != nil {
+	if err := lokstra_registry.LoadConfig(); err != nil {
 		logger.LogPanic("❌ Failed to load config:", err)
 	}
 
-	if err := lokstra.RunConfiguredServer(); err != nil {
+	if err := lokstra_registry.RunConfiguredServer(); err != nil {
 		logger.LogPanic("❌ Failed to run server:", err)
 	}
 }

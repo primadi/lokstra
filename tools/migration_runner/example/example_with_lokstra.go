@@ -3,59 +3,37 @@ package main
 import (
 	"log"
 
-	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/lokstra_init"
 )
 
 // Example of using lokstra.CheckDbMigration in your main application
 // This is the recommended way for automatic migration in development
 func ExampleUsage() {
 	// Bootstrap Lokstra first
-	lokstra.Bootstrap()
+	lokstra_init.Bootstrap()
 
 	// Option 1: Auto mode (RECOMMENDED for development)
 	// - Runs migrations in dev/debug mode automatically
 	// - Skips migrations in prod mode (use CLI: lokstra migration up)
-	err := lokstra.CheckDbMigration(&lokstra.MigrationConfig{
+	err := lokstra_init.CheckDbMigration(&lokstra_init.MigrationConfig{
 		MigrationsDir: "migrations",
-		Force:         lokstra.MigrationForceAuto, // or leave empty (default)
 	})
 	if err != nil {
 		log.Fatalf("Migration check failed: %v", err)
 	}
 
 	// Option 2: Always run (even in prod - NOT RECOMMENDED)
-	err = lokstra.CheckDbMigration(&lokstra.MigrationConfig{
+	err = lokstra_init.CheckDbMigration(&lokstra_init.MigrationConfig{
 		MigrationsDir: "migrations",
-		Force:         lokstra.MigrationForceTrue,
 	})
 	if err != nil {
 		log.Fatalf("Migration failed: %v", err)
 	}
 
-	// Option 3: Never run (use CLI only)
-	err = lokstra.CheckDbMigration(&lokstra.MigrationConfig{
-		MigrationsDir: "migrations",
-		Force:         lokstra.MigrationForceFalse,
-	})
-	if err != nil {
-		log.Fatalf("Migration check failed: %v", err)
-	}
-
-	// Option 4: Custom database pool
-	err = lokstra.CheckDbMigration(&lokstra.MigrationConfig{
+	// Option 3: Custom database pool
+	err = lokstra_init.CheckDbMigration(&lokstra_init.MigrationConfig{
 		MigrationsDir: "db/migrations",
 		DbPoolName:    "analytics-db", // from config.yaml named-db-pools
-		Force:         lokstra.MigrationForceAuto,
-	})
-	if err != nil {
-		log.Fatalf("Migration failed: %v", err)
-	}
-
-	// Option 5: Silent mode (no logs)
-	err = lokstra.CheckDbMigration(&lokstra.MigrationConfig{
-		MigrationsDir: "migrations",
-		Force:         lokstra.MigrationForceAuto,
-		Silent:        true,
 	})
 	if err != nil {
 		log.Fatalf("Migration failed: %v", err)
@@ -68,10 +46,10 @@ func ExampleUsage() {
 // Typical usage in a real application
 func TypicalMain() {
 	// 1. Bootstrap Lokstra (loads config, detects mode, etc)
-	lokstra.Bootstrap()
+	lokstra_init.Bootstrap()
 
 	// 2. Auto-run migrations in dev/debug, skip in prod
-	if err := lokstra.CheckDbMigration(nil); err != nil {
+	if err := lokstra_init.CheckDbMigration(nil); err != nil {
 		log.Fatalf("Migration error: %v", err)
 	}
 

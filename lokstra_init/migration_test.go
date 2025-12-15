@@ -1,9 +1,11 @@
-package lokstra
+package lokstra_init_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/primadi/lokstra/lokstra_init"
 )
 
 func TestLoadMigrationYaml(t *testing.T) {
@@ -13,7 +15,7 @@ func TestLoadMigrationYaml(t *testing.T) {
 
 	// Test 1: File doesn't exist
 	t.Run("file_not_exists", func(t *testing.T) {
-		_, err := loadMigrationYaml(filepath.Join(tmpDir, "nonexistent.yaml"))
+		_, err := lokstra_init.LoadMigrationYaml(filepath.Join(tmpDir, "nonexistent.yaml"))
 		if err == nil {
 			t.Error("Expected error for non-existent file, got nil")
 		}
@@ -33,7 +35,7 @@ depends-on:
 			t.Fatalf("Failed to write test file: %v", err)
 		}
 
-		cfg, err := loadMigrationYaml(yamlPath)
+		cfg, err := lokstra_init.LoadMigrationYaml(yamlPath)
 		if err != nil {
 			t.Fatalf("Failed to load YAML: %v", err)
 		}
@@ -43,9 +45,6 @@ depends-on:
 		}
 		if cfg.SchemaTable != "tenant_migrations" {
 			t.Errorf("Expected SchemaTable 'tenant_migrations', got '%s'", cfg.SchemaTable)
-		}
-		if cfg.Force != "on" {
-			t.Errorf("Expected Force 'on', got '%s'", cfg.Force)
 		}
 		if cfg.Description != "Tenant database migrations" {
 			t.Errorf("Expected Description 'Tenant database migrations', got '%s'", cfg.Description)
@@ -59,7 +58,7 @@ depends-on:
 			t.Fatalf("Failed to write test file: %v", err)
 		}
 
-		cfg, err := loadMigrationYaml(yamlPath)
+		cfg, err := lokstra_init.LoadMigrationYaml(yamlPath)
 		if err != nil {
 			t.Fatalf("Failed to load YAML: %v", err)
 		}
@@ -80,7 +79,7 @@ depends-on:
 			t.Fatalf("Failed to write test file: %v", err)
 		}
 
-		_, err := loadMigrationYaml(yamlPath)
+		_, err := lokstra_init.LoadMigrationYaml(yamlPath)
 		if err == nil {
 			t.Error("Expected error for invalid YAML, got nil")
 		}
@@ -103,7 +102,7 @@ force: off
 
 	// Test: YAML config should be loaded and merged
 	t.Run("yaml_config_merge", func(t *testing.T) {
-		cfg := &MigrationConfig{
+		cfg := &lokstra_init.MigrationConfig{
 			// MigrationsDir: tmpDir,
 			// Leave other fields empty - should be filled from YAML
 		}
@@ -113,24 +112,12 @@ force: off
 		// by checking the values before it tries to connect
 
 		// Simulate the merging logic from CheckDbMigration
-		if yamlCfg, err := loadMigrationYaml(yamlPath); err == nil {
+		if yamlCfg, err := lokstra_init.LoadMigrationYaml(yamlPath); err == nil {
 			if cfg.DbPoolName == "" && yamlCfg.DbPoolName != "" {
 				cfg.DbPoolName = yamlCfg.DbPoolName
 			}
 			if cfg.SchemaTable == "" && yamlCfg.SchemaTable != "" {
 				cfg.SchemaTable = yamlCfg.SchemaTable
-			}
-			if cfg.Force == "" && yamlCfg.Force != "" {
-				switch yamlCfg.Force {
-				case "on":
-					cfg.Force = MigrationForceTrue
-				case "off":
-					cfg.Force = MigrationForceFalse
-				case "auto":
-					cfg.Force = MigrationForceAuto
-				default:
-					cfg.Force = MigrationForce(yamlCfg.Force)
-				}
 			}
 		}
 
@@ -149,21 +136,17 @@ force: off
 		if cfg.SchemaTable != "analytics_migrations" {
 			t.Errorf("Expected SchemaTable 'analytics_migrations' from YAML, got '%s'", cfg.SchemaTable)
 		}
-		if cfg.Force != MigrationForceFalse {
-			t.Errorf("Expected Force 'false' from YAML 'off', got '%s'", cfg.Force)
-		}
 	})
 
 	// Test: Explicit config should override YAML
 	t.Run("explicit_config_overrides_yaml", func(t *testing.T) {
-		cfg := &MigrationConfig{
+		cfg := &lokstra_init.MigrationConfig{
 			// MigrationsDir: tmpDir,
 			DbPoolName: "custom-db", // Explicit value
-			Force:      MigrationForceTrue,
 		}
 
 		// Simulate merging - explicit values should NOT be overridden
-		if yamlCfg, err := loadMigrationYaml(yamlPath); err == nil {
+		if yamlCfg, err := lokstra_init.LoadMigrationYaml(yamlPath); err == nil {
 			if cfg.DbPoolName == "" && yamlCfg.DbPoolName != "" {
 				cfg.DbPoolName = yamlCfg.DbPoolName
 			}
@@ -181,11 +164,6 @@ force: off
 		// DbPoolName should keep explicit value
 		if cfg.DbPoolName != "custom-db" {
 			t.Errorf("Expected explicit DbPoolName 'custom-db', got '%s'", cfg.DbPoolName)
-		}
-
-		// Force should keep explicit value
-		if cfg.Force != MigrationForceTrue {
-			t.Errorf("Expected explicit Force 'true', got '%s'", cfg.Force)
 		}
 	})
 }

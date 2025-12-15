@@ -142,6 +142,16 @@ func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
 }
 
 func (s *syncConfigPG) Set(ctx context.Context, key string, value any) error {
+	// Check if value already exists and is unchanged (optimization)
+	s.mu.RLock()
+	existingValue, exists := s.cache[key]
+	s.mu.RUnlock()
+
+	if exists && equal(existingValue, value) {
+		// Value unchanged - skip database write to reduce IO/network load
+		return nil
+	}
+
 	valueJSON, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("failed to marshal value: %w", err)
@@ -574,13 +584,13 @@ func ServiceFactory(mapCfg map[string]any) any {
 }
 
 // Register registers the SyncConfig service type
-func Register(dbPoolName string) {
+func Register(dbPoolName string, heartBeatInterval, reconnectInterval time.Duration) {
 	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory)
-	SetDefaultSyncConfigPG(dbPoolName)
+	SetDefaultSyncConfigPG(dbPoolName, heartBeatInterval, reconnectInterval)
 }
 
 // registers the default SyncConfigPG service
-func SetDefaultSyncConfigPG(syncDbPoolName string) {
+func SetDefaultSyncConfigPG(syncDbPoolName string, heartBeatInterval, reconnectInterval time.Duration) {
 	if lokstra_registry.HasService("sync-config") {
 		return // Already registered
 	}
@@ -593,10 +603,8 @@ func SetDefaultSyncConfigPG(syncDbPoolName string) {
 			SyncOnMismatch:     true,
 			EnableNotification: true,
 
-			HeartbeatInterval: lokstra_registry.GetConfig(
-				"dbpool-manager.heartbeat-interval", 5*time.Minute), // 5 minutes
-			ReconnectInterval: lokstra_registry.GetConfig(
-				"dbpool-manager.reconnect-interval", 5*time.Second), // 5 seconds
+			HeartbeatInterval: heartBeatInterval,
+			ReconnectInterval: reconnectInterval,
 		}
 		svc, err := Service(cfg)
 		if err != nil {

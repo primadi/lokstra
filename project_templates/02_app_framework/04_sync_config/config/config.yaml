@@ -1,12 +1,5 @@
 # yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
-configs:
-  dbpool-manager:
-    use_sync: true
-    # dbpool_name: db_main
-    # heartbeat_interval: ${DBPOOL_MANAGER_HEARTBEAT_INTERVAL:5} # in minutes
-    # reconnect_interval: ${DBPOOL_MANAGER_RECONNECT_INTERVAL:5} # in seconds
-    
 named-db-pools:
   db_main:
     dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}

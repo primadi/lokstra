@@ -1,70 +1,27 @@
 package lokstra_registry
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/primadi/lokstra/common/logger"
-	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/deploy/loader"
 )
 
-// LoadConfig loads YAML configuration file(s) and registers lazy load services.
-// This makes config available for service/middleware registration.
-// Config paths are relative to the project base path.
-//
-// Example:
-//
-//	if err := lokstra_registry.LoadConfig("config.yaml"); err != nil {
-//	    logger.LogPanic(err)
-//	}
-//
-// After calling LoadConfig, you can:
-//   - Access config via GetConfig()
-//   - Register services/middlewares (they can read config)
-//   - Call InitAndRunServer() to start the server
+// LoadConfig loads configuration from the specified file path.
+// path can be one or more YAML files or folders.
+// If no path is provided, it defaults to "config" folder
 func LoadConfig(configPaths ...string) error {
 	if len(configPaths) == 0 {
-		configPaths = []string{"config.yaml"}
+		configPaths = []string{"config"}
 	}
 
 	// Load config (loads ALL deployments into Global registry)
-	if err := loader.LoadAndBuild(configPaths); err != nil {
+	if _, err := loader.LoadConfig(configPaths...); err != nil {
 		return err
 	}
 
 	logger.LogDebug("✅ Config loaded successfully from: %v", configPaths)
 	return nil
-}
-
-// LoadConfigFromFolder loads all YAML files from the specified folder.
-// This is a convenience wrapper around LoadConfig.
-//
-// Example:
-//
-//	if err := lokstra_registry.LoadConfigFromFolder("config"); err != nil {
-//	    logger.LogPanic(err)
-//	}
-func LoadConfigFromFolder(configFolder string) error {
-	// Load all YAML files in the specified config folder
-	basePath := utils.GetBasePath()
-	configFolder = filepath.Join(basePath, configFolder)
-	files, err := filepath.Glob(filepath.Join(configFolder, "*.yaml"))
-	if err != nil {
-		return err
-	}
-
-	if len(files) == 0 {
-		logger.LogInfo("⚠️  No YAML config found in folder: %s", configFolder)
-		return nil
-	}
-
-	lenPrefix := len(basePath) + 1
-	for i, f := range files {
-		files[i] = f[lenPrefix:]
-	}
-
-	return LoadConfig(files...)
 }
 
 // LoadNamedDbPoolsFromConfig sets up database pools from loaded config.
@@ -113,4 +70,9 @@ func RunConfiguredServer() error {
 
 	// Run server
 	return RunServer(server, timeout)
+}
+
+// return runtime mode: dev, debug, or prod
+func GetRuntimeMode() string {
+	return GetConfig("runtime.mode", "prod")
 }

@@ -837,6 +837,12 @@ func (g *GlobalRegistry) RegisterService(name string, service any) {
 	logger.LogDebug("ℹ️  Registered service instance: '%s'\n", name)
 }
 
+// UnregisterService removes a service instance from the registry
+func (g *GlobalRegistry) UnregisterService(name string) {
+	g.serviceInstances.Delete(name)
+	logger.LogDebug("ℹ️  Unregistered service instance: '%s'\n", name)
+}
+
 // RegisterLazyService registers a lazy service factory that will be instantiated on first access.
 // The factory will be called only once, and the result is cached.
 // This allows services to be registered in any order, regardless of dependencies.

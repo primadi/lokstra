@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/primadi/lokstra"
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
 func main() {
-	lokstra.Bootstrap()
+	lokstra_init.Bootstrap()
 
 	logger.LogInfo("")
 	logger.LogInfo("╔═══════════════════════════════════════════════╗")
@@ -18,7 +18,7 @@ func main() {
 
 	logger.SetLogLevelFromEnv()
 
-	lokstra.LoadConfigFromFolder("config")
+	lokstra_registry.LoadConfig("config")
 
 	dsn := lokstra_registry.GetConfig("db_main.dsn", "")
 	schema := lokstra_registry.GetConfig("db_main.schema", "public")
@@ -42,7 +42,7 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. Run server from config folder
-	if err := lokstra.RunConfiguredServer(); err != nil {
+	if err := lokstra_registry.RunConfiguredServer(); err != nil {
 		panic(err)
 	}
 }

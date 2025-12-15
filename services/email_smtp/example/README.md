@@ -11,7 +11,7 @@ func main() {
     lokstra.Bootstrap()
     
     // Load config
-    lokstra.LoadConfig("config.yaml")
+    lokstra_registry.LoadConfig("config.yaml")
     
     // Services auto-registered when server runs
     lokstra_registry.InitAndRunServer()
@@ -49,7 +49,7 @@ func main() {
     lokstra_registry.RegisterServiceType("email-api-service", EmailAPIServiceFactory)
     
     // Load config and run (auto-registers services from deployments)
-    lokstra.LoadConfigFromFolder("configs")
+    lokstra_registry.LoadConfigFromFolder("configs")
     lokstra_registry.InitAndRunServer()
 }
 ```

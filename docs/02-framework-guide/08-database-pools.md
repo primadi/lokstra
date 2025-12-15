@@ -43,7 +43,7 @@ func main() {
     lokstra.Bootstrap()
     
     // 1. Load config only
-    if err := lokstra.LoadConfig("config.yaml"); err != nil {
+    if err := lokstra_registry.LoadConfig("config.yaml"); err != nil {
         log.Fatal(err)
     }
     
@@ -151,7 +151,7 @@ named-db-pools:
 ✅ **Good:**
 ```go
 // Load config first, setup DB later
-lokstra.LoadConfig("config.yaml")
+lokstra_registry.LoadConfig("config.yaml")
 lokstra.SetupNamedDbPools()
 ```
 
@@ -209,7 +209,7 @@ export DB_SSLMODE=require
 ```go
 func TestUserService(t *testing.T) {
     // Load config without setting up DB pools
-    lokstra.LoadConfig("config.yaml")
+    lokstra_registry.LoadConfig("config.yaml")
     
     // Mock DB pool
     mockDB := &MockDbPool{}

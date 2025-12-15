@@ -38,7 +38,8 @@ type DbPoolConfig struct {
 	Password string `yaml:"password,omitempty" json:"password,omitempty"`
 
 	// Schema configuration
-	Schema string `yaml:"schema,omitempty" json:"schema,omitempty"` // Default: "public"
+	Schema     string            `yaml:"schema,omitempty" json:"schema,omitempty"`           // Default: "public"
+	RlsContext map[string]string `yaml:"rls-context,omitempty" json:"rls-context,omitempty"` // Row Level Security context variables
 
 	// Pool configuration (optional)
 	MinConns    int    `yaml:"min-conns,omitempty" json:"min-conns,omitempty"`
