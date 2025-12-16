@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -23,7 +24,7 @@ func main() {
 	registerMiddlewareTypes()
 
 	// 3. RunServerFromConfig
-	if err := lokstra_registry.LoadConfig(); err != nil {
+	if _, err := loader.LoadConfig(); err != nil {
 		logger.LogPanic("❌ Failed to load config:", err)
 	}
 

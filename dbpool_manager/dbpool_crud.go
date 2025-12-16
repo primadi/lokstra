@@ -40,13 +40,13 @@ func AddDbPool(config DbPoolConfig) error {
 
 	// Set the pool configuration (upsert: works for both new and existing pools)
 	// This also auto-registers the pool as a lazy service
-	dpm.SetNamedDbPool(config.Name, config.DSN, config.Schema, config.RlsContext)
+	dpm.SetDbPoolManager(config.Name, config.DSN, config.Schema, config.RlsContext)
 
 	// Validate configuration by attempting to get the pool
-	_, err := dpm.GetNamedDbPool(config.Name)
+	_, err := dpm.GetDbPoolManager(config.Name)
 	if err != nil {
 		// Rollback on validation failure
-		dpm.RemoveNamedDbPool(config.Name)
+		dpm.RemoveDbPoolManager(config.Name)
 		return fmt.Errorf("failed to create pool '%s': %w", config.Name, err)
 	}
 
@@ -75,13 +75,13 @@ func RemoveDbPool(name string) error {
 	}
 
 	// Check if pool exists
-	_, _, _, err := dpm.GetNamedDbPoolInfo(name)
+	_, _, _, err := dpm.GetDbPoolManagerInfo(name)
 	if err != nil {
 		return fmt.Errorf("pool '%s' not found: %w", name, err)
 	}
 
 	// Remove from manager (also unregisters service automatically)
-	dpm.RemoveNamedDbPool(name)
+	dpm.RemoveDbPoolManager(name)
 
 	logger.LogInfo("✅ Removed DB pool: %s", name)
 	return nil
@@ -98,7 +98,7 @@ func GetDbPoolInfo(name string) (*DbPoolConfig, error) {
 		return nil, fmt.Errorf("dbpool-manager service not found")
 	}
 
-	dsn, schema, rlsContext, err := dpm.GetNamedDbPoolInfo(name)
+	dsn, schema, rlsContext, err := dpm.GetDbPoolManagerInfo(name)
 	if err != nil {
 		return nil, fmt.Errorf("pool '%s' not found: %w", name, err)
 	}
@@ -119,8 +119,8 @@ func ListDbPools() ([]string, error) {
 		return nil, fmt.Errorf("dbpool-manager service not found")
 	}
 
-	// Use GetAllNamedDbPools from DbPoolManager interface
-	allPools := dpm.GetAllNamedDbPools()
+	// Use GetAllDbPoolManager from DbPoolManager interface
+	allPools := dpm.GetAllDbPoolManager()
 	if allPools == nil {
 		return []string{}, nil
 	}
@@ -144,7 +144,7 @@ func GetDbPool(name string) (serviceapi.DbPool, error) {
 		return nil, fmt.Errorf("dbpool-manager service not found")
 	}
 
-	return dpm.GetNamedDbPool(name)
+	return dpm.GetDbPoolManager(name)
 }
 
 // AcquireDbConn acquires a connection from a named pool

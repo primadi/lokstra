@@ -74,8 +74,8 @@ func (p *DbPoolManager) GetDbPool(dsn string, schema string, rlsContext map[stri
 	return newPool, nil
 }
 
-// GetNamedDbPool implements serviceapi.DbPoolManager.
-func (p *DbPoolManager) GetNamedDbPool(name string) (serviceapi.DbPool, error) {
+// GetDbPoolManager implements serviceapi.DbPoolManager.
+func (p *DbPoolManager) GetDbPoolManager(name string) (serviceapi.DbPool, error) {
 	p.mu.RLock()
 	dbPoolInfo, ok := p.namedPools[name]
 	p.mu.RUnlock()
@@ -85,8 +85,8 @@ func (p *DbPoolManager) GetNamedDbPool(name string) (serviceapi.DbPool, error) {
 	return p.GetDbPool(dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext)
 }
 
-// GetNamedDbPoolInfo implements serviceapi.DbPoolManager.
-func (p *DbPoolManager) GetNamedDbPoolInfo(name string) (string, string, map[string]string, error) {
+// GetDbPoolManagerInfo implements serviceapi.DbPoolManager.
+func (p *DbPoolManager) GetDbPoolManagerInfo(name string) (string, string, map[string]string, error) {
 	p.mu.RLock()
 	dbPoolInfo, ok := p.namedPools[name]
 	p.mu.RUnlock()
@@ -96,8 +96,8 @@ func (p *DbPoolManager) GetNamedDbPoolInfo(name string) (string, string, map[str
 	return dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext, nil
 }
 
-// RemoveNamedDbPool implements serviceapi.DbPoolManager.
-func (p *DbPoolManager) RemoveNamedDbPool(name string) {
+// RemoveDbPoolManager implements serviceapi.DbPoolManager.
+func (p *DbPoolManager) RemoveDbPoolManager(name string) {
 	p.mu.Lock()
 	delete(p.namedPools, name)
 	p.mu.Unlock()
@@ -108,8 +108,8 @@ func (p *DbPoolManager) RemoveNamedDbPool(name string) {
 	}
 }
 
-// SetNamedDbPool implements serviceapi.DbPoolManager.
-func (p *DbPoolManager) SetNamedDbPool(name string, dsn string, schema string, rlsContext map[string]string) {
+// SetDbPoolManager implements serviceapi.DbPoolManager.
+func (p *DbPoolManager) SetDbPoolManager(name string, dsn string, schema string, rlsContext map[string]string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.namedPools[name] = &serviceapi.DbPoolInfo{
@@ -122,7 +122,7 @@ func (p *DbPoolManager) SetNamedDbPool(name string, dsn string, schema string, r
 	// This makes pools accessible via lokstra_registry.GetService[DbPool](name)
 	if registry := getGlobalRegistry(); registry != nil {
 		registry.RegisterLazyService(name, func() any {
-			pool, _ := p.GetNamedDbPool(name)
+			pool, _ := p.GetDbPoolManager(name)
 			return pool
 		}, nil)
 	}
@@ -140,7 +140,7 @@ func (p *DbPoolManager) Shutdown() error {
 	return nil
 }
 
-func (p *DbPoolManager) GetAllNamedDbPools() map[string]*serviceapi.DbPoolInfo {
+func (p *DbPoolManager) GetAllDbPoolManager() map[string]*serviceapi.DbPoolInfo {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	result := make(map[string]*serviceapi.DbPoolInfo)

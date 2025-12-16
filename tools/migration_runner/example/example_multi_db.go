@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/services/sync_config_pg"
@@ -16,14 +17,16 @@ func main() {
 	lokstra_init.Bootstrap()
 
 	// load database and other configurations
-	if err := lokstra_registry.LoadConfig("config"); err != nil {
+	if _, err := loader.LoadConfig("config"); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
 	lokstra_init.UsePgxDbPoolManager(true)
 
 	sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
-	lokstra_registry.LoadNamedDbPoolsFromConfig()
+	if err := loader.LoadDbPoolManagerFromConfig(); err != nil {
+		log.Fatalf("Failed to load named DB pools: %v", err)
+	}
 
 	// OPTION 1: Auto-scan all migration folders (RECOMMENDED)
 	// Scans multi_db/ for subdirectories, runs them in alphabetical order

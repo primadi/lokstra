@@ -9,7 +9,7 @@ Simple database migration tool for Lokstra framework.
 - ✅ Supports multiple named databases
 - ✅ Idempotent (safe to run multiple times)
 - ✅ Transaction support per migration
-- ✅ Integrates with Lokstra's named-db-pools
+- ✅ Integrates with Lokstra's dbpool-manager
 - ✅ **Auto-generate migration files** with `create` command
 - ✅ **Conflict detection** - prevents version collisions
 - ✅ **Multiple statements** per file (tables, indexes, views, procedures)
@@ -155,7 +155,7 @@ DROP TABLE IF EXISTS users;
 
 ### config.yaml
 ```yaml
-named-db-pools:
+dbpool-manager:
   main-db:
     host: localhost
     port: 5432
@@ -179,7 +179,7 @@ import (
 func main() {
     lokstra.Bootstrap()
     
-    // Load config (auto-discovers named-db-pools)
+    // Load config (auto-discovers dbpool-manager)
     lokstra_registry.LoadConfigFromFolder("config")
     
     // Run migrations before starting server

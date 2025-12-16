@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
@@ -41,12 +42,14 @@ func MainTest() {
 
 	// Bootstrap and load config for other commands
 	lokstra_init.Bootstrap()
-	lokstra_registry.LoadConfig("config")
+	if _, err := loader.LoadConfig("config"); err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 
 	// Get database pool
 	pool, ok := lokstra_registry.GetServiceAny(*dbName)
 	if !ok {
-		log.Fatalf("❌ Database pool '%s' not found. Check your config.yaml named-db-pools section", *dbName)
+		log.Fatalf("❌ Database pool '%s' not found. Check your config.yaml dbpool-manager section", *dbName)
 	}
 
 	dbPool, ok := pool.(serviceapi.DbPool)

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/services/sync_config_pg"
 )
@@ -59,6 +60,7 @@ func BootstrapAndRun(opts ...InitializeOption) error {
 	cfg := &InitializeConfig{
 		PanicOnConfigError:       true,
 		LogLevel:                 logger.LogLevelInfo,
+		EnableLoadConfig:         true,
 		EnableAnnotation:         true, // Auto-detect @RouterService
 		EnableDbPoolManager:      false,
 		IsDbPoolAutoSync:         false,
@@ -109,7 +111,7 @@ func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
 
 	// 3. LoadConfig
 	if cfg.EnableLoadConfig {
-		if err := lokstra_registry.LoadConfig(cfg.ConfigPath...); err != nil {
+		if _, err := loader.LoadConfig(cfg.ConfigPath...); err != nil {
 			return cfg.returnError(err)
 		}
 	}
@@ -128,7 +130,7 @@ func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
 	if cfg.EnableDbPoolManager {
 		UsePgxDbPoolManager(cfg.IsDbPoolAutoSync)
 
-		if err := lokstra_registry.LoadNamedDbPoolsFromConfig(); err != nil {
+		if err := loader.LoadDbPoolManagerFromConfig(); err != nil {
 			return cfg.returnError(err)
 		}
 	}

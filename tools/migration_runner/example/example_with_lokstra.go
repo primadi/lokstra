@@ -33,7 +33,7 @@ func ExampleUsage() {
 	// Option 3: Custom database pool
 	err = lokstra_init.CheckDbMigration(&lokstra_init.MigrationConfig{
 		MigrationsDir: "db/migrations",
-		DbPoolName:    "analytics-db", // from config.yaml named-db-pools
+		DbPoolName:    "analytics-db", // from config.yaml dbpool-manager
 	})
 	if err != nil {
 		log.Fatalf("Migration failed: %v", err)

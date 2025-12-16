@@ -71,7 +71,3 @@ func (s *UserServiceImpl) Activate(p *domain.ActivateUserRequest) error {
 func (s *UserServiceImpl) Delete(p *domain.DeleteUserRequest) error {
 	return s.UserRepo.Delete(p.ID)
 }
-
-func Register() {
-	// do nothing, just to make sure the package is loaded
-}

@@ -8,6 +8,7 @@ import (
 )
 
 // UserRepositoryImpl implements domain.UserRepository with in-memory storage
+// @Service "user-repository"
 type UserRepositoryImpl struct {
 	mu      sync.RWMutex
 	users   map[int]*domain.User
@@ -18,13 +19,10 @@ type UserRepositoryImpl struct {
 // Ensure implementation
 var _ domain.UserRepository = (*UserRepositoryImpl)(nil)
 
-// NewUserRepository creates a new in-memory user repository with seed data
-func NewUserRepository() *UserRepositoryImpl {
-	repo := &UserRepositoryImpl{
-		users:   make(map[int]*domain.User),
-		byEmail: make(map[string]*domain.User),
-		nextID:  1,
-	}
+func (r *UserRepositoryImpl) Init() error {
+	r.users = make(map[int]*domain.User)
+	r.byEmail = make(map[string]*domain.User)
+	r.nextID = 1
 
 	// Seed data
 	seedUsers := []*domain.User{
@@ -34,10 +32,10 @@ func NewUserRepository() *UserRepositoryImpl {
 	}
 
 	for _, u := range seedUsers {
-		repo.Create(u)
+		r.Create(u)
 	}
 
-	return repo
+	return nil
 }
 
 // GetByID retrieves a user by ID
@@ -129,9 +127,4 @@ func (r *UserRepositoryImpl) Delete(id int) error {
 	delete(r.users, id)
 	delete(r.byEmail, user.Email)
 	return nil
-}
-
-// UserRepositoryFactory creates a new UserRepositoryImpl instance
-func UserRepositoryFactory(deps map[string]any, config map[string]any) any {
-	return NewUserRepository()
 }

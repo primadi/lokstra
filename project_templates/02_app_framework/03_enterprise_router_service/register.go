@@ -6,16 +6,7 @@ import (
 	"github.com/primadi/lokstra/core/request"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/middleware/recovery"
-
-	"github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/order"
-	"github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/user"
 )
-
-func registerServiceTypes() {
-	// Register modules (each module owns its service type registration)
-	user.Register()
-	order.Register()
-}
 
 func registerRouters() {
 	// Register manual routers (not generated from @RouterService)

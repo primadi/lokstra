@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
@@ -9,7 +10,7 @@ import (
 func main() {
 	lokstra_init.Bootstrap()
 
-	if err := lokstra_registry.LoadConfig(
+	if _, err := loader.LoadConfig(
 		"config/base.yaml",
 		"config/dev.yaml", // or production.yaml for prod
 	); err != nil {

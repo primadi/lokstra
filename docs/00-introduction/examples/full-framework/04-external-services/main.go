@@ -5,6 +5,7 @@ import (
 
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/deploy"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	svc "github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/04-external-services/service"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
@@ -33,7 +34,7 @@ func main() {
 
 	printStartInfo()
 
-	if err := lokstra_registry.LoadConfig(); err != nil {
+	if _, err := loader.LoadConfig(); err != nil {
 		logger.LogPanic("❌ Failed to load config:", err)
 	}
 

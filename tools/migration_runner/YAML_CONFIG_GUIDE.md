@@ -32,7 +32,7 @@ migrations/
 Each migration folder can have a `migration.yaml` file to configure database-specific settings:
 
 ```yaml
-# Database pool name from config.yaml named-db-pools
+# Database pool name from config.yaml dbpool-manager
 dbpool-name: main-db
 
 # Schema migrations tracking table

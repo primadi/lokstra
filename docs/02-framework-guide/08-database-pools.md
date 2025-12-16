@@ -15,7 +15,7 @@ Lokstra provides built-in support for database connection pooling with automatic
 
 **config.yaml:**
 ```yaml
-named-db-pools:
+dbpool-manager:
   main-db:
     dsn: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"
     min_conns: 2
@@ -48,7 +48,7 @@ func main() {
     }
     
     // 2. Setup DB pools explicitly (if needed)
-    if err := lokstra.SetupNamedDbPools(); err != nil {
+    if err := lokstra.SetupDbPoolManager(); err != nil {
         log.Fatal(err)
     }
     
@@ -116,7 +116,7 @@ service-definitions:
 ### Option 1: Direct DSN
 
 ```yaml
-named-db-pools:
+dbpool-manager:
   mydb:
     dsn: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"
 ```
@@ -124,7 +124,7 @@ named-db-pools:
 ### Option 2: Component-Based (Recommended)
 
 ```yaml
-named-db-pools:
+dbpool-manager:
   mydb:
     host: ${DB_HOST:localhost}
     port: ${DB_PORT:5432}
@@ -152,7 +152,7 @@ named-db-pools:
 ```go
 // Load config first, setup DB later
 lokstra_registry.LoadConfig("config.yaml")
-lokstra.SetupNamedDbPools()
+lokstra.SetupDbPoolManager()
 ```
 
 ❌ **Bad:**
@@ -164,7 +164,7 @@ lokstra_registry.RunServerFromConfig("config.yaml")
 ### 2. Use Named Pools for Different Purposes
 
 ```yaml
-named-db-pools:
+dbpool-manager:
   transactional-db:  # For OLTP workloads
     max_conns: 10
     
@@ -178,7 +178,7 @@ named-db-pools:
 ### 3. Environment-Specific Configuration
 
 ```yaml
-named-db-pools:
+dbpool-manager:
   main-db:
     host: ${DB_HOST:localhost}
     port: ${DB_PORT:5432}

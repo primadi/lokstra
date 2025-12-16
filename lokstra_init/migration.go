@@ -17,7 +17,7 @@ import (
 // MigrationYamlConfig represents the migration.yaml file structure
 // This file is optional and located in the migrations directory
 type MigrationYamlConfig struct {
-	// DbPoolName is the database pool name from config.yaml named-db-pools
+	// DbPoolName is the database pool name from config.yaml dbpool-manager
 	DbPoolName string `yaml:"dbpool-name"`
 
 	// SchemaTable is the table name for tracking migrations
@@ -40,7 +40,7 @@ type MigrationConfig struct {
 	// Default: "migrations"
 	MigrationsDir string
 
-	// DbPoolName is the name of the database pool from named-db-pools
+	// DbPoolName is the name of the database pool from dbpool-manager
 	// Default: "main-db"
 	// Can be overridden by migration.yaml
 	DbPoolName string
@@ -115,7 +115,7 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 	// Get database pool
 	pool, ok := lokstra_registry.GetServiceAny(cfg.DbPoolName)
 	if !ok {
-		return fmt.Errorf("database pool '%s' not found - check your config.yaml named-db-pools section", cfg.DbPoolName)
+		return fmt.Errorf("database pool '%s' not found - check your config.yaml dbpool-manager section", cfg.DbPoolName)
 	}
 
 	dbPool, ok := pool.(serviceapi.DbPool)

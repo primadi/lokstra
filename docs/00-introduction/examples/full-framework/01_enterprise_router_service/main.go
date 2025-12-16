@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
@@ -18,7 +19,9 @@ func main() {
 
 	logger.SetLogLevelFromEnv()
 
-	lokstra_registry.LoadConfig("config")
+	if _, err := loader.LoadConfig("config"); err != nil {
+		panic(err)
+	}
 
 	dsn := lokstra_registry.GetConfig("db_main.dsn", "")
 	schema := lokstra_registry.GetConfig("db_main.schema", "public")

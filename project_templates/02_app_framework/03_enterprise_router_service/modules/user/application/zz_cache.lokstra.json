@@ -3,15 +3,15 @@
   "files": {
     "user_service.go": {
       "filename": "user_service.go",
-      "checksum": "8a406a9a57f5db224e7f8260fc3f1fdc21ab33f73d6e0224b60df10810138fc6",
+      "checksum": "2f6340c9382716a7ec0428b8f6db6a0d40dddf3c5372549b4ca5b188917dca5d",
       "annotations": 9,
-      "last_scan": "2025-12-10T03:50:06.636111+07:00",
+      "last_scan": "2025-12-16T11:43:09.5087265+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2025-12-10T03:50:06.636111+07:00"
+      "generated_mod_time": "2025-12-16T11:43:09.5087265+07:00"
     }
   },
-  "updated_at": "2025-12-12T15:39:36.8554716+07:00",
+  "updated_at": "2025-12-16T11:43:21.5925431+07:00",
   "generated_checksum": "f1d4037b46a04ef378b4d985efb148c26f695e3f6db1601bee944b4992502afb"
 }
