@@ -139,7 +139,7 @@ func main() {
 - Solution 2: Manually remove from database: `DELETE FROM schema_migrations WHERE version = XXX`
 
 **Error: "Database pool 'main-db' not found"**
-- Check that `named-db-pools.main-db` is defined in your config.yaml
+- Check that `dbpool-manager.main-db` is defined in your config.yaml
 - Make sure you imported `_ "github.com/primadi/lokstra/services/dbpool_manager"`
 
 **Error: "Migrations directory not found"**

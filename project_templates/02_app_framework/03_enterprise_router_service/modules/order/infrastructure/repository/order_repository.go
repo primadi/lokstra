@@ -9,6 +9,7 @@ import (
 )
 
 // OrderRepositoryImpl implements domain.OrderRepository with in-memory storage
+// @Service "order-repository"
 type OrderRepositoryImpl struct {
 	mu       sync.RWMutex
 	orders   map[int]*domain.Order
@@ -20,12 +21,10 @@ type OrderRepositoryImpl struct {
 var _ domain.OrderRepository = (*OrderRepositoryImpl)(nil)
 
 // NewOrderRepository creates a new in-memory order repository with seed data
-func NewOrderRepository() *OrderRepositoryImpl {
-	repo := &OrderRepositoryImpl{
-		orders:   make(map[int]*domain.Order),
-		byUserID: make(map[int][]*domain.Order),
-		nextID:   1,
-	}
+func (r *OrderRepositoryImpl) Init() error {
+	r.orders = make(map[int]*domain.Order)
+	r.byUserID = make(map[int][]*domain.Order)
+	r.nextID = 1
 
 	// Seed data
 	seedOrders := []*domain.Order{
@@ -35,10 +34,10 @@ func NewOrderRepository() *OrderRepositoryImpl {
 	}
 
 	for _, o := range seedOrders {
-		repo.Create(o)
+		r.Create(o)
 	}
 
-	return repo
+	return nil
 }
 
 // GetByID retrieves an order by ID
@@ -142,9 +141,4 @@ func (r *OrderRepositoryImpl) Delete(id int) error {
 	}
 
 	return nil
-}
-
-// OrderRepositoryFactory creates a new OrderRepositoryImpl instance
-func OrderRepositoryFactory(deps map[string]any, config map[string]any) any {
-	return NewOrderRepository()
 }

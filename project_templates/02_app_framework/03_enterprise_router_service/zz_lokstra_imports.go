@@ -6,5 +6,7 @@ package main
 
 import (
 	_ "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/order/application"
+	_ "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/order/infrastructure/repository"
 	_ "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/user/application"
+	_ "github.com/primadi/lokstra/project_templates/02_app_framework/03_enterprise_router_service/modules/user/infrastructure/repository"
 )

@@ -78,7 +78,3 @@ func (s *OrderServiceImpl) Cancel(p *domain.CancelOrderRequest) error {
 func (s *OrderServiceImpl) Delete(p *domain.DeleteOrderRequest) error {
 	return s.OrderRepo.Delete(p.ID)
 }
-
-func Register() {
-	// do nothing, just to ensure package is loaded
-}

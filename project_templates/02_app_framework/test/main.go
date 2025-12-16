@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/syncmap"
@@ -12,7 +13,9 @@ func main() {
 	lokstra_init.Bootstrap()
 
 	// 2. Load application config
-	lokstra_registry.LoadConfig("config.yaml")
+	if _, err := loader.LoadConfig("config.yaml"); err != nil {
+		panic(err)
+	}
 
 	// 3. Register routers
 	registerRouters()

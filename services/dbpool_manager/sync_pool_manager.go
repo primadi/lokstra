@@ -85,8 +85,8 @@ func (p *SyncDbPoolManager) GetDbPool(dsn string, schema string, rlsContext map[
 	return newPool, nil
 }
 
-// GetNamedDbPool implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) GetNamedDbPool(name string) (serviceapi.DbPool, error) {
+// GetDbPoolManager implements serviceapi.DbPoolManager.
+func (p *SyncDbPoolManager) GetDbPoolManager(name string) (serviceapi.DbPool, error) {
 	p.ensureSyncMapInitialized()
 	dbPoolInfo, ok := p.namedPools.Load(name)
 	if !ok {
@@ -95,8 +95,8 @@ func (p *SyncDbPoolManager) GetNamedDbPool(name string) (serviceapi.DbPool, erro
 	return p.GetDbPool(dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext)
 }
 
-// GetNamedDbPoolInfo implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) GetNamedDbPoolInfo(name string) (string, string, map[string]string, error) {
+// GetDbPoolManagerInfo implements serviceapi.DbPoolManager.
+func (p *SyncDbPoolManager) GetDbPoolManagerInfo(name string) (string, string, map[string]string, error) {
 	p.ensureSyncMapInitialized()
 	dbPoolInfo, ok := p.namedPools.Load(name)
 	if !ok {
@@ -105,8 +105,8 @@ func (p *SyncDbPoolManager) GetNamedDbPoolInfo(name string) (string, string, map
 	return dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext, nil
 }
 
-// RemoveNamedDbPool implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) RemoveNamedDbPool(name string) {
+// RemoveDbPoolManager implements serviceapi.DbPoolManager.
+func (p *SyncDbPoolManager) RemoveDbPoolManager(name string) {
 	p.ensureSyncMapInitialized()
 	p.namedPools.Delete(context.Background(), name)
 
@@ -116,8 +116,8 @@ func (p *SyncDbPoolManager) RemoveNamedDbPool(name string) {
 	}
 }
 
-// SetNamedDbPool implements serviceapi.DbPoolManager.
-func (p *SyncDbPoolManager) SetNamedDbPool(name string, dsn string, schema string, rlsContext map[string]string) {
+// SetDbPoolManager implements serviceapi.DbPoolManager.
+func (p *SyncDbPoolManager) SetDbPoolManager(name string, dsn string, schema string, rlsContext map[string]string) {
 	p.ensureSyncMapInitialized()
 	p.namedPools.Store(name, &serviceapi.DbPoolInfo{
 		Dsn:        dsn,
@@ -129,13 +129,13 @@ func (p *SyncDbPoolManager) SetNamedDbPool(name string, dsn string, schema strin
 	// This makes pools accessible via lokstra_registry.GetService[DbPool](name)
 	if registry := getGlobalRegistry(); registry != nil {
 		registry.RegisterLazyService(name, func() any {
-			pool, _ := p.GetNamedDbPool(name)
+			pool, _ := p.GetDbPoolManager(name)
 			return pool
 		}, nil)
 	}
 }
 
-func (p *SyncDbPoolManager) GetAllNamedDbPools() map[string]*serviceapi.DbPoolInfo {
+func (p *SyncDbPoolManager) GetAllDbPoolManager() map[string]*serviceapi.DbPoolInfo {
 	p.ensureSyncMapInitialized()
 	all, err := p.namedPools.All(context.Background())
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -25,7 +26,7 @@ func main() {
 
 	// 3. Run server from config folder
 	// Lokstra will automatically merge all YAML files in config/ folder
-	if err := lokstra_registry.LoadConfig("config"); err != nil {
+	if _, err := loader.LoadConfig("config"); err != nil {
 		logger.LogPanic("❌ Failed to load config:", err)
 	}
 

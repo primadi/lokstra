@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "files": {
+    "user_repository.go": {
+      "filename": "user_repository.go",
+      "checksum": "7dafad18a4f0c697959f64464c62083d87606cfd720531f643305e6d97a9fddf",
+      "annotations": 1,
+      "last_scan": "2025-12-16T11:43:09.5032337+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-16T11:43:09.5032337+07:00"
+    }
+  },
+  "updated_at": "2025-12-16T11:43:21.5931069+07:00",
+  "generated_checksum": "84e08cd520f9a6f6ccefb1c77c8d82b2b5cf5481eef82a869c454fbf23cf5208"
+}

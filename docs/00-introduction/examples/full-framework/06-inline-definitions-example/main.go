@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/primadi/lokstra/common/logger"
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -12,7 +13,7 @@ func main() {
 	// Get config path
 	// configPath := filepath.Join("docs", "00-introduction", "examples", "full-framework", "06-inline-definitions-example", "config.yaml")
 
-	if err := lokstra_registry.LoadConfig(); err != nil {
+	if _, err := loader.LoadConfig(); err != nil {
 		logger.LogPanic("❌ Failed to load config:", err)
 	}
 

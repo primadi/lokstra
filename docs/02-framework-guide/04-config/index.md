@@ -92,7 +92,7 @@ configs:
     dsn: "postgres://localhost/mydb"
 
 # Named database pools
-named-db-pools:
+dbpool-manager:
   main-db:
     dsn: "postgres://localhost:5432/mydb"
     schema: "public"
@@ -205,7 +205,7 @@ Reference: `${app.name}`, `${database.host}`
 
 ### Named DB Pools
 ```yaml
-named-db-pools:
+dbpool-manager:
   main-db:
     host: "localhost"
     port: 5432
@@ -222,7 +222,7 @@ named-db-pools:
 
 Or use DSN directly:
 ```yaml
-named-db-pools:
+dbpool-manager:
   main-db:
     dsn: "postgres://user:pass@localhost:5432/mydb"
     schema: "public"

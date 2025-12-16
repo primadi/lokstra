@@ -22,7 +22,6 @@ func main() {
 			fmt.Println("╚═══════════════════════════════════════════════╝")
 			fmt.Println("")
 
-			registerServiceTypes()
 			registerRouters()
 			registerMiddlewareTypes()
 

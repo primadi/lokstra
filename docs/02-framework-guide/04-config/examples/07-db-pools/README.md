@@ -18,7 +18,7 @@ Demonstrates configuring multiple named database pools with different settings.
 
 #### Option 1: Component-Based
 ```yaml
-named-db-pools:
+dbpool-manager:
   main-db:
     host: "localhost"
     port: 5432
@@ -35,7 +35,7 @@ named-db-pools:
 
 #### Option 2: DSN-Based
 ```yaml
-named-db-pools:
+dbpool-manager:
   analytics-db:
     dsn: "postgres://user:pass@host:5432/db?sslmode=require"
     schema: "analytics"
@@ -227,7 +227,7 @@ sslmode: "require"  # or verify-full
 ### 4. Environment Variables
 
 ```yaml
-named-db-pools:
+dbpool-manager:
   main-db:
     host: "${DB_HOST}"
     port: 5432

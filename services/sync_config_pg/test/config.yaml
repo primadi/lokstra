@@ -7,7 +7,7 @@ configs:
     # heartbeat_interval: ${DBPOOL_MANAGER_HEARTBEAT_INTERVAL:5} # in minutes
     # reconnect_interval: ${DBPOOL_MANAGER_RECONNECT_INTERVAL:5} # in seconds
     
-named-db-pools:
+dbpool-manager:
   db_main:
     dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
     schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}

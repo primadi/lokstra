@@ -860,6 +860,10 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 // LoadConfig loads config and builds ALL deployments into Global registry
 // Returns error only - deployments are stored in deploy.Global()
 func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
+	if len(configPaths) == 0 {
+		configPaths = []string{"config"}
+	}
+
 	config, err := loadConfig(configPaths...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
@@ -971,23 +975,19 @@ func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
 		registry.StoreDeploymentTopology(deployTopo)
 	}
 
-	// Auto-discover and setup named DB pools
-	// if err := SetupNamedDbPools(registry, config); err != nil {
-	// 	return fmt.Errorf("failed to setup named DB pools: %w", err)
-	// }
-
+	logger.LogDebug("✅ Config loaded successfully from: %v", configPaths)
 	return config, nil
 }
 
-// LoadNamedDbPoolsFromConfig auto-discovers and sets up named DB pools from config
+// LoadDbPoolManagerFromConfig auto-discovers and sets up named DB pools from config
 // Requires dbpool-manager service to be already registered
-func LoadNamedDbPoolsFromConfig() error {
+func LoadDbPoolManagerFromConfig() error {
 	registry := deploy.Global()
 	config := registry.GetDeployConfig()
 
-	// Check if named-db-pools section exists
-	if len(config.NamedDbPools) == 0 {
-		// No named-db-pools section, skip
+	// Check if dbpool-manager section exists
+	if len(config.DbPoolManager) == 0 {
+		// No dbpool-manager section, skip
 		return nil
 	}
 
@@ -1001,7 +1001,7 @@ func LoadNamedDbPoolsFromConfig() error {
 	}
 
 	// Setup each pool
-	for poolName, poolConfig := range config.NamedDbPools {
+	for poolName, poolConfig := range config.DbPoolManager {
 		// Extract DSN or build from components
 		dsn := poolConfig.DSN
 
@@ -1042,7 +1042,7 @@ func LoadNamedDbPoolsFromConfig() error {
 			password := poolConfig.Password
 
 			if host == "" || database == "" {
-				return fmt.Errorf("named-db-pools.%s: must provide either 'dsn' or 'host'+'database'", poolName)
+				return fmt.Errorf("dbpool-manager.%s: must provide either 'dsn' or 'host'+'database'", poolName)
 			}
 
 			// Build DSN with best practice defaults
@@ -1083,7 +1083,7 @@ func LoadNamedDbPoolsFromConfig() error {
 
 		// Set DSN and Schema for poolName
 		// This also auto-registers the pool as a lazy service
-		dbPoolManager.SetNamedDbPool(poolName, dsn, schema, poolConfig.RlsContext)
+		dbPoolManager.SetDbPoolManager(poolName, dsn, schema, poolConfig.RlsContext)
 
 		logger.LogDebug("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
 	}

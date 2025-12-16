@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/middleware/recovery"
@@ -13,7 +14,7 @@ func main() {
 	lokstra_init.Bootstrap()
 
 	// STEP 1: Load Config
-	if err := lokstra_registry.LoadConfig("config.yaml"); err != nil {
+	if _, err := loader.LoadConfig("config.yaml"); err != nil {
 		log.Fatal("Failed to load config:", err)
 	}
 

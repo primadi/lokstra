@@ -385,7 +385,7 @@
         }
       }
     },
-    "named-db-pools": {
+    "dbpool-manager": {
       "type": "object",
       "description": "Named database pool configurations",
       "patternProperties": {
