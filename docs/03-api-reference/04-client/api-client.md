@@ -9,7 +9,7 @@ The `api_client` package provides utilities for making HTTP requests to Lokstra 
 ## Import Path
 
 ```go
-import "github.com/primadi/lokstra/api_client"
+import "github.com/primadi/lokstra/common/api_client"
 ```
 
 ---
@@ -287,7 +287,7 @@ err := api_client.NewApiErrorWithDetails(
 package service
 
 import (
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
 )
 

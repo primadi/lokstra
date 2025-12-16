@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/primadi/lokstra/common/syncmap"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/dbpool_pg"
-	"github.com/primadi/lokstra/syncmap"
 )
 
 type SyncDbPoolManager struct {

@@ -8,9 +8,9 @@ import (
 
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/lokstra_init/migration_runner"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
-	"github.com/primadi/lokstra/tools/migration_runner"
 	"gopkg.in/yaml.v3"
 )
 

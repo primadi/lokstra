@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/api_client"
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/docs/00-introduction/examples/full-framework/02-multi-deployment-yaml/model"

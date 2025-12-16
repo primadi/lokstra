@@ -346,7 +346,7 @@ func FetchAndCast[T any](client *api_client.ClientRouter, path string,
 ```go
 import (
     "github.com/primadi/lokstra"
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
 )
 
 client := api_client.NewClientRouter("https://api.example.com")
