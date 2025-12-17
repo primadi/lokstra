@@ -2,6 +2,72 @@
 
 Welcome to the Lokstra Framework documentation directory.
 
+## 🏗 Project Overview
+
+Lokstra is a **modern Go web framework with declarative service management** that can be used in two primary ways:
+
+- **Router Mode** – like Gin / Echo / Chi, focused on HTTP routing & middleware.
+- **Application Framework Mode** – like NestJS / Spring Boot, with dependency injection, auto-generated routers, and config-driven deployment.
+
+High-level repository structure:
+
+- **`cmd/lokstra`** – Lokstra CLI:  
+  - Create new projects from templates (`lokstra new ...`).  
+  - Run code generation for annotations / enterprise templates (`lokstra autogen ...`).  
+  - Basic docs are in `cmd/lokstra/README.md` (for full parameter list, see the source code).
+
+- **`common`** – Shared utilities used across projects:
+  - **`api_client`** – helpers for calling remote services over HTTP.
+  - **`cast`** – type conversion helpers (e.g. string → int).
+  - **`customtype`** – custom types like `date`, `datetime`, `decimal`.
+  - **`dbpool_manager`** – helpers for database connection pooling.
+  - **`json`** – JSON encoding/decoding helpers.
+  - **`logger`** – logging utilities based on `slog` with readable handlers.
+  - **`response_writer`** – helpers for buffering and manipulating responses.
+  - **`syncmap`** – concurrency-safe maps with a nicer API.
+  - **`utils`** – generic helpers (string, slice, map, hash password, etc.).
+  - **`validator`** – validation integration using struct tags.
+
+- **`core`** – Lokstra framework core:
+  - Routing (`core/router`), request/response handling, and route description.
+  - Deployment & configuration loading (`core/deploy`).
+  - Service & server abstractions (`core/service`, `core/server`, `core/app`).
+  - Annotation and code generation support (`core/annotation`).
+
+- **`docs`** – This documentation folder, published to GitHub Pages (`https://primadi.github.io/lokstra/`) using Jekyll.
+
+- **`lokstra_handler`** – Handler helpers:
+  - `mount_reverse_proxy`, `mount_static`, `mount_spa` to easily mount reverse proxy, static files, and SPA.
+
+- **`lokstra_init`** – Initialization helpers for Lokstra:
+  - Application bootstrap, config loading, service registration, etc.
+
+- **`lokstra_registry`** – Lokstra Dependency Injection / Service Registry:
+  - Register service types, factories, and service configurations.
+
+- **`middleware`** – Built-in middleware:
+  - Recovery, request logger, slow request logger, gzip compression, CORS, and more.
+
+- **`project_templates`** – Running project examples and templates for the CLI:
+  - **`01_router`** – Lokstra as a **Router**:
+    - `01_router_only` – pure router, good for learning routing & CRUD.
+    - `02_single_app` – single app server with graceful shutdown.
+    - `03_multi_app` – multiple apps (e.g. admin + public API).
+  - **`02_app_framework`** – Lokstra as an **Application Framework**:
+    - `01_enterprise_router_service` – enterprise modular app with annotations, generated routers, and multiple topologies.
+    - `02_sync_config` – configuration sync / infrastructure service example (db pools, migrations, sync map).
+    - `03_tenant_management` – tenant management service using a Postgres-backed store.
+
+- **`serviceapi`** – Interfaces for built-in services (dbpool, redis, email, metrics, etc.) that you can implement or mock.
+
+- **`services`** – Implementations of built-in services:
+  - Database pool, Redis, SMTP email sender, Prometheus metrics, sync config, and more.
+
+To see end-to-end application examples:
+
+- **Lokstra as Router**: see `project_templates/01_router/*`.
+- **Lokstra as Application Framework**: see `project_templates/02_app_framework/*`.
+
 ## 📁 Documentation Structure
 
 ### Main Documentation (GitHub Pages)

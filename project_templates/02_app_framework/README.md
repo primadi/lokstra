@@ -1,437 +1,165 @@
 # Lokstra App Framework Templates
 
-**Production-Ready Templates for Domain-Driven Applications**
+**Production-Ready Templates for Enterprise & Infrastructure Scenarios**
 
-This folder contains framework templates that demonstrate how to build **production-ready applications** using Lokstra with domain-driven architecture patterns.
+This folder contains **application framework templates** that demonstrate how to build
+enterprise-style applications and infrastructure services using Lokstra,
+including **DDD modules**, **annotation-based routers**, and **config-driven deployment**.
 
 ---
 
 ## 📂 Available Templates
 
-### 1. [01_medium_system](./01_medium_system/)
+### 1. [`01_enterprise_router_service`](./01_enterprise_router_service/)
 
-**For medium-sized applications (2-10 entities)**
+**Enterprise modular application with annotation-based routers**
 
-```
-domain/ + repository/ + service/ + config.yaml
-```
+This template shows how to build a **large, modular application** with:
 
-- ✅ Clean Architecture with flat structure
-- ✅ Domain-driven design principles
-- ✅ Single config file
-- ✅ Perfect for single team
-- ✅ Quick development
+- ✅ **DDD modules** (`modules/user`, `modules/order`, `modules/shared`)
+- ✅ `@RouterService` / `@Route` annotations and **generated routers**
+- ✅ Per-environment deployments (`development` vs `microservice`) via `config/deployment.yaml`
+- ✅ Custom middleware: `request-logger`, `simple-auth`, `mw-test`
+- ✅ New bootstrap flow using `lokstra_init.BootstrapAndRun`
 
-**Use when**: You have 2-10 entities, single team, monolith deployment
+**Use when**:
 
----
+- You want to see the **full enterprise pattern** for Track 2 (Application Framework).  
+- You need an example of **bounded contexts + annotations + auto routers**.  
+- You want to understand **how to structure modules** and **configure multiple topologies**.
 
-### 2. [02_enterprise_modular](./02_enterprise_modular/)
-
-**For enterprise applications (10+ entities)**
-
-```
-modules/{context}/{domain,application,infrastructure}/ + config/{module}.yaml
-```
-
-- ✅ DDD with Bounded Contexts
-- ✅ Modular architecture per business capability
-- ✅ Per-module configuration files
-- ✅ Multi-team scalability
-- ✅ Microservices-ready
-
-**Use when**: You have 10+ entities, multiple teams, need modularity
+For details, see [`01_enterprise_router_service/README.md`](./01_enterprise_router_service/README.md)
+and [`README_FLOWS.md`](./01_enterprise_router_service/README_FLOWS.md).
 
 ---
 
-## 🎯 Which Template Should I Use?
+### 2. [`02_sync_config`](./02_sync_config/)
 
-### Quick Decision Guide
+**Configuration synchronization & migrations example**
+
+This template demonstrates how to build a **background / infrastructure service**
+that uses Lokstra features such as:
+
+- ✅ `lokstra_init.BootstrapAndRun` with:
+  - `WithAnnotations`
+  - `WithYAMLConfigPath`
+  - `WithPgSyncMap`
+  - `WithDbPoolManager`
+  - `WithDbMigrations`
+- ✅ Database migrations stored under `migrations/`
+- ✅ Central configuration in `config/config.yaml`
+
+**Use when**:
+
+- You want to learn how to build **non-HTTP / infra-style services** with Lokstra.  
+- You need an example of **syncing configuration/state** using Postgres and Lokstra’s helpers.  
+- You want to see how to wire **db pools, sync map, migrations, and annotations** together.
+
+---
+
+### 3. [`03_tenant_management`](./03_tenant_management/)
+
+**Tenant service with Postgres-backed store**
+
+This template focuses on a **single bounded context (tenant management)** and shows:
+
+- ✅ Annotation-based service & router for `tenant-service`
+- ✅ Postgres-backed tenant store configured via `config/config.yaml`
+- ✅ Usage of built-in middleware (`recovery`, `request_logger`)
+- ✅ Simple but realistic domain + repository pattern
+
+**Use when**:
+
+- You want a **focused example** of a single service built with Track 2.  
+- You need a reference for **tenant management / multi-tenant style** building blocks.  
+- You want to see a smaller example than `01_enterprise_router_service` but still using DB.
+
+---
+
+## 🎯 Which Template Should I Start With?
 
 | Your Situation | Recommended Template |
-|---------------|---------------------|
-| 2-10 entities, single team | **01_medium_system** |
-| 10+ entities, multiple teams | **02_enterprise_modular** |
-| Simple domain, quick start | **01_medium_system** |
-| Complex domain, bounded contexts | **02_enterprise_modular** |
-| Monolith only | **01_medium_system** |
-| Future microservices | **02_enterprise_modular** |
-| Learning DDD | **01_medium_system** (start here) |
-| Production enterprise app | **02_enterprise_modular** |
+|---------------|----------------------|
+| Learning enterprise Track 2 end-to-end | **01_enterprise_router_service** |
+| Want infra/background service example | **02_sync_config** |
+| Need focused tenant management example | **03_tenant_management** |
+| Evaluating annotations + generated routers | **01_enterprise_router_service** |
+| Evaluating DB integration & migrations | **02_sync_config** or **03_tenant_management** |
 
-**Not sure?** → Start with **01_medium_system**, migrate to **02_enterprise_modular** when needed
-
----
-
-## 📊 Template Comparison
-
-See [TEMPLATES_COMPARISON.md](./TEMPLATES_COMPARISON.md) for detailed comparison including:
-- Structure differences
-- When to use each
-- Migration path
-- Code examples
-- Real-world scenarios
-
----
-
-## 🏗 Architecture Overview
-
-Both templates follow **Clean Architecture** principles with domain-driven design:
-
-### Medium System (Flat)
-
-```
-Layers organized by technical concern:
-
-┌─────────────────────────────────┐
-│         domain/                 │  ← Entities & Contracts
-│    (user/, order/)              │
-├─────────────────────────────────┤
-│         service/                │  ← Business Logic
-│    (user_service, order_service)│
-├─────────────────────────────────┤
-│         repository/             │  ← Data Access
-│    (user_repo, order_repo)      │
-└─────────────────────────────────┘
-```
-
-**Good for**: When all domains are closely related
-
----
-
-### Enterprise Modular (DDD)
-
-```
-Modules organized by business capability:
-
-┌──────────────────┐  ┌──────────────────┐
-│   modules/user/  │  │  modules/order/  │
-│  ┌────────────┐  │  │  ┌────────────┐  │
-│  │  domain    │  │  │  │  domain    │  │
-│  ├────────────┤  │  │  ├────────────┤  │
-│  │application │  │  │  │application │  │
-│  ├────────────┤  │  │  ├────────────┤  │
-│  │infrastructure│ │  │  │infrastructure│ │
-│  └────────────┘  │  │  └────────────┘  │
-└──────────────────┘  └──────────────────┘
-  User Context          Order Context
-```
-
-**Good for**: When domains need clear boundaries
+If you are **new to Lokstra**, first complete the router templates in
+`project_templates/01_router`, then move to `01_enterprise_router_service`.
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: Medium System
+> Run these commands from the **repository root** (where `go.mod` is).
+
+### 1. Enterprise Router Service
 
 ```bash
-cd lokstra-project-root
-go run ./project_templates/02_app_framework/01_medium_system
+go run ./project_templates/02_app_framework/01_enterprise_router_service
 ```
 
-Server starts on `http://localhost:3000`
+Server starts on `http://localhost:3000` (see `config/deployment.yaml`).
 
-**Test APIs**:
-- Open `01_medium_system/test.http` in VS Code
-- Click "Send Request" to test endpoints
+- Open `01_enterprise_router_service/test.http` and `test-microservice.http` in VS Code.  
+- Click **“Send Request”** to try the monolith and microservice flows.
 
 ---
 
-### Option 2: Enterprise Modular
+### 2. Sync Config Service
 
 ```bash
-cd lokstra-project-root
-go run ./project_templates/02_app_framework/02_enterprise_modular
+go run ./project_templates/02_app_framework/02_sync_config
 ```
 
-Server starts on `http://localhost:3000`
+The service will:
 
-**Test APIs**:
-- Open `02_enterprise_modular/test.http` in VS Code
-- Click "Send Request" to test endpoints
+- Initialize Postgres using migrations in `migrations/`.  
+- Use `config/config.yaml` for db pool & deployment settings.
 
----
-
-## 📚 What You'll Learn
-
-### Medium System Teaches:
-
-1. **Clean Architecture**: Separation of concerns
-2. **Domain Layer**: Entities and contracts
-3. **Service Layer**: Business logic implementation
-4. **Repository Pattern**: Data access abstraction
-5. **Dependency Injection**: Factory-based DI
-6. **Config-Driven Deployment**: Single YAML configuration
+Use `02_sync_config/test.http` (if present) or your own HTTP client/tooling
+to interact with the service as needed.
 
 ---
 
-### Enterprise Modular Teaches:
+### 3. Tenant Management Service
 
-All of the above, plus:
+```bash
+go run ./project_templates/02_app_framework/03_tenant_management
+```
 
-7. **Bounded Contexts**: Module isolation
-8. **Domain-Driven Design**: Strategic patterns
-9. **Modular Configuration**: Per-module YAML files
-10. **Team Scalability**: Multi-team architecture
-11. **Microservices Patterns**: Service decomposition
-12. **Module Portability**: Copy-paste modules
+Server starts on `http://localhost:3000` (see `config/config.yaml`).
+
+- Open `03_tenant_management/tenant-service.http` in VS Code.  
+- Click **“Send Request”** to test the tenant APIs.
 
 ---
 
-## 🎓 Learning Path
+## 🎓 Learning Path (Track 2 – Application Framework)
 
-### Beginner (Start Here)
-
-1. **Complete Router Templates** first:
+1. **Router basics** (Track 1):
    - `project_templates/01_router/01_router_only/`
    - `project_templates/01_router/02_single_app/`
    - `project_templates/01_router/03_multi_app/`
-
-2. **Then try Medium System**:
-   - `project_templates/02_app_framework/01_medium_system/`
-
-### Intermediate
-
-3. **Study Enterprise Modular**:
-   - `project_templates/02_app_framework/02_enterprise_modular/`
-
-4. **Read comparison**:
-   - `TEMPLATES_COMPARISON.md`
-
-### Advanced
-
-5. **Build your own** using these templates as reference
-6. **Experiment** with microservices deployment
-7. **Customize** for your specific domain
-
----
-
-## 📖 Documentation
-
-### Per-Template Documentation
-
-Each template has comprehensive README:
-
-- **[01_medium_system/README.md](./01_medium_system/README.md)**
-  - When to use
-  - Project structure
-  - Getting started
-  - Adding domains
-  - API documentation
-
-- **[02_enterprise_modular/README.md](./02_enterprise_modular/README.md)**
-  - When to use
-  - DDD concepts
-  - Module structure
-  - Adding modules
-  - Team scalability
-  - Deployment strategies
-
-### Comparison Guide
-
-- **[TEMPLATES_COMPARISON.md](./TEMPLATES_COMPARISON.md)**
-  - Side-by-side comparison
-  - Decision matrix
-  - Migration path
-  - Real-world examples
-
----
-
-## 🔧 Common Features
-
-Both templates include:
-
-- ✅ **In-Memory Storage**: No database setup needed
-- ✅ **Seed Data**: Pre-populated test data
-- ✅ **REST API**: Full CRUD operations
-- ✅ **Validation**: Request validation with struct tags
-- ✅ **Error Handling**: Proper error responses
-- ✅ **Logging**: Request/response logging
-- ✅ **test.http**: API testing with VS Code REST Client
-- ✅ **README**: Comprehensive documentation
-- ✅ **Production-Ready**: Follows best practices
-
----
-
-## 💡 Key Differences
-
-| Feature | Medium | Enterprise |
-|---------|---------|-----------|
-| **Structure** | Flat by layer | Nested by module |
-| **Configuration** | Single file | Per-module files |
-| **Import Paths** | Cross-layer | Within-module |
-| **Team Model** | Single team | Multiple teams |
-| **Portability** | Moderate | High |
-| **Complexity** | Low | High |
-
----
-
-## 🎯 Real-World Use Cases
-
-### Medium System Examples:
-
-- **Blog Platform**: Posts, comments, users, categories
-- **Inventory System**: Products, suppliers, stock
-- **Booking System**: Bookings, customers, rooms
-- **Task Management**: Projects, tasks, users
-- **CMS**: Pages, media, users, settings
-
-### Enterprise Modular Examples:
-
-- **E-Commerce**: User, product, order, payment, shipping, review, analytics
-- **Banking**: Account, transaction, loan, investment, compliance
-- **Healthcare**: Patient, appointment, billing, pharmacy, lab
-- **ERP**: Sales, inventory, procurement, HR, finance
-- **SaaS Platform**: Auth, tenant, billing, analytics, support
-
----
-
-## 🚢 Deployment Options
-
-### Medium System
-
-```yaml
-# config.yaml - Single deployment
-deployments:
-  - name: api-server
-    type: server
-    port: 3000
-    services:
-      - name: user-service
-      - name: order-service
-```
-
-**Deployment**: Single process, all services together
-
----
-
-### Enterprise Modular
-
-```yaml
-# config/user.yaml
-deployments:
-  - name: api-server
-    port: 3000
-    services:
-      - name: user-service
-
-# config/order.yaml
-deployments:
-  - name: api-server  # Same name = merge
-    port: 3000
-    services:
-      - name: order-service
-```
-
-**Flexible Deployment**:
-- **Monolith**: `go run . config/` (all modules)
-- **Microservices**: `go run . config/user.yaml` (per module)
-- **Hybrid**: Group related modules
-
----
-
-## 🔄 Migration Guide
-
-### From Medium to Enterprise
-
-When to migrate:
-- ✅ Growing from 10 to 20+ entities
-- ✅ Need to split teams
-- ✅ Planning microservices
-- ✅ Domain complexity increasing
-
-**Steps**:
-1. Create `modules/` folder structure
-2. Move `domain/{entity}/` → `modules/{entity}/domain/`
-3. Move `service/{entity}_service.go` → `modules/{entity}/application/`
-4. Move `repository/{entity}_repository.go` → `modules/{entity}/infrastructure/repository/`
-5. Split `config.yaml` → `config/{entity}.yaml` per module
-6. Update imports in all files
-7. Update `register.go` with new paths
-
-See [TEMPLATES_COMPARISON.md](./TEMPLATES_COMPARISON.md) for detailed migration guide.
+2. **Enterprise framework example**:
+   - `project_templates/02_app_framework/01_enterprise_router_service/`
+3. **Infrastructure / background service**:
+   - `project_templates/02_app_framework/02_sync_config/`
+4. **Domain-focused service (tenant)**:
+   - `project_templates/02_app_framework/03_tenant_management/`
+5. **Deep dive**:
+   - Read `docs/02-framework-guide/` on the main docs site  
+     (`https://primadi.github.io/lokstra/`).
 
 ---
 
 ## 🛠 Prerequisites
 
 - **Go 1.23+**
-- **VS Code** (recommended) with REST Client extension
-- **Lokstra** framework (in parent directory)
-- Understanding of:
-  - Go programming
-  - REST APIs
-  - Basic architecture patterns
-
----
-
-## 📝 Template Structure
-
-### What's Included
-
-Each template contains:
-
-```
-{template}/
-├── domain/          or  modules/
-├── service/         or  application/
-├── repository/      or  infrastructure/
-├── config.yaml      or  config/*.yaml
-├── main.go             ← Entry point
-├── register.go         ← Service registration
-├── test.http           ← API tests
-├── README.md           ← Documentation
-└── .gitignore          ← Git ignore rules
-```
-
-### What's NOT Included (by design)
-
-These templates are **starting points**. Production apps need:
-
-- ❌ Real database (templates use in-memory)
-- ❌ Authentication/Authorization
-- ❌ Rate limiting
-- ❌ Caching layer
-- ❌ Monitoring/Metrics
-- ❌ CI/CD configuration
-- ❌ Docker/Kubernetes configs
-- ❌ API documentation (Swagger/OpenAPI)
-
-**Why?** These are environment-specific and business-specific decisions you should make based on your needs.
-
----
-
-## 🎨 Customization
-
-### Extending Templates
-
-Both templates are designed to be extended:
-
-1. **Add domains/modules**: Follow existing patterns
-2. **Add middleware**: Register in `register.go`
-3. **Add validation**: Use struct tags
-4. **Add persistence**: Swap in-memory repos with DB repos
-5. **Add authentication**: Add auth middleware
-6. **Add API docs**: Generate from code
-
-### Example: Add PostgreSQL
-
-Replace in-memory repository:
-
-```go
-// Before (in-memory)
-func NewUserRepositoryMemory() domain.UserRepository {
-    return &UserRepositoryMemory{...}
-}
-
-// After (PostgreSQL)
-func NewUserRepositoryPostgres(db *sql.DB) domain.UserRepository {
-    return &UserRepositoryPostgres{db: db}
-}
-```
-
-Update `register.go` to inject database connection.
+- **PostgreSQL** for templates that use db pools (see each template’s `config.yaml`).
+- **VS Code** (recommended) with REST Client extension for `.http` files.
 
 ---
 
@@ -451,10 +179,9 @@ These templates are part of the Lokstra framework. See LICENSE file in project r
 
 ## 🎉 Get Started
 
-1. **Choose your template** (use decision guide above)
-2. **Read the template's README**
-3. **Run the example**
-4. **Study the code**
-5. **Customize for your needs**
+1. **Pick a template** based on your use case.  
+2. **Read the template’s README** (inside its folder).  
+3. **Run the example**, explore `test.http`/`.http` files.  
+4. **Adapt the patterns** to your own domain and infrastructure.
 
 Happy coding with Lokstra! 🚀

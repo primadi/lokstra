@@ -33,3 +33,27 @@ type TenantStore interface {
 	// Exists checks if a tenant exists
 	Exists(ctx context.Context, tenantID string) (bool, error)
 }
+
+// UserStore defines the interface for user persistence
+type UserStore interface {
+	// Create creates a new user
+	Create(ctx context.Context, user *domain.User) error
+
+	// Get retrieves a user by ID
+	Get(ctx context.Context, userID string) (*domain.User, error)
+
+	// Update updates an existing user
+	Update(ctx context.Context, user *domain.User) error
+
+	// Delete deletes a user
+	Delete(ctx context.Context, userID string) error
+
+	// ListByTenant lists all users for a tenant
+	ListByTenant(ctx context.Context, tenantID string) ([]*domain.User, error)
+
+	// GetByEmail retrieves a user by email within a tenant
+	GetByEmail(ctx context.Context, tenantID string, email string) (*domain.User, error)
+
+	// Exists checks if a user exists
+	Exists(ctx context.Context, userID string) (bool, error)
+}

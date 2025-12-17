@@ -12,7 +12,29 @@ import (
 // Auto-register on package import
 func init() {
 	RegisterPostgresTenantStore()
+	RegisterPostgresUserStore()
 }
+
+// ============================================================
+// FILE: user_store.go
+// ============================================================
+
+// RegisterPostgresUserStore registers the postgres-user-store with the registry
+// Auto-generated from annotations:
+//   - @Service name="postgres-user-store"
+//   - @Inject annotations
+func RegisterPostgresUserStore() {
+	lokstra_registry.RegisterLazyService("postgres-user-store", func(deps map[string]any, cfg map[string]any) any {
+		svc := &PostgresUserStore{
+			dbPool: deps["db_auth"].(serviceapi.DbPool),
+		}
+		
+		return svc
+	}, map[string]any{
+		"depends-on": []string{ "db_auth", },
+	})
+}
+
 
 // ============================================================
 // FILE: tenant_store.go
@@ -33,5 +55,6 @@ func RegisterPostgresTenantStore() {
 		"depends-on": []string{ "db_auth", },
 	})
 }
+
 
 

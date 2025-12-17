@@ -10,8 +10,18 @@
         "zz_generated.lokstra.go"
       ],
       "generated_mod_time": "2025-12-17T13:05:22.9715226+07:00"
+    },
+    "user_store.go": {
+      "filename": "user_store.go",
+      "checksum": "a5384f7e27d997654afdfc7f2b938ace100ef759bdb6cba1711fd4a6c8b5e6ad",
+      "annotations": 2,
+      "last_scan": "2025-12-17T17:16:58.2514677+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-17T17:16:58.2514677+07:00"
     }
   },
-  "updated_at": "2025-12-17T13:06:19.7727344+07:00",
-  "generated_checksum": "08ce3610633f31288ccacdac60d439e2cf3e58b340126937f2be2c2bd056d8fc"
+  "updated_at": "2025-12-17T17:17:03.4996895+07:00",
+  "generated_checksum": "f3e29afd20b1546d51b0f487725dc26863d7cf2c011aba9071035b6308ae8956"
 }

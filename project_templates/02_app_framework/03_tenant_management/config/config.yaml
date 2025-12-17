@@ -3,6 +3,7 @@
 configs:
   store:
     tenant-store: postgres-tenant-store
+    user-store: postgres-user-store
 
 dbpool-manager:
   db_auth:

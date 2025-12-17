@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/primadi/lokstra/core/response"
+	"github.com/primadi/lokstra/serviceapi"
 )
 
 type Context struct {
@@ -55,6 +56,16 @@ func (c *Context) Next() error {
 	h := c.handlers[c.index]
 	c.index++
 	return h(c)
+}
+
+// Begins a transaction for the specified pool name
+// Returns a finalize function to be deferred
+// that accepts a pointer to error to determine commit/rollback
+
+func (c *Context) BeginTransaction(poolName string) func(*error) {
+	newCtx, finalizeCtx := serviceapi.BeginTransaction(c, poolName)
+	c.Context = newCtx // Update embedded context with transaction context
+	return finalizeCtx
 }
 
 // Finalizes the response, writing status code and body if not already written

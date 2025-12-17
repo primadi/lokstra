@@ -9,9 +9,9 @@ import (
 
 	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
+	"github.com/primadi/lokstra/lokstra_init/migration_runner"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
-	"github.com/primadi/lokstra/tools/migration_runner"
 
 	// Import services
 	_ "github.com/primadi/lokstra/services/dbpool_manager"

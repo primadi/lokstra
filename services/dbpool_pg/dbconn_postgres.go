@@ -12,7 +12,36 @@ import (
 )
 
 type pgxConnWrapper struct {
-	conn *pgxpool.Conn
+	conn     *pgxpool.Conn
+	poolName string // Pool name for transaction tracking
+}
+
+// getExecutor returns the appropriate executor based on transaction context.
+// If a transaction is active, it returns the transaction.
+// Otherwise, it returns the connection itself.
+func (c *pgxConnWrapper) getExecutor(ctx context.Context) (dbExecutor, error) {
+	// Check if there's an active transaction for this pool name
+	if txCtx := serviceapi.GetTransaction(ctx, c.poolName); txCtx != nil {
+		// Transaction already created? Reuse it
+		if txCtx.Tx != nil {
+			return txCtx.Tx.(*pgxTxWrapper).tx, nil
+		}
+
+		// Lazy create transaction on first use
+		tx, err := c.conn.Begin(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		// Store in context for reuse
+		txCtx.Tx = &pgxTxWrapper{tx: tx, txCtx: txCtx}
+		txCtx.Conn = c
+
+		return tx, nil
+	}
+
+	// No transaction - use connection directly
+	return c.conn, nil
 }
 
 // Shutdown implements serviceapi.DbConn.
@@ -27,12 +56,20 @@ func (c *pgxConnWrapper) Ping(context context.Context) error {
 }
 
 func (c *pgxConnWrapper) Exec(ctx context.Context, query string, args ...any) (serviceapi.CommandResult, error) {
-	tag, err := c.conn.Exec(ctx, query, args...)
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tag, err := executor.Exec(ctx, query, args...)
 	return serviceapi.NewCommandResult(tag.RowsAffected), err
 }
 
 func (c *pgxConnWrapper) Query(ctx context.Context, query string, args ...any) (serviceapi.Rows, error) {
-	rows, err := c.conn.Query(ctx, query, args...)
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := executor.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +77,20 @@ func (c *pgxConnWrapper) Query(ctx context.Context, query string, args ...any) (
 }
 
 func (c *pgxConnWrapper) QueryRow(ctx context.Context, query string, args ...any) serviceapi.Row {
-	return c.conn.QueryRow(ctx, query, args...)
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return &errorRowConn{err: err}
+	}
+	return executor.QueryRow(ctx, query, args...)
+}
+
+// errorRowConn implements serviceapi.Row for error cases in Conn
+type errorRowConn struct {
+	err error
+}
+
+func (e *errorRowConn) Scan(dest ...any) error {
+	return e.err
 }
 
 func (c *pgxConnWrapper) IsErrorNoRows(err error) bool {
@@ -52,7 +102,11 @@ func (c *pgxConnWrapper) SelectOne(ctx context.Context, query string, args []any
 }
 
 func (c *pgxConnWrapper) SelectMustOne(ctx context.Context, query string, args []any, dest ...any) error {
-	return pgxSelectMustOne(ctx, c.conn, query, args, dest...)
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return err
+	}
+	return pgxSelectMustOne(ctx, executor, query, args, dest...)
 }
 
 func pgxSelectMustOne(ctx context.Context, conn dbExecutor, query string, args []any, dest ...any) error {
@@ -79,7 +133,11 @@ func pgxSelectMustOne(ctx context.Context, conn dbExecutor, query string, args [
 
 func (c *pgxConnWrapper) SelectOneRowMap(ctx context.Context, query string,
 	args ...any) (serviceapi.RowMap, error) {
-	rows, err := c.conn.Query(ctx, query, args...)
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := executor.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +148,11 @@ func (c *pgxConnWrapper) SelectOneRowMap(ctx context.Context, query string,
 
 func (c *pgxConnWrapper) SelectManyRowMap(ctx context.Context, query string,
 	args ...any) ([]serviceapi.RowMap, error) {
-	return pgxSelectMany(ctx, c.conn, query, args...)
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return pgxSelectMany(ctx, executor, query, args...)
 }
 
 func pgxSelectMany(ctx context.Context,
@@ -107,7 +169,11 @@ func pgxSelectMany(ctx context.Context,
 func (c *pgxConnWrapper) SelectManyWithMapper(ctx context.Context,
 	fnScan func(serviceapi.Row) (any, error), query string, args ...any) (any, error) {
 
-	return pgxSelectManyWithMapper(ctx, c.conn, fnScan, query, args...)
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return pgxSelectManyWithMapper(ctx, executor, fnScan, query, args...)
 }
 
 func pgxSelectManyWithMapper(ctx context.Context,
@@ -140,12 +206,34 @@ func pgxSelectManyWithMapper(ctx context.Context,
 }
 
 func (c *pgxConnWrapper) IsExists(ctx context.Context, query string, args ...any) (bool, error) {
+	executor, err := c.getExecutor(ctx)
+	if err != nil {
+		return false, err
+	}
 	var exists bool
-	err := c.conn.QueryRow(ctx, fmt.Sprintf("SELECT EXISTS(%s)", query), args...).Scan(&exists)
+	err = executor.QueryRow(ctx, fmt.Sprintf("SELECT EXISTS(%s)", query), args...).Scan(&exists)
 	return exists, err
 }
 
 func (c *pgxConnWrapper) Begin(ctx context.Context) (serviceapi.DbTx, error) {
+	// Check if already in transaction context
+	if txCtx := serviceapi.GetTransaction(ctx, c.poolName); txCtx != nil {
+		if txCtx.Tx != nil {
+			// Already in transaction, increment counter and return it
+			txCtx.IncrementCounter()
+			return txCtx.Tx, nil
+		}
+		// Lazy create transaction
+		tx, err := c.conn.Begin(ctx)
+		if err != nil {
+			return nil, err
+		}
+		txCtx.Tx = &pgxTxWrapper{tx: tx, txCtx: txCtx}
+		txCtx.Conn = c
+		return txCtx.Tx, nil
+	}
+
+	// Create new transaction (no TxContext)
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -154,6 +242,27 @@ func (c *pgxConnWrapper) Begin(ctx context.Context) (serviceapi.DbTx, error) {
 }
 
 func (c *pgxConnWrapper) Transaction(ctx context.Context, fn func(tx serviceapi.DbExecutor) error) error {
+	// Check if already in transaction context
+	if txCtx := serviceapi.GetTransaction(ctx, c.poolName); txCtx != nil {
+		if txCtx.Tx != nil {
+			// Already in transaction, just execute the function
+			return fn(txCtx.Tx)
+		}
+		// Lazy create transaction
+		tx, err := c.conn.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		txCtx.Tx = &pgxTxWrapper{tx: tx, txCtx: txCtx}
+		txCtx.Conn = c
+		if err := fn(txCtx.Tx); err != nil {
+			_ = tx.Rollback(ctx)
+			return err
+		}
+		return tx.Commit(ctx)
+	}
+
+	// Create new transaction (no TxContext)
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
 		return err

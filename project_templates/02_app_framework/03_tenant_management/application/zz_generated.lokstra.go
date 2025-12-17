@@ -80,7 +80,8 @@ func (s *TenantServiceRemote) UpdateTenant(p *request.Context) (*domain.Tenant, 
 
 func TenantServiceFactory(deps map[string]any, config map[string]any) any {
 	svc := &TenantService{
-		Store: deps["@store.tenant-store"].(repository.TenantStore),
+		TenantStore: deps["@store.tenant-store"].(repository.TenantStore),
+		UserStore: deps["@store.user-store"].(repository.UserStore),
 	}
 	
 	return svc
@@ -139,7 +140,7 @@ func RegisterTenantService() {
 	lokstra_registry.RegisterLazyService("tenant-service",
 		"tenant-service-factory",
 		map[string]any{
-			"depends-on": []string{ "@store.tenant-store", },
+			"depends-on": []string{ "@store.tenant-store", "@store.user-store", },
 		})
 }
 

@@ -123,12 +123,14 @@ func (t *Tenant) Validate() error {
 
 // CreateTenantRequest request to create a tenant with auto-owner creation
 type CreateTenantRequest struct {
-	ID       string          `json:"id" validate:"required"`
-	Name     string          `json:"name" validate:"required"`
-	DBDsn    string          `json:"db_dsn" validate:"required"`    // Database connection string
-	DBSchema string          `json:"db_schema" validate:"required"` // Database schema name
-	Settings *TenantSettings `json:"settings,omitempty"`
-	Metadata *map[string]any `json:"metadata,omitempty"`
+	ID         string          `json:"id" validate:"required"`
+	Name       string          `json:"name" validate:"required"`
+	OwnerEmail string          `json:"owner_email" validate:"required,email"` // Email for auto-created owner user
+	OwnerName  string          `json:"owner_name" validate:"required"`        // Name for auto-created owner user
+	DBDsn      string          `json:"db_dsn" validate:"required"`            // Database connection string
+	DBSchema   string          `json:"db_schema" validate:"required"`         // Database schema name
+	Settings   *TenantSettings `json:"settings,omitempty"`
+	Metadata   *map[string]any `json:"metadata,omitempty"`
 }
 
 // GetTenantRequest request to get a tenant
