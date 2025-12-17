@@ -1,0 +1,49 @@
+### Tenant Service API Tests
+@baseUrl = http://localhost:3000/api/auth/core/tenants
+@contentType = application/json
+
+### Health Check
+GET {{baseUrl}}/health
+
+### 1. Create Tenant
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "id": "acme-corp",
+  "name": "Acme Corporation",
+  "owner_id": "owner-123",
+  "db_dsn": "postgres://postgres:adm1n@localhost:5432/lokstra_db?sslmode=disable",
+  "db_schema": "acme_corp",
+  "settings": {
+    "max_users": 100,
+    "max_apps": 10
+  }
+}
+
+### 2. Get Tenant by ID
+# @name getTenant
+GET {{baseUrl}}/{{tenantId}}
+
+### 3. List All Tenants
+GET {{baseUrl}}
+Content-Type: {{contentType}}
+
+### 4. Update Tenant
+PUT {{baseUrl}}/{{tenantId}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Acme Corporation Updated",
+  "description": "Updated description for Acme Corp",
+  "settings": {
+    "max_users": 200,
+    "max_apps": 20
+  }
+}
+
+### 5. Delete Tenant
+DELETE {{baseUrl}}/{{tenantId}}
+
+### Variables
+@tenantId = acme-corp

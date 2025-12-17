@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "files": {
+    "tenant_service.go": {
+      "filename": "tenant_service.go",
+      "checksum": "78282a8564898600a5235b2945859344b9750102905f04b2a14948f90fe87def",
+      "annotations": 9,
+      "last_scan": "2025-12-17T13:04:04.3438745+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2025-12-17T13:04:04.3438745+07:00"
+    }
+  },
+  "updated_at": "2025-12-17T13:06:19.7732591+07:00",
+  "generated_checksum": "861f1678d9f910b101c632055b764aeeab725a69959453d7e7777f699dbdca99"
+}

@@ -62,7 +62,7 @@ func BootstrapAndRun(opts ...InitializeOption) error {
 		LogLevel:                 logger.LogLevelInfo,
 		EnableLoadConfig:         true,
 		EnableAnnotation:         true, // Auto-detect @RouterService
-		EnableDbPoolManager:      false,
+		EnableDbPoolManager:      true,
 		IsDbPoolAutoSync:         false,
 		EnablePgxSyncMap:         false,
 		SkipMigrationOnProd:      true,
