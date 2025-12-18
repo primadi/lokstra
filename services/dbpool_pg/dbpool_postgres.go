@@ -61,6 +61,7 @@ func (r *rowWrapper) Scan(dest ...any) error {
 
 type pgxPostgresPool struct {
 	pool       *pgxpool.Pool
+	poolName   string // Pool name for transaction tracking
 	dsn        string
 	schema     string
 	rlsContext map[string]string
@@ -238,13 +239,16 @@ func (p *pgxPostgresPool) Acquire(ctx context.Context) (serviceapi.DbConn, error
 			return nil, fmt.Errorf("failed to set RLS context: %w", err)
 		}
 	}
-	return &pgxConnWrapper{conn: conn}, nil
+	return &pgxConnWrapper{
+		conn:     conn,
+		poolName: p.poolName,
+	}, nil
 }
 
 var _ serviceapi.DbPool = (*pgxPostgresPool)(nil)
 var _ serviceapi.DbPoolSchemaRls = (*pgxPostgresPool)(nil)
 
-func NewPgxPostgresPool(dsn string, schema string, rlsContext map[string]string) (*pgxPostgresPool, error) {
+func NewPgxPostgresPool(poolName string, dsn string, schema string, rlsContext map[string]string) (*pgxPostgresPool, error) {
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -256,6 +260,7 @@ func NewPgxPostgresPool(dsn string, schema string, rlsContext map[string]string)
 
 	return &pgxPostgresPool{
 		pool:       pool,
+		poolName:   poolName,
 		dsn:        dsn,
 		schema:     schema,
 		rlsContext: rlsContext,

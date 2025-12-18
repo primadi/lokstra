@@ -3,6 +3,7 @@ package dbpool_pg
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
@@ -68,17 +69,25 @@ func (cfg *Config) GetFinalDSN() string {
 	return dsnFinal
 }
 
-func Service(cfg *Config) *pgxPostgresPool {
+func Service(poolName string, cfg *Config) *pgxPostgresPool {
 	dsn := cfg.GetFinalDSN()
 
-	svc, err := NewPgxPostgresPool(dsn, cfg.Schema, cfg.RlsContext)
+	svc, err := NewPgxPostgresPool(poolName, dsn, cfg.Schema, cfg.RlsContext)
 	if err != nil {
 		return nil
 	}
 	return svc
 }
 
+var lastCtr = atomic.Int32{}
+
 func ServiceFactory(params map[string]any) any {
+	poolName := utils.GetValueFromMap(params, "pool_name", "")
+	if poolName == "" {
+		newCtr := lastCtr.Add(1)
+		poolName = fmt.Sprintf("%s-%d", SERVICE_TYPE, newCtr)
+	}
+
 	cfg := &Config{
 		DSN:         utils.GetValueFromMap(params, "dsn", ""),
 		Host:        utils.GetValueFromMap(params, "host", "localhost"),
@@ -94,7 +103,7 @@ func ServiceFactory(params map[string]any) any {
 		Schema:      utils.GetValueFromMap(params, "schema", "public"),
 		RlsContext:  utils.GetValueFromMap(params, "rls_context", map[string]string{}),
 	}
-	return Service(cfg)
+	return Service(poolName, cfg)
 }
 
 func Register() {

@@ -36,7 +36,7 @@ service-definitions:
   # Then, define sync config that uses the pool
   config-service:
     type: sync_config_pg
-    depends-on: [dbpool-manager]
+    depends-on: [dbpool-definitions]
     params:
       dbpool_name: my-db-pool
       table_name: app_config

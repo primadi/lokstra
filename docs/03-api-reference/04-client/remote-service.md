@@ -9,7 +9,7 @@
 ## Import Path
 
 ```go
-import "github.com/primadi/lokstra/api_client"
+import "github.com/primadi/lokstra/common/api_client"
 ```
 
 ---
@@ -367,7 +367,7 @@ api_client.CallRemoteService[*SearchResult](service, "GetSearchResults", ctx, re
 package service
 
 import (
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
     "github.com/primadi/lokstra/core/request"
 )
@@ -488,7 +488,7 @@ func handleError(ctx *request.Context, err error) error {
 package service
 
 import (
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -603,7 +603,7 @@ func handleProductError(ctx *request.Context, err error) error {
 package service
 
 import (
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -709,7 +709,7 @@ func (s *OrderService) UpdateOrderStatus(ctx *request.Context) error {
 package service
 
 import (
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -832,7 +832,7 @@ package service
 
 import (
     "sync"
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
 )
 

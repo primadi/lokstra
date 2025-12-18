@@ -105,7 +105,7 @@ import "github.com/primadi/lokstra/core/deploy"
 import "github.com/primadi/lokstra/core/deploy/schema"
 
 // Client
-import "github.com/primadi/lokstra/api_client"
+import "github.com/primadi/lokstra/common/api_client"
 
 // Middleware (auto-registered when imported)
 import _ "github.com/primadi/lokstra/middleware/cors"
@@ -192,7 +192,7 @@ func (s *OrderService) CreateOrder(userID int) {
 
 ### Calling Remote Services
 ```go
-import "github.com/primadi/lokstra/api_client"
+import "github.com/primadi/lokstra/common/api_client"
 
 client := api_client.NewClientRouter("https://api.example.com")
 

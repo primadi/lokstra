@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/primadi/lokstra/common/syncmap"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/dbpool_pg"
-	"github.com/primadi/lokstra/syncmap"
 )
 
 type SyncDbPoolManager struct {
@@ -15,7 +15,7 @@ type SyncDbPoolManager struct {
 	namedPools   *syncmap.SyncMap[*serviceapi.DbPoolInfo] // key: name
 	syncMapName  string                                   // lazy init: sync map name
 	mu           sync.RWMutex
-	newPoolFunc  func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)
+	newPoolFunc  func(poolName, dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)
 	syncMapMu    sync.Mutex // lazy init mutex
 	syncMapReady bool       // lazy init flag
 }
@@ -28,7 +28,7 @@ func (p *SyncDbPoolManager) AcquireConn(ctx context.Context, dsn string, schema 
 	dbPool, ok := p.pools[dsn]
 	if !ok {
 		var err error
-		dbPool, err = p.newPoolFunc(dsn, schema, rlsContext)
+		dbPool, err = p.newPoolFunc("", dsn, schema, rlsContext)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,27 @@ func (p *SyncDbPoolManager) AcquireNamedConn(ctx context.Context, name string) (
 	if !ok {
 		return nil, errors.New("dbpool: named pool not found: " + name)
 	}
-	return p.AcquireConn(ctx, dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext)
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	dbPool, ok := p.pools[dbPoolInfo.Dsn]
+	if !ok {
+		var err error
+		dbPool, err = p.newPoolFunc(name, dbPoolInfo.Dsn, dbPoolInfo.Schema, dbPoolInfo.RlsContext)
+		if err != nil {
+			return nil, err
+		}
+		p.pools[dbPoolInfo.Dsn] = dbPool
+	}
+
+	dbPoolWithRls, ok := dbPool.(serviceapi.DbPoolSchemaRls)
+	if !ok {
+		return nil, errors.New("dbpool: pool does not support schema or RLS")
+	}
+	dbPoolWithRls.SetSchemaRls(dbPoolInfo.Schema, dbPoolInfo.RlsContext)
+
+	return dbPool.Acquire(ctx)
 }
 
 // GetDbPool implements serviceapi.DbPoolManager.
@@ -77,7 +97,7 @@ func (p *SyncDbPoolManager) GetDbPool(dsn string, schema string, rlsContext map[
 	if ok {
 		return dbPool, nil
 	}
-	newPool, err := p.newPoolFunc(dsn, schema, rlsContext)
+	newPool, err := p.newPoolFunc("", dsn, schema, rlsContext)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +178,7 @@ func (p *SyncDbPoolManager) Shutdown() error {
 
 var _ serviceapi.DbPoolManager = (*SyncDbPoolManager)(nil)
 
-func NewSyncDbPoolManager(syncName string, newPoolFunc func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
+func NewSyncDbPoolManager(syncName string, newPoolFunc func(poolName, dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error)) serviceapi.DbPoolManager {
 	return &SyncDbPoolManager{
 		pools:       make(map[string]serviceapi.DbPool),
 		syncMapName: syncName,
@@ -169,7 +189,7 @@ func NewSyncDbPoolManager(syncName string, newPoolFunc func(dsn, schema string, 
 
 func NewPgxSyncDbPoolManager() serviceapi.DbPoolManager {
 	return NewSyncDbPoolManager("dbpool",
-		func(dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error) {
-			return dbpool_pg.NewPgxPostgresPool(dsn, schema, rlsContext)
+		func(poolName, dsn, schema string, rlsContext map[string]string) (serviceapi.DbPool, error) {
+			return dbpool_pg.NewPgxPostgresPool(poolName, dsn, schema, rlsContext)
 		})
 }

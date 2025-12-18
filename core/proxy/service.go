@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/api_client"
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/request"
 )

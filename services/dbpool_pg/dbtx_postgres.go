@@ -11,7 +11,8 @@ import (
 )
 
 type pgxTxWrapper struct {
-	tx pgx.Tx
+	tx    pgx.Tx
+	txCtx *serviceapi.TxContext // Reference to context for state updates
 }
 
 // Begin implements Tx.
@@ -21,7 +22,11 @@ func (p *pgxTxWrapper) Begin(ctx context.Context) (serviceapi.DbTx, error) {
 
 // Commit implements Tx.
 func (p *pgxTxWrapper) Commit(ctx context.Context) error {
-	return p.tx.Commit(ctx)
+	err := p.tx.Commit(ctx)
+	if err == nil && p.txCtx != nil {
+		p.txCtx.SetCommitted()
+	}
+	return err
 }
 
 // Exec implements Tx.
@@ -63,7 +68,11 @@ func (p *pgxTxWrapper) IsErrorNoRows(err error) bool {
 
 // Rollback implements Tx.
 func (p *pgxTxWrapper) Rollback(ctx context.Context) error {
-	return p.tx.Rollback(ctx)
+	err := p.tx.Rollback(ctx)
+	if err == nil && p.txCtx != nil {
+		p.txCtx.SetRolledBack()
+	}
+	return err
 }
 
 func (p *pgxTxWrapper) SelectOneRowMap(ctx context.Context, query string,

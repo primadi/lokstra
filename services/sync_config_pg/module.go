@@ -63,7 +63,7 @@ func getDsnAndSchema(cfg *Config) (string, string) {
 		panic("sync_config_pg: deploy config not found")
 	}
 
-	poolConfig, ok := deployConfig.DbPoolManager[cfg.DbPoolName]
+	poolConfig, ok := deployConfig.DbPoolDefinitions[cfg.DbPoolName]
 	if !ok {
 		panic(fmt.Sprintf("sync_config_pg: named pool '%s' not found in config", cfg.DbPoolName))
 	}
@@ -105,7 +105,7 @@ func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
 	// Create context with cancel for goroutine management
 	ctx, cancel := context.WithCancel(context.Background())
 
-	dbPool, err := dbpool_pg.NewPgxPostgresPool(dsn, schema, nil)
+	dbPool, err := dbpool_pg.NewPgxPostgresPool(cfg.DbPoolName, dsn, schema, nil)
 	if err != nil {
 		if listenerDB != nil {
 			listenerDB.Close()

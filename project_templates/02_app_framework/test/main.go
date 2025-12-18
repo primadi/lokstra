@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/primadi/lokstra"
+	"github.com/primadi/lokstra/common/syncmap"
 	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
-	"github.com/primadi/lokstra/syncmap"
 )
 
 func main() {

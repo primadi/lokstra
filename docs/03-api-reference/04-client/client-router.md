@@ -9,7 +9,7 @@
 ## Import Path
 
 ```go
-import "github.com/primadi/lokstra/api_client"
+import "github.com/primadi/lokstra/common/api_client"
 ```
 
 ---
@@ -346,7 +346,7 @@ client := lokstra_registry.GetClientRouter("user-router")
 package service
 
 import (
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
 )
 
@@ -386,7 +386,7 @@ func (s *OrderService) CreateOrder(ctx *request.Context) error {
 package service
 
 import (
-    "github.com/primadi/lokstra/api_client"
+    "github.com/primadi/lokstra/common/api_client"
     "github.com/primadi/lokstra/lokstra_registry"
 )
 

@@ -8,16 +8,16 @@ import (
 
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/lokstra_init/migration_runner"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
-	"github.com/primadi/lokstra/tools/migration_runner"
 	"gopkg.in/yaml.v3"
 )
 
 // MigrationYamlConfig represents the migration.yaml file structure
 // This file is optional and located in the migrations directory
 type MigrationYamlConfig struct {
-	// DbPoolName is the database pool name from config.yaml dbpool-manager
+	// DbPoolName is the database pool name from config.yaml dbpool-definitions
 	DbPoolName string `yaml:"dbpool-name"`
 
 	// SchemaTable is the table name for tracking migrations
@@ -115,7 +115,7 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 	// Get database pool
 	pool, ok := lokstra_registry.GetServiceAny(cfg.DbPoolName)
 	if !ok {
-		return fmt.Errorf("database pool '%s' not found - check your config.yaml dbpool-manager section", cfg.DbPoolName)
+		return fmt.Errorf("database pool '%s' not found - check your config.yaml dbpool-definitions section", cfg.DbPoolName)
 	}
 
 	dbPool, ok := pool.(serviceapi.DbPool)

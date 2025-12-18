@@ -1,0 +1,31 @@
+# migration.yaml - Optional configuration file for database migrations
+# Place this file in your migrations directory (e.g., migrations/migration.yaml)
+#
+# This file allows you to configure migration behavior per database pool
+# Useful for multi-database systems (tenant-db, ledger-db, analytics-db, etc)
+
+# Database pool name from config.yaml dbpool-definitions section
+# If not specified, defaults to "main-db"
+dbpool-name: main-db
+
+# Schema migrations tracking table name
+# This table stores which migrations have been applied
+# If not specified, defaults to "schema_migrations"
+schema-table: schema_migrations
+
+# Migration execution mode
+# - "auto": Run in dev/debug mode, skip in prod (RECOMMENDED)
+# - "on": Always run migrations (even in prod)
+# - "off": Never run migrations (use CLI only)
+# If not specified, defaults to "auto"
+force: auto
+
+# Description (optional, for documentation)
+description: Main application database migrations
+
+# Dependencies (optional, for future multi-DB support)
+# List of other migration folders that must run before this one
+# Example:
+# depends-on:
+#   - tenant-db
+#   - user-db

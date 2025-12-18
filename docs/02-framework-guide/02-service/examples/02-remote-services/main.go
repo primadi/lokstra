@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra"
-	"github.com/primadi/lokstra/api_client"
+	"github.com/primadi/lokstra/common/api_client"
 	"github.com/primadi/lokstra/core/response"
 	"github.com/primadi/lokstra/lokstra_registry"
 )
