@@ -62,7 +62,6 @@ func BootstrapAndRun(opts ...InitializeOption) error {
 		LogLevel:                 logger.LogLevelInfo,
 		EnableLoadConfig:         true,
 		EnableAnnotation:         true, // Auto-detect @RouterService
-		EnableDbPoolManager:      true,
 		IsDbPoolAutoSync:         false,
 		EnablePgxSyncMap:         false,
 		SkipMigrationOnProd:      true,
@@ -84,15 +83,6 @@ func BootstrapAndRun(opts ...InitializeOption) error {
 
 // Initialize lokstra framework with given config
 func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
-	if !cfg.EnableDbPoolManager {
-		if cfg.EnablePgxSyncMap {
-			return cfg.returnError(fmt.Errorf("PgxSyncMap requires DbPoolManager to be enabled"))
-		}
-		if cfg.EnableDbMigration {
-			return cfg.returnError(fmt.Errorf("DB Migration check requires DbPoolManager to be enabled"))
-		}
-	}
-
 	if cfg.EnablePgxSyncMap {
 		if len(cfg.PgxSyncMapDbPoolName) == 0 {
 			return cfg.returnError(fmt.Errorf("PgxSyncMapDbPoolName must be set when UsePgxSyncMap is true"))
@@ -126,13 +116,11 @@ func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
 			cfg.PgxSyncHeartbeatInterval, cfg.PgxSyncReconnectInterval)
 	}
 
-	// 5. PgxDbPoolManager (can now use sync-config if IsDbPoolAutoSync=true)
-	if cfg.EnableDbPoolManager {
-		UsePgxDbPoolManager(cfg.IsDbPoolAutoSync)
+	// 5. Crewate Db Pool Manager and load definitions from config
+	UsePgxDbPoolManager(cfg.IsDbPoolAutoSync)
 
-		if err := loader.LoadDbPoolManagerFromConfig(); err != nil {
-			return cfg.returnError(err)
-		}
+	if err := loader.LoadDbPoolDefsFromConfig(); err != nil {
+		return cfg.returnError(err)
 	}
 
 	// 6. Check DB Migrations

@@ -49,7 +49,7 @@ func MainTest() {
 	// Get database pool
 	pool, ok := lokstra_registry.GetServiceAny(*dbName)
 	if !ok {
-		log.Fatalf("❌ Database pool '%s' not found. Check your config.yaml dbpool-manager section", *dbName)
+		log.Fatalf("❌ Database pool '%s' not found. Check your config.yaml dbpool-definitions section", *dbName)
 	}
 
 	dbPool, ok := pool.(serviceapi.DbPool)

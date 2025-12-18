@@ -3,7 +3,7 @@ configs:
     name: "Migration Example"
     version: "1.0.0"
 
-dbpool-manager:
+dbpool-definitions:
   main-db:
     host: localhost
     port: 5432

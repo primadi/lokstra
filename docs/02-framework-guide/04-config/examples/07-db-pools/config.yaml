@@ -6,7 +6,7 @@ configs:
     name: "DatabaseApp"
 
 # Named database pool configurations
-dbpool-manager:
+dbpool-definitions:
   # Main application database
   main-db:
     host: "localhost"

@@ -7,7 +7,7 @@ using Lokstra's **initialization helpers**, **YAML config**, and
 **annotation-based code generation**:
 
 - `lokstra_init.BootstrapAndRun()`
-- `config/config.yaml` with `configs`, `dbpool-manager`, and `servers`
+- `config/config.yaml` with `configs`, `dbpool-definitions`, and `servers`
 - `@RouterService`, `@Inject`, and `@Route` annotations
 
 ---
@@ -17,7 +17,7 @@ using Lokstra's **initialization helpers**, **YAML config**, and
 Use this template when you want to learn how to:
 
 - Build a **single, focused service** (tenant management / multi-tenant building block).
-- Wire **PostgreSQL** via `dbpool-manager` and a custom store.
+- Wire **PostgreSQL** via `dbpool-definitions` and a custom store.
 - Expose REST APIs using **annotation-based routers**.
 - Use `lokstra_init.BootstrapAndRun()` with the **default bootstrap flow**.
 
@@ -33,7 +33,7 @@ Application Framework mode (Track 2) with minimal noise.
 ├── application/
 │   └── tenant_service.go      # @RouterService + @Inject + @Route
 ├── config/
-│   └── config.yaml            # YAML config (configs, dbpool-manager, servers)
+│   └── config.yaml            # YAML config (configs, dbpool-definitions, servers)
 ├── domain/
 │   └── tenant.go              # Tenant entities & DTOs (requests)
 ├── repository/
@@ -61,7 +61,7 @@ Requirements:
 - PostgreSQL running and reachable with DSN in `config/config.yaml`:
 
 ```yaml
-dbpool-manager:
+dbpool-definitions:
   db_auth:
     dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
     schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
@@ -126,7 +126,7 @@ configs:
   store:
     tenant-store: postgres-tenant-store
 
-dbpool-manager:
+dbpool-definitions:
   db_auth:
     dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
     schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
@@ -195,7 +195,7 @@ What this does:
         dbPool serviceapi.DbPool
     }
     ```
-  - The `dbpool-manager` section in `config.yaml` creates a **lazy DbPool service**
+  - The `dbpool-definitions` section in `config.yaml` creates a **lazy DbPool service**
     with the same name as the key:
     - `dbpool-manager.db_auth` → lazy service `"db_auth"`.
   - Therefore `@Inject "db_auth"` is resolved by the framework and injects the

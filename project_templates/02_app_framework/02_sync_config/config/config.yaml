@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
-dbpool-manager:
+dbpool-definitions:
   db_main:
     dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
     schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}

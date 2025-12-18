@@ -40,32 +40,110 @@ The `dbpool_manager` service provides centralized management of database connect
 
 ## Configuration
 
-### Config Struct
-
-```go
-// No specific configuration required
-// Pools are created dynamically based on DSN strings
-```
-
 ### YAML Configuration
 
-**Basic Configuration:**
+Lokstra uses a special `dbpool-definitions:` section in the root of YAML config for named pool definitions:
 
 ```yaml
-services:
-  db-pool-manager:
-    type: dbpool_manager
+# Named database pools section (root level)
+dbpool-definitions:
+  main-db:
+    dsn: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"
+    schema: "public"
+    min_conns: 2
+    max_conns: 10
+    max_idle_time: "30m"
+    max_lifetime: "1h"
+  
+  analytics-db:
+    host: localhost
+    port: 5432
+    database: analytics
+    username: user
+    password: pass
+    schema: "analytics"
 ```
 
-**With Default PostgreSQL Pool:**
+### DbPool Manager Modes
 
+Lokstra provides two implementation types for `dbpool-manager`:
+
+#### 1. Local Map Mode (Default)
+
+Uses in-memory `map[string]serviceapi.DbPool` and `map[string]*serviceapi.DbPoolInfo` to store pools and configurations.
+
+**Implementation:** `services/dbpool_manager/dbpool_manager.go`
+
+**Characteristics:**
+- Uses `sync.RWMutex` for thread-safe access
+- Pools stored in memory map (keyed by DSN)
+- Named pool configs stored in memory map (keyed by name)
+- Suitable for single-instance applications
+
+**Configuration:**
 ```yaml
-services:
-  db-pool-manager:
-    type: dbpool_manager
-    config:
-      pool_type: pgx  # Uses PostgreSQL pgx driver
+# Default mode - no special config needed
+dbpool-definitions:
+  main-db:
+    dsn: "postgres://localhost/mydb"
 ```
+
+**Code:**
+```go
+import "github.com/primadi/lokstra/services/dbpool_manager"
+
+// Create local pool manager
+manager := dbpool_manager.NewPgxPoolManager()
+lokstra_registry.RegisterService("dbpool-manager", manager)
+```
+
+#### 2. Distributed Sync Mode
+
+Uses `common/syncmap.SyncMap` to store named pool configurations, allowing sharing across multiple instances via PostgreSQL.
+
+**Implementation:** `services/dbpool_manager/sync_pool_manager.go`
+
+**Characteristics:**
+- Pools still stored in memory map (keyed by DSN) for performance
+- Named pool configs stored in `syncmap.SyncMap[*serviceapi.DbPoolInfo]`
+- Configurations sync across instances via PostgreSQL LISTEN/NOTIFY
+- Changes persist to database
+- Suitable for multi-instance deployments
+
+**Configuration:**
+```yaml
+
+# Define pools as usual
+dbpool-definitions:
+  main-db:
+    dsn: "postgres://localhost/mydb"
+    schema: "public"
+```
+
+**Code:**
+```go
+import (
+    "github.com/primadi/lokstra/services/dbpool_manager"
+    "github.com/primadi/lokstra/services/sync_config_pg"
+)
+
+// 1. Register sync-config service first (required)
+sync_config_pg.Register("dbpool", 5, 10) // name, heartbeat_interval, reconnect_interval
+
+// 2. Create sync pool manager
+manager := dbpool_manager.NewPgxSyncDbPoolManager()
+lokstra_registry.RegisterService("dbpool-manager", manager)
+```
+
+**Differences:**
+
+| Feature | Local Map Mode | Sync Mode |
+|---------|---------------|-----------|
+| Storage | In-memory `map[string]*DbPoolInfo` | `syncmap.SyncMap[*DbPoolInfo]` |
+| Persistence | Lost on restart | Persisted to database |
+| Multi-instance | Not shared | Shared across instances |
+| Real-time sync | N/A | Via PostgreSQL LISTEN/NOTIFY |
+| Initialization | Immediate | Lazy (on first use) |
 
 ### Programmatic Configuration
 
@@ -73,13 +151,18 @@ services:
 import (
     "github.com/primadi/lokstra/lokstra_registry"
     "github.com/primadi/lokstra/services/dbpool_manager"
+    "github.com/primadi/lokstra/lokstra_init"
 )
 
-// Register service
-dbpool_manager.Register()
+// Option 1: Use helper function (recommended)
+lokstra_init.UsePgxDbPoolManager(false) // false = local, true = sync
 
-// Create pool manager
-manager := lokstra_registry.GetService[serviceapi.DbPoolManager]("db-pool-manager")
+// Option 2: Manual registration
+manager := dbpool_manager.NewPgxPoolManager() // or NewPgxSyncDbPoolManager()
+lokstra_registry.RegisterService("dbpool-manager", manager)
+
+// Get manager
+manager := lokstra_registry.GetService[serviceapi.DbPoolManager]("dbpool-manager")
 ```
 
 ## Registration
@@ -357,6 +440,182 @@ manager.RemoveNamed("analytics")
 
 // Pool is not removed (might be used by other names/tenants)
 // Only the name->DSN mapping is removed
+```
+
+## Transaction Management
+
+Lokstra provides lazy transaction management through context. Transactions are created on-demand when the first database operation occurs, and all subsequent operations in the same context automatically join the transaction.
+
+### BeginTransaction
+
+The `BeginTransaction` method marks a context as needing a transaction for a specific pool name. The transaction is created lazily on first database operation.
+
+**Package:** `serviceapi`
+
+**Signature:**
+```go
+func BeginTransaction(ctx context.Context, poolName string) (context.Context, func(*error))
+```
+
+**Parameters:**
+- `ctx`: The context to attach transaction to
+- `poolName`: Name of the database pool (e.g., `"main-db"`, `"analytics-db"`)
+
+**Returns:**
+- New context with transaction marker
+- Finalize function that should be deferred, accepts pointer to error for commit/rollback decision
+
+**Usage Pattern:**
+```go
+func (s *Service) DoWork(ctx context.Context) (err error) {
+    ctx, finish := serviceapi.BeginTransaction(ctx, "main-db")
+    defer finish(&err) // Auto commit if err == nil, rollback if err != nil
+    
+    // First DB operation creates the transaction
+    s.repo1.Create(ctx, data1)
+    
+    // Subsequent operations join the same transaction
+    s.repo2.Update(ctx, data2)
+    s.repo3.Delete(ctx, id)
+    
+    return nil // Transaction commits
+}
+```
+
+### Request Context Integration
+
+In HTTP handlers, use `request.Context.BeginTransaction()`:
+
+```go
+func (s *UserService) CreateUser(ctx *request.Context, user *User) (err error) {
+    defer ctx.BeginTransaction("main-db")(&err)
+    
+    // All operations join the transaction
+    if err := s.userRepo.Create(ctx, user); err != nil {
+        return err // Auto rollback
+    }
+    
+    if err := s.auditRepo.Log(ctx, "user_created", user.ID); err != nil {
+        return err // Auto rollback
+    }
+    
+    return nil // Auto commit
+}
+```
+
+### Transaction Context Details
+
+**TxContext Structure:**
+```go
+type TxContext struct {
+    PoolName   string              // Pool name (e.g., "db_auth")
+    Tx         DbTx                // Transaction instance (lazy created)
+    Conn       DbConn              // Connection instance
+    Counter    int                 // Nested call counter
+    committed  bool                // Commit flag
+    rolledBack bool                // Rollback flag
+}
+```
+
+**How It Works:**
+
+1. **Marking Phase**: `BeginTransaction` adds `TxContext` marker to context
+2. **Lazy Creation**: First DB operation checks context, finds marker, creates transaction
+3. **Auto-Join**: Subsequent DB operations detect existing transaction and reuse it
+4. **Finalization**: Deferred function commits (on success) or rolls back (on error)
+
+**Transaction Flow:**
+```
+BeginTransaction("main-db")
+    ↓
+Context with TxContext marker (Tx == nil)
+    ↓
+First DB Operation
+    ↓
+getExecutor() checks context → finds TxContext
+    ↓
+Lazy create transaction (Tx = Begin())
+    ↓
+Second DB Operation
+    ↓
+getExecutor() checks context → reuses existing Tx
+    ↓
+defer finish(&err) → Commit() or Rollback()
+```
+
+### Pool Name Based Tracking
+
+Transactions are tracked by pool name, not pool instance. This allows:
+- Multiple pools to have independent transactions
+- Services to reference pools by name without direct injection
+- Transaction context to survive service boundaries
+
+**Example - Multiple Pool Transactions:**
+```go
+func (s *Service) Transfer(ctx context.Context) (err error) {
+    // Transaction for main database
+    ctx, finish1 := serviceapi.BeginTransaction(ctx, "main-db")
+    defer finish1(&err)
+    
+    // Transaction for analytics database (separate, independent)
+    ctx, finish2 := serviceapi.BeginTransaction(ctx, "analytics-db")
+    defer finish2(&err)
+    
+    // Operations on main-db join main-db transaction
+    s.mainRepo.Update(ctx, ...) // Uses "main-db" transaction
+    
+    // Operations on analytics-db join analytics-db transaction
+    s.analyticsRepo.Log(ctx, ...) // Uses "analytics-db" transaction
+    
+    return nil
+}
+```
+
+### WithoutTransaction
+
+Use `WithoutTransaction` to explicitly ignore parent transaction:
+
+```go
+import "github.com/primadi/lokstra/serviceapi"
+
+func (s *Service) CreateWithAudit(ctx context.Context) (err error) {
+    ctx, finish := serviceapi.BeginTransaction(ctx, "main-db")
+    defer finish(&err)
+    
+    // This joins the transaction
+    s.repo.Create(ctx, data)
+    
+    // This uses a separate connection (no transaction)
+    isolatedCtx := serviceapi.WithoutTransaction(ctx)
+    s.auditRepo.Log(isolatedCtx, "created") // Commits immediately
+    
+    return nil
+}
+```
+
+### Nested Transaction Support
+
+Lokstra supports pseudo-nested transactions using a counter mechanism:
+
+```go
+func (s *Service) Outer(ctx context.Context) (err error) {
+    ctx, finish := serviceapi.BeginTransaction(ctx, "main-db")
+    defer finish(&err) // Counter = 1
+    
+    s.Inner(ctx) // Calls BeginTransaction again
+    
+    return nil
+}
+
+func (s *Service) Inner(ctx context.Context) (err error) {
+    // Counter increments to 2
+    ctx, finish := serviceapi.BeginTransaction(ctx, "main-db")
+    defer finish(&err) // Counter decrements to 1
+    
+    s.repo.Update(ctx, data)
+    
+    return nil // Transaction commits only when counter reaches 0
+}
 ```
 
 ## Advanced Features

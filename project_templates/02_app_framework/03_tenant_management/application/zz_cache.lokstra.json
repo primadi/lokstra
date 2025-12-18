@@ -3,15 +3,15 @@
   "files": {
     "tenant_service.go": {
       "filename": "tenant_service.go",
-      "checksum": "9e247d6624faaaf2f25e2c81bcc36096d5132b185b4106a5dc06d2ea71d88e3b",
+      "checksum": "a8d23ee05ed47fe7d1a9eb4a760199dbd8bb5477d95c59ccb846f76710f85a86",
       "annotations": 10,
-      "last_scan": "2025-12-17T17:16:58.2514677+07:00",
+      "last_scan": "2025-12-18T16:07:08.4971722+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2025-12-17T17:16:58.2514677+07:00"
+      "generated_mod_time": "2025-12-18T16:07:08.4971722+07:00"
     }
   },
-  "updated_at": "2025-12-17T17:17:03.4991616+07:00",
+  "updated_at": "2025-12-18T16:07:14.4438215+07:00",
   "generated_checksum": "df8bffc551242f55129afe8190e26cdc9c1adb32bbd9b1b36878ef257ce0e43a"
 }

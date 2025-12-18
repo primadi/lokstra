@@ -979,15 +979,15 @@ func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
 	return config, nil
 }
 
-// LoadDbPoolManagerFromConfig auto-discovers and sets up named DB pools from config
+// LoadDbPoolDefsFromConfig auto-discovers and sets up named DB pools from config
 // Requires dbpool-manager service to be already registered
-func LoadDbPoolManagerFromConfig() error {
+func LoadDbPoolDefsFromConfig() error {
 	registry := deploy.Global()
 	config := registry.GetDeployConfig()
 
-	// Check if dbpool-manager section exists
-	if len(config.DbPoolManager) == 0 {
-		// No dbpool-manager section, skip
+	// Check if dbpool-definitions section exists
+	if len(config.DbPoolDefinitions) == 0 {
+		// No dbpool-definitions section, skip
 		return nil
 	}
 
@@ -1001,7 +1001,7 @@ func LoadDbPoolManagerFromConfig() error {
 	}
 
 	// Setup each pool
-	for poolName, poolConfig := range config.DbPoolManager {
+	for poolName, poolConfig := range config.DbPoolDefinitions {
 		// Extract DSN or build from components
 		dsn := poolConfig.DSN
 

@@ -14,7 +14,7 @@ func GetSchemaBytes() []byte {
 // This matches the JSON schema and supports multi-file merging
 type DeployConfig struct {
 	Configs               map[string]any               `yaml:"configs" json:"configs"`
-	DbPoolManager         map[string]*DbPoolConfig     `yaml:"dbpool-manager,omitempty" json:"dbpool-manager,omitempty"`
+	DbPoolDefinitions     map[string]*DbPoolConfig     `yaml:"dbpool-definitions,omitempty" json:"dbpool-definitions,omitempty"`
 	MiddlewareDefinitions map[string]*MiddlewareDef    `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
 	ServiceDefinitions    map[string]*ServiceDef       `yaml:"service-definitions" json:"service-definitions"`
 	RouterDefinitions     map[string]*RouterDef        `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"` // Renamed from Routers

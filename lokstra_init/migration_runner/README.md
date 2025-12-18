@@ -155,7 +155,7 @@ DROP TABLE IF EXISTS users;
 
 ### config.yaml
 ```yaml
-dbpool-manager:
+dbpool-definitions:
   main-db:
     host: localhost
     port: 5432
@@ -179,7 +179,7 @@ import (
 func main() {
     lokstra.Bootstrap()
     
-    // Load config (auto-discovers dbpool-manager)
+    // Load config (auto-discovers dbpool-definitions)
     lokstra_registry.LoadConfigFromFolder("config")
     
     // Run migrations before starting server

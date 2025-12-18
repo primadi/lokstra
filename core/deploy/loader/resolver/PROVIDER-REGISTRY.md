@@ -139,7 +139,7 @@ configs:
     host: "prod-db.example.com"
   db:url: "postgresql://localhost:5432/mydb"  # Key with colon
 
-dbpool-manager:
+dbpool-definitions:
   main:
     # Simple config reference (no colons in key)
     host: ${@cfg:database.host}
@@ -232,7 +232,7 @@ configs:
     host: "prod-db.example.com"
     port: 5432
   
-dbpool-manager:
+dbpool-definitions:
   main:
     host: ${@cfg:db.host}             # → "prod-db.example.com"
     port: ${@cfg:db.port}             # → 5432
@@ -502,7 +502,7 @@ configs:
   aws:
     region: ${AWS_REGION:us-east-1}   # @env provider
 
-dbpool-manager:
+dbpool-definitions:
   main:
     # Mix of providers
     host: ${@cfg:db.host}                           # @cfg provider

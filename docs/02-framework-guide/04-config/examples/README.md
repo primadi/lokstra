@@ -78,7 +78,7 @@ Recommended order:
 ### Configuration Hierarchy
 ```
 configs                      # Global config values
-dbpool-manager              # Database pool definitions
+dbpool-definitions              # Database pool definitions
 middleware-definitions      # Middleware instances
 service-definitions         # Service instances
 router-definitions         # Router configurations

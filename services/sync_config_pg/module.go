@@ -63,7 +63,7 @@ func getDsnAndSchema(cfg *Config) (string, string) {
 		panic("sync_config_pg: deploy config not found")
 	}
 
-	poolConfig, ok := deployConfig.DbPoolManager[cfg.DbPoolName]
+	poolConfig, ok := deployConfig.DbPoolDefinitions[cfg.DbPoolName]
 	if !ok {
 		panic(fmt.Sprintf("sync_config_pg: named pool '%s' not found in config", cfg.DbPoolName))
 	}

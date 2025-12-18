@@ -225,6 +225,41 @@ Deploy and manage your application across different environments.
 
 ---
 
+### 🗄️ 6. [Database Pools](./08-database-pools/)
+Configure and manage database connection pools.
+
+**What you'll learn:**
+- ✅ Named database pool configuration
+- ✅ Local vs distributed sync modes
+- ✅ Transaction management via context
+- ✅ Injecting database pools into services
+
+---
+
+### ⚙️ 7. [Lokstra Initialization (lokstra_init)](./09-lokstra-init/)
+Use the recommended initialization helper for correct setup order.
+
+**What you'll learn:**
+- ✅ Simple initialization with `BootstrapAndRun()`
+- ✅ Options pattern for customization
+- ✅ Correct initialization order
+- ✅ Common initialization patterns
+
+**Why use lokstra_init:**
+```go
+// Simple, correct initialization
+lokstra_init.BootstrapAndRun()
+
+// vs manual setup (complex, error-prone)
+// lokstra.Bootstrap()
+// lokstra_registry.LoadConfig(...)
+// sync_config_pg.Register(...)
+// lokstra_init.UsePgxDbPoolManager(...)
+// ... many more steps
+```
+
+---
+
 ## Framework Benefits
 
 ### vs Manual Service Management

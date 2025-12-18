@@ -22,7 +22,7 @@ func main() {
 
 	lokstra_init.UsePgxDbPoolManager(true)
 	sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
-	if err := loader.LoadDbPoolManagerFromConfig(); err != nil {
+	if err := loader.LoadDbPoolDefsFromConfig(); err != nil {
 		panic(err)
 	}
 

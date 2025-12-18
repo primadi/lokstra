@@ -7,15 +7,93 @@ nav_order: 8
 
 # Database Pools
 
-Lokstra provides built-in support for database connection pooling with automatic configuration from YAML files.
+Lokstra provides built-in support for database connection pooling with automatic configuration from YAML files. Understanding the hierarchy of database abstractions helps you use them effectively.
+
+## Database Components Hierarchy
+
+Lokstra's database system has four main components:
+
+```
+DbPoolManager (service)
+    ↓ manages
+DbPool (connection pool, injectable service)
+    ↓ provides
+DbConn (individual connection)
+    ↓ can create
+DbTx (transaction)
+```
+
+### 1. DbPoolManager
+
+**Service** that manages multiple named database pools. Defined in YAML `dbpool-definitions:` section.
+
+- Manages pool configurations (DSN, schema, etc.)
+- Creates and caches pool instances
+- Provides access to pools by name
+- Supports local map or distributed sync storage
+
+### 2. DbPool
+
+**Interface** representing a connection pool. Can be injected into services.
+
+```go
+type DbPool interface {
+    Acquire(ctx context.Context) (DbConn, error)
+    DbConn // Can also execute queries directly
+}
+```
+
+- Provides connections from the pool
+- Can be injected as `@Inject "pool-name"`
+- Shared across services using the same pool name
+
+### 3. DbConn
+
+**Interface** representing an individual database connection.
+
+```go
+type DbConn interface {
+    Begin(ctx context.Context) (DbTx, error)
+    Transaction(ctx context.Context, fn func(tx DbExecutor) error) error
+    Release() error
+    DbExecutor // Can execute queries
+}
+```
+
+- Represents a single connection from the pool
+- Must be released when done
+- Can create transactions
+
+### 4. DbTx (Transaction)
+
+**Interface** representing a database transaction.
+
+```go
+type DbTx interface {
+    Commit(ctx context.Context) error
+    Rollback(ctx context.Context) error
+    DbExecutor // Can execute queries
+}
+```
+
+- Represents an ongoing transaction
+- Created from DbConn or via context (recommended)
+- Must be committed or rolled back
+
+## Transaction via Context (Recommended)
+
+The recommended way to handle transactions is using `ctx.BeginTransaction()` from `request.Context`:
 
 ## Setup Database Pools
 
 ### 1. Define DB Pools in Config
 
+Lokstra has a special `dbpool-definitions:` section in YAML config for defining named database pools:
+
 **config.yaml:**
 ```yaml
-dbpool-manager:
+# Named database pools configuration
+dbpool-definitions:
   main-db:
     dsn: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"
     min_conns: 2
@@ -36,35 +114,61 @@ dbpool-manager:
     schema: "analytics"
 ```
 
-### 2. Explicit Setup (Recommended)
+This section is automatically loaded and pools are registered as services that can be injected.
+
+### 2. Recommended: Use lokstra_init
+
+**The recommended way** is to use `lokstra_init.BootstrapAndRun()` which handles everything in the correct order:
+
+```go
+package main
+
+import "github.com/primadi/lokstra/lokstra_init"
+
+func main() {
+    // Handles all initialization including dbpool-definitions setup
+    if err := lokstra_init.BootstrapAndRun(); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+With options for sync mode:
+```go
+err := lokstra_init.BootstrapAndRun(
+    lokstra_init.WithDbPoolManager(true, true), // enable, useSync
+    lokstra_init.WithPgSyncMap(true, "db_main"),
+)
+```
+
+**See [Lokstra Initialization](./09-lokstra-init.md) for details.**
+
+### 3. Manual Setup (Advanced)
+
+If you need more control, you can set up manually (not recommended unless you understand the initialization order):
 
 ```go
 func main() {
     lokstra.Bootstrap()
     
-    // 1. Load config only
+    // 1. Load config
     if err := lokstra_registry.LoadConfig("config.yaml"); err != nil {
         log.Fatal(err)
     }
     
-    // 2. Setup DB pools explicitly (if needed)
-    if err := lokstra.SetupDbPoolManager(); err != nil {
+    // 2. Setup sync-config first (if using sync mode)
+    sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
+    
+    // 3. Setup definitions
+    lokstra_init.UsePgxDbPoolManager(true) // true = sync mode
+    
+    // 4. Load pools from config
+    if err := loader.LoadDbPoolManagerFromConfig(); err != nil {
         log.Fatal(err)
     }
     
-    // 3. Run server
+    // 5. Run server
     lokstra_registry.InitAndRunServer()
-}
-```
-
-### 3. Auto Setup (Legacy - Backward Compatible)
-
-```go
-func main() {
-    lokstra.Bootstrap()
-    
-    // Auto-loads config + setup DB pools + run server
-    lokstra_registry.RunServerFromConfig("config.yaml")
 }
 ```
 
@@ -116,7 +220,7 @@ service-definitions:
 ### Option 1: Direct DSN
 
 ```yaml
-dbpool-manager:
+dbpool-definitions:
   mydb:
     dsn: "postgres://user:pass@localhost:5432/mydb?sslmode=disable"
 ```
@@ -124,7 +228,7 @@ dbpool-manager:
 ### Option 2: Component-Based (Recommended)
 
 ```yaml
-dbpool-manager:
+dbpool-definitions:
   mydb:
     host: ${DB_HOST:localhost}
     port: ${DB_PORT:5432}
@@ -164,7 +268,7 @@ lokstra_registry.RunServerFromConfig("config.yaml")
 ### 2. Use Named Pools for Different Purposes
 
 ```yaml
-dbpool-manager:
+dbpool-definitions:
   transactional-db:  # For OLTP workloads
     max_conns: 10
     
@@ -178,7 +282,7 @@ dbpool-manager:
 ### 3. Environment-Specific Configuration
 
 ```yaml
-dbpool-manager:
+dbpool-definitions:
   main-db:
     host: ${DB_HOST:localhost}
     port: ${DB_PORT:5432}
@@ -244,8 +348,247 @@ func (s *ReportingService) GenerateReport() (*Report, error) {
 }
 ```
 
+## DbPool Manager Modes
+
+Lokstra supports two types of `dbpool-manager` implementations:
+
+### 1. Local Map Mode (Default)
+
+Uses in-memory map to store pool configurations. Suitable for single-instance applications.
+
+```yaml
+# No special config needed - this is the default
+dbpool-definitions:
+  main-db:
+    dsn: "postgres://localhost/mydb"
+```
+
+**Characteristics:**
+- ✅ Fast access (in-memory map)
+- ✅ Simple configuration
+- ❌ Pool configs not shared across instances
+- ❌ Changes lost on restart
+
+### 2. Distributed Sync Mode
+
+Uses PostgreSQL-based SyncMap to share pool configurations across multiple instances. Requires `sync_config_pg` service.
+
+```yaml
+# Configure in configs section
+configs:
+  dbpool-definitions:
+    use_sync: true
+
+# Then define pools as usual
+dbpool-definitions:
+  main-db:
+    dsn: "postgres://localhost/mydb"
+    schema: "public"
+```
+
+**Characteristics:**
+- ✅ Pool configs shared across all instances
+- ✅ Changes persist and sync in real-time
+- ✅ Suitable for multi-instance deployments
+- ⚠️ Requires `sync_config_pg` service to be registered
+
+**When to use:**
+- Multiple application instances running
+- Need dynamic pool management across instances
+- Want pool configurations to persist and sync
+
+**Setup for Sync Mode:**
+
+**Recommended:** Use `lokstra_init`:
+
+```go
+import "github.com/primadi/lokstra/lokstra_init"
+
+func main() {
+    err := lokstra_init.BootstrapAndRun(
+        lokstra_init.WithDbPoolManager(true, true), // enable, useSync=true
+        lokstra_init.WithPgSyncMap(true, "db_main"),
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+**Manual setup** (advanced, not recommended):
+```go
+// 1. Register sync-config first (required for sync mode)
+sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
+
+// 2. Load config (contains use_sync: true)
+lokstra_registry.LoadConfig("config.yaml")
+
+// 3. Setup dbpool-manager with sync mode
+lokstra_init.UsePgxDbPoolManager(true)
+
+// 4. Load pools from config
+loader.LoadDbPoolManagerFromConfig()
+
+// 5. Run server
+lokstra_registry.InitAndRunServer()
+```
+
+**See [Lokstra Initialization](./09-lokstra-init.md) for recommended approach.**
+
+## Transaction Management
+
+**Recommended approach:** Use `ctx.BeginTransaction(poolName)` from `request.Context`. This creates a transaction for the specified pool name lazily (only when first database operation occurs) and automatically commits/rolls back based on error state.
+
+### Basic Transaction Usage
+
+```go
+func (s *UserService) CreateUser(ctx *request.Context, user *User) (err error) {
+    // Begin transaction for pool named "main-db"
+    // Transaction will be created automatically on first DB operation
+    defer ctx.BeginTransaction("main-db")(&err)
+    
+    // All database operations using this ctx will join the same transaction
+    if err := s.userRepo.Create(ctx, user); err != nil {
+        return err // Auto rollback on error
+    }
+    
+    if err := s.auditRepo.Log(ctx, "user_created", user.ID); err != nil {
+        return err // Auto rollback on error
+    }
+    
+    return nil // Auto commit on success
+}
+```
+
+**Example from real code:**
+
+```go
+// @Route "POST /"
+func (s *TenantService) CreateTenant(ctx *request.Context,
+    req *domain.CreateTenantRequest) (result *domain.Tenant, err error) {
+
+    // Begin transaction for pool "db_auth"
+    // All subsequent DB operations using ctx will join this transaction
+    finishTx := ctx.BeginTransaction("db_auth")
+    defer finishTx(&err)
+
+    // These operations will automatically join the transaction
+    existing, err := s.TenantStore.GetByName(ctx, req.Name)
+    if err == nil && existing != nil {
+        return nil, fmt.Errorf("tenant already exists")
+    }
+    
+    // Create tenant (also joins transaction)
+    tenant, err := s.TenantStore.Create(ctx, ...)
+    
+    return tenant, err // Auto commit if nil, rollback if error
+}
+```
+
+### How It Works
+
+1. **Marking**: `BeginTransaction("pool-name")` marks the context with transaction intent
+2. **Lazy Creation**: Transaction is created only when first DB operation occurs (not immediately)
+3. **Pool Name Based**: Transaction is tracked by pool name, not pool instance
+4. **Auto-Join**: All DB operations using the same context automatically join the transaction
+5. **Auto-Commit/Rollback**: 
+   - Returns `nil` → Transaction commits automatically
+   - Returns error → Transaction rolls back automatically
+
+**Key Points:**
+- No need to manually inject DbPool - just use the pool name
+- Transaction is created lazily (zero overhead if no DB operations)
+- All operations in the same context automatically share the transaction
+
+### Using Without Request Context (Service Layer)
+
+If you need transactions outside of HTTP handlers, use `serviceapi.BeginTransaction()`:
+
+```go
+import "github.com/primadi/lokstra/serviceapi"
+
+func (s *UserService) DoWork(ctx context.Context) (err error) {
+    // Begin transaction (same API, but for standard context.Context)
+    ctx, finish := serviceapi.BeginTransaction(ctx, "main-db")
+    defer finish(&err)
+    
+    // Database operations join the transaction
+    s.repo1.Create(ctx, ...)
+    s.repo2.Update(ctx, ...)
+    
+    return nil // Auto commit
+}
+```
+
+**Note:** In HTTP handlers, prefer `ctx.BeginTransaction()` from `request.Context` as shown above.
+
+### Transaction with Multiple Pools
+
+Each pool name has its own transaction context:
+
+```go
+func (s *Service) Transfer(ctx *request.Context, amount float64) (err error) {
+    // Transaction for main database
+    defer ctx.BeginTransaction("main-db")(&err)
+    
+    // Transaction for analytics database (separate)
+    defer ctx.BeginTransaction("analytics-db")(&err)
+    
+    // Operations on main-db join main-db transaction
+    s.mainRepo.Deduct(ctx, amount)
+    
+    // Operations on analytics-db join analytics-db transaction
+    s.analyticsRepo.Log(ctx, "transfer", amount)
+    
+    return nil
+}
+```
+
+### Ignoring Parent Transaction
+
+Sometimes you need to execute operations outside of a transaction (e.g., audit logs that must commit immediately):
+
+```go
+import "github.com/primadi/lokstra/serviceapi"
+
+func (s *Service) CreateWithAudit(ctx *request.Context, data *Data) (err error) {
+    defer ctx.BeginTransaction("main-db")(&err)
+    
+    // This joins the transaction
+    if err := s.repo.Create(ctx, data); err != nil {
+        return err
+    }
+    
+    // This uses a separate connection (no transaction)
+    isolatedCtx := serviceapi.WithoutTransaction(ctx)
+    s.auditRepo.Log(isolatedCtx, "data_created") // Commits immediately
+    
+    return nil
+}
+```
+
+## Summary
+
+### Recommended Setup Flow
+
+1. **Use lokstra_init** for initialization (handles everything correctly)
+2. **Define pools** in YAML `dbpool-definitions:` section
+3. **Inject DbPool** into services using `@Inject "pool-name"`
+4. **Use transactions** via `ctx.BeginTransaction("pool-name")` in handlers
+
+### Component Usage
+
+| Component | Purpose | How to Get |
+|-----------|---------|------------|
+| **DbPoolManager** | Manages pools | Service: `"dbpool-manager"` |
+| **DbPool** | Connection pool | Inject: `@Inject "pool-name"` or `lokstra_registry.GetService[DbPool]("pool-name")` |
+| **DbConn** | Individual connection | `pool.Acquire(ctx)` |
+| **Transaction** | Database transaction | `ctx.BeginTransaction("pool-name")` (recommended) |
+
 ## See Also
 
-- [Service Registration](./03-services.md)
-- [Dependency Injection](./04-dependency-injection.md)
-- [Configuration Management](./05-configuration.md)
+- [Lokstra Initialization](./09-lokstra-init.md) - **Recommended initialization approach**
+- [Service Registration](./02-service/index.md) - Service setup
+- [Dependency Injection](./07-inject-annotation.md) - Injection patterns
+- [Configuration Management](./04-config/index.md) - YAML configuration
+- [DbPool Manager API Reference](../03-api-reference/06-services/dbpool-manager.md) - API details
