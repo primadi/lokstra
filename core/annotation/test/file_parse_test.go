@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseUserServiceFile(t *testing.T) {
-	filePath := "../../../project_templates/02_app_framework/03_enterprise_router_service/modules/user/application/user_service.go"
+	filePath := "../../../project_templates/02_app_framework/01_enterprise_router_service/modules/user/application/user_service.go"
 
 	annotations, err := annotation.ParseFileAnnotations(filePath)
 	if err != nil {

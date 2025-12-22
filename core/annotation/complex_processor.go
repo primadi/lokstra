@@ -328,7 +328,8 @@ type ServiceGeneration struct {
 	RemoteTypeName     string
 	SourceFile         string
 	IsService          bool // true if @Service, false if @RouterService
-	HasInitMethod      bool // true if Init() error method exists
+	HasInitMethod      bool // true if Init() or Init() error method exists
+	InitReturnsError   bool // true if Init() returns error, false if Init() has no return
 }
 
 // DependencyInfo holds field injection information

@@ -613,7 +613,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 	return nil
 }
 
-// checkInitMethod checks if struct has Init() error method
+// checkInitMethod checks if struct has Init() error or Init() method
 func checkInitMethod(file *FileToProcess, service *ServiceGeneration) {
 	fset := token.NewFileSet()
 	astFile, err := parser.ParseFile(fset, file.FullPath, nil, parser.ParseComments)
@@ -621,7 +621,7 @@ func checkInitMethod(file *FileToProcess, service *ServiceGeneration) {
 		return
 	}
 
-	// Look for method: func (receiver *StructName) Init() error
+	// Look for method: func (receiver *StructName) Init() error OR func (receiver *StructName) Init()
 	for _, decl := range astFile.Decls {
 		funcDecl, ok := decl.(*ast.FuncDecl)
 		if !ok || funcDecl.Recv == nil || len(funcDecl.Recv.List) == 0 {
@@ -649,20 +649,28 @@ func checkInitMethod(file *FileToProcess, service *ServiceGeneration) {
 			continue
 		}
 
-		// Check signature: no params, returns error
+		// Check signature: no params
 		if funcDecl.Type.Params.NumFields() != 0 {
 			continue
 		}
 
-		if funcDecl.Type.Results == nil || funcDecl.Type.Results.NumFields() != 1 {
-			continue
+		// Check return type
+		if funcDecl.Type.Results == nil || funcDecl.Type.Results.NumFields() == 0 {
+			// Init() - no return value
+			service.HasInitMethod = true
+			service.InitReturnsError = false
+			return
 		}
 
-		// Check return type is error
-		returnType := funcDecl.Type.Results.List[0].Type
-		if ident, ok := returnType.(*ast.Ident); ok && ident.Name == "error" {
-			service.HasInitMethod = true
-			return
+		if funcDecl.Type.Results.NumFields() == 1 {
+			// Check return type is error
+			returnType := funcDecl.Type.Results.List[0].Type
+			if ident, ok := returnType.(*ast.Ident); ok && ident.Name == "error" {
+				// Init() error
+				service.HasInitMethod = true
+				service.InitReturnsError = true
+				return
+			}
 		}
 	}
 }
@@ -830,6 +838,9 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 
 	// Collect used packages from method signatures, dependencies, and struct name
 	usedPackages := make(map[string]bool)
+	needsStrconv := false
+	needsStrings := false
+
 	for _, service := range ctx.GeneratedCode.Services {
 		// From method signatures - ONLY for @RouterService (not @Service)
 		// @Service doesn't generate proxy methods, so method signatures are not in generated code
@@ -843,10 +854,19 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 		for _, dep := range service.Dependencies {
 			collectPackagesFromType(dep.FieldType, usedPackages)
 		}
-		// From config dependencies - check if time.Duration is used
+		// From config dependencies - check if time.Duration or slice types are used
 		for _, cfg := range service.ConfigDependencies {
 			if cfg.FieldType == "time.Duration" {
 				usedPackages["time"] = true
+			}
+			// Check if slice types (other than []byte) are used - need strconv and strings
+			if strings.HasPrefix(cfg.FieldType, "[]") && cfg.FieldType != "[]byte" {
+				needsStrconv = true
+				needsStrings = true
+			}
+			// Check if struct types are used - need cast
+			if isStructType(cfg.FieldType) || isSliceOfStruct(cfg.FieldType) {
+				usedPackages["cast"] = true
 			}
 		}
 		// From struct name itself (e.g., if service struct is domain.UserService)
@@ -903,6 +923,19 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	// Third, add "time" if time.Duration is used
 	if usedPackages["time"] {
 		allImports["time"] = "time"
+	}
+
+	// Fourth, add "strconv" and "strings" if slice parsing is needed
+	if needsStrconv {
+		allImports["strconv"] = "strconv"
+	}
+	if needsStrings {
+		allImports["strings"] = "strings"
+	}
+
+	// Fifth, add "cast" if struct types are used
+	if usedPackages["cast"] {
+		allImports["github.com/primadi/lokstra/common/cast"] = "cast"
 	}
 
 	// Generate code
@@ -1097,6 +1130,459 @@ func convertDurationToGo(durationStr string) string {
 	return fmt.Sprintf("%s*%s", value, goUnit)
 }
 
+// parseDurationFromConfig generates code to parse time.Duration from config value
+// Handles both string ("15m", "20h") and time.Duration values from config
+// parseConfigValue generates code to parse any config value with type conversion
+// This universal function handles: primitives, time.Duration, []byte, slices, structs
+func parseConfigValue(fieldType, configKey, defaultValue string) string {
+	// For primitives (string, int, bool, float64), use direct type assertion
+	if fieldType == "string" || fieldType == "int" || fieldType == "int64" ||
+		fieldType == "float64" || fieldType == "bool" {
+		if defaultValue != "" {
+			return fmt.Sprintf("cfg[%q].(%s)", configKey, fieldType)
+		}
+		return fmt.Sprintf("cfg[%q].(%s)", configKey, fieldType)
+	}
+
+	// For time.Duration - handle both duration and string
+	if fieldType == "time.Duration" {
+		defaultVal := defaultValue
+		if defaultVal == "" {
+			defaultVal = "0"
+		}
+		return fmt.Sprintf(`func() time.Duration {
+		if v, ok := cfg[%q].(time.Duration); ok { return v }
+		if s, ok := cfg[%q].(string); ok {
+			if d, err := time.ParseDuration(s); err == nil { return d }
+		}
+		return %s
+	}()`, configKey, configKey, defaultVal)
+	}
+
+	// For []byte - handle both []byte and string
+	if fieldType == "[]byte" {
+		defaultVal := "nil"
+		if defaultValue != "" {
+			defaultVal = "[]byte(" + defaultValue + ")"
+		}
+		return fmt.Sprintf(`func() []byte {
+		if v, ok := cfg[%q].([]byte); ok { return v }
+		if s, ok := cfg[%q].(string); ok { return []byte(s) }
+		return %s
+	}()`, configKey, configKey, defaultVal)
+	}
+
+	// For slices ([]string, []int, []struct, etc.)
+	if strings.HasPrefix(fieldType, "[]") {
+		elementType := strings.TrimPrefix(fieldType, "[]")
+		defaultVal := "nil"
+		if defaultValue != "" {
+			defaultVal = defaultValue
+		}
+
+		// For slice of struct, use cast.ToStruct per element
+		if isStructType(elementType) {
+			return fmt.Sprintf(`func() %s {
+		if arr, ok := cfg[%q].([]any); ok {
+			result := make(%s, 0, len(arr))
+			for _, item := range arr {
+				var elem %s
+				if err := cast.ToStruct(item, &elem); err == nil {
+					result = append(result, elem)
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].(%s); ok { return arr }
+		return %s
+	}()`, fieldType, configKey, fieldType, elementType, configKey, fieldType, defaultVal)
+		}
+
+		// For primitive slices ([]string, []int, etc.) - handle array and comma-separated string
+		var parseCode string
+		switch elementType {
+		case "string":
+			parseCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]string, 0, len(arr))
+			for _, item := range arr {
+				if s, ok := item.(string); ok { result = append(result, s) }
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]string); ok { return arr }
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]string, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						result = append(result, trimmed)
+					}
+				}
+				return result
+			}
+		}`
+		case "int":
+			parseCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]int, 0, len(arr))
+			for _, item := range arr {
+				switch v := item.(type) {
+				case int: result = append(result, v)
+				case float64: result = append(result, int(v))
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]int); ok { return arr }
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]int, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						if val, err := strconv.Atoi(trimmed); err == nil {
+							result = append(result, val)
+						}
+					}
+				}
+				return result
+			}
+		}`
+		case "int64":
+			parseCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]int64, 0, len(arr))
+			for _, item := range arr {
+				switch v := item.(type) {
+				case int64: result = append(result, v)
+				case int: result = append(result, int64(v))
+				case float64: result = append(result, int64(v))
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]int64); ok { return arr }
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]int64, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						if val, err := strconv.ParseInt(trimmed, 10, 64); err == nil {
+							result = append(result, val)
+						}
+					}
+				}
+				return result
+			}
+		}`
+		case "float64":
+			parseCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]float64, 0, len(arr))
+			for _, item := range arr {
+				switch v := item.(type) {
+				case float64: result = append(result, v)
+				case int: result = append(result, float64(v))
+				case int64: result = append(result, float64(v))
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]float64); ok { return arr }
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]float64, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						if val, err := strconv.ParseFloat(trimmed, 64); err == nil {
+							result = append(result, val)
+						}
+					}
+				}
+				return result
+			}
+		}`
+		default:
+			// Generic slice handling
+			parseCode = fmt.Sprintf(`if arr, ok := cfg[%%q].(%s); ok { return arr }`, fieldType)
+		}
+
+		return fmt.Sprintf(`func() %s {
+		%s
+		return %s
+	}()`, fieldType, fmt.Sprintf(parseCode, configKey, configKey, configKey), defaultVal)
+	}
+
+	// For struct types - use cast.ToStruct
+	if isStructType(fieldType) {
+		defaultVal := fieldType + "{}"
+		if defaultValue != "" {
+			defaultVal = defaultValue
+		}
+		return fmt.Sprintf(`func() %s {
+		if v, ok := cfg[%q]; ok {
+			var result %s
+			if err := cast.ToStruct(v, &result); err == nil {
+				return result
+			}
+		}
+		return %s
+	}()`, fieldType, configKey, fieldType, defaultVal)
+	}
+
+	// Fallback: direct type assertion
+	return fmt.Sprintf("cfg[%q].(%s)", configKey, fieldType)
+}
+
+func parseDurationFromConfig(configKey, defaultValue string) string {
+	if defaultValue != "" {
+		return fmt.Sprintf(`func() time.Duration {
+		if v, ok := cfg[%q].(time.Duration); ok {
+			return v
+		}
+		if s, ok := cfg[%q].(string); ok {
+			if d, err := time.ParseDuration(s); err == nil {
+				return d
+			}
+		}
+		return %s
+	}()`, configKey, configKey, defaultValue)
+	}
+	return fmt.Sprintf(`func() time.Duration {
+		if v, ok := cfg[%q].(time.Duration); ok {
+			return v
+		}
+		if s, ok := cfg[%q].(string); ok {
+			if d, err := time.ParseDuration(s); err == nil {
+				return d
+			}
+		}
+		return 0
+	}()`, configKey, configKey)
+}
+
+// parseByteSliceFromConfig generates code to parse []byte from config value
+// Handles both []byte and string values from config
+func parseByteSliceFromConfig(configKey, defaultValue string) string {
+	if defaultValue != "" {
+		return fmt.Sprintf(`func() []byte {
+		if v, ok := cfg[%q].([]byte); ok {
+			return v
+		}
+		if s, ok := cfg[%q].(string); ok {
+			return []byte(s)
+		}
+		return []byte(%s)
+	}()`, configKey, configKey, defaultValue)
+	}
+	return fmt.Sprintf(`func() []byte {
+		if v, ok := cfg[%q].([]byte); ok {
+			return v
+		}
+		if s, ok := cfg[%q].(string); ok {
+			return []byte(s)
+		}
+		return nil
+	}()`, configKey, configKey)
+}
+
+// parseSliceFromConfig generates code to parse slice types from config value
+// Handles []string, []int, []int64, []float64, etc.
+// Supports both array values and comma-separated strings
+// parseStructFromConfig generates code to parse struct from config using cast.ToStruct
+func parseStructFromConfig(fieldType, configKey, defaultValue string) string {
+	if defaultValue != "" {
+		return fmt.Sprintf(`func() %s {
+		if v, ok := cfg[%q]; ok {
+			var result %s
+			if err := cast.ToStruct(v, &result); err == nil {
+				return result
+			}
+		}
+		return %s
+	}()`, fieldType, configKey, fieldType, defaultValue)
+	}
+	return fmt.Sprintf(`func() %s {
+		if v, ok := cfg[%q]; ok {
+			var result %s
+			if err := cast.ToStruct(v, &result); err == nil {
+				return result
+			}
+		}
+		return %s{}
+	}()`, fieldType, configKey, fieldType, fieldType)
+}
+
+func parseSliceFromConfig(fieldType, configKey, defaultValue string) string {
+	// Extract element type from []ElementType
+	elementType := strings.TrimPrefix(fieldType, "[]")
+
+	var conversionCode string
+	switch elementType {
+	case "string":
+		conversionCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]string, 0, len(arr))
+			for _, item := range arr {
+				if s, ok := item.(string); ok {
+					result = append(result, s)
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]string); ok {
+			return arr
+		}
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]string, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						result = append(result, trimmed)
+					}
+				}
+				return result
+			}
+		}`
+	case "int":
+		conversionCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]int, 0, len(arr))
+			for _, item := range arr {
+				switch v := item.(type) {
+				case int:
+					result = append(result, v)
+				case float64:
+					result = append(result, int(v))
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]int); ok {
+			return arr
+		}
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]int, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						if val, err := strconv.Atoi(trimmed); err == nil {
+							result = append(result, val)
+						}
+					}
+				}
+				return result
+			}
+		}`
+	case "int64":
+		conversionCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]int64, 0, len(arr))
+			for _, item := range arr {
+				switch v := item.(type) {
+				case int64:
+					result = append(result, v)
+				case int:
+					result = append(result, int64(v))
+				case float64:
+					result = append(result, int64(v))
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]int64); ok {
+			return arr
+		}
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]int64, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						if val, err := strconv.ParseInt(trimmed, 10, 64); err == nil {
+							result = append(result, val)
+						}
+					}
+				}
+				return result
+			}
+		}`
+	case "float64":
+		conversionCode = `if arr, ok := cfg[%q].([]any); ok {
+			result := make([]float64, 0, len(arr))
+			for _, item := range arr {
+				switch v := item.(type) {
+				case float64:
+					result = append(result, v)
+				case int:
+					result = append(result, float64(v))
+				case int64:
+					result = append(result, float64(v))
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%q].([]float64); ok {
+			return arr
+		}
+		if s, ok := cfg[%q].(string); ok {
+			if s != "" {
+				parts := strings.Split(s, ",")
+				result := make([]float64, 0, len(parts))
+				for _, p := range parts {
+					if trimmed := strings.TrimSpace(p); trimmed != "" {
+						if val, err := strconv.ParseFloat(trimmed, 64); err == nil {
+							result = append(result, val)
+						}
+					}
+				}
+				return result
+			}
+		}`
+	default:
+		// For struct types, use cast.ToStruct for conversion
+		if isStructType(elementType) {
+			conversionCode = fmt.Sprintf(`if arr, ok := cfg[%%q].([]any); ok {
+			result := make(%s, 0, len(arr))
+			for _, item := range arr {
+				var elem %s
+				if err := cast.ToStruct(item, &elem); err == nil {
+					result = append(result, elem)
+				}
+			}
+			return result
+		}
+		if arr, ok := cfg[%%q].(%s); ok {
+			return arr
+		}`, fieldType, elementType, fieldType)
+		} else {
+			// For other slice types ([]any, []interface{}, custom types), try direct type assertion
+			conversionCode = fmt.Sprintf(`if arr, ok := cfg[%%q].(%s); ok {
+			return arr
+		}
+		if arr, ok := cfg[%%q].([]any); ok {
+			result := make(%s, 0, len(arr))
+			for _, item := range arr {
+				if v, ok := item.(%s); ok {
+					result = append(result, v)
+				}
+			}
+			return result
+		}`, fieldType, fieldType, elementType)
+		}
+	}
+
+	if defaultValue != "" {
+		return fmt.Sprintf(`func() %s {
+		%s
+		return %s
+	}()`, fieldType, fmt.Sprintf(conversionCode, configKey, configKey, configKey), defaultValue)
+	}
+	return fmt.Sprintf(`func() %s {
+		%s
+		return nil
+	}()`, fieldType, fmt.Sprintf(conversionCode, configKey, configKey, configKey))
+}
+
 // genTemplate is the template for zz_generated.lokstra.go
 var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 	"hasReturnValue":    hasReturnValue,
@@ -1122,7 +1608,45 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 				// defaultValue like "24h", "5m", "30s"
 				// Need to convert to Go duration expression
 				return convertDurationToGo(defaultValue)
-			} // For int/bool/float, return as-is
+			}
+
+			// For slice types, check if it's a Go slice literal or convert from string
+			if strings.HasPrefix(fieldType, "[]") {
+				// If already a slice literal (starts with fieldType{ or []...{), use as-is
+				if strings.HasPrefix(defaultValue, fieldType+"{") || strings.HasPrefix(defaultValue, "[]") {
+					return defaultValue
+				}
+				// Otherwise, try to parse as simplified format based on element type
+				elementType := strings.TrimPrefix(fieldType, "[]")
+				switch elementType {
+				case "string":
+					// Parse "a,b,c" -> []string{"a", "b", "c"}
+					parts := strings.Split(defaultValue, ",")
+					quotedParts := make([]string, 0, len(parts))
+					for _, p := range parts {
+						trimmed := strings.TrimSpace(p)
+						if trimmed != "" {
+							quotedParts = append(quotedParts, fmt.Sprintf(`"%s"`, trimmed))
+						}
+					}
+					return fmt.Sprintf("%s{%s}", fieldType, strings.Join(quotedParts, ", "))
+				case "int", "int64", "float64":
+					// Parse "1,2,3" -> []int{1, 2, 3}
+					parts := strings.Split(defaultValue, ",")
+					trimmedParts := make([]string, 0, len(parts))
+					for _, p := range parts {
+						if trimmed := strings.TrimSpace(p); trimmed != "" {
+							trimmedParts = append(trimmedParts, trimmed)
+						}
+					}
+					return fmt.Sprintf("%s{%s}", fieldType, strings.Join(trimmedParts, ", "))
+				default:
+					// For other types, assume it's already a valid Go literal
+					return defaultValue
+				}
+			}
+
+			// For int/bool/float, return as-is
 			return defaultValue
 		}
 		// Generate type-specific zero values
@@ -1135,10 +1659,24 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 			return "0.0"
 		case "time.Duration":
 			return "0"
+		case "[]byte":
+			return "nil"
 		default:
+			// Check if it's a slice type
+			if strings.HasPrefix(fieldType, "[]") {
+				return "nil"
+			}
 			return `""`
 		}
 	},
+	"parseDurationFromConfig":  parseDurationFromConfig,
+	"parseByteSliceFromConfig": parseByteSliceFromConfig,
+	"parseSliceFromConfig":     parseSliceFromConfig,
+	"parseStructFromConfig":    parseStructFromConfig,
+	"parseConfigValue":         parseConfigValue, // Universal config parser
+	"isSliceType":              func(fieldType string) bool { return strings.HasPrefix(fieldType, "[]") && fieldType != "[]byte" },
+	"isStructType":             isStructType,
+	"isSliceOfStruct":          isSliceOfStruct,
 	"sortedKeys": func(m any) []string {
 		keys := make([]string, 0)
 		switch v := m.(type) {
@@ -1214,15 +1752,19 @@ func Register{{$service.StructName}}() {
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
-			{{$cfg.FieldName}}: cfg[{{quote $cfg.ConfigKey}}].({{$cfg.FieldType}}),
+			{{$cfg.FieldName}}: {{parseConfigValue $cfg.FieldType $cfg.ConfigKey (getDefaultValue $cfg.FieldType $cfg.DefaultValue)}},
 {{- end }}
 		}
 {{- if $service.HasInitMethod }}
 		
 		// Call Init() for post-initialization
+{{- if $service.InitReturnsError }}
 		if err := svc.Init(); err != nil {
 			panic("failed to initialize {{$service.ServiceName}}: " + err.Error())
 		}
+{{- else }}
+		svc.Init()
+{{- end }}
 {{- end }}
 		
 		return svc
@@ -1283,15 +1825,19 @@ func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) 
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
-		{{$cfg.FieldName}}: config[{{quote $cfg.ConfigKey}}].({{$cfg.FieldType}}),
+		{{$cfg.FieldName}}: {{parseConfigValue $cfg.FieldType $cfg.ConfigKey (getDefaultValue $cfg.FieldType $cfg.DefaultValue)}},
 {{- end }}
 	}
 {{- if $service.HasInitMethod }}
 	
 	// Call Init() for post-initialization
+{{- if $service.InitReturnsError }}
 	if err := svc.Init(); err != nil {
 		panic("failed to initialize {{$service.ServiceName}}: " + err.Error())
 	}
+{{- else }}
+	svc.Init()
+{{- end }}
 {{- end }}
 	
 	return svc
@@ -1365,4 +1911,30 @@ func hasReturnValue(route string) bool {
 
 func extractReturnType(route string) string {
 	return "*domain.User"
+}
+
+// isStructType checks if a type is a struct (not primitive, slice, map, or interface)
+func isStructType(fieldType string) bool {
+	// Empty type or primitive types
+	if fieldType == "" || fieldType == "string" || fieldType == "int" || fieldType == "int64" ||
+		fieldType == "float64" || fieldType == "bool" || fieldType == "time.Duration" ||
+		fieldType == "[]byte" {
+		return false
+	}
+	// Slice, map, or interface types
+	if strings.HasPrefix(fieldType, "[]") || strings.HasPrefix(fieldType, "map[") ||
+		fieldType == "any" || fieldType == "interface{}" {
+		return false
+	}
+	// Everything else is considered a struct
+	return true
+}
+
+// isSliceOfStruct checks if a type is a slice of struct
+func isSliceOfStruct(fieldType string) bool {
+	if !strings.HasPrefix(fieldType, "[]") {
+		return false
+	}
+	elementType := strings.TrimPrefix(fieldType, "[]")
+	return isStructType(elementType)
 }
