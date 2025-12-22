@@ -116,6 +116,123 @@ func(params *SearchParams) ([]Result, error) { return results, nil }
 
 ---
 
+## Database & Transactions
+
+### Inject DB Pool
+
+```go
+// @Service "user-repository"
+type UserRepository struct {
+    // @Inject "main-db"
+    DB serviceapi.DbPool
+}
+
+func (r *UserRepository) GetUser(ctx context.Context, id string) (*User, error) {
+    conn, err := r.DB.Acquire(ctx)
+    if err != nil {
+        return nil, err
+    }
+    defer conn.Release()
+    
+    var user User
+    err = conn.QueryRow(ctx,
+        "SELECT id, name, email FROM users WHERE id = $1", id,
+    ).Scan(&user.ID, &user.Name, &user.Email)
+    
+    return &user, err
+}
+```
+
+### Transactions (Auto-Finalized)
+
+```go
+// ✅ RECOMMENDED: Automatic management
+func (s *Service) Create(ctx *request.Context, req *Request) error {
+    ctx.BeginTransaction("main-db")  // No defer needed!
+    
+    s.repo1.Create(ctx, data1)
+    s.repo2.Create(ctx, data2)
+    
+    return ctx.Api.Ok(data)  // Auto-commit (status 200)
+}
+
+// ❌ Error or 400+ status → Auto-rollback
+func (s *Service) Update(ctx *request.Context, req *Request) error {
+    ctx.BeginTransaction("main-db")
+    
+    if err := s.repo.Update(ctx, data); err != nil {
+        return err  // ← Rollback
+    }
+    
+    return ctx.Api.BadRequest("Invalid") // ← Also rollback (status 400)
+}
+```
+
+**Auto-finalization rules:**
+- **Commit:** `nil` error + status < 400
+- **Rollback:** Error returned OR status >= 400
+
+### Manual Transaction Control
+
+```go
+// Dry-run: Execute but rollback
+func (s *Service) DryRun(ctx *request.Context) error {
+    ctx.BeginTransaction("main-db")
+    
+    result, _ := s.repo.Create(ctx, data)
+    
+    ctx.RollbackTransaction("main-db")  // ← Force rollback
+    return ctx.Api.Ok(result)           // 200 OK, no data saved
+}
+
+// Conditional commit
+func (s *Service) Batch(ctx *request.Context, items []Item) error {
+    ctx.BeginTransaction("main-db")
+    
+    successCount := s.process(ctx, items)
+    
+    if successCount < len(items)*0.8 {
+        ctx.RollbackTransaction("main-db")  // < 80% success
+    } else {
+        ctx.CommitTransaction("main-db")    // >= 80% success
+    }
+    
+    return ctx.Api.Ok(map[string]any{"success": successCount})
+}
+```
+
+### Multiple Pools
+
+```go
+func (s *Service) CrossDatabase(ctx *request.Context) error {
+    ctx.BeginTransaction("db-auth")
+    ctx.BeginTransaction("db-tenant")  // Independent
+    
+    s.authRepo.Create(ctx, authData)    // Uses db-auth tx
+    s.tenantRepo.Create(ctx, tenantData) // Uses db-tenant tx
+    
+    return ctx.Api.Ok("done")  // Both auto-commit
+}
+```
+
+### Service Layer (Without Request Context)
+
+```go
+import "github.com/primadi/lokstra/serviceapi"
+
+func (s *Service) DoWork(ctx context.Context) (err error) {
+    ctx, finish := serviceapi.BeginTransaction(ctx, "main-db")
+    defer finish(&err)  // ← Manual defer needed
+    
+    s.repo1.Create(ctx, ...)
+    s.repo2.Update(ctx, ...)
+    
+    return nil  // Auto-commit
+}
+```
+
+---
+
 ## Service Patterns (Recommended: Use Annotations)
 
 ### Annotation-Based Service (Recommended)

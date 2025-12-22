@@ -343,3 +343,141 @@ func TestSmartMerging(t *testing.T) {
 		t.Errorf("expected helper published-services to be cleared, got %d items", len(apiServer.HelperPublishedServices))
 	}
 }
+
+func TestValidateConfigYAML_Valid(t *testing.T) {
+	validYAML := `
+configs:
+  app-name: test-app
+  db-host: localhost
+
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - db-pool
+
+deployments:
+  development:
+    servers:
+      api:
+        base-url: http://localhost:8080
+        apps:
+          - addr: ":8080"
+            published-services:
+              - user-service
+`
+
+	err := loader.ValidateConfigYAML([]byte(validYAML))
+	if err != nil {
+		t.Errorf("valid YAML should pass validation: %v", err)
+	}
+}
+
+func TestValidateConfigYAML_InvalidField(t *testing.T) {
+	invalidYAML := `
+configs:
+  app-name: test-app
+
+servise-definitions:
+  user-service:
+    type: user-service-factory
+`
+
+	err := loader.ValidateConfigYAML([]byte(invalidYAML))
+	if err == nil {
+		t.Error("expected validation error for invalid field 'servise-definitions'")
+	}
+}
+
+func TestValidateConfigYAML_MissingRequiredField(t *testing.T) {
+	// Service definition without 'type' field
+	invalidYAML := `
+service-definitions:
+  user-service:
+    depends-on:
+      - db-pool
+`
+
+	err := loader.ValidateConfigYAML([]byte(invalidYAML))
+	if err == nil {
+		t.Error("expected validation error for missing 'type' field")
+	}
+}
+
+func TestValidateConfigYAML_InvalidType(t *testing.T) {
+	// addr should be string, not number
+	invalidYAML := `
+deployments:
+  development:
+    servers:
+      api:
+        base-url: http://localhost:8080
+        apps:
+          - addr: 8080
+            published-services:
+              - user-service
+`
+
+	err := loader.ValidateConfigYAML([]byte(invalidYAML))
+	if err == nil {
+		t.Error("expected validation error for wrong type (number instead of string)")
+	}
+}
+
+func TestValidateConfigYAML_InvalidDependsOn(t *testing.T) {
+	// depends-on with invalid service name pattern
+	invalidYAML := `
+service-definitions:
+  user-service:
+    type: user-service-factory
+    depends-on:
+      - DB_POOL
+`
+
+	err := loader.ValidateConfigYAML([]byte(invalidYAML))
+	if err == nil {
+		t.Error("expected validation error for invalid depends-on pattern (uppercase with underscore)")
+	}
+}
+
+func TestValidateConfigYAML_MalformedYAML(t *testing.T) {
+	malformedYAML := `
+configs:
+  app-name: test-app
+  invalid yaml:
+   - missing proper indentation
+  - broken structure
+`
+
+	err := loader.ValidateConfigYAML([]byte(malformedYAML))
+	if err == nil {
+		t.Error("expected error for malformed YAML")
+	}
+}
+
+func TestValidateConfigYAML_AdditionalProperties(t *testing.T) {
+	// Unknown top-level field
+	invalidYAML := `
+configs:
+  app-name: test-app
+
+unknown-field:
+  something: value
+`
+
+	err := loader.ValidateConfigYAML([]byte(invalidYAML))
+	if err == nil {
+		t.Error("expected validation error for unknown top-level field")
+	}
+}
+
+func TestValidateConfigYAML_EmptyConfig(t *testing.T) {
+	emptyYAML := `{}`
+
+	err := loader.ValidateConfigYAML([]byte(emptyYAML))
+	// Empty config might be valid depending on schema requirements
+	// Adjust assertion based on actual schema rules
+	if err != nil {
+		t.Logf("Empty config validation: %v", err)
+	}
+}

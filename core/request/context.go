@@ -2,11 +2,22 @@ package request
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/primadi/lokstra/core/response"
 	"github.com/primadi/lokstra/serviceapi"
 )
+
+// StatusCodeError represents an error state based on HTTP status code
+// Used to trigger transaction rollback for non-2xx status codes
+type StatusCodeError struct {
+	StatusCode int
+}
+
+func (e *StatusCodeError) Error() string {
+	return fmt.Sprintf("HTTP status code %d indicates error", e.StatusCode)
+}
 
 type Context struct {
 	// Embedding standard context for easy access
@@ -28,6 +39,12 @@ type Context struct {
 	handlers []HandlerFunc
 
 	value map[string]any
+
+	// Transaction finalizers to be called automatically in FinalizeResponse
+	// Map of poolName -> finalizer function
+	txFinalizers map[string]func(*error)
+	// Track order of transaction creation for proper LIFO finalization
+	txPoolOrder []string
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request, handlers []HandlerFunc) *Context {
@@ -59,19 +76,116 @@ func (c *Context) Next() error {
 }
 
 // Begins a transaction for the specified pool name
-// Returns a finalize function to be deferred
-// that accepts a pointer to error to determine commit/rollback
-
-func (c *Context) BeginTransaction(poolName string) func(*error) {
+// The transaction will be automatically finalized (commit/rollback) when FinalizeResponse is called
+// No need to defer the returned function anymore - it's handled automatically
+func (c *Context) BeginTransaction(poolName string) {
 	newCtx, finalizeCtx := serviceapi.BeginTransaction(c, poolName)
 	c.Context = newCtx // Update embedded context with transaction context
-	return finalizeCtx
+
+	// Initialize map if needed
+	if c.txFinalizers == nil {
+		c.txFinalizers = make(map[string]func(*error))
+	}
+
+	// Store finalizer by pool name
+	c.txFinalizers[poolName] = finalizeCtx
+	c.txPoolOrder = append(c.txPoolOrder, poolName)
+}
+
+// RollbackTransaction manually rolls back a specific transaction
+// Use this for edge cases like dry-run or testing where you want to return 200 OK but rollback changes
+//
+// ⚠️ WARNING: Only call this in the SAME handler that called BeginTransaction.
+// Do NOT use manual commit/rollback if your handler calls other handlers (nested calls),
+// as it can cause transaction state inconsistency.
+//
+// Safe usage:
+//   - Dry-run operations (single handler, no nested calls)
+//   - Testing/validation (single handler, no nested calls)
+//
+// Unsafe usage:
+//   - Handler A commits manually, then calls Handler B (nested)
+//   - Service layer that might be called by multiple handlers
+func (c *Context) RollbackTransaction(poolName string) {
+	if finalizer, exists := c.txFinalizers[poolName]; exists {
+		// Force rollback by passing a non-nil error
+		rollbackErr := error(&StatusCodeError{StatusCode: http.StatusInternalServerError})
+		finalizer(&rollbackErr)
+		// Remove from finalizers to prevent double-finalization
+		delete(c.txFinalizers, poolName)
+		// Also remove from order tracking
+		c.removeTxFromOrder(poolName)
+	}
+}
+
+// CommitTransaction manually commits a specific transaction
+// Use this for edge cases where you need explicit control over transaction lifecycle
+//
+// ⚠️ WARNING: Only call this in the SAME handler that called BeginTransaction.
+// Do NOT use manual commit/rollback if your handler calls other handlers (nested calls),
+// as it can cause transaction state inconsistency.
+//
+// Safe usage:
+//   - Conditional commit based on business logic (single handler)
+//   - Partial success handling (single handler, no nested calls)
+//
+// Unsafe usage:
+//   - Handler A commits manually, then calls Handler B (nested)
+//   - Service layer that might be called by multiple handlers
+func (c *Context) CommitTransaction(poolName string) {
+	if finalizer, exists := c.txFinalizers[poolName]; exists {
+		// Force commit by passing nil error
+		var commitErr error
+		finalizer(&commitErr)
+		// Remove from finalizers to prevent double-finalization
+		delete(c.txFinalizers, poolName)
+		// Also remove from order tracking
+		c.removeTxFromOrder(poolName)
+	}
+}
+
+// removeTxFromOrder removes a pool name from the order tracking
+func (c *Context) removeTxFromOrder(poolName string) {
+	for i, name := range c.txPoolOrder {
+		if name == poolName {
+			c.txPoolOrder = append(c.txPoolOrder[:i], c.txPoolOrder[i+1:]...)
+			break
+		}
+	}
 }
 
 // Finalizes the response, writing status code and body if not already written
+// Also automatically finalizes all transactions (commit on success, rollback on error)
 func (c *Context) FinalizeResponse(err error) {
+	// IMPORTANT: Always finalize transactions, even if response was manually written
+	// Use defer to ensure transactions are finalized in all code paths
+	defer func() {
+		// Finalize all remaining transactions (in reverse order - LIFO)
+		// Skip transactions that were manually committed/rolled back
+		// Determine if transaction should commit or rollback based on:
+		// 1. Explicit error from handler
+		// 2. Status code >= 400 (client/server errors)
+		statusCode := c.StatusCode()
+		var txErr error
+		if err != nil {
+			txErr = err
+		} else if statusCode >= http.StatusBadRequest {
+			// Create error from status code to trigger rollback
+			txErr = &StatusCodeError{StatusCode: statusCode}
+		}
+
+		// Call finalizers in reverse order (LIFO) for remaining transactions
+		for i := len(c.txPoolOrder) - 1; i >= 0; i-- {
+			poolName := c.txPoolOrder[i]
+			if finalizer, exists := c.txFinalizers[poolName]; exists {
+				finalizer(&txErr)
+			}
+		}
+	}()
+
 	if c.W.ManualWritten() {
-		// User already wrote directly to ResponseWriter, do nothing
+		// User already wrote directly to ResponseWriter, skip response writing
+		// but still finalize transactions (via defer above)
 		return
 	}
 

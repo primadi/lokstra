@@ -6,7 +6,8 @@
   },
   "[markdown]": {
     "files.exclude": {}
-  }
+  },
+  "go.diagnostic.vulncheck": "Off"
   // "markdown.validate.ignoredLinks": ["**/.github/copilot-instructions.md"]
   // "yaml.schemas": {
   //   "./schema/lokstra.json": [

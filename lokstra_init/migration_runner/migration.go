@@ -2,6 +2,7 @@ package migration_runner
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,9 @@ import (
 
 	"github.com/primadi/lokstra/serviceapi"
 )
+
+//go:embed lokstra_core.sql
+var lokstra_core_sql string
 
 // Migration represents a single database migration
 type Migration struct {
@@ -292,23 +296,9 @@ func (r *Runner) loadFromSubfolders(entries []os.DirEntry, minVersion int, migra
 	return nil
 }
 
-// ensureSchemaTable creates the schema_migrations table if it doesn't exist
-func (r *Runner) ensureSchemaTable(ctx context.Context) error {
-	conn, err := r.dbPool.Acquire(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
-	createTableSQL := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			version INTEGER PRIMARY KEY,
-			applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			description TEXT
-		)
-	`, r.schemaTable)
-
-	_, err = conn.Exec(ctx, createTableSQL)
+// EnsureSchemaTable creates the schema_migrations table if it doesn't exist
+func (r *Runner) EnsureSchemaTable(ctx context.Context) error {
+	_, err := r.dbPool.Exec(ctx, fmt.Sprintf(lokstra_core_sql, r.schemaTable))
 	if err != nil {
 		return fmt.Errorf("failed to create schema table: %w", err)
 	}
@@ -345,7 +335,7 @@ func (r *Runner) getAppliedVersions(ctx context.Context) (map[int]bool, error) {
 
 // Up runs all pending UP migrations
 func (r *Runner) Up(ctx context.Context) error {
-	if err := r.ensureSchemaTable(ctx); err != nil {
+	if err := r.EnsureSchemaTable(ctx); err != nil {
 		return err
 	}
 
@@ -382,16 +372,10 @@ func (r *Runner) Up(ctx context.Context) error {
 // getCurrentVersion returns the highest applied migration version
 // Returns 0 if no migrations have been applied
 func (r *Runner) getCurrentVersion(ctx context.Context) (int, error) {
-	conn, err := r.dbPool.Acquire(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
 	query := fmt.Sprintf("SELECT COALESCE(MAX(version), 0) FROM %s", r.schemaTable)
 
 	var maxVersion int
-	err = conn.QueryRow(ctx, query).Scan(&maxVersion)
+	err := r.dbPool.QueryRow(ctx, query).Scan(&maxVersion)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get current version: %w", err)
 	}
@@ -444,7 +428,7 @@ func (r *Runner) DownN(ctx context.Context, n int) error {
 		return err
 	}
 
-	if err := r.ensureSchemaTable(ctx); err != nil {
+	if err := r.EnsureSchemaTable(ctx); err != nil {
 		return err
 	}
 
@@ -524,7 +508,7 @@ func (r *Runner) runDownMigration(ctx context.Context, m *Migration) error {
 
 // Version returns the current migration version
 func (r *Runner) Version(ctx context.Context) (int, error) {
-	if err := r.ensureSchemaTable(ctx); err != nil {
+	if err := r.EnsureSchemaTable(ctx); err != nil {
 		return 0, err
 	}
 
@@ -550,7 +534,7 @@ func (r *Runner) Status(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	if err := r.ensureSchemaTable(ctx); err != nil {
+	if err := r.EnsureSchemaTable(ctx); err != nil {
 		return "", err
 	}
 

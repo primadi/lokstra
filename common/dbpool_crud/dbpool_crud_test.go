@@ -1,10 +1,10 @@
-package dbpool_manager_test
+package dbpool_crud_test
 
 import (
 	"context"
 	"testing"
 
-	"github.com/primadi/lokstra/common/dbpool_manager"
+	"github.com/primadi/lokstra/common/dbpool_crud"
 	"github.com/primadi/lokstra/lokstra_init"
 )
 
@@ -14,7 +14,7 @@ func ExampleAddDbPool() {
 	lokstra_init.UsePgxDbPoolManager(true) // Enable distributed sync
 
 	// Add new pool
-	err := dbpool_manager.AddDbPool(dbpool_manager.DbPoolConfig{
+	err := dbpool_crud.AddDbPool(dbpool_crud.DbPoolConfig{
 		Name:   "db-analytics",
 		DSN:    "postgres://user:pass@localhost:5432/analytics",
 		Schema: "public",
@@ -25,7 +25,7 @@ func ExampleAddDbPool() {
 	}
 
 	// Pool is now available across all servers (if using distributed sync)
-	conn, _ := dbpool_manager.AcquireDbConn(context.Background(), "db-analytics")
+	conn, _ := dbpool_crud.AcquireDbConn(context.Background(), "db-analytics")
 	defer conn.Release()
 
 	// Use connection...
@@ -33,7 +33,7 @@ func ExampleAddDbPool() {
 
 // Example: Update existing pool configuration
 func ExampleUpdateDbPool() {
-	err := dbpool_manager.UpdateDbPool(dbpool_manager.DbPoolConfig{
+	err := dbpool_crud.UpdateDbPool(dbpool_crud.DbPoolConfig{
 		Name:   "db-main",
 		DSN:    "postgres://user:pass@new-host:5432/main",
 		Schema: "public",
@@ -49,7 +49,7 @@ func ExampleUpdateDbPool() {
 
 // Example: Remove a pool
 func ExampleRemoveDbPool() {
-	err := dbpool_manager.RemoveDbPool("db-old-tenant")
+	err := dbpool_crud.RemoveDbPool("db-old-tenant")
 	if err != nil {
 		panic(err)
 	}
@@ -59,20 +59,20 @@ func ExampleRemoveDbPool() {
 
 // Example: List all pools
 func ExampleListDbPools() {
-	pools, err := dbpool_manager.ListDbPools()
+	pools, err := dbpool_crud.ListDbPools()
 	if err != nil {
 		panic(err)
 	}
 
 	for _, poolName := range pools {
-		info, _ := dbpool_manager.GetDbPoolInfo(poolName)
+		info, _ := dbpool_crud.GetDbPoolInfo(poolName)
 		println("Pool:", info.Name, "Schema:", info.Schema)
 	}
 }
 
 // Example: Get pool info
 func ExampleGetDbPoolInfo() {
-	info, err := dbpool_manager.GetDbPoolInfo("db-main")
+	info, err := dbpool_crud.GetDbPoolInfo("db-main")
 	if err != nil {
 		panic(err)
 	}
@@ -83,7 +83,7 @@ func ExampleGetDbPoolInfo() {
 
 // Example: Direct pool access
 func ExampleGetDbPool() {
-	pool, err := dbpool_manager.GetDbPool("db-main")
+	pool, err := dbpool_crud.GetDbPool("db-main")
 	if err != nil {
 		panic(err)
 	}
@@ -100,7 +100,7 @@ func TestDbPoolCRUD(t *testing.T) {
 	lokstra_init.UsePgxDbPoolManager(false) // Use local sync for testing
 
 	// Create
-	err := dbpool_manager.AddDbPool(dbpool_manager.DbPoolConfig{
+	err := dbpool_crud.AddDbPool(dbpool_crud.DbPoolConfig{
 		Name:   "test-pool",
 		DSN:    "postgres://localhost/test",
 		Schema: "test_schema",
@@ -110,7 +110,7 @@ func TestDbPoolCRUD(t *testing.T) {
 	}
 
 	// Read
-	info, err := dbpool_manager.GetDbPoolInfo("test-pool")
+	info, err := dbpool_crud.GetDbPoolInfo("test-pool")
 	if err != nil {
 		t.Fatalf("Failed to get pool info: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestDbPoolCRUD(t *testing.T) {
 	}
 
 	// Update
-	err = dbpool_manager.UpdateDbPool(dbpool_manager.DbPoolConfig{
+	err = dbpool_crud.UpdateDbPool(dbpool_crud.DbPoolConfig{
 		Name:   "test-pool",
 		DSN:    "postgres://localhost/test2",
 		Schema: "test_schema2",
@@ -131,19 +131,19 @@ func TestDbPoolCRUD(t *testing.T) {
 		t.Fatalf("Failed to update pool: %v", err)
 	}
 
-	info, _ = dbpool_manager.GetDbPoolInfo("test-pool")
+	info, _ = dbpool_crud.GetDbPoolInfo("test-pool")
 	if info.Schema != "test_schema2" {
 		t.Errorf("Expected schema 'test_schema2', got '%s'", info.Schema)
 	}
 
 	// Delete
-	err = dbpool_manager.RemoveDbPool("test-pool")
+	err = dbpool_crud.RemoveDbPool("test-pool")
 	if err != nil {
 		t.Fatalf("Failed to remove pool: %v", err)
 	}
 
 	// Verify deletion
-	_, err = dbpool_manager.GetDbPoolInfo("test-pool")
+	_, err = dbpool_crud.GetDbPoolInfo("test-pool")
 	if err == nil {
 		t.Error("Expected error when getting deleted pool")
 	}
