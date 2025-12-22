@@ -2,6 +2,7 @@ package sync_config_pg
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"hash/crc32"
 	"sort"
@@ -583,8 +584,38 @@ func ServiceFactory(mapCfg map[string]any) any {
 	return svc
 }
 
+//go:embed sync_config.sql
+var sync_config_sql string
+
 // Register registers the SyncConfig service type
 func Register(dbPoolName string, heartBeatInterval, reconnectInterval time.Duration) {
+	// get dsn and schema from dbPoolName, read config from deploy.Global()
+	dsn, schema := getDsnAndSchema(&Config{DbPoolName: dbPoolName})
+	// check is sync_config table on the schema, if not create it using sync_config_sql
+	dbPool, err := dbpool_pg.NewPgxPostgresPool(dbPoolName, dsn, schema, nil)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create connection pool for sync_config_pg registration: %v", err))
+	}
+	ctx := context.Background()
+	// acquire a connection
+	conn, err := dbPool.Acquire(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("failed to acquire connection for sync_config_pg registration: %v", err))
+	}
+	defer conn.Release()
+	// check if table exists
+	exists, err := conn.IsExists(ctx, "SELECT to_regclass($1)", fmt.Sprintf("%s.sync_config", schema))
+	if err != nil {
+		panic(fmt.Sprintf("failed to check sync_config table existence: %v", err))
+	}
+	if !exists {
+		// create table
+		_, err = conn.Exec(ctx, sync_config_sql)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create sync_config table: %v", err))
+		}
+	}
+
 	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory)
 	SetDefaultSyncConfigPG(dbPoolName, heartBeatInterval, reconnectInterval)
 }

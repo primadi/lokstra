@@ -20,11 +20,11 @@ type TenantService struct {
 
 // @Route "POST /"
 func (s *TenantService) CreateTenant(ctx *request.Context,
-	req *domain.CreateTenantRequest) (result *domain.Tenant, err error) {
+	req *domain.CreateTenantRequest) (*domain.Tenant, error) {
 
 	// Begin transaction - lazy created on first database operation
-	finishTx := ctx.BeginTransaction("db_auth")
-	defer finishTx(&err)
+	// Auto-finalized (commit/rollback) when response is written
+	ctx.BeginTransaction("db_auth")
 
 	// Check if tenant name already exists
 	existing, err := s.TenantStore.GetByName(ctx, req.Name)

@@ -484,22 +484,23 @@ func (s *Service) DoWork(ctx context.Context) (err error) {
 
 ### Request Context Integration
 
-In HTTP handlers, use `request.Context.BeginTransaction()`:
+In HTTP handlers, use `request.Context.BeginTransaction()`. Transactions are automatically finalized when the response is written:
 
 ```go
-func (s *UserService) CreateUser(ctx *request.Context, user *User) (err error) {
-    defer ctx.BeginTransaction("main-db")(&err)
+func (s *UserService) CreateUser(ctx *request.Context, user *User) error {
+    // Mark context as needing transaction - no defer needed!
+    ctx.BeginTransaction("main-db")
     
     // All operations join the transaction
     if err := s.userRepo.Create(ctx, user); err != nil {
-        return err // Auto rollback
+        return err // Auto rollback in FinalizeResponse
     }
     
     if err := s.auditRepo.Log(ctx, "user_created", user.ID); err != nil {
-        return err // Auto rollback
+        return err // Auto rollback in FinalizeResponse
     }
     
-    return nil // Auto commit
+    return nil // Auto commit in FinalizeResponse
 }
 ```
 
@@ -519,10 +520,10 @@ type TxContext struct {
 
 **How It Works:**
 
-1. **Marking Phase**: `BeginTransaction` adds `TxContext` marker to context
+1. **Marking Phase**: `ctx.BeginTransaction()` adds `TxContext` marker to context
 2. **Lazy Creation**: First DB operation checks context, finds marker, creates transaction
 3. **Auto-Join**: Subsequent DB operations detect existing transaction and reuse it
-4. **Finalization**: Deferred function commits (on success) or rolls back (on error)
+4. **Auto-Finalization**: When `FinalizeResponse` is called, transactions are automatically committed (on success) or rolled back (on error)
 
 **Transaction Flow:**
 ```

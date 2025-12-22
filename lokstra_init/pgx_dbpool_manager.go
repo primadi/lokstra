@@ -15,6 +15,7 @@ func UsePgxDbPoolManager(useSync bool) {
 	}
 
 	if useSync {
+		// ensure lokstra_core_sql migration is applied
 		pm = dbpool_manager.NewPgxSyncDbPoolManager()
 		logger.LogDebug("[Lokstra] DbPoolManager initialized with distributed sync")
 	} else {

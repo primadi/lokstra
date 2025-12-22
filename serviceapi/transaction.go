@@ -126,6 +126,12 @@ func finalizeTx(ctx context.Context, txCtx *TxContext, err *error) {
 	if txCtx.Conn != nil {
 		_ = txCtx.Conn.Release()
 	}
+
+	// Reset state to prevent reuse issues
+	txCtx.Tx = nil
+	txCtx.Conn = nil
+	txCtx.committed = false
+	txCtx.rolledBack = false
 }
 
 // WithoutTransaction creates a child context that explicitly ignores any parent transactions.

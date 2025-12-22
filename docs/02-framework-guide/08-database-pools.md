@@ -82,7 +82,7 @@ type DbTx interface {
 
 ## Transaction via Context (Recommended)
 
-The recommended way to handle transactions is using `ctx.BeginTransaction()` from `request.Context`:
+The recommended way to handle transactions is using `ctx.BeginTransaction(poolName)` from `request.Context`. Transactions are automatically finalized (commit/rollback) when the response is written.
 
 ## Setup Database Pools
 
@@ -442,10 +442,11 @@ lokstra_registry.InitAndRunServer()
 ### Basic Transaction Usage
 
 ```go
-func (s *UserService) CreateUser(ctx *request.Context, user *User) (err error) {
+func (s *UserService) CreateUser(ctx *request.Context, user *User) error {
     // Begin transaction for pool named "main-db"
     // Transaction will be created automatically on first DB operation
-    defer ctx.BeginTransaction("main-db")(&err)
+    // Will auto-commit on success or rollback on error in FinalizeResponse
+    ctx.BeginTransaction("main-db")
     
     // All database operations using this ctx will join the same transaction
     if err := s.userRepo.Create(ctx, user); err != nil {
@@ -465,12 +466,11 @@ func (s *UserService) CreateUser(ctx *request.Context, user *User) (err error) {
 ```go
 // @Route "POST /"
 func (s *TenantService) CreateTenant(ctx *request.Context,
-    req *domain.CreateTenantRequest) (result *domain.Tenant, err error) {
+    req *domain.CreateTenantRequest) (*domain.Tenant, error) {
 
     // Begin transaction for pool "db_auth"
     // All subsequent DB operations using ctx will join this transaction
-    finishTx := ctx.BeginTransaction("db_auth")
-    defer finishTx(&err)
+    ctx.BeginTransaction("db_auth")
 
     // These operations will automatically join the transaction
     existing, err := s.TenantStore.GetByName(ctx, req.Name)
@@ -491,14 +491,74 @@ func (s *TenantService) CreateTenant(ctx *request.Context,
 2. **Lazy Creation**: Transaction is created only when first DB operation occurs (not immediately)
 3. **Pool Name Based**: Transaction is tracked by pool name, not pool instance
 4. **Auto-Join**: All DB operations using the same context automatically join the transaction
-5. **Auto-Commit/Rollback**: 
-   - Returns `nil` → Transaction commits automatically
-   - Returns error → Transaction rolls back automatically
+5. **Auto-Finalization**: Happens automatically in `FinalizeResponse()`:
+   - Returns `nil` + status < 400 → **Commit**
+   - Returns error OR status >= 400 → **Rollback**
 
 **Key Points:**
 - No need to manually inject DbPool - just use the pool name
 - Transaction is created lazily (zero overhead if no DB operations)
 - All operations in the same context automatically share the transaction
+- Rollback happens on **any** error status (400+), even if handler returns nil error
+
+**Example - Status-based rollback:**
+```go
+func (s *Service) Create(ctx *request.Context, req *Request) error {
+    ctx.BeginTransaction("db")
+    
+    s.repo.Create(ctx, data)
+    
+    // Even though error is nil, transaction will rollback because status = 400
+    return ctx.Api.BadRequest("Validation failed") // ← Triggers rollback!
+}
+```
+
+### Manual Transaction Control
+
+For advanced scenarios (dry-run, testing, conditional commit):
+
+```go
+// Dry-run: Execute operations but don't persist
+func (s *Service) DryRun(ctx *request.Context, req *Request) error {
+    ctx.BeginTransaction("main-db")
+    
+    // Execute all operations
+    result, err := s.repo.Create(ctx, req)
+    if err != nil {
+        return err
+    }
+    
+    // Manual rollback - changes discarded
+    ctx.RollbackTransaction("main-db")
+    
+    // Return 200 OK with results
+    return ctx.Api.Ok(map[string]any{
+        "message": "Dry run successful",
+        "result": result,
+    })
+}
+
+// Conditional commit
+func (s *Service) BatchProcess(ctx *request.Context, items []Item) error {
+    ctx.BeginTransaction("main-db")
+    
+    successCount := s.processItems(ctx, items)
+    
+    if successCount < len(items) * 0.8 {
+        ctx.RollbackTransaction("main-db") // Below threshold
+        return ctx.Api.Ok(map[string]any{"status": "rolled_back"})
+    }
+    
+    ctx.CommitTransaction("main-db") // Above threshold
+    return ctx.Api.Ok(map[string]any{"status": "committed"})
+}
+```
+
+**Available Methods:**
+- `ctx.RollbackTransaction(poolName)` - Force rollback
+- `ctx.CommitTransaction(poolName)` - Force commit
+
+**See:** [Manual Transaction Control Examples](../examples/manual-transaction-control.md)
 
 ### Using Without Request Context (Service Layer)
 
@@ -527,12 +587,12 @@ func (s *UserService) DoWork(ctx context.Context) (err error) {
 Each pool name has its own transaction context:
 
 ```go
-func (s *Service) Transfer(ctx *request.Context, amount float64) (err error) {
+func (s *Service) Transfer(ctx *request.Context, amount float64) error {
     // Transaction for main database
-    defer ctx.BeginTransaction("main-db")(&err)
+    ctx.BeginTransaction("main-db")
     
     // Transaction for analytics database (separate)
-    defer ctx.BeginTransaction("analytics-db")(&err)
+    ctx.BeginTransaction("analytics-db")
     
     // Operations on main-db join main-db transaction
     s.mainRepo.Deduct(ctx, amount)
@@ -551,8 +611,8 @@ Sometimes you need to execute operations outside of a transaction (e.g., audit l
 ```go
 import "github.com/primadi/lokstra/serviceapi"
 
-func (s *Service) CreateWithAudit(ctx *request.Context, data *Data) (err error) {
-    defer ctx.BeginTransaction("main-db")(&err)
+func (s *Service) CreateWithAudit(ctx *request.Context, data *Data) error {
+    ctx.BeginTransaction("main-db")
     
     // This joins the transaction
     if err := s.repo.Create(ctx, data); err != nil {

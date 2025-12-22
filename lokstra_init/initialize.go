@@ -83,6 +83,7 @@ func BootstrapAndRun(opts ...InitializeOption) error {
 
 // Initialize lokstra framework with given config
 func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
+	// Validate config
 	if cfg.EnablePgxSyncMap {
 		if len(cfg.PgxSyncMapDbPoolName) == 0 {
 			return cfg.returnError(fmt.Errorf("PgxSyncMapDbPoolName must be set when UsePgxSyncMap is true"))

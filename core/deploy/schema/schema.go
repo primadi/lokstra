@@ -130,18 +130,18 @@ type ConfigDef struct {
 
 // MiddlewareDef defines a middleware instance
 type MiddlewareDef struct {
-	Name   string         `yaml:"name"`
-	Type   string         `yaml:"type"`   // Factory type
-	Config map[string]any `yaml:"config"` // Optional config
+	Name   string         `yaml:"name,omitempty" json:"name,omitempty"`     // Optional: defaults to map key
+	Type   string         `yaml:"type" json:"type"`                         // Factory type
+	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"` // Optional config
 }
 
 // ServiceDef defines a service instance
 type ServiceDef struct {
-	Name      string         `yaml:"name"`
-	Type      string         `yaml:"type"`             // Factory type
-	DependsOn []string       `yaml:"depends-on"`       // Dependencies (can be "paramName:serviceName")
-	Router    *RouterDef     `yaml:"router,omitempty"` // Embedded router definition (auto-generated router for this service)
-	Config    map[string]any `yaml:"config"`           // Optional config
+	Name      string         `yaml:"name,omitempty" json:"name,omitempty"`             // Optional: defaults to map key
+	Type      string         `yaml:"type" json:"type"`                                 // Factory type
+	DependsOn []string       `yaml:"depends-on,omitempty" json:"depends-on,omitempty"` // Dependencies (can be "paramName:serviceName")
+	Router    *RouterDef     `yaml:"router,omitempty" json:"router,omitempty"`         // Embedded router definition (auto-generated router for this service)
+	Config    map[string]any `yaml:"config,omitempty" json:"config,omitempty"`         // Optional config
 }
 
 // ReverseProxyDef defines a reverse proxy configuration

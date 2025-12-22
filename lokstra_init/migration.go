@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/primadi/lokstra/common/dbpool_crud"
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/lokstra_init/migration_runner"
@@ -106,7 +107,11 @@ func CheckDbMigration(cfg *MigrationConfig) error {
 
 	// Apply final defaults if still empty
 	if cfg.DbPoolName == "" {
-		cfg.DbPoolName = "main-db"
+		names, err := dbpool_crud.ListDbPools()
+		if err != nil || len(names) == 0 {
+			return fmt.Errorf("no database pools defined - check your config.yaml dbpool-definitions section")
+		}
+		cfg.DbPoolName = names[0] // Use first available pool
 	}
 	if cfg.SchemaTable == "" {
 		cfg.SchemaTable = "schema_migrations"

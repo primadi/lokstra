@@ -1,4 +1,4 @@
-package dbpool_manager
+package dbpool_crud
 
 import (
 	"context"

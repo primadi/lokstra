@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/deploy/loader/internal"
 	"github.com/primadi/lokstra/core/deploy/loader/resolver"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/xeipuuv/gojsonschema"
@@ -73,6 +72,16 @@ func loadConfig(paths ...string) (*schema.DeployConfig, error) {
 		}
 	}
 
+	// STEP 1.5: Validate merged config BEFORE any resolution
+	// This catches schema errors early before decode filters them out
+	mergedBytes, err := yaml.Marshal(merged)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal merged config for validation: %w", err)
+	}
+	if err := ValidateConfigYAML(mergedBytes); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
 	// STEP 2: Normalize shorthand servers (must be before getting server key)
 	normalizeShorthandServers(merged)
 
@@ -121,11 +130,6 @@ func loadConfig(paths ...string) (*schema.DeployConfig, error) {
 
 	// STEP 9: Normalize server definitions (convert helper fields to apps)
 	normalizeServerDefinitions(&finalConfig)
-
-	// STEP 10: Validate final config
-	if err := ValidateConfig(&finalConfig); err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
-	}
 
 	return &finalConfig, nil
 }
@@ -248,15 +252,21 @@ func mergeMaps[T any](target, source map[string]*T) map[string]*T {
 	return result
 }
 
-// ValidateConfig validates a deployment configuration against JSON schema
-func ValidateConfig(config *schema.DeployConfig) error {
+// ValidateConfigYAML validates raw YAML bytes against JSON schema
+// This must be called BEFORE YAML decode to catch invalid fields
+func ValidateConfigYAML(yamlData []byte) error {
 	// Load embedded schema from schema package
 	schemaData := schema.GetSchemaBytes()
 	schemaLoader := gojsonschema.NewBytesLoader(schemaData)
 
-	// Convert config to map for validation
-	configMap := internal.ConfigToMap(config)
-	documentLoader := gojsonschema.NewGoLoader(configMap) // Validate
+	// Parse YAML to generic map (don't use strict struct decode)
+	var configMap map[string]any
+	if err := yaml.Unmarshal(yamlData, &configMap); err != nil {
+		return fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	// Validate against schema
+	documentLoader := gojsonschema.NewGoLoader(configMap)
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
 		return fmt.Errorf("validation error: %w", err)

@@ -6,9 +6,13 @@ configs:
     user-store: postgres-user-store
 
 dbpool-definitions:
+  db_core:
+    dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
+    schema: ${GLOBAL_DB_SCHEMA:lokstra_core}
   db_auth:
     dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
-    schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
+    schema: ${GLOBAL_DB_SCHEMA:lokstra_core}
+
 
 servers:
   api-server:
