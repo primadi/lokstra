@@ -1661,11 +1661,22 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 			return "0"
 		case "[]byte":
 			return "nil"
+		case "string":
+			return `""`
 		default:
 			// Check if it's a slice type
 			if strings.HasPrefix(fieldType, "[]") {
 				return "nil"
 			}
+			// Check if it's a pointer
+			if strings.HasPrefix(fieldType, "*") {
+				return "nil"
+			}
+			// For struct types, return zero value: StructType{}
+			if isStructType(fieldType) {
+				return fieldType + "{}"
+			}
+			// Fallback for unknown types
 			return `""`
 		}
 	},
