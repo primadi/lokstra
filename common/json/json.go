@@ -25,6 +25,10 @@ import jsoniter "github.com/json-iterator/go"
 //		json.MarshalIndent = stdjson.MarshalIndent
 //	}
 
+type Unmarshaler interface {
+	UnmarshalJSON([]byte) error
+}
+
 var (
 	Marshal       = jsoniter.ConfigCompatibleWithStandardLibrary.Marshal
 	Unmarshal     = jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal

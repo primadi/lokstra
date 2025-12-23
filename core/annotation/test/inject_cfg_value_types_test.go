@@ -185,6 +185,185 @@ func (s *MixedService) GetInfo() string { return "info" }
 				`"time"`, `"strconv"`, `"strings"`, "github.com/primadi/lokstra/common/cast",
 			},
 		},
+		{
+			name: "StructWithComplexProperties",
+			serviceCode: `package testservice
+
+import "time"
+
+type NestedConfig struct {
+	Host string
+	Port int
+}
+
+type ComplexConfig struct {
+	Name     string
+	Secret   []byte
+	Timeout  time.Duration
+	Hosts    []string
+	Ports    []int
+	Nested   NestedConfig
+	Servers  []NestedConfig
+}
+
+// @RouterService name="complex-service", prefix="/api/complex"
+type ComplexService struct {
+	// @InjectCfgValue "config"
+	Config ComplexConfig
+}
+
+// @Route "GET /"
+func (s *ComplexService) GetInfo() string { return "info" }
+`,
+			expectedStrings: []string{
+				"Config", "ComplexConfig",
+				"github.com/primadi/lokstra/common/cast",
+				"cast.ToStruct", // Uses cast.ToStruct for struct conversion
+			},
+		},
+		{
+			name: "StructWithDefaultValue",
+			serviceCode: `package testservice
+
+type AppConfig struct {
+	Name string
+	Port int
+}
+
+// @RouterService name="default-service", prefix="/api/default"
+type DefaultService struct {
+	// @InjectCfgValue key="appconfig", default="AppConfig{Name: \"myapp\", Port: 8080}"
+	Config AppConfig
+}
+
+// @Route "GET /"
+func (s *DefaultService) GetInfo() string { return "info" }
+`,
+			expectedStrings: []string{
+				"Config", "AppConfig",
+				"github.com/primadi/lokstra/common/cast",
+				"cast.ToStruct",
+				`return AppConfig{Name: \"myapp\", Port: 8080}`, // Default value (with escaped quotes)
+			},
+		},
+		{
+			name: "StructWithCustomUnmarshalJSON",
+			serviceCode: `package testservice
+
+import (
+	"encoding/json"
+	"time"
+)
+
+// CustomDate implements json.Unmarshaler for flexible date parsing
+type CustomDate struct {
+	time.Time
+}
+
+func (cd *CustomDate) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		if t, err := time.Parse("2006-01-02", str); err == nil {
+			cd.Time = t
+			return nil
+		}
+	}
+	return json.Unmarshal(data, &cd.Time)
+}
+
+type ScheduleConfig struct {
+	EventName string
+	StartDate CustomDate
+	Duration  time.Duration
+}
+
+// @RouterService name="schedule-service", prefix="/api/schedule"
+type ScheduleService struct {
+	// @InjectCfgValue "schedule"
+	Config ScheduleConfig
+}
+
+// @Route "GET /"
+func (s *ScheduleService) GetInfo() string { return "info" }
+`,
+			expectedStrings: []string{
+				"Config", "ScheduleConfig",
+				"github.com/primadi/lokstra/common/cast",
+				"cast.ToStruct",
+			},
+		},
+		{
+			name: "StructWithCustomUnmarshalJSON_AndDefault",
+			serviceCode: `package testservice
+
+import (
+	"encoding/json"
+	"time"
+)
+
+// CustomDate implements json.Unmarshaler for flexible date parsing
+type CustomDate struct {
+	time.Time
+}
+
+func (cd *CustomDate) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		if t, err := time.Parse("2006-01-02", str); err == nil {
+			cd.Time = t
+			return nil
+		}
+	}
+	return json.Unmarshal(data, &cd.Time)
+}
+
+type ScheduleConfig struct {
+	EventName string
+	StartDate CustomDate
+	Duration  time.Duration
+}
+
+// @RouterService name="schedule-service", prefix="/api/schedule"
+type ScheduleService struct {
+	// @InjectCfgValue key="schedule", default="ScheduleConfig{EventName: \"DefaultEvent\", Duration: 3600000000000}"
+	Config ScheduleConfig
+}
+
+// @Route "GET /"
+func (s *ScheduleService) GetInfo() string { return "info" }
+`,
+			expectedStrings: []string{
+				"Config", "ScheduleConfig",
+				"github.com/primadi/lokstra/common/cast",
+				"cast.ToStruct",
+				`return ScheduleConfig{EventName: \"DefaultEvent\", Duration: 3600000000000}`,
+			},
+		},
+		{
+			name: "StructWithDefaultValue_UsingBacktick",
+			serviceCode: `package testservice
+
+type AppConfig struct {
+	Name string
+	Port int
+}
+
+// @RouterService name="default-service", prefix="/api/default"
+type DefaultService struct {
+	// @InjectCfgValue key="appconfig", default=` + "`AppConfig{Name: \"myapp\", Port: 8080}`" + `
+	Config AppConfig
+}
+
+// @Route "GET /"
+func (s *DefaultService) GetInfo() string { return "info" }
+`,
+			expectedStrings: []string{
+				"Config", "AppConfig",
+				"github.com/primadi/lokstra/common/cast",
+				"cast.ToStruct",
+				`return AppConfig{Name: "myapp", Port: 8080}`, // Backtick: no escaped quotes!
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -5,6 +5,9 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
+	"time"
+
+	"github.com/primadi/lokstra/common/json"
 )
 
 // cache: map[reflect.Type]map[string]int
@@ -22,7 +25,10 @@ func getFieldMap(t reflect.Type) map[string]int {
 			continue
 		}
 		name := field.Tag.Get("json")
-		if name == "" || name == "-" {
+		if name == "-" {
+			continue // Skip fields with json:"-"
+		}
+		if name == "" {
 			name = field.Name
 		}
 		fm[name] = i
@@ -87,6 +93,21 @@ func assignValue(field reflect.Value, raw any, strict bool) error {
 
 	rawVal := reflect.ValueOf(raw)
 	ft := field.Type()
+
+	// case 0: check if type implements json.Unmarshaler
+	if field.CanAddr() {
+		if unmarshaler, ok := field.Addr().Interface().(json.Unmarshaler); ok {
+			// Convert raw to JSON bytes
+			jsonBytes, err := json.Marshal(raw)
+			if err != nil {
+				return fmt.Errorf("failed to marshal for Unmarshaler: %w", err)
+			}
+			if err := unmarshaler.UnmarshalJSON(jsonBytes); err != nil {
+				return fmt.Errorf("UnmarshalJSON failed: %w", err)
+			}
+			return nil
+		}
+	}
 
 	// case 1: langsung assignable
 	if rawVal.Type().AssignableTo(ft) {
@@ -171,6 +192,21 @@ func tryConvert(val reflect.Value, targetType reflect.Type) (reflect.Value, bool
 			t, err := ToTime(val.String())
 			if err == nil {
 				return reflect.ValueOf(t), true
+			}
+		}
+	}
+
+	// Special case: time.Duration
+	if targetType.String() == "time.Duration" {
+		switch val.Kind() {
+		case reflect.Int, reflect.Int64:
+			return reflect.ValueOf(time.Duration(val.Int())), true
+		case reflect.Float64:
+			return reflect.ValueOf(time.Duration(val.Float())), true
+		case reflect.String:
+			d, err := time.ParseDuration(val.String())
+			if err == nil {
+				return reflect.ValueOf(d), true
 			}
 		}
 	}

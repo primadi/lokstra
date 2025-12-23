@@ -229,7 +229,7 @@ func isNamedArgument(arg string) bool {
 
 	for _, ch := range arg {
 		switch {
-		case (ch == '"' || ch == '\'') && quoteChar == 0:
+		case (ch == '"' || ch == '\'' || ch == '`') && quoteChar == 0:
 			inQuote = true
 			quoteChar = ch
 		case ch == quoteChar:
@@ -256,9 +256,10 @@ func parseArgValue(valueStr string) (any, error) {
 		return ParseArrayValue(valueStr)
 	}
 
-	// String: "value" or 'value'
+	// String: "value" or 'value' or `value`
 	if (strings.HasPrefix(valueStr, "\"") && strings.HasSuffix(valueStr, "\"")) ||
-		(strings.HasPrefix(valueStr, "'") && strings.HasSuffix(valueStr, "'")) {
+		(strings.HasPrefix(valueStr, "'") && strings.HasSuffix(valueStr, "'")) ||
+		(strings.HasPrefix(valueStr, "`") && strings.HasSuffix(valueStr, "`")) {
 		return valueStr[1 : len(valueStr)-1], nil
 	}
 
@@ -323,7 +324,7 @@ func SmartSplit(s string, delim rune) []string {
 
 	for _, ch := range s {
 		switch {
-		case (ch == '"' || ch == '\'') && quoteChar == 0:
+		case (ch == '"' || ch == '\'' || ch == '`') && quoteChar == 0:
 			// Start quote
 			inQuote = true
 			quoteChar = ch
