@@ -3,6 +3,9 @@ package kvstore_redis
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/primadi/lokstra/common/utils"
@@ -12,6 +15,13 @@ import (
 )
 
 const SERVICE_TYPE = "kvstore_redis"
+
+var ErrKeyNotFound = errors.New("key not found")
+
+var (
+	mu         sync.Mutex
+	poolClient = make(map[Config]*redis.Client)
+)
 
 // Config represents the configuration for Redis-based KvStore service.
 type Config struct {
@@ -28,6 +38,16 @@ type kvStoreRedis struct {
 }
 
 var _ serviceapi.KvStore = (*kvStoreRedis)(nil)
+
+// GetPrefix implements [serviceapi.KvStore].
+func (k *kvStoreRedis) GetPrefix() string {
+	return k.prefix
+}
+
+// SetPrefix implements [serviceapi.KvStore].
+func (k *kvStoreRedis) SetPrefix(prefix string) {
+	k.prefix = prefix
+}
 
 func (k *kvStoreRedis) prefixKey(key string) string {
 	if k.prefix != "" {
@@ -47,9 +67,15 @@ func (k *kvStoreRedis) Set(ctx context.Context, key string, value any, ttl time.
 func (k *kvStoreRedis) Get(ctx context.Context, key string, dest any) error {
 	data, err := k.client.Get(ctx, k.prefixKey(key)).Bytes()
 	if err != nil {
-		return err
+		if errors.Is(err, redis.Nil) {
+			return ErrKeyNotFound
+		}
+		return fmt.Errorf("redis get %q: %w", key, err)
 	}
-	return json.Unmarshal(data, dest)
+	if err := json.Unmarshal(data, dest); err != nil {
+		return fmt.Errorf("unmarshal key %q: %w", key, err)
+	}
+	return nil
 }
 
 func (k *kvStoreRedis) Delete(ctx context.Context, key string) error {
@@ -74,13 +100,14 @@ func (k *kvStoreRedis) Keys(ctx context.Context, pattern string) ([]string, erro
 		return nil, err
 	}
 
-	// Remove prefix from returned keys
-	if k.prefix != "" {
-		prefixLen := len(k.prefix) + 1 // +1 for the colon
-		for i, key := range keys {
-			if len(key) > prefixLen {
-				keys[i] = key[prefixLen:]
-			}
+	startItem := len(k.prefix)
+	if startItem > 0 {
+		startItem++ // to account for the colon
+	}
+
+	for i, key := range keys {
+		if len(key) > startItem {
+			keys[i] = key[startItem:]
 		}
 	}
 
@@ -95,12 +122,19 @@ func (k *kvStoreRedis) Shutdown() error {
 }
 
 func Service(cfg *Config) *kvStoreRedis {
-	client := redis.NewClient(&redis.Options{
-		Addr:     cfg.Addr,
-		Password: cfg.Password,
-		DB:       cfg.DB,
-		PoolSize: cfg.PoolSize,
-	})
+	mu.Lock()
+	client, exists := poolClient[*cfg]
+	if !exists {
+		client = redis.NewClient(&redis.Options{
+			Addr:     cfg.Addr,
+			Password: cfg.Password,
+			DB:       cfg.DB,
+			PoolSize: cfg.PoolSize,
+		})
+		poolClient[*cfg] = client
+	}
+	mu.Unlock()
+
 	return &kvStoreRedis{
 		client: client,
 		prefix: cfg.Prefix,

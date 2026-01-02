@@ -8,9 +8,9 @@ import (
 
 	"github.com/primadi/lokstra/services/dbpool_pg"
 	"github.com/primadi/lokstra/services/email_smtp"
-	"github.com/primadi/lokstra/services/kvstore_redis"
+	"github.com/primadi/lokstra/services/kvstore/kvstore_inmemory"
+	"github.com/primadi/lokstra/services/kvstore/kvstore_redis"
 	"github.com/primadi/lokstra/services/metrics_prometheus"
-	"github.com/primadi/lokstra/services/redis"
 	"github.com/primadi/lokstra/services/sync_config_pg"
 )
 
@@ -18,8 +18,8 @@ import (
 // Note: Auth services have been moved to github.com/primadi/lokstra-auth
 func RegisterAllServices() {
 	// Core services
-	redis.Register()
 	kvstore_redis.Register()
+	kvstore_inmemory.Register()
 	metrics_prometheus.Register()
 	dbpool_pg.Register()
 	email_smtp.Register()
