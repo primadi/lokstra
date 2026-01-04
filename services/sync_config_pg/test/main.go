@@ -8,10 +8,13 @@ import (
 	"github.com/primadi/lokstra/core/deploy/loader"
 	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_registry"
+	"github.com/primadi/lokstra/services/dbpool_pg"
 	"github.com/primadi/lokstra/services/sync_config_pg"
 )
 
 func main() {
+	dbpool_pg.Register()
+
 	// 1. Bootstrap Lokstra framework
 	lokstra_init.Bootstrap()
 
@@ -20,11 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	lokstra_init.UsePgxDbPoolManager(true)
 	sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
-	if err := loader.LoadDbPoolDefsFromConfig(); err != nil {
-		panic(err)
-	}
 
 	// 3. Register routers
 	registerRouters()

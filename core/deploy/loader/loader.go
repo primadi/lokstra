@@ -205,7 +205,6 @@ func applyConfigOverrides(config *schema.DeployConfig) {
 func mergeConfigs(target, source *schema.DeployConfig) *schema.DeployConfig {
 	result := &schema.DeployConfig{
 		Configs:               mergeMap(target.Configs, source.Configs),
-		DbPoolDefinitions:     mergeMaps(target.DbPoolDefinitions, source.DbPoolDefinitions),
 		MiddlewareDefinitions: mergeMaps(target.MiddlewareDefinitions, source.MiddlewareDefinitions),
 		ServiceDefinitions:    mergeMaps(target.ServiceDefinitions, source.ServiceDefinitions),
 		RouterDefinitions:     mergeMaps(target.RouterDefinitions, source.RouterDefinitions), // Renamed from Routers

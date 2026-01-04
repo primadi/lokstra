@@ -32,19 +32,15 @@ type InitializeConfig struct {
 	PgxSyncHeartbeatInterval time.Duration
 	PgxSyncReconnectInterval time.Duration
 
-	// 5. EnableDbPoolManager
-	EnableDbPoolManager bool
-	IsDbPoolAutoSync    bool
-
-	// 6. EnableDbMigration
+	// 5. EnableDbMigration
 	EnableDbMigration   bool
 	MigrationFolder     string
 	SkipMigrationOnProd bool
 
-	// 7. ServerInit Func
+	// 6. ServerInit Func
 	ServerInitFunc func() error
 
-	// 8. Init and Run Server
+	// 7. Init and Run Server
 	IsRunServer bool
 }
 
@@ -62,7 +58,6 @@ func BootstrapAndRun(opts ...InitializeOption) error {
 		LogLevel:                 logger.LogLevelInfo,
 		EnableLoadConfig:         true,
 		EnableAnnotation:         true, // Auto-detect @RouterService
-		IsDbPoolAutoSync:         false,
 		EnablePgxSyncMap:         false,
 		SkipMigrationOnProd:      true,
 		PgxSyncMapDbPoolName:     "db_main",
@@ -88,8 +83,6 @@ func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
 		if len(cfg.PgxSyncMapDbPoolName) == 0 {
 			return cfg.returnError(fmt.Errorf("PgxSyncMapDbPoolName must be set when UsePgxSyncMap is true"))
 		}
-	} else if cfg.IsDbPoolAutoSync {
-		return cfg.returnError(fmt.Errorf("IsDbPoolAutoSync requires PgxSyncMap to be enabled"))
 	}
 
 	// 1. Set log level
@@ -117,14 +110,7 @@ func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
 			cfg.PgxSyncHeartbeatInterval, cfg.PgxSyncReconnectInterval)
 	}
 
-	// 5. Crewate Db Pool Manager and load definitions from config
-	UsePgxDbPoolManager(cfg.IsDbPoolAutoSync)
-
-	if err := loader.LoadDbPoolDefsFromConfig(); err != nil {
-		return cfg.returnError(err)
-	}
-
-	// 6. Check DB Migrations
+	// 5. Check DB Migrations
 	if cfg.EnableDbMigration {
 		if mode := GetRuntimeMode(); mode != "prod" || !cfg.SkipMigrationOnProd {
 			if err := CheckDbMigrationsAuto(cfg.MigrationFolder); err != nil {
@@ -133,14 +119,14 @@ func BootstrapAndRunWithConfig(cfg *InitializeConfig) error {
 		}
 	}
 
-	// 7. Server Init Func
+	// 6. Server Init Func
 	if cfg.ServerInitFunc != nil {
 		if err := cfg.ServerInitFunc(); err != nil {
 			return cfg.returnError(err)
 		}
 	}
 
-	// 8. Init and Run Server
+	// 7. Init and Run Server
 	if cfg.IsRunServer {
 		if err := lokstra_registry.RunConfiguredServer(); err != nil {
 			return cfg.returnError(err)

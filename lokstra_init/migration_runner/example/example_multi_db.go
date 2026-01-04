@@ -21,12 +21,7 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	lokstra_init.UsePgxDbPoolManager(true)
-
 	sync_config_pg.Register("db_main", 5*time.Minute, 5*time.Second)
-	if err := loader.LoadDbPoolDefsFromConfig(); err != nil {
-		log.Fatalf("Failed to load named DB pools: %v", err)
-	}
 
 	// OPTION 1: Auto-scan all migration folders (RECOMMENDED)
 	// Scans multi_db/ for subdirectories, runs them in alphabetical order

@@ -61,14 +61,6 @@ func WithPgxSyncMapIntervals(heartBeatInterval, reconnectInterval time.Duration)
 	}
 }
 
-// enable or disable database pool auto synchronization
-// default enable is false
-func WithDbPoolAutoSync(enable bool) InitializeOption {
-	return func(c *InitializeConfig) {
-		c.IsDbPoolAutoSync = enable
-	}
-}
-
 // enable or disable database migrations with the given migration folder
 // default enable is false
 func WithDbMigrations(enable bool, folder string) InitializeOption {

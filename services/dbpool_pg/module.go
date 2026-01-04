@@ -79,7 +79,7 @@ func (cfg *Config) GetFinalDSN() string {
 	return dsnFinal
 }
 
-func Service(poolName string, cfg *Config) *pgxPostgresPool {
+func Service(poolName string, cfg *Config) *PgxPostgresPool {
 	dsn := cfg.GetFinalDSN()
 
 	svc, err := NewPgxPostgresPool(poolName, dsn, cfg.Schema, cfg.RlsContext)

@@ -16,7 +16,7 @@ Content-Type: application/json
 
 {
   "key": "mykey",
-  "value": "myvalue2"
+  "value": "myvalue1"
 }
 
 ### Set Value (example 2)

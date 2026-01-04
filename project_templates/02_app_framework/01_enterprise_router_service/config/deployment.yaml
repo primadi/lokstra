@@ -5,10 +5,12 @@ configs:
   store:
     order-repository: order-repository
 
-dbpool-definitions:
+service-definitions:
   db_main:
-    dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
-    schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
+    type: dbpool_pg
+    config:
+      dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
+      schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
     
 deployments:
   development:

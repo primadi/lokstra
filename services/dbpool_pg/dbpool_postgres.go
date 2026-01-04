@@ -59,21 +59,21 @@ func (r *rowWrapper) Scan(dest ...any) error {
 	return r.row.Scan(dest...)
 }
 
-type pgxPostgresPool struct {
+type PgxPostgresPool struct {
 	pool       *pgxpool.Pool
 	poolName   string // Pool name for transaction tracking
-	dsn        string
-	schema     string
-	rlsContext map[string]string
+	Dsn        string
+	Schema     string
+	RlsContext map[string]string
 }
 
 // Begin implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Begin(ctx context.Context) (serviceapi.DbTx, error) {
+func (p *PgxPostgresPool) Begin(ctx context.Context) (serviceapi.DbTx, error) {
 	panic("Begin() should not be called directly on DbPool. Use Acquire() first to get a DbConn, then call Begin() on it.")
 }
 
 // Exec implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Exec(ctx context.Context, query string, args ...any) (serviceapi.CommandResult, error) {
+func (p *PgxPostgresPool) Exec(ctx context.Context, query string, args ...any) (serviceapi.CommandResult, error) {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire connection: %w", err)
@@ -83,12 +83,12 @@ func (p *pgxPostgresPool) Exec(ctx context.Context, query string, args ...any) (
 }
 
 // IsErrorNoRows implements serviceapi.DbPool.
-func (p *pgxPostgresPool) IsErrorNoRows(err error) bool {
+func (p *PgxPostgresPool) IsErrorNoRows(err error) bool {
 	return errors.Is(err, pgx.ErrNoRows)
 }
 
 // IsExists implements serviceapi.DbPool.
-func (p *pgxPostgresPool) IsExists(ctx context.Context, query string, args ...any) (bool, error) {
+func (p *PgxPostgresPool) IsExists(ctx context.Context, query string, args ...any) (bool, error) {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to acquire connection: %w", err)
@@ -98,7 +98,7 @@ func (p *pgxPostgresPool) IsExists(ctx context.Context, query string, args ...an
 }
 
 // Ping implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Ping(ctx context.Context) error {
+func (p *PgxPostgresPool) Ping(ctx context.Context) error {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to acquire connection: %w", err)
@@ -108,7 +108,7 @@ func (p *pgxPostgresPool) Ping(ctx context.Context) error {
 }
 
 // Query implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Query(ctx context.Context, query string, args ...any) (serviceapi.Rows, error) {
+func (p *PgxPostgresPool) Query(ctx context.Context, query string, args ...any) (serviceapi.Rows, error) {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire connection: %w", err)
@@ -123,7 +123,7 @@ func (p *pgxPostgresPool) Query(ctx context.Context, query string, args ...any) 
 }
 
 // QueryRow implements serviceapi.DbPool.
-func (p *pgxPostgresPool) QueryRow(ctx context.Context, query string, args ...any) serviceapi.Row {
+func (p *PgxPostgresPool) QueryRow(ctx context.Context, query string, args ...any) serviceapi.Row {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return &errorRow{err: err}
@@ -134,12 +134,12 @@ func (p *pgxPostgresPool) QueryRow(ctx context.Context, query string, args ...an
 }
 
 // Release implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Release() error {
+func (p *PgxPostgresPool) Release() error {
 	panic("Release() should not be called directly on DbPool. Use Acquire() first to get a DbConn, then call Release() on it.")
 }
 
 // SelectManyRowMap implements serviceapi.DbPool.
-func (p *pgxPostgresPool) SelectManyRowMap(ctx context.Context, query string, args ...any) ([]serviceapi.RowMap, error) {
+func (p *PgxPostgresPool) SelectManyRowMap(ctx context.Context, query string, args ...any) ([]serviceapi.RowMap, error) {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire connection: %w", err)
@@ -149,7 +149,7 @@ func (p *pgxPostgresPool) SelectManyRowMap(ctx context.Context, query string, ar
 }
 
 // SelectManyWithMapper implements serviceapi.DbPool.
-func (p *pgxPostgresPool) SelectManyWithMapper(ctx context.Context, fnScan func(serviceapi.Row) (any, error), query string, args ...any) (any, error) {
+func (p *PgxPostgresPool) SelectManyWithMapper(ctx context.Context, fnScan func(serviceapi.Row) (any, error), query string, args ...any) (any, error) {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire connection: %w", err)
@@ -159,7 +159,7 @@ func (p *pgxPostgresPool) SelectManyWithMapper(ctx context.Context, fnScan func(
 }
 
 // SelectMustOne implements serviceapi.DbPool.
-func (p *pgxPostgresPool) SelectMustOne(ctx context.Context, query string, args []any, dest ...any) error {
+func (p *PgxPostgresPool) SelectMustOne(ctx context.Context, query string, args []any, dest ...any) error {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to acquire connection: %w", err)
@@ -169,7 +169,7 @@ func (p *pgxPostgresPool) SelectMustOne(ctx context.Context, query string, args 
 }
 
 // SelectOne implements serviceapi.DbPool.
-func (p *pgxPostgresPool) SelectOne(ctx context.Context, query string, args []any, dest ...any) error {
+func (p *PgxPostgresPool) SelectOne(ctx context.Context, query string, args []any, dest ...any) error {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to acquire connection: %w", err)
@@ -179,7 +179,7 @@ func (p *pgxPostgresPool) SelectOne(ctx context.Context, query string, args []an
 }
 
 // SelectOneRowMap implements serviceapi.DbPool.
-func (p *pgxPostgresPool) SelectOneRowMap(ctx context.Context, query string, args ...any) (serviceapi.RowMap, error) {
+func (p *PgxPostgresPool) SelectOneRowMap(ctx context.Context, query string, args ...any) (serviceapi.RowMap, error) {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire connection: %w", err)
@@ -189,7 +189,7 @@ func (p *pgxPostgresPool) SelectOneRowMap(ctx context.Context, query string, arg
 }
 
 // Transaction implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Transaction(ctx context.Context, fn func(tx serviceapi.DbExecutor) error) error {
+func (p *PgxPostgresPool) Transaction(ctx context.Context, fn func(tx serviceapi.DbExecutor) error) error {
 	cn, err := p.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to acquire connection: %w", err)
@@ -199,35 +199,35 @@ func (p *pgxPostgresPool) Transaction(ctx context.Context, fn func(tx serviceapi
 }
 
 // SetSchemaRls implements serviceapi.DbPoolSchemaRls.
-func (p *pgxPostgresPool) SetSchemaRls(schema string, rlsContext map[string]string) {
-	p.schema = schema
-	p.rlsContext = rlsContext
+func (p *PgxPostgresPool) SetSchemaRls(schema string, rlsContext map[string]string) {
+	p.Schema = schema
+	p.RlsContext = rlsContext
 }
 
 // Shutdown implements serviceapi.DbPool.
-func (p *pgxPostgresPool) Shutdown() error {
+func (p *PgxPostgresPool) Shutdown() error {
 	p.pool.Close()
 	return nil
 }
 
-func (p *pgxPostgresPool) Acquire(ctx context.Context) (serviceapi.DbConn, error) {
+func (p *PgxPostgresPool) Acquire(ctx context.Context) (serviceapi.DbConn, error) {
 	conn, err := p.pool.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(p.schema) > 0 {
-		stmt := "SET search_path TO " + pgx.Identifier{p.schema}.Sanitize()
+	if len(p.Schema) > 0 {
+		stmt := "SET search_path TO " + pgx.Identifier{p.Schema}.Sanitize()
 		if _, err := conn.Exec(ctx, stmt); err != nil {
 			conn.Release()
 			return nil, err
 		}
 	}
 
-	if len(p.rlsContext) > 0 {
+	if len(p.RlsContext) > 0 {
 		// Build all SET LOCAL statements in one query
 		var stmts []string
-		for key, value := range p.rlsContext {
+		for key, value := range p.RlsContext {
 			// Key is sanitized as identifier, value is quoted as literal string
 			stmt := fmt.Sprintf("SET LOCAL %s = '%s'", pgx.Identifier{key}.Sanitize(), value)
 			stmts = append(stmts, stmt)
@@ -245,10 +245,10 @@ func (p *pgxPostgresPool) Acquire(ctx context.Context) (serviceapi.DbConn, error
 	}, nil
 }
 
-var _ serviceapi.DbPool = (*pgxPostgresPool)(nil)
-var _ serviceapi.DbPoolSchemaRls = (*pgxPostgresPool)(nil)
+var _ serviceapi.DbPool = (*PgxPostgresPool)(nil)
+var _ serviceapi.DbPoolSchemaRls = (*PgxPostgresPool)(nil)
 
-func NewPgxPostgresPool(poolName string, dsn string, schema string, rlsContext map[string]string) (*pgxPostgresPool, error) {
+func NewPgxPostgresPool(poolName string, dsn string, schema string, rlsContext map[string]string) (*PgxPostgresPool, error) {
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -258,11 +258,11 @@ func NewPgxPostgresPool(poolName string, dsn string, schema string, rlsContext m
 		return nil, err
 	}
 
-	return &pgxPostgresPool{
+	return &PgxPostgresPool{
 		pool:       pool,
 		poolName:   poolName,
-		dsn:        dsn,
-		schema:     schema,
-		rlsContext: rlsContext,
+		Dsn:        dsn,
+		Schema:     schema,
+		RlsContext: rlsContext,
 	}, nil
 }

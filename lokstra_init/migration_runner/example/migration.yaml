@@ -3,8 +3,6 @@
 #
 # This file allows you to configure migration behavior per database pool
 # Useful for multi-database systems (tenant-db, ledger-db, analytics-db, etc)
-
-# Database pool name from config.yaml dbpool-definitions section
 # If not specified, defaults to "main-db"
 dbpool-name: main-db
 

@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/primadi/lokstra/common/json"
 	"github.com/primadi/lokstra/common/utils"
-	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
 	"github.com/primadi/lokstra/services/dbpool_pg"
@@ -58,25 +57,6 @@ type syncConfigPG struct {
 
 var _ serviceapi.SyncConfig = (*syncConfigPG)(nil)
 
-func getDsnAndSchema(cfg *Config) (string, string) {
-	deployConfig := deploy.Global().GetDeployConfig()
-	if deployConfig == nil {
-		panic("sync_config_pg: deploy config not found")
-	}
-
-	poolConfig, ok := deployConfig.DbPoolDefinitions[cfg.DbPoolName]
-	if !ok {
-		panic(fmt.Sprintf("sync_config_pg: named pool '%s' not found in config", cfg.DbPoolName))
-	}
-
-	schema := poolConfig.Schema
-	if schema == "" {
-		schema = "public" // Default schema
-	}
-
-	return poolConfig.DSN, schema
-}
-
 // NewSyncConfigPG creates a new SyncConfig instance from config
 // It will automatically get the database pool and create listener connection
 // If an instance with the same configuration already exists, it will be reused (singleton per config)
@@ -91,13 +71,17 @@ func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
 	}
 	instanceMu.Unlock()
 
-	dsn, schema := getDsnAndSchema(cfg)
+	dbPool := lokstra_registry.GetService[serviceapi.DbPool](cfg.DbPoolName)
+	pgxDbPool, ok := dbPool.(*dbpool_pg.PgxPostgresPool)
+	if !ok {
+		panic("cannot create dbPool " + cfg.DbPoolName)
+	}
 
 	// Get DSN for listener connection
 	var listenerDB *pgxpool.Pool
 	if cfg.EnableNotification {
 		var err error
-		listenerDB, err = pgxpool.New(context.Background(), dsn)
+		listenerDB, err = pgxpool.New(context.Background(), pgxDbPool.Dsn)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create listener pool: %w", err)
 		}
@@ -105,15 +89,6 @@ func NewSyncConfigPG(cfg *Config) (serviceapi.SyncConfig, error) {
 
 	// Create context with cancel for goroutine management
 	ctx, cancel := context.WithCancel(context.Background())
-
-	dbPool, err := dbpool_pg.NewPgxPostgresPool(cfg.DbPoolName, dsn, schema, nil)
-	if err != nil {
-		if listenerDB != nil {
-			listenerDB.Close()
-		}
-		cancel()
-		return nil, fmt.Errorf("failed to create db pool: %w", err)
-	}
 
 	service := &syncConfigPG{
 		cfg:         cfg,
@@ -576,6 +551,32 @@ func ServiceFactory(mapCfg map[string]any) any {
 		EnableNotification: utils.GetValueFromMap(mapCfg, "enable_notification", true),
 	}
 
+	dbPool := lokstra_registry.GetService[serviceapi.DbPool](cfg.DbPoolName)
+	pgxDbPool, ok := dbPool.(*dbpool_pg.PgxPostgresPool)
+	if !ok {
+		panic("cannot create dbPool " + cfg.DbPoolName)
+	}
+
+	ctx := context.Background()
+	// acquire a connection
+	conn, err := dbPool.Acquire(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("failed to acquire connection for sync_config_pg registration: %v", err))
+	}
+	defer conn.Release()
+	// check if table exists
+	exists, err := conn.IsExists(ctx, "SELECT to_regclass($1)", fmt.Sprintf("%s.sync_config", pgxDbPool.Schema))
+	if err != nil {
+		panic(fmt.Sprintf("failed to check sync_config table existence: %v", err))
+	}
+	if !exists {
+		// create table
+		_, err = conn.Exec(ctx, sync_config_sql)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create sync_config table: %v", err))
+		}
+	}
+
 	svc, err := Service(cfg)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create sync_config_pg service: %v", err))
@@ -589,33 +590,6 @@ var sync_config_sql string
 
 // Register registers the SyncConfig service type
 func Register(dbPoolName string, heartBeatInterval, reconnectInterval time.Duration) {
-	// get dsn and schema from dbPoolName, read config from deploy.Global()
-	dsn, schema := getDsnAndSchema(&Config{DbPoolName: dbPoolName})
-	// check is sync_config table on the schema, if not create it using sync_config_sql
-	dbPool, err := dbpool_pg.NewPgxPostgresPool(dbPoolName, dsn, schema, nil)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create connection pool for sync_config_pg registration: %v", err))
-	}
-	ctx := context.Background()
-	// acquire a connection
-	conn, err := dbPool.Acquire(ctx)
-	if err != nil {
-		panic(fmt.Sprintf("failed to acquire connection for sync_config_pg registration: %v", err))
-	}
-	defer conn.Release()
-	// check if table exists
-	exists, err := conn.IsExists(ctx, "SELECT to_regclass($1)", fmt.Sprintf("%s.sync_config", schema))
-	if err != nil {
-		panic(fmt.Sprintf("failed to check sync_config table existence: %v", err))
-	}
-	if !exists {
-		// create table
-		_, err = conn.Exec(ctx, sync_config_sql)
-		if err != nil {
-			panic(fmt.Sprintf("failed to create sync_config table: %v", err))
-		}
-	}
-
 	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory)
 	SetDefaultSyncConfigPG(dbPoolName, heartBeatInterval, reconnectInterval)
 }

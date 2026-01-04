@@ -138,24 +138,6 @@ configs:
   database:
     host: "prod-db.example.com"
   db:url: "postgresql://localhost:5432/mydb"  # Key with colon
-
-dbpool-definitions:
-  main:
-    # Simple config reference (no colons in key)
-    host: ${@cfg:database.host}
-    # Interpreted as: key="database.host" ✅
-    
-    # Config key contains colon - WITHOUT quotes (ambiguous)
-    url: ${@cfg:db:url}
-    # Interpreted as: key="db", default="url" ❌
-    
-    # Config key contains colon - WITH quotes (clear)
-    url: ${@cfg:'db:url'}
-    # Interpreted as: key="db:url" ✅
-    
-    # With default value
-    url: ${@cfg:'db:url':postgresql://localhost:5432/fallback}
-    # Interpreted as: key="db:url", default="postgresql://localhost:5432/fallback" ✅
 ```
 
 ### Best Practices
@@ -231,11 +213,6 @@ configs:
   db:
     host: "prod-db.example.com"
     port: 5432
-  
-dbpool-definitions:
-  main:
-    host: ${@cfg:db.host}             # → "prod-db.example.com"
-    port: ${@cfg:db.port}             # → 5432
 ```
 
 **Features:**
@@ -502,18 +479,19 @@ configs:
   aws:
     region: ${AWS_REGION:us-east-1}   # @env provider
 
-dbpool-definitions:
-  main:
-    # Mix of providers
-    host: ${@cfg:db.host}                           # @cfg provider
-    port: ${@cfg:db.port}                             # @cfg provider
-    database: ${DB_NAME}                             # @env provider (default)
-    username: ${@aws-secret:prod/db/username}        # @aws-secret provider
-    password: ${@aws-secret:prod/db/password}        # @aws-secret provider
-    min-conns: 2
-    max-conns: 10
-
 service-definitions:
+  main:
+    type: dbpool_pg
+    config:
+      # Mix of providers
+      host: ${@cfg:db.host}                           # @cfg provider
+      port: ${@cfg:db.port}                             # @cfg provider
+      database: ${DB_NAME}                             # @env provider (default)
+      username: ${@aws-secret:prod/db/username}        # @aws-secret provider
+      password: ${@aws-secret:prod/db/password}        # @aws-secret provider
+      min-conns: 2
+      max-conns: 10
+
   api-service:
     type: api-service-factory
     config:

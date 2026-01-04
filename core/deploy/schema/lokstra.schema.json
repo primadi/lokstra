@@ -294,79 +294,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "dbPoolConfig": {
-      "type": "object",
-      "description": "Database pool configuration",
-      "properties": {
-        "dsn": {
-          "type": "string",
-          "description": "PostgreSQL connection string (DSN)"
-        },
-        "host": {
-          "type": "string",
-          "description": "Database host"
-        },
-        "port": {
-          "type": "integer",
-          "description": "Database port",
-          "default": 5432,
-          "minimum": 1,
-          "maximum": 65535
-        },
-        "database": {
-          "type": "string",
-          "description": "Database name"
-        },
-        "username": {
-          "type": "string",
-          "description": "Database username"
-        },
-        "password": {
-          "type": "string",
-          "description": "Database password"
-        },
-        "schema": {
-          "type": "string",
-          "description": "Database schema",
-          "default": "public"
-        },
-        "min-conns": {
-          "type": "integer",
-          "description": "Minimum number of connections in the pool",
-          "default": 2,
-          "minimum": 0
-        },
-        "max-conns": {
-          "type": "integer",
-          "description": "Maximum number of connections in the pool",
-          "default": 10,
-          "minimum": 1
-        },
-        "max-idle-time": {
-          "type": "string",
-          "description": "Maximum idle time for connections (duration string, e.g., '30m')",
-          "default": "30m",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
-        },
-        "max-lifetime": {
-          "type": "string",
-          "description": "Maximum lifetime for connections (duration string, e.g., '1h')",
-          "default": "1h",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
-        },
-        "sslmode": {
-          "type": "string",
-          "description": "SSL mode for connection",
-          "enum": ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"],
-          "default": "disable"
-        }
-      },
-      "oneOf": [
-        { "required": ["dsn"] },
-        { "required": ["host", "database"] }
-      ],
-      "additionalProperties": false
     }
   },
   "properties": {
@@ -383,13 +310,6 @@
             { "type": "array" }
           ]
         }
-      }
-    },
-    "dbpool-definitions": {
-      "type": "object",
-      "description": "Named database pool configurations",
-      "patternProperties": {
-        "^[a-z][a-z0-9-]*$": { "$ref": "#/definitions/dbPoolConfig" }
       }
     },
     "middleware-definitions": {
