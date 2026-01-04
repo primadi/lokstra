@@ -3,13 +3,11 @@ package loader
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/primadi/lokstra/common/logger"
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/deploy/schema"
 	"github.com/primadi/lokstra/core/router"
-	"github.com/primadi/lokstra/serviceapi"
 )
 
 // Case-insensitive map lookup helpers
@@ -977,116 +975,4 @@ func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
 
 	logger.LogDebug("✅ Config loaded successfully from: %v", configPaths)
 	return config, nil
-}
-
-// LoadDbPoolDefsFromConfig auto-discovers and sets up named DB pools from config
-// Requires dbpool-manager service to be already registered
-func LoadDbPoolDefsFromConfig() error {
-	registry := deploy.Global()
-	config := registry.GetDeployConfig()
-
-	// Check if dbpool-definitions section exists
-	if len(config.DbPoolDefinitions) == 0 {
-		// No dbpool-definitions section, skip
-		return nil
-	}
-
-	dpm, ok := deploy.Global().GetServiceAny("dbpool-manager")
-	if !ok || dpm == nil {
-		return fmt.Errorf("dbpool-manager service not found in registry")
-	}
-	dbPoolManager, ok := dpm.(serviceapi.DbPoolManager)
-	if !ok {
-		return fmt.Errorf("dbpool-manager service does not implement serviceapi.DbPoolManager interface")
-	}
-
-	// Setup each pool
-	for poolName, poolConfig := range config.DbPoolDefinitions {
-		// Extract DSN or build from components
-		dsn := poolConfig.DSN
-
-		// Extract optional pool parameters with best practice defaults
-		minConns := poolConfig.MinConns
-		if minConns == 0 {
-			minConns = 2 // Best practice: 2 minimum connections
-		}
-
-		maxConns := poolConfig.MaxConns
-		if maxConns == 0 {
-			maxConns = 10 // Best practice: 10 max connections
-		}
-
-		maxIdleTime := 30 * time.Minute // Best practice default
-		if poolConfig.MaxIdleTime != "" {
-			if parsed, err := time.ParseDuration(poolConfig.MaxIdleTime); err == nil {
-				maxIdleTime = parsed
-			}
-		}
-
-		maxLifetime := time.Hour // Best practice default
-		if poolConfig.MaxLifetime != "" {
-			if parsed, err := time.ParseDuration(poolConfig.MaxLifetime); err == nil {
-				maxLifetime = parsed
-			}
-		}
-
-		// If no DSN, build from components
-		if dsn == "" {
-			host := poolConfig.Host
-			port := poolConfig.Port
-			if port == 0 {
-				port = 5432 // Default PostgreSQL port
-			}
-			database := poolConfig.Database
-			username := poolConfig.Username
-			password := poolConfig.Password
-
-			if host == "" || database == "" {
-				return fmt.Errorf("dbpool-manager.%s: must provide either 'dsn' or 'host'+'database'", poolName)
-			}
-
-			// Build DSN with best practice defaults
-			sslmode := poolConfig.SSLMode
-			if sslmode == "" {
-				sslmode = "disable"
-			}
-
-			dsn = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s&pool_min_conns=%d&pool_max_conns=%d&pool_max_conn_idle_time=%s&pool_max_conn_lifetime=%s",
-				username, password, host, port, database, sslmode, minConns, maxConns, maxIdleTime, maxLifetime)
-		} else {
-			// DSN provided - apply optional pool parameters if not already set
-			opts := ""
-			if !strings.Contains(dsn, "pool_min_conns=") {
-				opts += fmt.Sprintf("&pool_min_conns=%d", minConns)
-			}
-			if !strings.Contains(dsn, "pool_max_conns=") {
-				opts += fmt.Sprintf("&pool_max_conns=%d", maxConns)
-			}
-			if !strings.Contains(dsn, "pool_max_conn_idle_time=") {
-				opts += fmt.Sprintf("&pool_max_conn_idle_time=%s", maxIdleTime)
-			}
-			if !strings.Contains(dsn, "pool_max_conn_lifetime=") {
-				opts += fmt.Sprintf("&pool_max_conn_lifetime=%s", maxLifetime)
-			}
-			if strings.Contains(dsn, "?") {
-				dsn += opts
-			} else {
-				dsn += "?" + strings.TrimPrefix(opts, "&")
-			}
-		}
-
-		// Extract schema (default: public)
-		schema := poolConfig.Schema
-		if schema == "" {
-			schema = "public"
-		}
-
-		// Set DSN and Schema for poolName
-		// This also auto-registers the pool as a lazy service
-		dbPoolManager.SetDbPoolManager(poolName, dsn, schema, poolConfig.RlsContext)
-
-		logger.LogDebug("✅ Registered DB pool: %s (schema: %s)", poolName, schema)
-	}
-
-	return nil
 }

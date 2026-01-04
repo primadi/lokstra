@@ -50,31 +50,41 @@ func (cfg *Config) GetFinalDSN() string {
 	}
 	dsnFinal := cfg.DSN
 
+	// Determine separator: ? if no query params yet, & if already has params
+	separator := "&"
+	if !strings.Contains(dsnFinal, "?") {
+		separator = "?"
+	}
+
 	if !strings.Contains(dsnFinal, "pool_min_conns=") {
-		dsnFinal += fmt.Sprintf("&pool_min_conns=%d", cfg.MinConns)
+		dsnFinal += fmt.Sprintf("%spool_min_conns=%d", separator, cfg.MinConns)
+		separator = "&"
 	}
 	if !strings.Contains(dsnFinal, "pool_max_conns=") {
-		dsnFinal += fmt.Sprintf("&pool_max_conns=%d", cfg.MaxConns)
+		dsnFinal += fmt.Sprintf("%spool_max_conns=%d", separator, cfg.MaxConns)
+		separator = "&"
 	}
 	if !strings.Contains(dsnFinal, "pool_max_conn_idle_time=") {
-		dsnFinal += fmt.Sprintf("&pool_max_conn_idle_time=%s", cfg.MaxIdleTime)
+		dsnFinal += fmt.Sprintf("%spool_max_conn_idle_time=%s", separator, cfg.MaxIdleTime)
+		separator = "&"
 	}
 	if !strings.Contains(dsnFinal, "pool_max_conn_lifetime=") {
-		dsnFinal += fmt.Sprintf("&pool_max_conn_lifetime=%s", cfg.MaxLifetime)
+		dsnFinal += fmt.Sprintf("%spool_max_conn_lifetime=%s", separator, cfg.MaxLifetime)
+		separator = "&"
 	}
 
 	if !strings.Contains(dsnFinal, "sslmode=") {
-		dsnFinal += fmt.Sprintf("&sslmode=%s", cfg.SSLMode)
+		dsnFinal += fmt.Sprintf("%ssslmode=%s", separator, cfg.SSLMode)
 	}
 	return dsnFinal
 }
 
-func Service(poolName string, cfg *Config) *pgxPostgresPool {
+func Service(poolName string, cfg *Config) *PgxPostgresPool {
 	dsn := cfg.GetFinalDSN()
 
 	svc, err := NewPgxPostgresPool(poolName, dsn, cfg.Schema, cfg.RlsContext)
 	if err != nil {
-		return nil
+		panic(fmt.Sprintf("failed to create dbpool_pg service for pool '%s': %v", poolName, err))
 	}
 	return svc
 }

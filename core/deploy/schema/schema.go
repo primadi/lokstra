@@ -14,7 +14,6 @@ func GetSchemaBytes() []byte {
 // This matches the JSON schema and supports multi-file merging
 type DeployConfig struct {
 	Configs               map[string]any               `yaml:"configs" json:"configs"`
-	DbPoolDefinitions     map[string]*DbPoolConfig     `yaml:"dbpool-definitions,omitempty" json:"dbpool-definitions,omitempty"`
 	MiddlewareDefinitions map[string]*MiddlewareDef    `yaml:"middleware-definitions,omitempty" json:"middleware-definitions,omitempty"`
 	ServiceDefinitions    map[string]*ServiceDef       `yaml:"service-definitions" json:"service-definitions"`
 	RouterDefinitions     map[string]*RouterDef        `yaml:"router-definitions,omitempty" json:"router-definitions,omitempty"` // Renamed from Routers
@@ -23,30 +22,6 @@ type DeployConfig struct {
 	// Shorthand: top-level servers (auto-creates 'default' deployment)
 	// Use this when you only need one deployment
 	Servers map[string]*ServerDefMap `yaml:"servers,omitempty" json:"servers,omitempty"`
-}
-
-// DbPoolConfig defines configuration for a named database pool
-type DbPoolConfig struct {
-	// Connection via DSN (highest priority)
-	DSN string `yaml:"dsn,omitempty" json:"dsn,omitempty"`
-
-	// Connection via components (used if DSN not provided)
-	Host     string `yaml:"host,omitempty" json:"host,omitempty"`
-	Port     int    `yaml:"port,omitempty" json:"port,omitempty"`
-	Database string `yaml:"database,omitempty" json:"database,omitempty"`
-	Username string `yaml:"username,omitempty" json:"username,omitempty"`
-	Password string `yaml:"password,omitempty" json:"password,omitempty"`
-
-	// Schema configuration
-	Schema     string            `yaml:"schema,omitempty" json:"schema,omitempty"`           // Default: "public"
-	RlsContext map[string]string `yaml:"rls-context,omitempty" json:"rls-context,omitempty"` // Row Level Security context variables
-
-	// Pool configuration (optional)
-	MinConns    int    `yaml:"min-conns,omitempty" json:"min-conns,omitempty"`
-	MaxConns    int    `yaml:"max-conns,omitempty" json:"max-conns,omitempty"`
-	MaxIdleTime string `yaml:"max-idle-time,omitempty" json:"max-idle-time,omitempty"` // Duration string (e.g., "30m")
-	MaxLifetime string `yaml:"max-lifetime,omitempty" json:"max-lifetime,omitempty"`   // Duration string (e.g., "1h")
-	SSLMode     string `yaml:"sslmode,omitempty" json:"sslmode,omitempty"`             // SSL mode (disable, require, etc.)
 }
 
 // RouterDef defines a router auto-generated from a service

@@ -25,7 +25,7 @@ DbTx (transaction)
 
 ### 1. DbPoolManager
 
-**Service** that manages multiple named database pools. Defined in YAML `dbpool-definitions:` section.
+**Service** that manages multiple named database pools.
 
 - Manages pool configurations (DSN, schema, etc.)
 - Creates and caches pool instances

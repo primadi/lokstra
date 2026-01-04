@@ -20,4 +20,10 @@ type KvStore interface {
 
 	// Gets all keys matching the pattern.
 	Keys(ctx context.Context, pattern string) ([]string, error)
+
+	// Sets Prefix for all keys
+	SetPrefix(prefix string)
+
+	// Gets Prefix for all keys
+	GetPrefix() string
 }

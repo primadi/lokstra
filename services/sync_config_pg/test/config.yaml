@@ -7,10 +7,12 @@ configs:
     # heartbeat_interval: ${DBPOOL_MANAGER_HEARTBEAT_INTERVAL:5} # in minutes
     # reconnect_interval: ${DBPOOL_MANAGER_RECONNECT_INTERVAL:5} # in seconds
     
-dbpool-definitions:
+service-definitions:
   db_main:
-    dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db}
-    schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
+    type: dbpool_pg
+    config:
+      dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db2}
+      schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
   
 deployments:
   monolith:
