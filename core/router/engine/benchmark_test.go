@@ -1,10 +1,13 @@
-package engine
+package engine_test
 
 import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/primadi/lokstra/core/router/engine"
+	chiengine "github.com/primadi/lokstra/core/router/engine/chi"
 )
 
 // Benchmark handlers
@@ -28,9 +31,9 @@ var (
 )
 
 // setupRouters creates routers with common test routes
-func setupRouters() (serveMux, serveMuxPlus, chiRouter RouterEngine) {
+func setupRouters() (serveMux, serveMuxPlus, chiRouter engine.RouterEngine) {
 	// ServeMux
-	sm := NewServeMux()
+	sm := engine.NewServeMux()
 	sm.Handle("GET /", simpleHandler)
 	sm.Handle("GET /users", simpleHandler)
 	sm.Handle("GET /users/{id}", pathValueHandler)
@@ -40,7 +43,7 @@ func setupRouters() (serveMux, serveMuxPlus, chiRouter RouterEngine) {
 	sm.Handle("GET /api/{path...}", wildcardHandler)
 
 	// ServeMuxPlus
-	smp := NewServeMuxPlus()
+	smp := engine.NewServeMuxPlus()
 	smp.Handle("GET /", simpleHandler)
 	smp.Handle("GET /users", simpleHandler)
 	smp.Handle("GET /users/{id}", pathValueHandler)
@@ -50,7 +53,7 @@ func setupRouters() (serveMux, serveMuxPlus, chiRouter RouterEngine) {
 	smp.Handle("GET /api/{path...}", wildcardHandler)
 
 	// ChiRouter
-	chi := NewChiRouter()
+	chi := chiengine.NewChiRouter()
 	chi.Handle("GET /", simpleHandler)
 	chi.Handle("GET /users", simpleHandler)
 	chi.Handle("GET /users/{id}", pathValueHandler)
@@ -278,10 +281,10 @@ func BenchmarkMixedRoutes_ChiRouter(b *testing.B) {
 }
 
 // Benchmark large route table (100 routes)
-func setupLargeRouters() (serveMux, serveMuxPlus, chiRouter RouterEngine) {
-	sm := NewServeMux()
-	smp := NewServeMuxPlus()
-	chi := NewChiRouter()
+func setupLargeRouters() (serveMux, serveMuxPlus, chiRouter engine.RouterEngine) {
+	sm := engine.NewServeMux()
+	smp := engine.NewServeMuxPlus()
+	chi := chiengine.NewChiRouter()
 
 	for i := 0; i < 100; i++ {
 		pattern := fmt.Sprintf("GET /resource%d/{id}", i)
@@ -336,21 +339,21 @@ func BenchmarkLargeRouteTable_ChiRouter(b *testing.B) {
 func BenchmarkRouterCreation_ServeMux(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = NewServeMux()
+		_ = engine.NewServeMux()
 	}
 }
 
 func BenchmarkRouterCreation_ServeMuxPlus(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = NewServeMuxPlus()
+		_ = engine.NewServeMuxPlus()
 	}
 }
 
 func BenchmarkRouterCreation_ChiRouter(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_ = NewChiRouter()
+		_ = chiengine.NewChiRouter()
 	}
 }
 
@@ -358,7 +361,7 @@ func BenchmarkRouterCreation_ChiRouter(b *testing.B) {
 func BenchmarkRouteRegistration_ServeMux(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		sm := NewServeMux()
+		sm := engine.NewServeMux()
 		sm.Handle("GET /users/{id}", pathValueHandler)
 	}
 }
@@ -366,7 +369,7 @@ func BenchmarkRouteRegistration_ServeMux(b *testing.B) {
 func BenchmarkRouteRegistration_ServeMuxPlus(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		smp := NewServeMuxPlus()
+		smp := engine.NewServeMuxPlus()
 		smp.Handle("GET /users/{id}", pathValueHandler)
 	}
 }
@@ -374,7 +377,7 @@ func BenchmarkRouteRegistration_ServeMuxPlus(b *testing.B) {
 func BenchmarkRouteRegistration_ChiRouter(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		chi := NewChiRouter()
+		chi := chiengine.NewChiRouter()
 		chi.Handle("GET /users/{id}", pathValueHandler)
 	}
 }
