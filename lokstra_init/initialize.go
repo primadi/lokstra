@@ -52,6 +52,24 @@ func (c *InitializeConfig) returnError(err error) error {
 	return err
 }
 
+// Initialize lokstra framework with options
+// defaults:
+//   - PanicOnConfigError=true,
+//   - LogLevel=Info,
+//   - EnableLoadConfig=true,
+//   - EnableAnnotation=true,
+//   - IsRunServer=true,
+//
+// Db Migration Options:
+//   - EnableDbMigration=false,
+//   - SkipMigrationOnProd=true,
+//   - MigrationFolder="migrations"
+//
+// PgxSyncMap Options:
+//   - EnablePgxSyncMap=false,
+//   - PgxSyncMapDbPoolName="db_main",
+//   - PgxSyncHeartbeatInterval=5min,
+//   - PgxSyncReconnectInterval=5s,
 func BootstrapAndRun(opts ...InitializeOption) error {
 	cfg := &InitializeConfig{
 		PanicOnConfigError:       true,

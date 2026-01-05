@@ -314,7 +314,7 @@ func (r *Runner) getAppliedVersions(ctx context.Context) (map[int]bool, error) {
 	}
 	defer conn.Release()
 
-	query := fmt.Sprintf("SELECT version FROM %s", r.schemaTable)
+	query := fmt.Sprintf("SELECT version FROM lokstra_core.%s", r.schemaTable)
 	rows, err := conn.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query applied migrations: %w", err)
@@ -372,7 +372,7 @@ func (r *Runner) Up(ctx context.Context) error {
 // getCurrentVersion returns the highest applied migration version
 // Returns 0 if no migrations have been applied
 func (r *Runner) getCurrentVersion(ctx context.Context) (int, error) {
-	query := fmt.Sprintf("SELECT COALESCE(MAX(version), 0) FROM %s", r.schemaTable)
+	query := fmt.Sprintf("SELECT COALESCE(MAX(version), 0) FROM lokstra_core.%s", r.schemaTable)
 
 	var maxVersion int
 	err := r.dbPool.QueryRow(ctx, query).Scan(&maxVersion)
@@ -404,7 +404,7 @@ func (r *Runner) runUpMigration(ctx context.Context, m *Migration) error {
 
 		// Record migration
 		insertSQL := fmt.Sprintf(
-			"INSERT INTO %s (version, description) VALUES ($1, $2)",
+			"INSERT INTO lokstra_core.%s (version, description) VALUES ($1, $2)",
 			r.schemaTable,
 		)
 		_, err = tx.Exec(ctx, insertSQL, m.Version, m.Description)
@@ -493,7 +493,7 @@ func (r *Runner) runDownMigration(ctx context.Context, m *Migration) error {
 
 		// Remove migration record
 		deleteSQL := fmt.Sprintf(
-			"DELETE FROM %s WHERE version = $1",
+			"DELETE FROM lokstra_core.%s WHERE version = $1",
 			r.schemaTable,
 		)
 		_, err = tx.Exec(ctx, deleteSQL, m.Version)
@@ -518,7 +518,7 @@ func (r *Runner) Version(ctx context.Context) (int, error) {
 	}
 	defer conn.Release()
 
-	query := fmt.Sprintf("SELECT COALESCE(MAX(version), 0) FROM %s", r.schemaTable)
+	query := fmt.Sprintf("SELECT COALESCE(MAX(version), 0) FROM lokstra_core.%s", r.schemaTable)
 	var version int
 	err = conn.QueryRow(ctx, query).Scan(&version)
 	if err != nil {

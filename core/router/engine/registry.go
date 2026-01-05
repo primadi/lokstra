@@ -19,5 +19,8 @@ func init() {
 	RegisterEngine("default", NewServeMux)
 	RegisterEngine("servemux", NewServeMux)
 	RegisterEngine("servemux-plus", NewServeMuxPlus)
-	RegisterEngine("chi", NewChiRouter)
+
+	// import the chi engine package to register it:
+	// import "github.com/primadi/lokstra/core/router/engine/chi"
+	// RegisterEngine("chi", chi.NewChiRouter)
 }

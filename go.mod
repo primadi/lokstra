@@ -40,10 +40,10 @@ require (
 require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.7.6
+	github.com/jackc/pgx/v5 v5.8.0
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
-	github.com/quic-go/quic-go v0.57.1
+	github.com/quic-go/quic-go v0.58.0
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/shopspring/decimal v1.4.0
 	github.com/valyala/fasthttp v1.68.0

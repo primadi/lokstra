@@ -1,4 +1,4 @@
-package engine
+package chi
 
 import (
 	"net/http"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/primadi/lokstra/common/utils"
+	"github.com/primadi/lokstra/core/router/engine"
 )
 
 // ChiRouter wraps go-chi router to implement RouterEngine interface
@@ -22,7 +23,7 @@ type ChiRouter struct {
 }
 
 // NewChiRouter creates a new ChiRouter
-func NewChiRouter() RouterEngine {
+func NewChiRouter() engine.RouterEngine {
 	return &ChiRouter{
 		mux:          chi.NewRouter(),
 		allowMethods: make(map[string]string),
@@ -183,4 +184,4 @@ func convertToChiPattern(path string) string {
 	return path
 }
 
-var _ RouterEngine = (*ChiRouter)(nil)
+var _ engine.RouterEngine = (*ChiRouter)(nil)

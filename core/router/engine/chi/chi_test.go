@@ -1,14 +1,16 @@
-package engine
+package chi_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	chiengine "github.com/primadi/lokstra/core/router/engine/chi"
 )
 
 func TestChi_BasicRouting(t *testing.T) {
-	engine := NewChiRouter()
+	engine := chiengine.NewChiRouter()
 
 	// Register handlers
 	engine.Handle("GET /api/users", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +47,7 @@ func TestChi_BasicRouting(t *testing.T) {
 }
 
 func TestChi_HeadAutoGeneration(t *testing.T) {
-	engine := NewChiRouter()
+	engine := chiengine.NewChiRouter()
 
 	// Register GET handler
 	engine.Handle("GET /api/info", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +74,7 @@ func TestChi_HeadAutoGeneration(t *testing.T) {
 }
 
 func TestChi_OptionsHandling(t *testing.T) {
-	engine := NewChiRouter()
+	engine := chiengine.NewChiRouter()
 
 	// Register handlers
 	engine.Handle("GET /api/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +107,7 @@ func TestChi_OptionsHandling(t *testing.T) {
 }
 
 func TestChi_AnyMethod(t *testing.T) {
-	engine := NewChiRouter()
+	engine := chiengine.NewChiRouter()
 
 	// Register ANY handler
 	engine.Handle("ANY /api/wildcard", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +132,7 @@ func TestChi_AnyMethod(t *testing.T) {
 }
 
 func TestChi_MethodNotAllowed(t *testing.T) {
-	engine := NewChiRouter()
+	engine := chiengine.NewChiRouter()
 
 	// Register only GET
 	engine.Handle("GET /api/readonly", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +155,7 @@ func TestChi_MethodNotAllowed(t *testing.T) {
 }
 
 func TestChi_NotFound(t *testing.T) {
-	engine := NewChiRouter()
+	engine := chiengine.NewChiRouter()
 
 	// Don't register any routes
 
