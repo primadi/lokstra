@@ -147,7 +147,7 @@ func (a *App) AddReverseProxies(proxies []*ReverseProxyConfig) {
 	logger.LogInfo("✅ [%s] Reverse proxies added successfully\n", a.name)
 }
 
-func (a *App) numRouters() int {
+func (a *App) NumRouters() int {
 	if a.mainRouter == nil {
 		return 0
 	}
@@ -165,7 +165,7 @@ func (a *App) numRouters() int {
 // Print app start information, including the number of routers and their routes
 func (a *App) PrintStartInfo() {
 	logger.LogInfo("Starting [%s] with %d router(s) on address %s",
-		a.name, a.numRouters(), a.listenerConfig["addr"])
+		a.name, a.NumRouters(), a.listenerConfig["addr"])
 
 	if a.mainRouter != nil {
 		a.mainRouter.PrintRoutes()
