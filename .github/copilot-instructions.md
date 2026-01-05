@@ -139,8 +139,14 @@ func (s *MySQLStore) GetUser(id string) (*User, error) { /* ... */ }
 // application/user_service.go
 // @RouterService name="user-service", prefix="/api/users"
 type UserService struct {
-    // @Inject "cfg:store.implementation"
+    // @Inject "@store.implementation"
     Store Store  // Actual service injected based on config!
+
+    // @Inject "cfg:app.timeout"  // Config value injection
+    Timeout time.Duration
+
+    // @Inject "cfg:@jwt.key-path"  // Indirect config
+    JWTSecret string  // Key resolved from another config value
 }
 
 // @Route "GET /{id}"
@@ -156,6 +162,15 @@ configs:
   store:
     implementation: "postgres-store" # Switch to "mysql-store" here!
 
+  app:
+    timeout: "30s"  # Direct config value
+
+  jwt:
+    key-path: "app.production-jwt-secret"  # Points to actual key
+
+  app:
+    production-jwt-secret: "super-secret-key"
+
 service-definitions:
   postgres-store:
     type: postgres-store
@@ -170,6 +185,15 @@ deployments:
         addr: ":8080"
         published-services: [user-service]
 ```
+
+**Injection Patterns Summary:**
+
+| Annotation                  | Syntax              | Purpose                        | Example                     |
+| --------------------------- | ------------------- | ------------------------------ | --------------------------- |
+| `@Inject "service-name"`    | Direct service      | Inject service                 | `@Inject "user-repo"`       |
+| `@Inject "@config.key"`     | Service from config | Service name from config       | `@Inject "@store.impl"`     |
+| `@Inject "cfg:config.key"`  | Config value        | Config value injection         | `@Inject "cfg:app.timeout"` |
+| `@Inject "cfg:@config.key"` | Indirect config     | Config key from another config | `@Inject "cfg:@jwt.path"`   |
 
 **Benefits:**
 
