@@ -1,15 +1,16 @@
-package app
+package app_test
 
 import (
 	"testing"
 
+	"github.com/primadi/lokstra/core/app"
 	"github.com/primadi/lokstra/core/router"
 )
 
 func TestAddReverseProxies(t *testing.T) {
 	tests := []struct {
 		name        string
-		proxies     []*ReverseProxyConfig
+		proxies     []*app.ReverseProxyConfig
 		wantRouters int // Expected number of routers after adding proxies
 	}{
 		{
@@ -19,12 +20,12 @@ func TestAddReverseProxies(t *testing.T) {
 		},
 		{
 			name:        "Empty proxies",
-			proxies:     []*ReverseProxyConfig{},
+			proxies:     []*app.ReverseProxyConfig{},
 			wantRouters: 0,
 		},
 		{
 			name: "Single proxy",
-			proxies: []*ReverseProxyConfig{
+			proxies: []*app.ReverseProxyConfig{
 				{
 					Prefix:      "/api",
 					StripPrefix: true,
@@ -35,7 +36,7 @@ func TestAddReverseProxies(t *testing.T) {
 		},
 		{
 			name: "Multiple proxies",
-			proxies: []*ReverseProxyConfig{
+			proxies: []*app.ReverseProxyConfig{
 				{
 					Prefix:      "/api",
 					StripPrefix: true,
@@ -53,48 +54,44 @@ func TestAddReverseProxies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := New("test-app", ":8080")
+			testApp := app.New("test-app", ":8080")
 
-			app.AddReverseProxies(tt.proxies)
+			testApp.AddReverseProxies(tt.proxies)
 
-			got := app.numRouters()
+			got := testApp.NumRouters()
 			if got != tt.wantRouters {
-				t.Errorf("numRouters() = %d, want %d", got, tt.wantRouters)
+				t.Errorf("NumRouters() = %d, want %d", got, tt.wantRouters)
 			}
 		})
 	}
 }
 
 func TestAddReverseProxies_WithExistingRouter(t *testing.T) {
-	app := New("test-app", ":8080")
+	testApp := app.New("test-app", ":8080")
 
 	// Add a regular router first
 	regularRouter := router.New("regular-router")
-	app.AddRouter(regularRouter)
+	testApp.AddRouter(regularRouter)
 
 	// Add reverse proxies
-	proxies := []*ReverseProxyConfig{
+	proxies := []*app.ReverseProxyConfig{
 		{
 			Prefix:      "/api",
 			StripPrefix: true,
 			Target:      "http://backend:8080",
 		},
 	}
-	app.AddReverseProxies(proxies)
+	testApp.AddReverseProxies(proxies)
 
 	// Should have 2 routers: proxy router + regular router
-	got := app.numRouters()
+	got := testApp.NumRouters()
 	want := 2
 	if got != want {
-		t.Errorf("numRouters() = %d, want %d", got, want)
+		t.Errorf("NumRouters() = %d, want %d", got, want)
 	}
 
 	// First router should be the proxy router
-	mainRouter := app.GetRouter()
-	if mainRouter == nil {
-		t.Fatal("mainRouter is nil")
-	}
-
+	mainRouter := testApp.GetRouter()
 	// Verify router name contains "reverse-proxy"
 	if mainRouter.Name() != "test-app-reverse-proxy" {
 		t.Errorf("First router name = %s, want test-app-reverse-proxy", mainRouter.Name())

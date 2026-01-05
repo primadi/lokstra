@@ -28,6 +28,9 @@ import (
 // Register path resolver for router package
 func init() {
 	router.RegisterPathResolver(SimpleResolver)
+
+	// Wire up config resolver for request.Context to avoid circular dependency
+	request.SetConfigResolver(GetConfig)
 }
 
 // ===== TYPE ALIASES FOR CLEANER API =====

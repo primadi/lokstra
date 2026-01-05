@@ -4,10 +4,24 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/primadi/lokstra/core/response"
 	"github.com/primadi/lokstra/serviceapi"
 )
+
+// ConfigResolver is a function type for resolving config values
+// Used to avoid circular dependency with lokstra_registry
+type ConfigResolver func(key string, defaultValue any) any
+
+// Global config resolver set by lokstra_registry at initialization
+var globalConfigResolver ConfigResolver
+
+// SetConfigResolver sets the global config resolver
+// Called by lokstra_registry during initialization to avoid circular dependency
+func SetConfigResolver(resolver ConfigResolver) {
+	globalConfigResolver = resolver
+}
 
 // StatusCodeError represents an error state based on HTTP status code
 // Used to trigger transaction rollback for non-2xx status codes
@@ -78,8 +92,34 @@ func (c *Context) Next() error {
 // Begins a transaction for the specified pool name
 // The transaction will be automatically finalized (commit/rollback) when FinalizeResponse is called
 // No need to defer the returned function anymore - it's handled automatically
+//
+// Supports indirection with @ prefix:
+//   - BeginTransaction("my-pool")           - Direct pool name
+//   - BeginTransaction("@auth.db-pool")     - Pool name from config
+//
+// Example with indirection:
+//
+//	config.yaml:
+//	  configs:
+//	    auth:
+//	      db-pool: "postgres-auth-pool"
+//
+//	BeginTransaction("@auth.db-pool")  // Resolves to "postgres-auth-pool"
 func (c *Context) BeginTransaction(poolName string) {
-	newCtx, finalizeCtx := serviceapi.BeginTransaction(c, poolName)
+	// Resolve indirection if @ prefix is present
+	actualPoolName := poolName
+	if strings.HasPrefix(poolName, "@") && globalConfigResolver != nil {
+		configKey := strings.TrimPrefix(poolName, "@")
+		if resolvedName, ok := globalConfigResolver(configKey, "").(string); ok && resolvedName != "" {
+			actualPoolName = resolvedName
+		} else {
+			// Config key not found or not a string, use original (will likely fail at runtime)
+			// This matches the behavior of @Inject where invalid config keys fail at runtime
+			actualPoolName = poolName
+		}
+	}
+
+	newCtx, finalizeCtx := serviceapi.BeginTransaction(c, actualPoolName)
 	c.Context = newCtx // Update embedded context with transaction context
 
 	// Initialize map if needed
@@ -87,9 +127,9 @@ func (c *Context) BeginTransaction(poolName string) {
 		c.txFinalizers = make(map[string]func(*error))
 	}
 
-	// Store finalizer by pool name
-	c.txFinalizers[poolName] = finalizeCtx
-	c.txPoolOrder = append(c.txPoolOrder, poolName)
+	// Store finalizer by actual pool name (not the @ prefixed name)
+	c.txFinalizers[actualPoolName] = finalizeCtx
+	c.txPoolOrder = append(c.txPoolOrder, actualPoolName)
 }
 
 // RollbackTransaction manually rolls back a specific transaction
