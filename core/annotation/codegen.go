@@ -1156,7 +1156,7 @@ func generateIndirectConfigCode(fieldType, indirectKey, defaultVal string) strin
 				result := make(%s, 0, len(arr))
 				for _, item := range arr {
 					var elem %s
-					if err := cast.ToStruct(item, &elem); err == nil {
+					if err := cast.ToStruct(item, &elem, false); err == nil {
 						result = append(result, elem)
 					}
 				}
@@ -1182,7 +1182,7 @@ func generateIndirectConfigCode(fieldType, indirectKey, defaultVal string) strin
 		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
 			if v, ok := cfg[actualKey]; ok {
 				var result %s
-				if err := cast.ToStruct(v, &result); err == nil {
+				if err := cast.ToStruct(v, &result, false); err == nil {
 					return result
 				}
 			}
@@ -1263,7 +1263,7 @@ func parseConfigValue(fieldType, configKey, defaultValue string) string {
 			result := make(%s, 0, len(arr))
 			for _, item := range arr {
 				var elem %s
-				if err := cast.ToStruct(item, &elem); err == nil {
+				if err := cast.ToStruct(item, &elem, false); err == nil {
 					result = append(result, elem)
 				}
 			}
@@ -1398,7 +1398,7 @@ func parseConfigValue(fieldType, configKey, defaultValue string) string {
 		return fmt.Sprintf(`func() %s {
 		if v, ok := cfg[%q]; ok {
 			var result %s
-			if err := cast.ToStruct(v, &result); err == nil {
+			if err := cast.ToStruct(v, &result, false); err == nil {
 				return result
 			}
 		}
@@ -1471,7 +1471,7 @@ func parseStructFromConfig(fieldType, configKey, defaultValue string) string {
 		return fmt.Sprintf(`func() %s {
 		if v, ok := cfg[%q]; ok {
 			var result %s
-			if err := cast.ToStruct(v, &result); err == nil {
+			if err := cast.ToStruct(v, &result, false); err == nil {
 				return result
 			}
 		}
@@ -1481,7 +1481,7 @@ func parseStructFromConfig(fieldType, configKey, defaultValue string) string {
 	return fmt.Sprintf(`func() %s {
 		if v, ok := cfg[%q]; ok {
 			var result %s
-			if err := cast.ToStruct(v, &result); err == nil {
+			if err := cast.ToStruct(v, &result, false); err == nil {
 				return result
 			}
 		}
@@ -1621,7 +1621,7 @@ func parseSliceFromConfig(fieldType, configKey, defaultValue string) string {
 			result := make(%s, 0, len(arr))
 			for _, item := range arr {
 				var elem %s
-				if err := cast.ToStruct(item, &elem); err == nil {
+				if err := cast.ToStruct(item, &elem, false); err == nil {
 					result = append(result, elem)
 				}
 			}
@@ -1865,7 +1865,7 @@ func Register{{$service.StructName}}() {
 {{- end }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
-		{{quote $cfg.ConfigKey}}: lokstra_registry.GetConfig({{quote $cfg.ConfigKey}}, {{getDefaultValue $cfg.FieldType $cfg.DefaultValue}}),
+		{{quote $cfg.ConfigKey}}: lokstra_registry.GetConfig[any]({{quote $cfg.ConfigKey}}, {{getDefaultValue $cfg.FieldType $cfg.DefaultValue}}),
 {{- end }}
 {{- end }}
 	})
@@ -1983,7 +1983,7 @@ func Register{{$service.StructName}}() {
 {{- if $service.ConfigDependencies }}
 {{- range $key := sortedKeys $service.ConfigDependencies }}
 {{- $cfg := index $service.ConfigDependencies $key }}
-			{{quote $cfg.ConfigKey}}: lokstra_registry.GetConfig({{quote $cfg.ConfigKey}}, {{getDefaultValue $cfg.FieldType $cfg.DefaultValue}}),
+			{{quote $cfg.ConfigKey}}: lokstra_registry.GetConfig[any]({{quote $cfg.ConfigKey}}, {{getDefaultValue $cfg.FieldType $cfg.DefaultValue}}),
 {{- end }}
 {{- end }}
 		})
