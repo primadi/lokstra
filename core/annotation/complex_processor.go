@@ -343,10 +343,12 @@ type DependencyInfo struct {
 
 // ConfigInfo holds config injection information for @InjectCfgValue
 type ConfigInfo struct {
-	ConfigKey    string // e.g., "auth.jwt-secret"
+	ConfigKey    string // e.g., "auth.jwt-secret" or "@jwt.key-path" for indirection
 	FieldName    string // e.g., "jwtSecret"
 	FieldType    string // e.g., "string", "int", "bool", "time.Duration"
 	DefaultValue string // Default value as string (will be converted based on type)
+	IsIndirect   bool   // true if config key is resolved from another config (@ prefix)
+	IndirectKey  string // e.g., "jwt.key-path" (only if IsIndirect=true)
 }
 
 // MethodSignature holds method signature information

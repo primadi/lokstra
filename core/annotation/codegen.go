@@ -273,13 +273,8 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 			return err
 		}
 
-		// Find @Inject annotations for dependencies
+		// Find @Inject annotations for dependencies and config values
 		if err := extractDependencies(file, service); err != nil {
-			return err
-		}
-
-		// Find @InjectCfgValue annotations for config dependencies
-		if err := extractConfigDependencies(file, service); err != nil {
 			return err
 		}
 
@@ -571,8 +566,10 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		// Supported formats:
 		// @Inject "user-repository"              - Direct service injection
 		// @Inject service="user-repository"      - Direct service injection (named param)
-		// @Inject "@store.implementation"     - Service name from config
+		// @Inject "@store.implementation"        - Service name from config
 		// @Inject service="@store.implementation" - Service name from config (named param)
+		// @Inject "cfg:app.timeout"              - Config value injection
+		// @Inject "cfg:@jwt.key-path"            - Config value via indirection
 		args, err := ann.ReadArgs("service")
 		if err != nil {
 			return fmt.Errorf("@Inject on line %d: %w", ann.Line, err)
@@ -587,9 +584,31 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 			// ann.TargetName is field name
 			fieldType := fieldTypes[ann.TargetName]
 
-			// Check if this is config-based injection (@ prefix)
-			if strings.HasPrefix(serviceName, "@") {
-				configKey := strings.TrimPrefix(serviceName, "@")
+			// Check if this is config value injection (cfg: prefix)
+			if after, ok := strings.CutPrefix(serviceName, "cfg:"); ok {
+				configKey := after
+				// Check for indirection (@ prefix after cfg:)
+				if after0, ok0 := strings.CutPrefix(configKey, "@"); ok0 {
+					indirectKey := after0
+					service.ConfigDependencies[configKey] = &ConfigInfo{
+						ConfigKey:    configKey,
+						FieldName:    ann.TargetName,
+						FieldType:    fieldType,
+						DefaultValue: "",
+						IsIndirect:   true,
+						IndirectKey:  indirectKey,
+					}
+				} else {
+					service.ConfigDependencies[configKey] = &ConfigInfo{
+						ConfigKey:    configKey,
+						FieldName:    ann.TargetName,
+						FieldType:    fieldType,
+						DefaultValue: "",
+					}
+				}
+			} else if after0, ok0 := strings.CutPrefix(serviceName, "@"); ok0 {
+				// Config-based service injection (@ prefix)
+				configKey := after0
 				service.Dependencies[configKey] = &DependencyInfo{
 					ServiceName:   "", // Will be resolved from config at runtime
 					FieldName:     ann.TargetName,
@@ -673,111 +692,6 @@ func checkInitMethod(file *FileToProcess, service *ServiceGeneration) {
 			}
 		}
 	}
-}
-
-// extractConfigDependencies finds all @InjectCfgValue annotations and field info
-func extractConfigDependencies(file *FileToProcess, service *ServiceGeneration) error {
-	// Parse file to get field types
-	fset := token.NewFileSet()
-	astFile, err := parser.ParseFile(fset, file.FullPath, nil, parser.ParseComments)
-	if err != nil {
-		return err
-	}
-
-	// Find struct fields for THIS struct only
-	fieldTypes := make(map[string]string)     // fieldName -> fieldType
-	structFieldNames := make(map[string]bool) // fieldName -> true (for THIS struct only)
-
-	for _, decl := range astFile.Decls {
-		genDecl, ok := decl.(*ast.GenDecl)
-		if !ok || genDecl.Tok != token.TYPE {
-			continue
-		}
-
-		for _, spec := range genDecl.Specs {
-			typeSpec, ok := spec.(*ast.TypeSpec)
-			if !ok || typeSpec.Name.Name != service.StructName {
-				continue
-			}
-
-			structType, ok := typeSpec.Type.(*ast.StructType)
-			if !ok {
-				continue
-			}
-
-			// Extract field names and types ONLY for THIS struct
-			for _, field := range structType.Fields.List {
-				if len(field.Names) == 0 {
-					continue
-				}
-				fieldName := field.Names[0].Name
-				fieldType := exprToString(field.Type)
-				fieldTypes[fieldName] = fieldType
-				structFieldNames[fieldName] = true
-			}
-			// Break after finding the target struct to avoid processing other structs
-			break
-		}
-	}
-
-	// Now process @InjectCfgValue annotations - ONLY for fields belonging to THIS struct
-	for _, ann := range file.Annotations {
-		if ann.Name != "InjectCfgValue" && ann.Name != "injectcfgvalue" {
-			continue
-		}
-
-		// Skip if annotation target is not a field of THIS struct
-		if !structFieldNames[ann.TargetName] {
-			continue
-		}
-
-		// Supported formats:
-		// @InjectCfgValue "app.jwt-secret"
-		// @InjectCfgValue key="app.jwt-secret"
-		// @InjectCfgValue key="app.jwt-secret", default="secret"
-		// @InjectCfgValue "app.timeout", "30"  (positional: key, default)
-		args, err := ann.ReadArgs("key", "default")
-		if err != nil {
-			return fmt.Errorf("@InjectCfgValue on line %d: %w", ann.Line, err)
-		}
-
-		var configKey string
-		if key, ok := args["key"].(string); ok {
-			configKey = key
-		}
-
-		// Parse default value (optional) - can be string, int, bool, or float
-		defaultValue := ""
-		if def, ok := args["default"]; ok && def != nil {
-			// Convert any type to string
-			switch v := def.(type) {
-			case string:
-				defaultValue = v
-			case int:
-				defaultValue = fmt.Sprintf("%d", v)
-			case bool:
-				defaultValue = fmt.Sprintf("%t", v)
-			case float64:
-				defaultValue = fmt.Sprintf("%g", v)
-			default:
-				defaultValue = fmt.Sprintf("%v", v)
-			}
-		}
-
-		if configKey != "" && ann.TargetName != "" {
-			// ann.TargetName is field name
-			fieldType := fieldTypes[ann.TargetName]
-
-			service.ConfigDependencies[configKey] = &ConfigInfo{
-				ConfigKey:    configKey,
-				FieldName:    ann.TargetName,
-				FieldType:    fieldType,
-				DefaultValue: defaultValue,
-			}
-		}
-	}
-
-	return nil
 }
 
 // writeGenFile writes the zz_generated.lokstra.go file
@@ -1130,11 +1044,173 @@ func convertDurationToGo(durationStr string) string {
 	return fmt.Sprintf("%s*%s", value, goUnit)
 }
 
+// parseIndirectConfigValue generates code for indirect config resolution
+// First resolves the actual config key from another config value, then fetches the final value
+func parseIndirectConfigValue(fieldType, indirectKey, defaultValue string) string {
+	// Generate appropriate default value based on field type
+	defaultVal := defaultValue
+	if defaultVal == "" {
+		switch fieldType {
+		case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+			defaultVal = "0"
+		case "bool":
+			defaultVal = "false"
+		case "float32", "float64":
+			defaultVal = "0.0"
+		case "time.Duration":
+			defaultVal = "0"
+		case "[]byte":
+			defaultVal = "nil"
+		case "string":
+			defaultVal = `""`
+		default:
+			if strings.HasPrefix(fieldType, "[]") {
+				defaultVal = "nil"
+			} else if strings.HasPrefix(fieldType, "*") {
+				defaultVal = "nil"
+			} else if isStructType(fieldType) {
+				defaultVal = fieldType + "{}"
+			} else {
+				defaultVal = `""`
+			}
+		}
+	}
+
+	// Generate code for indirect resolution
+	// Step 1: Get actual key name from config[indirectKey]
+	// Step 2: Get actual value from config[actualKey]
+	// Step 3: Parse based on field type
+	return generateIndirectConfigCode(fieldType, indirectKey, defaultVal)
+}
+
+// generateIndirectConfigCode generates the actual Go code for indirect config resolution
+func generateIndirectConfigCode(fieldType, indirectKey, defaultVal string) string {
+	// Different handling based on field type
+	if fieldType == "string" {
+		return fmt.Sprintf(`func() string {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].(string); ok { return v }
+		}
+		return %s
+	}()`, indirectKey, defaultVal)
+	}
+
+	if fieldType == "int" || fieldType == "int64" {
+		return fmt.Sprintf(`func() %s {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].(%s); ok { return v }
+			if v, ok := cfg[actualKey].(float64); ok { return %s(v) }
+		}
+		return %s
+	}()`, fieldType, indirectKey, fieldType, fieldType, defaultVal)
+	}
+
+	if fieldType == "float64" {
+		return fmt.Sprintf(`func() float64 {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].(float64); ok { return v }
+			if v, ok := cfg[actualKey].(int); ok { return float64(v) }
+		}
+		return %s
+	}()`, indirectKey, defaultVal)
+	}
+
+	if fieldType == "bool" {
+		return fmt.Sprintf(`func() bool {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].(bool); ok { return v }
+		}
+		return %s
+	}()`, indirectKey, defaultVal)
+	}
+
+	if fieldType == "time.Duration" {
+		return fmt.Sprintf(`func() time.Duration {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].(time.Duration); ok { return v }
+			if s, ok := cfg[actualKey].(string); ok {
+				if d, err := time.ParseDuration(s); err == nil { return d }
+			}
+		}
+		return %s
+	}()`, indirectKey, defaultVal)
+	}
+
+	if fieldType == "[]byte" {
+		return fmt.Sprintf(`func() []byte {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].([]byte); ok { return v }
+			if s, ok := cfg[actualKey].(string); ok { return []byte(s) }
+		}
+		return %s
+	}()`, indirectKey, defaultVal)
+	}
+
+	// For slices
+	if strings.HasPrefix(fieldType, "[]") {
+		elementType := strings.TrimPrefix(fieldType, "[]")
+		if isStructType(elementType) {
+			return fmt.Sprintf(`func() %s {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if arr, ok := cfg[actualKey].([]any); ok {
+				result := make(%s, 0, len(arr))
+				for _, item := range arr {
+					var elem %s
+					if err := cast.ToStruct(item, &elem); err == nil {
+						result = append(result, elem)
+					}
+				}
+				return result
+			}
+			if arr, ok := cfg[actualKey].(%s); ok { return arr }
+		}
+		return %s
+	}()`, fieldType, indirectKey, fieldType, elementType, fieldType, defaultVal)
+		}
+		// Primitive slices
+		return fmt.Sprintf(`func() %s {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].(%s); ok { return v }
+		}
+		return %s
+	}()`, fieldType, indirectKey, fieldType, defaultVal)
+	}
+
+	// For struct types
+	if isStructType(fieldType) {
+		return fmt.Sprintf(`func() %s {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey]; ok {
+				var result %s
+				if err := cast.ToStruct(v, &result); err == nil {
+					return result
+				}
+			}
+		}
+		return %s
+	}()`, fieldType, indirectKey, fieldType, defaultVal)
+	}
+
+	// Fallback
+	return fmt.Sprintf(`func() %s {
+		if actualKey, ok := cfg[%q].(string); ok && actualKey != "" {
+			if v, ok := cfg[actualKey].(%s); ok { return v }
+		}
+		return %s
+	}()`, fieldType, indirectKey, fieldType, defaultVal)
+}
+
 // parseDurationFromConfig generates code to parse time.Duration from config value
 // Handles both string ("15m", "20h") and time.Duration values from config
 // parseConfigValue generates code to parse any config value with type conversion
 // This universal function handles: primitives, time.Duration, []byte, slices, structs
+// configKey can start with @ for indirection (e.g., "@jwt.key-path" resolves actual key from config)
 func parseConfigValue(fieldType, configKey, defaultValue string) string {
+	// Check if this is indirect config resolution (@ prefix)
+	if strings.HasPrefix(configKey, "@") {
+		indirectKey := strings.TrimPrefix(configKey, "@")
+		return parseIndirectConfigValue(fieldType, indirectKey, defaultValue)
+	}
 	// For primitives (string, int, bool, float64), use direct type assertion
 	if fieldType == "string" || fieldType == "int" || fieldType == "int64" ||
 		fieldType == "float64" || fieldType == "bool" {
@@ -1713,7 +1789,13 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 	},
 }).Parse(`// AUTO-GENERATED CODE - DO NOT EDIT
 // Generated by lokstra-annotation from annotations in this folder
-// Annotations: @RouterService, @Service, @Inject, @InjectCfgValue, @Route
+// Annotations: @RouterService, @Service, @Inject, @Route
+//
+// @Inject supports:
+//   - "service-name"          : Direct service injection
+//   - "@config.key"           : Service name from config value
+//   - "cfg:config.key"        : Config value injection
+//   - "cfg:@config.key"       : Config value via indirection
 
 package {{.Package}}
 
@@ -1744,11 +1826,8 @@ func init() {
 // Register{{$service.StructName}} registers the {{$service.ServiceName}} with the registry
 // Auto-generated from annotations:
 //   - @Service name={{quote $service.ServiceName}}
-{{- if $service.Dependencies}}
+{{- if or $service.Dependencies $service.ConfigDependencies}}
 //   - @Inject annotations
-{{- end}}
-{{- if $service.ConfigDependencies}}
-//   - @InjectCfgValue annotations
 {{- end}}
 func Register{{$service.StructName}}() {
 	lokstra_registry.RegisterLazyService({{quote $service.ServiceName}}, func(deps map[string]any, cfg map[string]any) any {
@@ -1867,11 +1946,8 @@ func {{$service.RemoteTypeName}}Factory(deps, config map[string]any) any {
 // Register{{$service.StructName}} registers the {{$service.ServiceName}} with the registry
 // Auto-generated from annotations:
 //   - @RouterService name={{quote $service.ServiceName}}, prefix={{quote $service.Prefix}}
-{{- if $service.Dependencies}}
+{{- if or $service.Dependencies $service.ConfigDependencies}}
 //   - @Inject annotations
-{{- end}}
-{{- if $service.ConfigDependencies}}
-//   - @InjectCfgValue annotations
 {{- end}}
 //   - @Route annotations on methods
 func Register{{$service.StructName}}() {
