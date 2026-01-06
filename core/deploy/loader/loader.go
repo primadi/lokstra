@@ -3,6 +3,7 @@ package loader
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -211,8 +212,9 @@ func mergeConfigs(target, source *schema.DeployConfig) *schema.DeployConfig {
 		Configs:               mergeMap(target.Configs, source.Configs),
 		MiddlewareDefinitions: mergeMaps(target.MiddlewareDefinitions, source.MiddlewareDefinitions),
 		ServiceDefinitions:    mergeMaps(target.ServiceDefinitions, source.ServiceDefinitions),
-		RouterDefinitions:     mergeMaps(target.RouterDefinitions, source.RouterDefinitions), // Renamed from Routers
+		RouterDefinitions:     mergeMaps(target.RouterDefinitions, source.RouterDefinitions),
 		Deployments:           mergeMaps(target.Deployments, source.Deployments),
+		Servers:               mergeMaps(target.Servers, source.Servers),
 	}
 	return result
 }
@@ -227,12 +229,8 @@ func mergeMap(target, source map[string]any) map[string]any {
 	}
 
 	result := make(map[string]any, len(target)+len(source))
-	for k, v := range target {
-		result[k] = v
-	}
-	for k, v := range source {
-		result[k] = v // Source overrides target
-	}
+	maps.Copy(result, target)
+	maps.Copy(result, source)
 	return result
 }
 
@@ -246,12 +244,8 @@ func mergeMaps[T any](target, source map[string]*T) map[string]*T {
 	}
 
 	result := make(map[string]*T, len(target)+len(source))
-	for k, v := range target {
-		result[k] = v
-	}
-	for k, v := range source {
-		result[k] = v // Source overrides target
-	}
+	maps.Copy(result, target)
+	maps.Copy(result, source)
 	return result
 }
 
