@@ -82,10 +82,8 @@ func loadConfig(paths ...string) (*schema.DeployConfig, error) {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// STEP 2: Normalize shorthand servers (must be before getting server key)
-	normalizeShorthandServers(merged)
-
-	// STEP 3: Resolve configs.server to know which deployment/server to use
+	// STEP 2: Resolve configs.server to know which deployment/server to use
+	// NOTE: normalizeShorthandServers moved to STEP 9 (after all resolution)
 	if serverKeyRaw, ok := merged.Configs["server"]; ok {
 		if serverKeyStr, ok := serverKeyRaw.(string); ok {
 			resolved := resolver.ResolveSingleValue(serverKeyStr)
@@ -93,16 +91,14 @@ func loadConfig(paths ...string) (*schema.DeployConfig, error) {
 		}
 	}
 
-	// STEP 4: Apply config overrides (deployment → server)
-	applyConfigOverrides(merged)
-
-	// STEP 5: Marshal back to YAML for 2-phase resolution
+	// STEP 3: Marshal back to YAML for 2-phase resolution
+	// NOTE: applyConfigOverrides moved to STEP 10 (after normalization)
 	dataWithOverrides, err := yaml.Marshal(merged)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal merged config: %w", err)
 	}
 
-	// STEP 6: Resolve all ${...} EXCEPT ${@cfg:...}
+	// STEP 4: Resolve all ${...} EXCEPT ${@cfg:...}
 	step1Data := resolver.ResolveYAMLBytesStep1(dataWithOverrides)
 
 	var tempConfig schema.DeployConfig
@@ -112,7 +108,7 @@ func loadConfig(paths ...string) (*schema.DeployConfig, error) {
 		return nil, fmt.Errorf("failed to parse YAML (step 1): %w", err)
 	}
 
-	// STEP 7: Resolve ${@cfg:...} using configs from step 1
+	// STEP 5: Resolve ${@cfg:...} using configs from step 1
 	step1Bytes, err := yaml.Marshal(&tempConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal config for step 2: %w", err)
@@ -120,13 +116,21 @@ func loadConfig(paths ...string) (*schema.DeployConfig, error) {
 
 	step2Data := resolver.ResolveYAMLBytesStep2(step1Bytes, tempConfig.Configs)
 
-	// STEP 8: Final decode with all values resolved
+	// STEP 6: Final decode with all values resolved
 	var finalConfig schema.DeployConfig
 	decoder2 := yaml.NewDecoder(bytes.NewReader(step2Data))
 	decoder2.KnownFields(true)
 	if err := decoder2.Decode(&finalConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML (step 2): %w", err)
 	}
+
+	// STEP 7: Normalize shorthand servers (convert top-level servers → deployments.default.servers)
+	// MUST be done after all resolution to avoid being lost during re-decoding
+	normalizeShorthandServers(&finalConfig)
+
+	// STEP 8: Apply config overrides (deployment → server)
+	// MUST be after normalizeShorthandServers so Deployments map exists
+	applyConfigOverrides(&finalConfig)
 
 	// STEP 9: Normalize server definitions (convert helper fields to apps)
 	normalizeServerDefinitions(&finalConfig)
