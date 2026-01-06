@@ -3,13 +3,13 @@
   "files": {
     "tenant_store.go": {
       "filename": "tenant_store.go",
-      "checksum": "9b5940da1912b8b9308f1e622ea5d5bb2ae552838768c686e2254dfc7ba6bc7d",
+      "checksum": "69cfa403a05f67049c76dabbf33532a750340e7e56032e5abfddf7320fb6fb02",
       "annotations": 2,
-      "last_scan": "2025-12-17T13:05:22.9715226+07:00",
+      "last_scan": "2026-01-06T18:21:51.7106529+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2025-12-17T13:05:22.9715226+07:00"
+      "generated_mod_time": "2026-01-06T18:21:51.7106529+07:00"
     },
     "user_store.go": {
       "filename": "user_store.go",
@@ -22,6 +22,6 @@
       "generated_mod_time": "2025-12-17T17:16:58.2514677+07:00"
     }
   },
-  "updated_at": "2026-01-03T02:13:01.787159+07:00",
-  "generated_checksum": "f3e29afd20b1546d51b0f487725dc26863d7cf2c011aba9071035b6308ae8956"
+  "updated_at": "2026-01-06T18:32:31.0742558+07:00",
+  "generated_checksum": "6d04f356e55fdd6649cd4f9b74fa67408922514cc820402ecf1ce8816081d19d"
 }
