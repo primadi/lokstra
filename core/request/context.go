@@ -119,7 +119,7 @@ func (c *Context) BeginTransaction(poolName string) {
 		}
 	}
 
-	newCtx, finalizeCtx := serviceapi.BeginTransaction(c, actualPoolName)
+	newCtx, finalizeCtx := serviceapi.BeginTransaction(c.Context, actualPoolName)
 	c.Context = newCtx // Update embedded context with transaction context
 
 	// Initialize map if needed

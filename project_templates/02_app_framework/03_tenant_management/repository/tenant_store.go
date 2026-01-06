@@ -157,7 +157,7 @@ func (s *PostgresTenantStore) GetByName(ctx context.Context, name string) (*doma
 }
 
 func (s *PostgresTenantStore) Exists(ctx context.Context, tenantID string) (bool, error) {
-	query := `SELECT SELECT 1 FROM tenants WHERE id = $1`
+	query := `SELECT 1 FROM tenants WHERE id = $1`
 	return s.dbPool.IsExists(ctx, query, tenantID)
 }
 
