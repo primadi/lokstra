@@ -49,11 +49,11 @@ import "time"
 
 // @RouterService name="basic-service", prefix="/api/basic"
 type BasicService struct {
-	// @InjectCfgValue "app.name"
+	// @Inject "cfg:app.name"
 	AppName string
-	// @InjectCfgValue "app.port"
+	// @Inject "cfg:app.port"
 	Port int
-	// @InjectCfgValue "app.timeout"
+	// @Inject "cfg:app.timeout"
 	Timeout time.Duration
 }
 
@@ -68,7 +68,7 @@ func (s *BasicService) GetInfo() string { return "info" }
 
 // @RouterService name="byte-service", prefix="/api/bytes"
 type ByteService struct {
-	// @InjectCfgValue "secret"
+	// @Inject "cfg:secret"
 	Secret []byte
 }
 
@@ -83,7 +83,7 @@ func (s *ByteService) GetInfo() string { return "info" }
 
 // @RouterService name="string-slice-service", prefix="/api/strings"
 type StringSliceService struct {
-	// @InjectCfgValue "hosts"
+	// @Inject "cfg:hosts"
 	Hosts []string
 }
 
@@ -98,11 +98,11 @@ func (s *StringSliceService) GetInfo() string { return "info" }
 
 // @RouterService name="int-slice-service", prefix="/api/ints"
 type IntSliceService struct {
-	// @InjectCfgValue "ports"
+	// @Inject "cfg:ports"
 	Ports []int
-	// @InjectCfgValue "delays"
+	// @Inject "cfg:delays"
 	Delays []int64
-	// @InjectCfgValue "rates"
+	// @Inject "cfg:rates"
 	Rates []float64
 }
 
@@ -122,7 +122,7 @@ type DatabaseConfig struct {
 
 // @RouterService name="struct-service", prefix="/api/struct"
 type StructService struct {
-	// @InjectCfgValue "database"
+	// @Inject "cfg:database"
 	DBConfig DatabaseConfig
 }
 
@@ -142,7 +142,7 @@ type ServerConfig struct {
 
 // @RouterService name="server-service", prefix="/api/servers"
 type ServerService struct {
-	// @InjectCfgValue "servers"
+	// @Inject "cfg:servers"
 	Servers []ServerConfig
 }
 
@@ -163,17 +163,17 @@ type AuthConfig struct {
 
 // @RouterService name="mixed-service", prefix="/api/mixed"
 type MixedService struct {
-	// @InjectCfgValue "name"
+	// @Inject "cfg:name"
 	Name string
-	// @InjectCfgValue "timeout"
+	// @Inject "cfg:timeout"
 	Timeout time.Duration
-	// @InjectCfgValue "secret"
+	// @Inject "cfg:secret"
 	Secret []byte
-	// @InjectCfgValue "hosts"
+	// @Inject "cfg:hosts"
 	Hosts []string
-	// @InjectCfgValue "ports"
+	// @Inject "cfg:ports"
 	Ports []int
-	// @InjectCfgValue "auth"
+	// @Inject "cfg:auth"
 	Auth AuthConfig
 }
 
@@ -208,7 +208,7 @@ type ComplexConfig struct {
 
 // @RouterService name="complex-service", prefix="/api/complex"
 type ComplexService struct {
-	// @InjectCfgValue "config"
+	// @Inject "cfg:config"
 	Config ComplexConfig
 }
 
@@ -232,7 +232,7 @@ type AppConfig struct {
 
 // @RouterService name="default-service", prefix="/api/default"
 type DefaultService struct {
-	// @InjectCfgValue key="appconfig", default="AppConfig{Name: \"myapp\", Port: 8080}"
+	// @Inject "cfg:appconfig", "AppConfig{Name: \"myapp\", Port: 8080}"
 	Config AppConfig
 }
 
@@ -279,7 +279,7 @@ type ScheduleConfig struct {
 
 // @RouterService name="schedule-service", prefix="/api/schedule"
 type ScheduleService struct {
-	// @InjectCfgValue "schedule"
+	// @Inject "cfg:schedule"
 	Config ScheduleConfig
 }
 
@@ -325,7 +325,7 @@ type ScheduleConfig struct {
 
 // @RouterService name="schedule-service", prefix="/api/schedule"
 type ScheduleService struct {
-	// @InjectCfgValue key="schedule", default="ScheduleConfig{EventName: \"DefaultEvent\", Duration: 3600000000000}"
+	// @Inject "cfg:schedule", "ScheduleConfig{EventName: \"DefaultEvent\", Duration: 3600000000000}"
 	Config ScheduleConfig
 }
 
@@ -350,7 +350,7 @@ type AppConfig struct {
 
 // @RouterService name="default-service", prefix="/api/default"
 type DefaultService struct {
-	// @InjectCfgValue key="appconfig", default=` + "`AppConfig{Name: \"myapp\", Port: 8080}`" + `
+	// @Inject "cfg:appconfig", ` + "`AppConfig{Name: \"myapp\", Port: 8080}`" + `
 	Config AppConfig
 }
 

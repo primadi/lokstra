@@ -569,8 +569,9 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		// @Inject "@store.implementation"        - Service name from config
 		// @Inject service="@store.implementation" - Service name from config (named param)
 		// @Inject "cfg:app.timeout"              - Config value injection
+		// @Inject "cfg:app.timeout", "default"   - Config with default value
 		// @Inject "cfg:@jwt.key-path"            - Config value via indirection
-		args, err := ann.ReadArgs("service")
+		args, err := ann.ReadArgs("service", "default")
 		if err != nil {
 			return fmt.Errorf("@Inject on line %d: %w", ann.Line, err)
 		}
@@ -578,6 +579,11 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		var serviceName string
 		if svc, ok := args["service"].(string); ok {
 			serviceName = svc
+		}
+
+		var defaultValue string
+		if def, ok := args["default"].(string); ok {
+			defaultValue = def
 		}
 
 		if serviceName != "" && ann.TargetName != "" {
@@ -594,7 +600,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 						ConfigKey:    configKey,
 						FieldName:    ann.TargetName,
 						FieldType:    fieldType,
-						DefaultValue: "",
+						DefaultValue: defaultValue,
 						IsIndirect:   true,
 						IndirectKey:  indirectKey,
 					}
@@ -603,7 +609,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 						ConfigKey:    configKey,
 						FieldName:    ann.TargetName,
 						FieldType:    fieldType,
-						DefaultValue: "",
+						DefaultValue: defaultValue,
 					}
 				}
 			} else if after0, ok0 := strings.CutPrefix(serviceName, "@"); ok0 {

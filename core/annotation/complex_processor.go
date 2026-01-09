@@ -321,7 +321,7 @@ type ServiceGeneration struct {
 	RouteMiddlewares   map[string][]string         // methodName -> []middleware (per-route middleware)
 	Methods            map[string]*MethodSignature // methodName -> signature
 	Dependencies       map[string]*DependencyInfo  // serviceName -> field info
-	ConfigDependencies map[string]*ConfigInfo      // configKey -> config field info (for @InjectCfgValue)
+	ConfigDependencies map[string]*ConfigInfo      // configKey -> config field info (for @Inject "cfg:...")
 	Imports            map[string]string           // alias -> import path (e.g., "domain" -> ".../.../domain")
 	StructName         string
 	InterfaceName      string

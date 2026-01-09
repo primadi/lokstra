@@ -42,7 +42,7 @@ type UserListResponse struct {
 	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
-// Example: @RouterService with @Inject (optional), @InjectCfgValue, and @Route
+// Example: @RouterService with @Inject (dependencies and config) and @Route
 
 // @RouterService name="user-api-service", prefix="/api/v1/users", middlewares=["recovery", "request-logger"]
 type UserAPIService struct {
@@ -55,31 +55,31 @@ type UserAPIService struct {
 	Cache CacheService
 
 	// Configuration: API rate limiting
-	// @InjectCfgValue key="api.rate-limit.enabled", default=true
+	// @Inject "cfg:api.rate-limit.enabled", "true"
 	RateLimitEnabled bool
 
-	// @InjectCfgValue key="api.rate-limit.max-requests", default=100
+	// @Inject "cfg:api.rate-limit.max-requests", "100"
 	MaxRequests int
 
-	// @InjectCfgValue "api.rate-limit.window", "1m"
+	// @Inject "cfg:api.rate-limit.window", "1m"
 	RateLimitWindow time.Duration
 
 	// Configuration: Pagination
-	// @InjectCfgValue key="api.pagination.default-page-size", default="20"
+	// @Inject "cfg:api.pagination.default-page-size", "20"
 	DefaultPageSize int
 
-	// @InjectCfgValue key="api.pagination.max-page-size", default="100"
+	// @Inject "cfg:api.pagination.max-page-size", "100"
 	MaxPageSize int
 
 	// Configuration: Response
-	// @InjectCfgValue key="api.response.include-metadata", default="true"
+	// @Inject "cfg:api.response.include-metadata", "true"
 	IncludeMetadata bool
 
 	// Configuration: Authentication
-	// @InjectCfgValue "api.jwt-secret"
+	// @Inject "cfg:api.jwt-secret"
 	JwtSecret string
 
-	// @InjectCfgValue key="api.token-expiry", default="24h"
+	// @Inject "cfg:api.token-expiry", "24h"
 	TokenExpiry time.Duration
 }
 

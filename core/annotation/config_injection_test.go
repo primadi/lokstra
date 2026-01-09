@@ -56,8 +56,8 @@ type UserService struct {
 	// @Inject "logger"
 	Logger any
 
-	// Config value injection (existing @InjectCfgValue)
-	// @InjectCfgValue "app.name"
+	// Config value injection
+	// @Inject "cfg:app.name"
 	AppName string
 }
 

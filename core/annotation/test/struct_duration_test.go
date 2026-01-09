@@ -29,7 +29,7 @@ type ServerConfig struct {
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue "server"
+	// @Inject "cfg:server"
 	Server ServerConfig
 }
 
@@ -55,7 +55,9 @@ type ServerConfig struct {
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="server", default=` + "`ServerConfig{Host: \"localhost\", Port: 8080, Timeout: 15*time.Minute}`" + `
+	// @Inject "cfg:server"
+	// NOTE: Default value not yet supported for struct config injection via @Inject
+	// Use config.yaml to provide default values instead
 	Server ServerConfig
 }
 
@@ -65,7 +67,6 @@ func (s *TestService) GetInfo() string { return "info" }
 			expectedStrings: []string{
 				"Server", "ServerConfig",
 				"cast.ToStruct",
-				`ServerConfig{Host: "localhost", Port: 8080, Timeout: 15*time.Minute}`,
 			},
 		},
 		{
@@ -82,7 +83,7 @@ type ServerConfig struct {
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="server", default="ServerConfig{Host: \"localhost\", Port: 8080, Timeout: 15*time.Minute}"
+	// @Inject "cfg:server"
 	Server ServerConfig
 }
 
@@ -92,7 +93,6 @@ func (s *TestService) GetInfo() string { return "info" }
 			expectedStrings: []string{
 				"Server", "ServerConfig",
 				"cast.ToStruct",
-				`ServerConfig{Host: \"localhost\", Port: 8080, Timeout: 15*time.Minute}`, // Escaped
 			},
 		},
 		{
@@ -109,7 +109,7 @@ type ServerConfig struct {
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="server", default=` + "`ServerConfig{Host: \"localhost\", Port: 8080, Timeout: 900000000000}`" + `
+	// @Inject "cfg:server"
 	Server ServerConfig
 }
 
@@ -119,7 +119,6 @@ func (s *TestService) GetInfo() string { return "info" }
 			expectedStrings: []string{
 				"Server", "ServerConfig",
 				"cast.ToStruct",
-				`ServerConfig{Host: "localhost", Port: 8080, Timeout: 900000000000}`,
 			},
 		},
 	}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "files": {
+    "service_a.go": {
+      "filename": "service_a.go",
+      "checksum": "45fa18d5ff386d14e86cc5f1a9e6ee7883297f193c087097ba98e94a783c52c1",
+      "annotations": 3,
+      "last_scan": "2026-01-09T17:05:02.2301931+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-09T17:05:02.2301931+07:00"
+    },
+    "service_b.go": {
+      "filename": "service_b.go",
+      "checksum": "9c7212810e6e7983080da9c60fe9d1e23e8229b177810afd4068a4deaba340d4",
+      "annotations": 3,
+      "last_scan": "2026-01-09T17:05:02.2301931+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-09T17:05:02.2301931+07:00"
+    },
+    "service_c.go": {
+      "filename": "service_c.go",
+      "checksum": "49e8b2f9c23cbc4eecb58061bf6b7606d559a2317045ab5d41cffb973cc02048",
+      "annotations": 3,
+      "last_scan": "2026-01-09T17:05:02.2301931+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-09T17:05:02.2301931+07:00"
+    },
+    "service_d.go": {
+      "filename": "service_d.go",
+      "checksum": "f3636ca6cf2d987c6f56b922d6d799412dafc2504a1d49a3f7bf753b94667ad3",
+      "annotations": 3,
+      "last_scan": "2026-01-09T17:05:02.2301931+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-09T17:05:02.2301931+07:00"
+    }
+  },
+  "updated_at": "2026-01-09T17:05:02.2301931+07:00",
+  "generated_checksum": "b19eaa60148c486f37808f581617bd8df30bd59adda696e95dd0484c93ad5f1d"
+}

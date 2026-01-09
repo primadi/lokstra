@@ -880,16 +880,16 @@ type AuthService struct {
     Cache domain.CacheService
     
     // Configuration injection (type-safe)
-    // @InjectCfgValue "auth.jwt-secret"
+    // @Inject "cfg:auth.jwt-secret"
     JwtSecret string
     
-    // @InjectCfgValue key="auth.token-expiry", default="24h"
+    // @Inject "cfg:auth.token-expiry", "24h"
     TokenExpiry time.Duration
     
-    // @InjectCfgValue key="auth.max-attempts", default="5"
+    // @Inject "cfg:auth.max-attempts", "5"
     MaxAttempts int
     
-    // @InjectCfgValue key="auth.debug-mode", default="false"
+    // @Inject "cfg:auth.debug-mode", "false"
     DebugMode bool
 }
 
@@ -954,8 +954,7 @@ go run . --generate-only
 |------------|---------|---------|
 | `@RouterService` | HTTP service with routes | `@RouterService name="user-service", prefix="/api"` |
 | `@Service` | Pure service (no HTTP) | `@Service name="auth-service"` |
-| `@Inject` | Dependency injection | `@Inject "user-repository"` or `@Inject service="cache", optional=true` |
-| `@InjectCfgValue` | Config injection | `@InjectCfgValue "jwt-secret"` or `@InjectCfgValue key="timeout", default="30s"` |
+| `@Inject` | Dependency/config injection | `@Inject "user-repository"` or `@Inject "cfg:timeout", "30s"` |
 | `@Route` | HTTP route mapping | `@Route "GET /users/{id}"` |
 
 **@RouterService Parameters:**
@@ -968,15 +967,13 @@ go run . --generate-only
 - `name`: Service name (required, positional or named)
 
 **@Inject Parameters:**
-- `service`: Service name (required, positional or named)
+- `service`: Service name (required, positional or named) OR
+- `cfg:key`: Config key for config injection (e.g., `@Inject "cfg:auth.jwt-secret"`)
 - `optional`: Boolean, default `false` - set to `true` for optional dependencies
+- For config injection: Second positional arg or `default` param for default value
+- Config types auto-detected: `string`, `int`, `bool`, `float64`, `time.Duration`
 
-**@InjectCfgValue Parameters:**
-- `key`: Config key (required, positional or named)
-- `default`: Default value (optional)
-- Type auto-detected: `string`, `int`, `bool`, `float64`, `time.Duration`
-
-**@Route Parameters:**
+**@Route Parameters:****
 - HTTP method + path pattern
 - Supports path parameters: `{id}`, `{userId}`, etc.
 - **Supports variables in path**: `"GET ${api-version}/users/{id}"` resolves from config

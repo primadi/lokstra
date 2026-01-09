@@ -23,7 +23,7 @@ import "time"
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="timeout", default="15m"
+	// @Inject "cfg:timeout", "15m"
 	Timeout time.Duration
 }
 
@@ -40,7 +40,7 @@ import "time"
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="timeout", default="2h"
+	// @Inject "cfg:timeout", "2h"
 	Timeout time.Duration
 }
 
@@ -57,7 +57,7 @@ import "time"
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="timeout", default="30s"
+	// @Inject "cfg:timeout", "30s"
 	Timeout time.Duration
 }
 

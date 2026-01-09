@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Example: @Service annotation with @Inject and @InjectCfgValue
+// Example: @Service annotation with @Inject for dependencies and config
 
 // @Service name="auth-service"
 type AuthService struct {
@@ -14,16 +14,16 @@ type AuthService struct {
 	// @Inject "cache-service"
 	Cache CacheService
 
-	// @InjectCfgValue "auth.jwt-secret"
+	// @Inject "cfg:auth.jwt-secret"
 	JwtSecret string
 
-	// @InjectCfgValue key="auth.token-expiry", default="24h"
+	// @Inject "cfg:auth.token-expiry", "24h"
 	TokenExpiry time.Duration
 
-	// @InjectCfgValue key="auth.max-attempts", default=5
+	// @Inject "cfg:auth.max-attempts", "5"
 	MaxAttempts int
 
-	// @InjectCfgValue key="auth.debug-mode", default="false"
+	// @Inject "cfg:auth.debug-mode", "false"
 	DebugMode bool
 }
 
@@ -64,16 +64,16 @@ func (s *AuthService) Login(email, password string) (string, error) {
 
 // @Service name="notification-service"
 type NotificationService struct {
-	// @InjectCfgValue "smtp.host"
+	// @Inject "cfg:smtp.host"
 	SMTPHost string
 
-	// @InjectCfgValue key="smtp.port", default="587"
+	// @Inject "cfg:smtp.port", "587"
 	SMTPPort int
 
-	// @InjectCfgValue key="smtp.from-email", default="noreply@example.com"
+	// @Inject "cfg:smtp.from-email", "noreply@example.com"
 	FromEmail string
 
-	// @InjectCfgValue key="notification.enabled", default="true"
+	// @Inject "cfg:notification.enabled", "true"
 	Enabled bool
 }
 

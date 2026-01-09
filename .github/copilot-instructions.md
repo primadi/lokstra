@@ -54,10 +54,10 @@ type UserService struct {
     // @Inject "user-repository"               - Direct service injection
     UserRepo UserRepository
 
-    // @Inject "cfg:store.implementation"      - Service from config (NEW!)
+    // @Inject "@store.implementation"         - Service from config
     Store Store  // Injected service name from config: store.implementation = "postgres-store"
 
-    // @InjectCfgValue "app.name"              - Config value injection
+    // @Inject "cfg:app.name"                  - Config value injection
     AppName string
 }// @Route "GET /{id}"
 func (s *UserService) GetByID(p *GetUserParams) (*User, error) {

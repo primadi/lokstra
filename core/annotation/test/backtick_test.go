@@ -27,7 +27,7 @@ type Config struct {
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="config", default=` + "`Config{Name: \"myapp\", Port: 8080}`" + `
+	// @Inject "cfg:config", ` + "`Config{Name: \"myapp\", Port: 8080}`" + `
 	Cfg Config
 }
 
@@ -48,7 +48,7 @@ type Config struct {
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="config", default="Config{Name: \"myapp\", Port: 8080}"
+	// @Inject "cfg:config", "Config{Name: \"myapp\", Port: 8080}"
 	Cfg Config
 }
 
@@ -72,7 +72,7 @@ type ScheduleConfig struct {
 
 // @RouterService name="test-service", prefix="/api"
 type TestService struct {
-	// @InjectCfgValue key="schedule", default=` + "`ScheduleConfig{EventName: \"Meeting\", StartDate: \"2024-12-25\", Duration: 3600000000000}`" + `
+	// @Inject "cfg:schedule", ` + "`ScheduleConfig{EventName: \"Meeting\", StartDate: \"2024-12-25\", Duration: 3600000000000}`" + `
 	Config ScheduleConfig
 }
 

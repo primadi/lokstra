@@ -1,46 +1,49 @@
 ---
 layout: default
-title: "@InjectCfgValue Annotation"
+title: "Config Injection with @Inject"
 parent: Framework Guide
 nav_order: 8
 ---
 
-# @InjectCfgValue Annotation
+# Config Injection with @Inject
 
 ## Overview
 
-The `@InjectCfgValue` annotation injects configuration values from `config.yaml` into service fields. It provides type-safe configuration injection with automatic type detection and optional default values.
+The `@Inject` annotation with `cfg:` prefix injects configuration values from `config.yaml` into service fields. It provides type-safe configuration injection with automatic type detection and optional default values.
+
+**Note:** Previously used `@InjectCfgValue` annotation - now unified under `@Inject` with `cfg:` prefix.
 
 ## Basic Syntax
 
 ```go
-// @InjectCfgValue "config.key"
+// @Inject "cfg:config.key"
 FieldName FieldType
 
 // or with default value
-// @InjectCfgValue key="config.key", default="value"
+// @Inject "cfg:config.key", "default-value"
 FieldName FieldType
 ```
 
 ## Supported Formats
 
-### 1. Positional Arguments
+### 1. Positional Arguments (Recommended)
 
 ```go
-// @InjectCfgValue "smtp.host"
+// @Inject "cfg:smtp.host"
 SMTPHost string
 
-// @InjectCfgValue "smtp.host", "localhost"
+// @Inject "cfg:smtp.host", "localhost"
 SMTPHost string
 ```
 
-### 2. Named Arguments
+### 2. Named Arguments (Legacy compatibility)
 
 ```go
-// @InjectCfgValue key="smtp.host"
+// @Inject service="cfg:smtp.host"
 SMTPHost string
 
-// @InjectCfgValue key="smtp.host", default="localhost"
+// Note: default value in second position
+// @Inject "cfg:smtp.host", "localhost"
 SMTPHost string
 ```
 
@@ -65,11 +68,11 @@ The framework automatically detects the field type and uses the appropriate `Get
 // @Service name="email-service"
 type EmailService struct {
     // No default - required in config
-    // @InjectCfgValue "smtp.host"
+    // @Inject "cfg:smtp.host"
     SMTPHost string
     
     // With default
-    // @InjectCfgValue key="smtp.from", default="noreply@example.com"
+    // @Inject "cfg:smtp.from", "noreply@example.com"
     FromEmail string
 }
 ```
@@ -93,10 +96,10 @@ configs:
 ```go
 // @Service name="rate-limiter"
 type RateLimiter struct {
-    // @InjectCfgValue key="rate.max-requests", default="100"
+    // @Inject "cfg:rate.max-requests", "100"
     MaxRequests int
     
-    // @InjectCfgValue key="rate.window-seconds", default="60"
+    // @Inject "cfg:rate.window-seconds", "60"
     WindowSeconds int64
 }
 ```
@@ -112,10 +115,10 @@ WindowSeconds: lokstra_registry.GetConfigInt("rate.window-seconds", 60),
 ```go
 // @Service name="feature-flags"
 type FeatureFlags struct {
-    // @InjectCfgValue key="features.new-ui", default="false"
+    // @Inject "cfg:features.new-ui", "false"
     EnableNewUI bool
     
-    // @InjectCfgValue key="features.debug-mode", default="false"
+    // @Inject "cfg:features.debug-mode", "false"
     DebugMode bool
 }
 ```
@@ -131,10 +134,10 @@ DebugMode:   lokstra_registry.GetConfigBool("features.debug-mode", false),
 ```go
 // @Service name="cache-service"
 type CacheService struct {
-    // @InjectCfgValue key="cache.ttl", default="5m"
+    // @Inject "cfg:cache.ttl", "5m"
     TTL time.Duration
     
-    // @InjectCfgValue key="cache.cleanup-interval", default="1h"
+    // @Inject "cfg:cache.cleanup-interval", "1h"
     CleanupInterval time.Duration
 }
 ```
@@ -150,10 +153,10 @@ CleanupInterval: lokstra_registry.GetConfigDuration("cache.cleanup-interval", 1*
 ```go
 // @Service name="payment-service"
 type PaymentService struct {
-    // @InjectCfgValue key="payment.fee-percentage", default="2.5"
+    // @Inject "cfg:payment.fee-percentage", "2.5"
     FeePercentage float64
     
-    // @InjectCfgValue key="payment.min-amount", default="10.0"
+    // @Inject "cfg:payment.min-amount", "10.0"
     MinAmount float32
 }
 ```
@@ -176,35 +179,35 @@ import "time"
 // @Service name="app-config"
 type AppConfig struct {
     // String configs
-    // @InjectCfgValue key="app.name", default="MyApp"
+    // @Inject "cfg:app.name", "MyApp"
     AppName string
     
-    // @InjectCfgValue "app.version"
+    // @Inject "cfg:app.version"
     Version string  // Required, no default
     
     // Integer configs
-    // @InjectCfgValue key="server.port", default="8080"
+    // @Inject "cfg:server.port", "8080"
     ServerPort int
     
-    // @InjectCfgValue key="server.max-connections", default="1000"
+    // @Inject "cfg:server.max-connections", "1000"
     MaxConnections int64
     
     // Boolean configs
-    // @InjectCfgValue key="server.enable-gzip", default="true"
+    // @Inject "cfg:server.enable-gzip", "true"
     EnableGzip bool
     
-    // @InjectCfgValue key="server.debug", default="false"
+    // @Inject "cfg:server.debug", "false"
     Debug bool
     
     // Duration configs
-    // @InjectCfgValue key="server.read-timeout", default="30s"
+    // @Inject "cfg:server.read-timeout", "30s"
     ReadTimeout time.Duration
     
-    // @InjectCfgValue key="server.write-timeout", default="30s"
+    // @Inject "cfg:server.write-timeout", "30s"
     WriteTimeout time.Duration
     
     // Float configs
-    // @InjectCfgValue key="cache.eviction-ratio", default="0.1"
+    // @Inject "cfg:cache.eviction-ratio", "0.1"
     CacheEvictionRatio float64
 }
 
@@ -262,7 +265,7 @@ func RegisterAppConfig() {
 If config key is missing in `config.yaml`, uses the default:
 
 ```go
-// @InjectCfgValue key="smtp.host", default="localhost"
+// @Inject "cfg:smtp.host", "localhost"
 SMTPHost string  // "localhost" if not in config
 ```
 
@@ -271,13 +274,13 @@ SMTPHost string  // "localhost" if not in config
 If config key is missing, uses type's zero value:
 
 ```go
-// @InjectCfgValue "smtp.host"
+// @Inject "cfg:smtp.host"
 SMTPHost string  // "" if not in config
 
-// @InjectCfgValue "server.port"
+// @Inject "cfg:server.port"
 Port int  // 0 if not in config
 
-// @InjectCfgValue "debug"
+// @Inject "cfg:debug"
 Debug bool  // false if not in config
 ```
 
@@ -287,19 +290,19 @@ Debug bool  // false if not in config
 
 ✅ **Good:**
 ```go
-// @InjectCfgValue key="database.connection-timeout", default="30s"
+// @Inject "cfg:database.connection-timeout", "30s"
 DBTimeout time.Duration
 
-// @InjectCfgValue key="auth.jwt-secret"
+// @Inject "cfg:auth.jwt-secret"
 JWTSecret string
 ```
 
 ❌ **Bad:**
 ```go
-// @InjectCfgValue "timeout"  // Too vague
+// @Inject "cfg:timeout"  // Too vague
 Timeout time.Duration
 
-// @InjectCfgValue "secret"  // Not descriptive
+// @Inject "cfg:secret"  // Not descriptive
 Secret string
 ```
 
@@ -307,10 +310,10 @@ Secret string
 
 ✅ **Good:**
 ```go
-// @InjectCfgValue key="server.port", default="8080"
+// @Inject "cfg:server.port", "8080"
 Port int
 
-// @InjectCfgValue key="cache.ttl", default="5m"
+// @Inject "cfg:cache.ttl", "5m"
 CacheTTL time.Duration
 ```
 
@@ -339,13 +342,13 @@ configs:
 ```go
 // @Service name="db-service"
 type DBService struct {
-    // @InjectCfgValue key="database.host", default="localhost"
+    // @Inject "cfg:database.host", "localhost"
     Host string
     
-    // @InjectCfgValue key="database.port", default="5432"
+    // @Inject "cfg:database.port", "5432"
     Port int
     
-    // @InjectCfgValue key="database.timeout", default="30s"
+    // @Inject "cfg:database.timeout", "30s"
     Timeout time.Duration
 }
 ```
@@ -356,16 +359,16 @@ type DBService struct {
 // @Service name="payment-service"
 type PaymentService struct {
     // REQUIRED - no default
-    // @InjectCfgValue "payment.api-key"
+    // @Inject "cfg:payment.api-key"
     APIKey string
     
     // Optional - has default
-    // @InjectCfgValue key="payment.timeout", default="60s"
+    // @Inject "cfg:payment.timeout", "60s"
     Timeout time.Duration
 }
 ```
 
-## Combining @Inject and @InjectCfgValue
+## Combining @Inject (Service and Config)
 
 ```go
 // @Service name="notification-service"
@@ -378,13 +381,13 @@ type NotificationService struct {
     EmailSvc EmailService
     
     // Configuration
-    // @InjectCfgValue key="notifications.enabled", default="true"
+    // @Inject "cfg:notifications.enabled", "true"
     Enabled bool
     
-    // @InjectCfgValue key="notifications.batch-size", default="100"
+    // @Inject "cfg:notifications.batch-size", "100"
     BatchSize int
     
-    // @InjectCfgValue key="notifications.retry-attempts", default="3"
+    // @Inject "cfg:notifications.retry-attempts", "3"
     RetryAttempts int
 }
 
