@@ -1815,13 +1815,11 @@ func parseSliceFromConfig(fieldType, configKey, defaultValue string) string {
 
 // genTemplate is the template for zz_generated.lokstra.go
 var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
-	"hasReturnValue":    hasReturnValue,
-	"extractReturnType": extractReturnType,
-	"quote":             func(s string) string { return fmt.Sprintf("%q", s) },
-	"join":              strings.Join,
-	"trimPrefix":        strings.TrimPrefix,
-	"trimSuffix":        strings.TrimSuffix,
-	"notEmpty":          func(s string) bool { return strings.TrimSpace(s) != "" },
+	"quote":      func(s string) string { return fmt.Sprintf("%q", s) },
+	"join":       strings.Join,
+	"trimPrefix": strings.TrimPrefix,
+	"trimSuffix": strings.TrimSuffix,
+	"notEmpty":   func(s string) bool { return strings.TrimSpace(s) != "" },
 
 	"getDefaultValue": func(fieldType, defaultValue string) string {
 		if defaultValue != "" {
@@ -2145,14 +2143,6 @@ func Register{{$service.StructName}}() {
 {{end}}
 {{end}}
 {{range $filename, $code := .PreservedSections}}{{$code}}{{end}}`))
-
-func hasReturnValue(route string) bool {
-	return !strings.Contains(route, "error")
-}
-
-func extractReturnType(route string) string {
-	return "*domain.User"
-}
 
 // isStructType checks if a type is a struct (not primitive, slice, map, or interface)
 func isStructType(fieldType string) bool {

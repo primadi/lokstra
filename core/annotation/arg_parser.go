@@ -108,7 +108,9 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 	}
 
 	return annotations, nil
-} // parseAnnotationLine parses a single annotation line
+}
+
+// parseAnnotationLine parses a single annotation line
 // Supports both formats:
 //
 //	@RouterService name="user-service", prefix="/api"

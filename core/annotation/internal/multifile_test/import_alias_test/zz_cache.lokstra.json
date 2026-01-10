@@ -5,43 +5,43 @@
       "filename": "service_a.go",
       "checksum": "45fa18d5ff386d14e86cc5f1a9e6ee7883297f193c087097ba98e94a783c52c1",
       "annotations": 3,
-      "last_scan": "2026-01-09T17:29:34.0136949+07:00",
+      "last_scan": "2026-01-11T02:39:29.0677188+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2026-01-09T17:29:34.0136949+07:00"
+      "generated_mod_time": "2026-01-11T02:39:29.0677188+07:00"
     },
     "service_b.go": {
       "filename": "service_b.go",
       "checksum": "9c7212810e6e7983080da9c60fe9d1e23e8229b177810afd4068a4deaba340d4",
       "annotations": 3,
-      "last_scan": "2026-01-09T17:29:34.0136949+07:00",
+      "last_scan": "2026-01-11T02:39:29.0677188+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2026-01-09T17:29:34.0136949+07:00"
+      "generated_mod_time": "2026-01-11T02:39:29.0677188+07:00"
     },
     "service_c.go": {
       "filename": "service_c.go",
       "checksum": "49e8b2f9c23cbc4eecb58061bf6b7606d559a2317045ab5d41cffb973cc02048",
       "annotations": 3,
-      "last_scan": "2026-01-09T17:29:34.0136949+07:00",
+      "last_scan": "2026-01-11T02:39:29.0677188+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2026-01-09T17:29:34.0136949+07:00"
+      "generated_mod_time": "2026-01-11T02:39:29.0677188+07:00"
     },
     "service_d.go": {
       "filename": "service_d.go",
       "checksum": "f3636ca6cf2d987c6f56b922d6d799412dafc2504a1d49a3f7bf753b94667ad3",
       "annotations": 3,
-      "last_scan": "2026-01-09T17:29:34.0136949+07:00",
+      "last_scan": "2026-01-11T02:39:29.0677188+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2026-01-09T17:29:34.0136949+07:00"
+      "generated_mod_time": "2026-01-11T02:39:29.0677188+07:00"
     }
   },
-  "updated_at": "2026-01-09T17:29:34.0136949+07:00",
+  "updated_at": "2026-01-11T02:39:29.0677188+07:00",
   "generated_checksum": "4e132d1b4c803cd988d3529e67ccd73f58291f83b447bea3d2b10250ef1783cd"
 }
