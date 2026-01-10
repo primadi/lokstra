@@ -35,10 +35,10 @@ app.Run(30 * time.Second)
 ```go
 // main.go
 func main() {
-    // Auto-generates code when @RouterService changes detected
+    // Auto-generates code when @EndpointService changes detected
     lokstra.Bootstrap()
 
-    // Import packages with @RouterService annotations
+    // Import packages with @EndpointService annotations
     _ "myapp/modules/user/application"
 
     // Services auto-registered via annotations!
@@ -49,15 +49,15 @@ func main() {
 **Service with annotations:**
 
 ```go
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "user-repository"               - Direct service injection
     UserRepo UserRepository
 
-    // @Inject "cfg:store.implementation"      - Service from config (NEW!)
+    // @Inject "@store.implementation"         - Service from config
     Store Store  // Injected service name from config: store.implementation = "postgres-store"
 
-    // @InjectCfgValue "app.name"              - Config value injection
+    // @Inject "cfg:app.name"                  - Config value injection
     AppName string
 }// @Route "GET /{id}"
 func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
@@ -137,7 +137,7 @@ func (s *MySQLStore) GetUser(id string) (*User, error) { /* ... */ }
 
 ```go
 // application/user_service.go
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "@store.implementation"
     Store Store  // Actual service injected based on config!
@@ -301,7 +301,7 @@ myapp/
 ├── infrastructure/
 │   └── user_repository.go
 └── application/
-    ├── user_service.go              # Contains @RouterService
+    ├── user_service.go              # Contains @EndpointService
     └── zz_generated.lokstra.go      # Auto-generated
 ```
 
@@ -381,7 +381,7 @@ go run . --generate-only # Force rebuild all
 3. **Use pointer parameters** for request binding: `*CreateUserParams`
 4. **Follow domain-driven design**: domain → repository → service
 5. **Type-safe DI**: Use direct type assertions and `service.LazyLoad[T]` for lazy service loading
-6. **Prefer annotations** for business services: Use `@RouterService` + `@Route` instead of manual registration
+6. **Prefer annotations** for business services: Use `@EndpointService` + `@Route` instead of manual registration
 
 ## When Suggesting Code
 
@@ -397,12 +397,12 @@ go run . --generate-only # Force rebuild all
    - Include error handling
    - Include validation tags
    - Include config.yaml if using framework mode
-   - Use `@RouterService` annotations for business services
+   - Use `@EndpointService` annotations for business services
 
 3. **Follow project structure:**
    - Separate domain/application/infrastructure
    - Use interfaces in domain layer
-   - Business logic in application layer with `@RouterService`
+   - Business logic in application layer with `@EndpointService`
    - Data access in infrastructure layer
 
 ## Resources

@@ -758,7 +758,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			continue
 		}
 
-		// Get service type metadata (has router config from @RouterService annotation)
+		// Get service type metadata (has router config from @EndpointService annotation)
 		metadata := registry.GetServiceMetadata(serviceDef.Type)
 		if metadata == nil {
 			// Skip services without metadata

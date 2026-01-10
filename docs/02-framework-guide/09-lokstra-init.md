@@ -175,7 +175,7 @@ if cfg.EnableAnnotation {
     lokstra.Bootstrap(cfg.AnnotationScanPaths...)
 }
 ```
-- Scans for `@RouterService`, `@Service`, `@Route` annotations
+- Scans for `@EndpointService`, `@Service`, `@Route` annotations
 - Generates router code if needed
 - Auto-registers services
 

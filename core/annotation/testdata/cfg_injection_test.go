@@ -43,7 +43,7 @@ func (s *MySQLTenantStore) SaveTenant(tenant *Tenant) error {
 	return nil
 }
 
-// @RouterService name="tenant-service", prefix="/api/tenants", middlewares=["recovery"]
+// @EndpointService name="tenant-service", prefix="/api/tenants", middlewares=["recovery"]
 type TenantService struct {
 	// @Inject "cfg:store.tenant-store"
 	Store TenantStore

@@ -21,12 +21,12 @@ type RetryConfig struct {
     MaxDelay   time.Duration `json:"max_delay"`
 }
 
-// @RouterService name="app-service", prefix="/api"
+// @EndpointService name="app-service", prefix="/api"
 type AppService struct {
-    // @InjectCfgValue "server"
+    // @Inject "cfg:server"
     Server ServerConfig
     
-    // @InjectCfgValue "retry"
+    // @Inject "cfg:retry"
     Retry RetryConfig
 }
 ```
@@ -75,19 +75,19 @@ Server: func() ServerConfig {
 
 ### Option A: Using Backtick (Recommended - No Escaping!)
 ```go
-// @InjectCfgValue key="server", default=`ServerConfig{Host: "localhost", Port: 8080, ReadTimeout: 30*time.Second}`
+// @Inject "cfg:server", `ServerConfig{Host: "localhost", Port: 8080, ReadTimeout: 30*time.Second}`
 Server ServerConfig
 ```
 
 ### Option B: Using Double Quotes (Need Escaping)
 ```go
-// @InjectCfgValue key="server", default="ServerConfig{Host: \"localhost\", Port: 8080, ReadTimeout: 30*time.Second}"
+// @Inject "cfg:server", "ServerConfig{Host: \"localhost\", Port: 8080, ReadTimeout: 30*time.Second}"
 Server ServerConfig
 ```
 
 ### Option C: Duration String Format
 ```go
-// @InjectCfgValue key="timeout", default="15m"
+// @Inject "cfg:timeout", "15m"
 Timeout time.Duration
 ```
 
@@ -107,9 +107,9 @@ type DatabaseConfig struct {
     IdleTimeout     time.Duration `json:"idle_timeout"`
 }
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
-    // @InjectCfgValue key="database", default=`DatabaseConfig{Host: "localhost", Port: 5432, MaxConnections: 10, ConnectTimeout: 5*time.Second, QueryTimeout: 30*time.Second, IdleTimeout: 10*time.Minute}`
+    // @Inject "cfg:database", `DatabaseConfig{Host: "localhost", Port: 5432, MaxConnections: 10, ConnectTimeout: 5*time.Second, QueryTimeout: 30*time.Second, IdleTimeout: 10*time.Minute}`
     DB DatabaseConfig
 }
 

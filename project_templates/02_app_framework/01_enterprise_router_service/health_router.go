@@ -6,7 +6,7 @@ import (
 )
 
 // NewHealthRouter creates a manual health check router
-// This demonstrates how to create routers manually without @RouterService annotation
+// This demonstrates how to create routers manually without @EndpointService annotation
 func NewHealthRouter() router.Router {
 	r := router.New("health-router")
 

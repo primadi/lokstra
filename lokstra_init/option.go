@@ -25,7 +25,7 @@ func WithLogLevel(level logger.LogLevel) InitializeOption {
 
 // enable annotations with optional scan paths
 // if no paths provided, use default paths
-// example annotations : @RouterService, @Service, @Route
+// example annotations : @EndpointService, @Service, @Route
 // default enable is true, path is empty (current folder)
 func WithAnnotations(enable bool, paths ...string) InitializeOption {
 	return func(c *InitializeConfig) {

@@ -5,7 +5,7 @@ import (
 	"github.com/primadi/lokstra/core/service"
 )
 
-// @RouterService name="user-service", prefix="/api/v1/users"
+// @EndpointService name="user-service", prefix="/api/v1/users"
 type UserService struct {
 	// @Inject "user-repo"
 	UserRepo *service.Cached[any]

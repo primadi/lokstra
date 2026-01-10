@@ -5,7 +5,7 @@ package annotation
 
 /* Example 1: @Inject with cfg: prefix for config values
 
-// @RouterService name="auth-service", prefix="/api/auth"
+// @EndpointService name="auth-service", prefix="/api/auth"
 type AuthService struct {
 	// @Inject "cfg:app.timeout"
 	Timeout time.Duration
@@ -26,7 +26,7 @@ config.yaml:
 
 /* Example 2: @Inject with cfg:@ prefix (indirect config)
 
-// @RouterService name="auth-service", prefix="/api/auth"
+// @EndpointService name="auth-service", prefix="/api/auth"
 type AuthService struct {
 	// @Inject "cfg:@jwt.key-path"
 	JWTSecret string
@@ -75,7 +75,7 @@ config.yaml:
 
 /* Example 4: Mixed injection patterns
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
 	// Direct service injection
 	// @Inject "user-repository"

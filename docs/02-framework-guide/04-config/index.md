@@ -163,7 +163,7 @@ deployments:
 ## 🔧 Key Features
 
 ### 1. Service Auto-Discovery
-Services with `@RouterService` annotation are automatically discovered and registered.
+Services with `@EndpointService` annotation are automatically discovered and registered.
 
 ### 2. Router Auto-Generation
 Routers are auto-generated from published services based on metadata.

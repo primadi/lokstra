@@ -18,7 +18,7 @@ The `@Service` annotation is used to register **pure service classes** (non-HTTP
 - Any service that doesn't expose HTTP endpoints
 
 **Key Differences:**
-- `@RouterService` → HTTP handlers (controllers) with routes
+- `@EndpointService` → HTTP handlers (controllers) with routes
 - `@Service` → Pure services without HTTP endpoints
 
 ## Basic Syntax
@@ -91,16 +91,16 @@ func RegisterAuthService() {
 }
 ```
 
-### 3. Configuration Injection with @InjectCfgValue
+### 3. Configuration Injection with @Inject "cfg:..."
 
 **Basic config:**
 ```go
 // @Service name="auth-service"
 type AuthService struct {
-    // @InjectCfgValue "auth.jwt-secret"
+    // @Inject "cfg:auth.jwt-secret"
     JwtSecret string
     
-    // @InjectCfgValue key="auth.token-expiry"
+    // @Inject "cfg:auth.token-expiry"
     TokenExpiry time.Duration
 }
 ```
@@ -109,13 +109,13 @@ type AuthService struct {
 ```go
 // @Service name="email-service"
 type EmailService struct {
-    // @InjectCfgValue key="smtp.host", default="localhost"
+    // @Inject "cfg:smtp.host", "localhost"
     SMTPHost string
     
-    // @InjectCfgValue key="smtp.port", default="587"
+    // @Inject "cfg:smtp.port", "587"
     SMTPPort int
     
-    // @InjectCfgValue key="smtp.enabled", default="true"
+    // @Inject "cfg:smtp.enabled", "true"
     Enabled bool
 }
 ```
@@ -163,17 +163,17 @@ type AuthService struct {
     Cache domain.CacheService
     
     // Required config (no default)
-    // @InjectCfgValue "auth.jwt-secret"
+    // @Inject "cfg:auth.jwt-secret"
     JwtSecret string
     
     // Config with defaults
-    // @InjectCfgValue key="auth.token-expiry", default="24h"
+    // @Inject "cfg:auth.token-expiry", "24h"
     TokenExpiry time.Duration
     
-    // @InjectCfgValue key="auth.max-attempts", default="5"
+    // @Inject "cfg:auth.max-attempts", "5"
     MaxAttempts int
     
-    // @InjectCfgValue key="auth.debug-mode", default="false"
+    // @Inject "cfg:auth.debug-mode", "false"
     DebugMode bool
 }
 
@@ -248,7 +248,6 @@ func init() {
 // Auto-generated from annotations:
 //   - @Service name="auth-service"
 //   - @Inject annotations
-//   - @InjectCfgValue annotations
 func RegisterAuthService() {
     lokstra_registry.RegisterLazyService("auth-service", func(deps map[string]any, cfg map[string]any) any {
         return &AuthService{
@@ -311,7 +310,7 @@ type PaymentProcessor struct {
 ❌ **Bad:**
 ```go
 // Don't use @Service for HTTP controllers
-// Use @RouterService instead
+// Use @EndpointService instead
 ```
 
 ### 2. Separate Configuration Concerns
@@ -320,10 +319,10 @@ type PaymentProcessor struct {
 ```go
 // @Service name="sms-service"
 type SMSService struct {
-    // @InjectCfgValue key="sms.api-key"
+    // @Inject "cfg:sms.api-key"
     APIKey string
     
-    // @InjectCfgValue key="sms.endpoint", default="https://api.sms.com"
+    // @Inject "cfg:sms.endpoint", "https://api.sms.com"
     Endpoint string
 }
 ```
@@ -372,24 +371,24 @@ func (s *UserService) GetUser(id string) (*User, error) {
 ```go
 // @Service name="config-service"
 type ConfigService struct {
-    // @InjectCfgValue key="server.port", default="8080"
+    // @Inject "cfg:server.port", "8080"
     Port int  // Auto-uses GetConfigInt
     
-    // @InjectCfgValue key="cache.ttl", default="5m"
+    // @Inject "cfg:cache.ttl", "5m"
     CacheTTL time.Duration  // Auto-uses GetConfigDuration
     
-    // @InjectCfgValue key="debug", default="false"
+    // @Inject "cfg:debug", "false"
     Debug bool  // Auto-uses GetConfigBool
 }
 ```
 
-## Comparison: @Service vs @RouterService
+## Comparison: @Service vs @EndpointService
 
-| Feature | @Service | @RouterService |
+| Feature | @Service | @EndpointService |
 |---------|----------|----------------|
 | HTTP Routes | ❌ No | ✅ Yes (@Route) |
 | Dependency Injection | ✅ @Inject | ✅ @Inject |
-| Config Injection | ✅ @InjectCfgValue | ✅ @InjectCfgValue |
+| Config Injection | ✅ @Inject "cfg:..." | ✅ @Inject "cfg:..." |
 | Optional Dependencies | ✅ Yes | ✅ Yes |
 | Use Case | Business logic, utilities | HTTP controllers |
 | Generated Code | `RegisterLazyService` | `RegisterRouterServiceType` |
@@ -419,7 +418,7 @@ go run . --generate-only
 
 ## See Also
 
-- [@RouterService](05-router-service-annotation.md) - For HTTP endpoints
+- [@EndpointService](05-router-service-annotation.md) - For HTTP endpoints
 - [@Inject](07-inject-annotation.md) - Dependency injection details
-- [@InjectCfgValue](08-inject-cfg-annotation.md) - Configuration injection
+- [@Inject "cfg:..."](08-inject-cfg-annotation.md) - Configuration injection
 - [Service Registry](09-service-registry.md) - Manual service registration

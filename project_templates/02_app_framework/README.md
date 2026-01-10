@@ -17,7 +17,7 @@ including **DDD modules**, **annotation-based routers**, and **config-driven dep
 This template shows how to build a **large, modular application** with:
 
 - ✅ **DDD modules** (`modules/user`, `modules/order`, `modules/shared`)
-- ✅ `@RouterService` / `@Route` annotations and **generated routers**
+- ✅ `@EndpointService` / `@Route` annotations and **generated routers**
 - ✅ Per-environment deployments (`development` vs `microservice`) via `config/deployment.yaml`
 - ✅ Custom middleware: `request-logger`, `simple-auth`, `mw-test`
 - ✅ New bootstrap flow using `lokstra_init.BootstrapAndRun`

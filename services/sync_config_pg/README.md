@@ -137,10 +137,10 @@ maxUsers := configService.GetInt(ctx, "max_users", 100)
 appName := configService.GetString(ctx, "app_name", "MyApp")
 ```
 
-### With Annotation (@RouterService)
+### With Annotation (@EndpointService)
 
 ```go
-// @RouterService name="settings-service"
+// @EndpointService name="settings-service"
 type SettingsService struct {
     // @Inject "config-service"
     Config serviceapi.SyncConfig

@@ -22,7 +22,7 @@ import (
 
 // ProcessComplexAnnotations processes annotations with parallel folder processing.
 // rootPath is a slice of directories to scan. Each directory and its subdirectories
-// will be scanned for .go files containing @RouterService annotations.
+// will be scanned for .go files containing @EndpointService annotations.
 func ProcessComplexAnnotations(rootPath []string, maxWorkers int,
 	onProcessRouterService func(*RouterServiceContext) error) (bool, error) {
 	// Find all folders containing .go files from all root paths
@@ -170,7 +170,7 @@ func ProcessPerFolder(folderPath string, onProcessRouterService func(*RouterServ
 		forceRegenerate = true
 	}
 
-	// Step 2: Scan .go files containing @RouterService
+	// Step 2: Scan .go files containing @EndpointService
 	skipped, updated, deleted, err := scanFolderFiles(folderPath, cache)
 	if err != nil {
 		return false, fmt.Errorf("failed to scan files: %w", err)
@@ -321,13 +321,13 @@ type ServiceGeneration struct {
 	RouteMiddlewares   map[string][]string         // methodName -> []middleware (per-route middleware)
 	Methods            map[string]*MethodSignature // methodName -> signature
 	Dependencies       map[string]*DependencyInfo  // serviceName -> field info
-	ConfigDependencies map[string]*ConfigInfo      // configKey -> config field info (for @InjectCfgValue)
+	ConfigDependencies map[string]*ConfigInfo      // configKey -> config field info (for @Inject "cfg:...")
 	Imports            map[string]string           // alias -> import path (e.g., "domain" -> ".../.../domain")
 	StructName         string
 	InterfaceName      string
 	RemoteTypeName     string
 	SourceFile         string
-	IsService          bool // true if @Service, false if @RouterService
+	IsService          bool // true if @Service, false if @EndpointService
 	HasInitMethod      bool // true if Init() or Init() error method exists
 	InitReturnsError   bool // true if Init() returns error, false if Init() has no return
 }
@@ -341,7 +341,7 @@ type DependencyInfo struct {
 	ConfigKey     string // e.g., "store.implementation" (only if IsConfigBased=true)
 }
 
-// ConfigInfo holds config injection information for @InjectCfgValue
+// ConfigInfo holds config injection information for @Inject "cfg:..."
 type ConfigInfo struct {
 	ConfigKey    string // e.g., "auth.jwt-secret" or "@jwt.key-path" for indirection
 	FieldName    string // e.g., "jwtSecret"
@@ -417,7 +417,7 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 
 		fullPath := filepath.Join(folderPath, file.Name())
 
-		// Quick check: does file contain @RouterService or @Service?
+		// Quick check: does file contain @EndpointService or @Service?
 		hasAnnotations, err := fileContainsServiceAnnotations(fullPath)
 		if err != nil {
 			// Cleanup before returning error
@@ -477,7 +477,7 @@ func scanFolderFiles(folderPath string, cache *FolderCache) ([]*FileToProcess, [
 	return skipped, updated, deleted, nil
 }
 
-// fileContainsServiceAnnotations quickly checks if file contains @RouterService or @Service annotation.
+// fileContainsServiceAnnotations quickly checks if file contains @EndpointService or @Service annotation.
 // Uses same parsing logic as ParseFileAnnotations for consistency.
 // Only matches when annotation is at the start of comment content (after // and spaces).
 // Ignores TAB-indented annotations (Go code examples in documentation).
@@ -496,8 +496,8 @@ func fileContainsServiceAnnotations(path string) (bool, error) {
 		// Check for // comment
 		if after, ok := bytes.CutPrefix(trimmedLine, []byte("//")); ok {
 			// CRITICAL: Detect Go code examples (TAB-indented after //)
-			// Valid annotation:   // @RouterService
-			// Invalid annotation: //	@RouterService (TAB - code example)
+			// Valid annotation:   // @EndpointService
+			// Invalid annotation: //	@EndpointService (TAB - code example)
 
 			// Find the position of // in original line
 			commentPos := bytes.Index(line, []byte("//"))
@@ -513,11 +513,11 @@ func fileContainsServiceAnnotations(path string) (bool, error) {
 				// Check for multiple spaces or single TAB
 				trimmedAfter := bytes.TrimLeft(afterComment, " \t")
 
-				// Check for @RouterService or @Service
-				if bytes.HasPrefix(trimmedAfter, []byte("@RouterService")) || bytes.HasPrefix(trimmedAfter, []byte("@Service")) {
+				// Check for @EndpointService or @Service
+				if bytes.HasPrefix(trimmedAfter, []byte("@EndpointService")) || bytes.HasPrefix(trimmedAfter, []byte("@Service")) {
 					leadingWhitespace := afterComment[:len(afterComment)-len(trimmedAfter)]
 
-					// Allow single space only (normal comment: "// @RouterService")
+					// Allow single space only (normal comment: "// @EndpointService")
 					// Reject TAB or multiple spaces
 					if len(leadingWhitespace) > 1 || (len(leadingWhitespace) == 1 && leadingWhitespace[0] == '\t') {
 						// Indented - skip it
@@ -530,7 +530,7 @@ func fileContainsServiceAnnotations(path string) (bool, error) {
 
 			// Also check trimmed version for backward compatibility
 			after = bytes.TrimSpace(after)
-			if bytes.HasPrefix(after, []byte("@RouterService")) || bytes.HasPrefix(after, []byte("@Service")) {
+			if bytes.HasPrefix(after, []byte("@EndpointService")) || bytes.HasPrefix(after, []byte("@Service")) {
 				// Double-check: make sure it's not TAB-indented
 				commentPos := bytes.Index(line, []byte("//"))
 				if commentPos != -1 && commentPos+2 < len(line) {
@@ -556,7 +556,7 @@ func fileContainsServiceAnnotations(path string) (bool, error) {
 	return false, scanner.Err()
 }
 
-// fileContainsRouterService quickly checks if file contains @RouterService annotation.
+// fileContainsRouterService quickly checks if file contains @EndpointService annotation.
 // Deprecated: Use fileContainsServiceAnnotations instead.
 // Kept for backward compatibility with tests.
 func fileContainsRouterService(path string) (bool, error) {
@@ -774,7 +774,7 @@ func generateImportFile(startPath string, packages []string) error {
 	var buf bytes.Buffer
 	buf.WriteString("// AUTO-GENERATED CODE - DO NOT EDIT\n")
 	buf.WriteString("// Generated by lokstra-annotation to auto-register services via init()\n")
-	buf.WriteString("// This file imports all packages containing @Service or @RouterService annotations\n\n")
+	buf.WriteString("// This file imports all packages containing @Service or @EndpointService annotations\n\n")
 	buf.WriteString("package main\n\n")
 	buf.WriteString("import (\n")
 	for _, pkg := range sortedPackages {

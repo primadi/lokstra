@@ -90,7 +90,7 @@ deployments                # Deployment topologies
 
 ### Auto-Generation Flow
 ```
-1. @RouterService annotation → Service metadata
+1. @EndpointService annotation → Service metadata
 2. published-services → Auto-generate router
 3. service.router → Router customization
 4. router-definitions → Override defaults
@@ -112,7 +112,7 @@ service-definitions:
   user-service:
     type: user-service-factory
     depends-on: [user-repository]
-    router: {}  # Uses conventions from @RouterService
+    router: {}  # Uses conventions from @EndpointService
 
 deployments:
   dev:

@@ -124,7 +124,7 @@ type SendEmailParams struct {
     Message string `json:"message" validate:"required"`
 }
 
-// @RouterService name="notification-service", prefix="/api/notifications"
+// @EndpointService name="notification-service", prefix="/api/notifications"
 type NotificationService struct {
     // @Inject "email-service"
     EmailSender serviceapi.EmailSender
@@ -154,7 +154,7 @@ import (
     "github.com/primadi/lokstra/serviceapi"
 )
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "email-service"
     EmailSender serviceapi.EmailSender
@@ -214,7 +214,7 @@ import (
     "github.com/primadi/lokstra/serviceapi"
 )
 
-// @RouterService name="invoice-service", prefix="/api/invoices"
+// @EndpointService name="invoice-service", prefix="/api/invoices"
 type InvoiceService struct {
     // @Inject "email-service"
     EmailSender serviceapi.EmailSender
@@ -274,7 +274,7 @@ import (
     "github.com/primadi/lokstra/serviceapi"
 )
 
-// @RouterService name="newsletter-service", prefix="/api/newsletter"
+// @EndpointService name="newsletter-service", prefix="/api/newsletter"
 type NewsletterService struct {
     // @Inject "email-service"
     EmailSender serviceapi.EmailSender
@@ -324,7 +324,7 @@ import (
     "github.com/primadi/lokstra/serviceapi"
 )
 
-// @RouterService name="auth-service", prefix="/api/auth"
+// @EndpointService name="auth-service", prefix="/api/auth"
 type AuthService struct {
     // @Inject "email-service"
     EmailSender serviceapi.EmailSender
@@ -390,7 +390,7 @@ import (
     "github.com/primadi/lokstra/serviceapi"
 )
 
-// @RouterService name="template-email-service", prefix="/api/emails"
+// @EndpointService name="template-email-service", prefix="/api/emails"
 type TemplateEmailService struct {
     // @Inject "email-service"
     EmailSender serviceapi.EmailSender

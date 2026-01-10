@@ -196,9 +196,9 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 		return err
 	}
 
-	// Find @RouterService and @Service annotations
+	// Find @EndpointService and @Service annotations
 	for _, ann := range file.Annotations {
-		if ann.Name != "RouterService" && ann.Name != "Service" {
+		if ann.Name != "EndpointService" && ann.Name != "Service" {
 			continue
 		}
 
@@ -217,10 +217,10 @@ func processFileForCodeGen(file *FileToProcess, ctx *RouterServiceContext) error
 			}
 			serviceName, _ = args["name"].(string)
 		} else {
-			// @RouterService needs name, prefix, middlewares
+			// @EndpointService needs name, prefix, middlewares
 			args, err := ann.ReadArgs("name", "prefix", "middlewares")
 			if err != nil {
-				return fmt.Errorf("@RouterService on line %d: %w", ann.Line, err)
+				return fmt.Errorf("@EndpointService on line %d: %w", ann.Line, err)
 			}
 			serviceName, _ = args["name"].(string)
 			prefix, _ = args["prefix"].(string)
@@ -569,8 +569,9 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		// @Inject "@store.implementation"        - Service name from config
 		// @Inject service="@store.implementation" - Service name from config (named param)
 		// @Inject "cfg:app.timeout"              - Config value injection
+		// @Inject "cfg:app.timeout", "default"   - Config with default value
 		// @Inject "cfg:@jwt.key-path"            - Config value via indirection
-		args, err := ann.ReadArgs("service")
+		args, err := ann.ReadArgs("service", "default")
 		if err != nil {
 			return fmt.Errorf("@Inject on line %d: %w", ann.Line, err)
 		}
@@ -578,6 +579,11 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 		var serviceName string
 		if svc, ok := args["service"].(string); ok {
 			serviceName = svc
+		}
+
+		var defaultValue string
+		if def, ok := args["default"].(string); ok {
+			defaultValue = def
 		}
 
 		if serviceName != "" && ann.TargetName != "" {
@@ -594,7 +600,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 						ConfigKey:    configKey,
 						FieldName:    ann.TargetName,
 						FieldType:    fieldType,
-						DefaultValue: "",
+						DefaultValue: defaultValue,
 						IsIndirect:   true,
 						IndirectKey:  indirectKey,
 					}
@@ -603,7 +609,7 @@ func extractDependencies(file *FileToProcess, service *ServiceGeneration) error 
 						ConfigKey:    configKey,
 						FieldName:    ann.TargetName,
 						FieldType:    fieldType,
-						DefaultValue: "",
+						DefaultValue: defaultValue,
 					}
 				}
 			} else if after0, ok0 := strings.CutPrefix(serviceName, "@"); ok0 {
@@ -734,7 +740,7 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 
 	for _, service := range ctx.GeneratedCode.Services {
 		if !service.IsService {
-			// @RouterService needs deploy and proxy
+			// @EndpointService needs deploy and proxy
 			needsDeploy = true
 			needsProxy = true
 		}
@@ -756,7 +762,7 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	needsStrings := false
 
 	for _, service := range ctx.GeneratedCode.Services {
-		// From method signatures - ONLY for @RouterService (not @Service)
+		// From method signatures - ONLY for @EndpointService (not @Service)
 		// @Service doesn't generate proxy methods, so method signatures are not in generated code
 		if !service.IsService {
 			for _, method := range service.Methods {
@@ -793,7 +799,18 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	}
 
 	// Filter imports to only used packages
-	allImports := make(map[string]string) // path -> alias
+	// Strategy:
+	// 1. Same path + different aliases → Merge to longest alias (canonical)
+	// 2. Different paths + same alias → Rename one with counter suffix
+
+	type importEntry struct {
+		Alias string
+		Path  string
+	}
+
+	// Step 1: Collect all (alias, path) pairs from source files
+	var allImportEntries []importEntry
+	seenCombinations := make(map[string]bool) // "alias:path" -> true
 
 	// Hardcoded imports - conditionally included based on usage
 	hardcodedImports := map[string]bool{
@@ -802,54 +819,164 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 		"github.com/primadi/lokstra/lokstra_registry": true, // Always needed
 	}
 
-	// First, add imports from updated services
+	// Collect from updated services
 	for _, service := range ctx.GeneratedCode.Services {
 		for alias, importPath := range service.Imports {
-			// Skip hardcoded imports that are conditionally included
 			if _, isHardcoded := hardcodedImports[importPath]; isHardcoded {
 				continue
 			}
-			// Only include if package is actually used in generated code
-			// This filters out imports from source file that are not used in handlers/dependencies
 			if usedPackages[alias] {
-				// Use path as key to deduplicate, prefer shorter alias
-				if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
-					allImports[importPath] = alias
+				combo := alias + ":" + importPath
+				if !seenCombinations[combo] {
+					allImportEntries = append(allImportEntries, importEntry{Alias: alias, Path: importPath})
+					seenCombinations[combo] = true
 				}
 			}
 		}
 	}
 
-	// Second, add imports from existing generated file if package is still used
+	// Collect from existing generated file
 	for alias, importPath := range existingImports {
-		// Skip hardcoded imports that are conditionally included
 		if _, isHardcoded := hardcodedImports[importPath]; isHardcoded {
 			continue
 		}
 		if usedPackages[alias] {
-			// Use path as key to deduplicate, prefer shorter alias
-			if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
-				allImports[importPath] = alias
+			combo := alias + ":" + importPath
+			if !seenCombinations[combo] {
+				allImportEntries = append(allImportEntries, importEntry{Alias: alias, Path: importPath})
+				seenCombinations[combo] = true
 			}
 		}
 	}
 
-	// Third, add "time" if time.Duration is used
+	// Step 2: Group by path and find canonical alias (longest) for same path
+	pathToAliases := make(map[string][]string) // path -> [aliases]
+	for _, entry := range allImportEntries {
+		pathToAliases[entry.Path] = append(pathToAliases[entry.Path], entry.Alias)
+	}
+
+	pathToCanonical := make(map[string]string) // path -> canonical alias (longest)
+
+	for path, aliases := range pathToAliases {
+		// Find longest alias as canonical; if tie, pick lexicographically smallest (alphabetically first)
+		canonical := aliases[0]
+		for i, alias := range aliases {
+			if i == 0 {
+				continue
+			}
+			if len(alias) > len(canonical) || (len(alias) == len(canonical) && alias < canonical) {
+				canonical = alias
+			}
+		}
+		pathToCanonical[path] = canonical
+	}
+
+	// Step 3: Build final import list with conflict resolution
+	aliasToPath := make(map[string]string)      // alias -> path (for conflict detection)
+	pathToFinalAlias := make(map[string]string) // path -> final alias (after conflict resolution)
+	var finalImports []importEntry
+
+	for path, canonical := range pathToCanonical {
+		// Check if canonical alias conflicts with another path
+		if existingPath, exists := aliasToPath[canonical]; exists && existingPath != path {
+			// Conflict! Rename this one
+			newAlias := canonical
+			counter := 1
+			for {
+				newAlias = fmt.Sprintf("%s_%d", canonical, counter)
+				if _, taken := aliasToPath[newAlias]; !taken {
+					break
+				}
+				counter++
+			}
+			finalImports = append(finalImports, importEntry{Alias: newAlias, Path: path})
+			aliasToPath[newAlias] = path
+			pathToFinalAlias[path] = newAlias
+		} else {
+			finalImports = append(finalImports, importEntry{Alias: canonical, Path: path})
+			aliasToPath[canonical] = path
+			pathToFinalAlias[path] = canonical
+		}
+	}
+
+	// Step 3.5: Build alias remap based on actual final aliases
+	// Map: (path, oldAlias) -> finalAlias
+	aliasRemap := make(map[string]map[string]string) // path -> (oldAlias -> finalAlias)
+
+	for path, aliases := range pathToAliases {
+		finalAlias := pathToFinalAlias[path]
+		aliasRemap[path] = make(map[string]string)
+
+		for _, oldAlias := range aliases {
+			aliasRemap[path][oldAlias] = finalAlias
+		}
+	}
+
+	// Step 4: Add standard library imports if needed
 	if usedPackages["time"] {
-		allImports["time"] = "time"
+		if _, exists := aliasToPath["time"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "time", Path: "time"})
+			aliasToPath["time"] = "time"
+		}
 	}
 
-	// Fourth, add "strconv" and "strings" if slice parsing is needed
 	if needsStrconv {
-		allImports["strconv"] = "strconv"
-	}
-	if needsStrings {
-		allImports["strings"] = "strings"
+		if _, exists := aliasToPath["strconv"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "strconv", Path: "strconv"})
+			aliasToPath["strconv"] = "strconv"
+		}
 	}
 
-	// Fifth, add "cast" if struct types are used
+	if needsStrings {
+		if _, exists := aliasToPath["strings"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "strings", Path: "strings"})
+			aliasToPath["strings"] = "strings"
+		}
+	}
+
 	if usedPackages["cast"] {
-		allImports["github.com/primadi/lokstra/common/cast"] = "cast"
+		if _, exists := aliasToPath["cast"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "cast", Path: "github.com/primadi/lokstra/common/cast"})
+			aliasToPath["cast"] = "github.com/primadi/lokstra/common/cast"
+		}
+	}
+
+	// Step 5: Apply alias remapping to all services
+	// Update method signatures and dependency types to use final aliases
+	for _, service := range ctx.GeneratedCode.Services {
+		// Build remap for this service based on its imports
+		serviceRemap := make(map[string]string)
+		for oldAlias, path := range service.Imports {
+			if pathRemap, exists := aliasRemap[path]; exists {
+				if finalAlias, exists := pathRemap[oldAlias]; exists && finalAlias != oldAlias {
+					serviceRemap[oldAlias] = finalAlias
+				}
+			}
+		}
+
+		// Remap method signatures
+		for _, method := range service.Methods {
+			if method.ParamType != "" {
+				method.ParamType = remapTypeAliases(method.ParamType, serviceRemap)
+			}
+			if method.ReturnType != "" {
+				method.ReturnType = remapTypeAliases(method.ReturnType, serviceRemap)
+			}
+		}
+
+		// Remap dependency types
+		for _, dep := range service.Dependencies {
+			if dep.FieldType != "" {
+				dep.FieldType = remapTypeAliases(dep.FieldType, serviceRemap)
+			}
+		}
+
+		// Remap config dependency types
+		for _, cfg := range service.ConfigDependencies {
+			if cfg.FieldType != "" {
+				cfg.FieldType = remapTypeAliases(cfg.FieldType, serviceRemap)
+			}
+		}
 	}
 
 	// Generate code
@@ -858,7 +985,7 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 		"Package":           pkgName,
 		"Services":          ctx.GeneratedCode.Services,
 		"PreservedSections": ctx.GeneratedCode.PreservedSections,
-		"AllImports":        allImports,
+		"AllImports":        finalImports,
 		"AllStructNames":    allStructNames,
 		"NeedsDeploy":       needsDeploy,
 		"NeedsProxy":        needsProxy,
@@ -943,6 +1070,33 @@ func collectPackagesFromType(typeStr string, packages map[string]bool) {
 		}
 		packages[pkg] = true
 	}
+}
+
+// remapTypeAliases remaps package aliases in type strings
+// E.g., "models.User" -> "pkgamodel.User" if aliasMap["models"] = "pkgamodel"
+// Handles: pkg.Type, *pkg.Type, []pkg.Type, []*pkg.Type, map[pkg.Key]pkg.Value, etc.
+func remapTypeAliases(typeStr string, aliasMap map[string]string) string {
+	if typeStr == "" || len(aliasMap) == 0 {
+		return typeStr
+	}
+
+	// Replace all qualified identifiers: pkg.Type
+	// Pattern: word boundary + package name + dot + identifier
+	for oldAlias, newAlias := range aliasMap {
+		if oldAlias == newAlias {
+			continue // No change needed
+		}
+
+		// Use regex to match: (^|[^a-zA-Z0-9_])oldAlias\.
+		// This ensures we match "models.User" but not "mymodels.User"
+		pattern := `(^|[^a-zA-Z0-9_])` + regexp.QuoteMeta(oldAlias) + `\.`
+		re := regexp.MustCompile(pattern)
+
+		// Replace with: $1newAlias.
+		typeStr = re.ReplaceAllString(typeStr, "${1}"+newAlias+".")
+	}
+
+	return typeStr
 }
 
 // getPackageName gets package name from a folder
@@ -1661,13 +1815,11 @@ func parseSliceFromConfig(fieldType, configKey, defaultValue string) string {
 
 // genTemplate is the template for zz_generated.lokstra.go
 var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
-	"hasReturnValue":    hasReturnValue,
-	"extractReturnType": extractReturnType,
-	"quote":             func(s string) string { return fmt.Sprintf("%q", s) },
-	"join":              strings.Join,
-	"trimPrefix":        strings.TrimPrefix,
-	"trimSuffix":        strings.TrimSuffix,
-	"notEmpty":          func(s string) bool { return strings.TrimSpace(s) != "" },
+	"quote":      func(s string) string { return fmt.Sprintf("%q", s) },
+	"join":       strings.Join,
+	"trimPrefix": strings.TrimPrefix,
+	"trimSuffix": strings.TrimSuffix,
+	"notEmpty":   func(s string) bool { return strings.TrimSpace(s) != "" },
 
 	"getDefaultValue": func(fieldType, defaultValue string) string {
 		if defaultValue != "" {
@@ -1789,7 +1941,7 @@ var genTemplate = template.Must(template.New("gen").Funcs(template.FuncMap{
 	},
 }).Parse(`// AUTO-GENERATED CODE - DO NOT EDIT
 // Generated by lokstra-annotation from annotations in this folder
-// Annotations: @RouterService, @Service, @Inject, @Route
+// Annotations: @EndpointService, @Service, @Inject, @Route
 //
 // @Inject supports:
 //   - "service-name"          : Direct service injection
@@ -1807,8 +1959,8 @@ import (
 	"github.com/primadi/lokstra/core/proxy"
 {{- end }}
 	"github.com/primadi/lokstra/lokstra_registry"
-{{- range $path, $alias := .AllImports }}
-	{{$alias}} "{{$path}}"
+{{- range $entry := .AllImports }}
+	{{$entry.Alias}} "{{$entry.Path}}"
 {{- end }}
 )
 
@@ -1934,7 +2086,7 @@ func {{$service.StructName}}Factory(deps map[string]any, config map[string]any) 
 }
 
 // {{$service.RemoteTypeName}}Factory creates a remote HTTP client for {{$service.InterfaceName}}
-// Auto-generated from @RouterService annotation
+// Auto-generated from @EndpointService annotation
 func {{$service.RemoteTypeName}}Factory(deps, config map[string]any) any {
 	proxyService, ok := config["remote"].(*proxy.Service)
 	if !ok {
@@ -1945,7 +2097,7 @@ func {{$service.RemoteTypeName}}Factory(deps, config map[string]any) any {
 
 // Register{{$service.StructName}} registers the {{$service.ServiceName}} with the registry
 // Auto-generated from annotations:
-//   - @RouterService name={{quote $service.ServiceName}}, prefix={{quote $service.Prefix}}
+//   - @EndpointService name={{quote $service.ServiceName}}, prefix={{quote $service.Prefix}}
 {{- if or $service.Dependencies $service.ConfigDependencies}}
 //   - @Inject annotations
 {{- end}}
@@ -1991,14 +2143,6 @@ func Register{{$service.StructName}}() {
 {{end}}
 {{end}}
 {{range $filename, $code := .PreservedSections}}{{$code}}{{end}}`))
-
-func hasReturnValue(route string) bool {
-	return !strings.Contains(route, "error")
-}
-
-func extractReturnType(route string) string {
-	return "*domain.User"
-}
 
 // isStructType checks if a type is a struct (not primitive, slice, map, or interface)
 func isStructType(fieldType string) bool {

@@ -5,7 +5,7 @@ Simple single-file YAML configuration demonstrating core concepts.
 ## What's Demonstrated
 
 - ✅ Single-file YAML configuration
-- ✅ Service registration with @RouterService annotation
+- ✅ Service registration with @EndpointService annotation
 - ✅ Dependency injection (service → repository)
 - ✅ Router auto-generation from published services
 - ✅ Middleware registration and usage
@@ -17,7 +17,7 @@ Simple single-file YAML configuration demonstrating core concepts.
 ```
 01-basic-config/
 ├── main.go              # Application entry point + registration
-├── user_service.go      # Service with @RouterService annotation
+├── user_service.go      # Service with @EndpointService annotation
 ├── user_repository.go   # Repository implementation
 ├── middleware.go        # Custom middleware
 ├── config.yaml          # YAML configuration
@@ -29,11 +29,11 @@ Simple single-file YAML configuration demonstrating core concepts.
 
 ## Code Walkthrough
 
-### 1. Service with @RouterService Annotation
+### 1. Service with @EndpointService Annotation
 
 **user_service.go:**
 ```go
-// @RouterService name="user-service", prefix="/api/users", middlewares=["recovery", "request-logger"]
+// @EndpointService name="user-service", prefix="/api/users", middlewares=["recovery", "request-logger"]
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository
@@ -56,7 +56,7 @@ func (s *UserService) Create(p *CreateUserRequest) (*User, error) {
 ```
 
 **Annotations explained:**
-- `@RouterService` - Marks this as a service with auto-generated router
+- `@EndpointService` - Marks this as a service with auto-generated router
   - `name` - Service name for registration
   - `prefix` - URL prefix for all routes
   - `middlewares` - Middleware applied to all routes
@@ -116,7 +116,7 @@ deployments:
 ```
 
 **Minimal config! Everything else comes from:**
-- `@RouterService` annotation (service metadata)
+- `@EndpointService` annotation (service metadata)
 - Service type registration in code
 - Convention over configuration
 
@@ -124,7 +124,7 @@ deployments:
 
 ### Bootstrap Flow
 
-1. **`lokstra.Bootstrap()`** scans for `@RouterService` annotations
+1. **`lokstra.Bootstrap()`** scans for `@EndpointService` annotations
 2. Generates `zz_generated.lokstra.go` with service metadata
 3. Auto-registers service type: `user-service` → `UserServiceFactory`
 
@@ -199,7 +199,7 @@ All routes have these middleware applied:
 ### 1. Convention Over Configuration
 Minimal YAML config because:
 - Routes defined by `@Route` annotations
-- Service metadata from `@RouterService`
+- Service metadata from `@EndpointService`
 - Dependencies from `@Inject`
 
 ### 2. Auto-Generation

@@ -218,7 +218,7 @@ public class AppConfig {
 // Service method signatures determine routes
 func (s *UserService) GetAll(p *GetAllParams) ([]User, error)       // GET /users
 // Lokstra - Annotation-driven routes (explicit)
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository

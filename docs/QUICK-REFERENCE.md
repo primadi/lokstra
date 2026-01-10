@@ -238,7 +238,7 @@ func (s *Service) DoWork(ctx context.Context) (err error) {
 ### Annotation-Based Service (Recommended)
 
 ```go
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository
@@ -266,7 +266,7 @@ func (s *UserService) Delete(p *DeleteUserParams) error {
 
 **Annotation with Variables** (resolves from config.yaml):
 ```go
-// @RouterService name="user-service", prefix="${api-prefix}"
+// @EndpointService name="user-service", prefix="${api-prefix}"
 // @Route "GET ${api-version}/users/{id}"
 ```
 
@@ -295,13 +295,13 @@ type AuthService struct {
     Cache CacheService
     
     // Configuration injection
-    // @InjectCfgValue "auth.jwt-secret"
+    // @Inject "cfg:auth.jwt-secret"
     JwtSecret string
     
-    // @InjectCfgValue key="auth.token-expiry", default="24h"
+    // @Inject "cfg:auth.token-expiry", "24h"
     TokenExpiry time.Duration
     
-    // @InjectCfgValue key="auth.max-attempts", default="5"
+    // @Inject "cfg:auth.max-attempts", "5"
     MaxAttempts int
 }
 
@@ -332,8 +332,8 @@ configs:
 
 **@Service supports:**
 - `@Inject` - Service dependencies (required or optional)
-- `@InjectCfgValue` - Configuration injection (auto-typed)
-- No HTTP routes (use `@RouterService` for that)
+- `@Inject "cfg:..."` - Configuration injection (auto-typed)
+- No HTTP routes (use `@EndpointService` for that)
 
 **Generated code:**
 ```go
@@ -354,20 +354,16 @@ func RegisterAuthService() {
 
 | Annotation | Purpose | Where |
 |------------|---------|-------|
-| `@RouterService` | HTTP service with routes | Above struct |
+| `@EndpointService` | HTTP service with routes | Above struct |
 | `@Service` | Pure service (no HTTP) | Above struct |
 | `@Route` | HTTP endpoint | Above method (RouterService only) |
-| `@Inject` | Dependency injection | Above field |
-| `@InjectCfgValue` | Config injection | Above field |
+| `@Inject` | Dependency/config injection | Above field |
 
-**@Inject parameters:**
-- `service` (positional or named) - service name
+**@Inject parameters:****
+- `service` (positional or named) - service name (or use `cfg:` prefix for config)
 - `optional` - `true`/`false` (default: `false`)
-
-**@InjectCfgValue parameters:**
-- `key` (positional or named) - config key
-- `default` - default value (optional)
-- Type auto-detected: `string`, `int`, `bool`, `float64`, `time.Duration`
+- For config: `@Inject "cfg:config.key"` or `@Inject "cfg:config.key", "default"`
+- Type auto-detected for config: `string`, `int`, `bool`, `float64`, `time.Duration`
 
 ### Manual Service Factory (Advanced)
 
@@ -553,7 +549,7 @@ deployments:
 ## Annotations
 
 ```go
-// @RouterService name="user-service", prefix="/api", middlewares=["recovery"]
+// @EndpointService name="user-service", prefix="/api", middlewares=["recovery"]
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository

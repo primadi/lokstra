@@ -24,7 +24,7 @@ import (
 	core_repository "github.com/primadi/lokstra-auth/infrastructure/repository"  // USED in dependency
 )
 
-// @RouterService name="test-service", prefix="/api"
+// @EndpointService name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "user-repository"
 	Repo core_repository.UserRepository
@@ -111,13 +111,13 @@ type CreateUserParams struct {
 		t.Error("Generated code should import lokstra_registry")
 	}
 
-	// Should include deploy and proxy for @RouterService
+	// Should include deploy and proxy for @EndpointService
 	if !strings.Contains(genCode, `"github.com/primadi/lokstra/core/deploy"`) {
-		t.Error("Generated code should import deploy for @RouterService")
+		t.Error("Generated code should import deploy for @EndpointService")
 	}
 
 	if !strings.Contains(genCode, `"github.com/primadi/lokstra/core/proxy"`) {
-		t.Error("Generated code should import proxy for @RouterService")
+		t.Error("Generated code should import proxy for @EndpointService")
 	}
 
 	t.Logf("✅ Generated code correctly filtered unused imports")
@@ -176,7 +176,7 @@ import (
 	"testapp/helper"  // NOT used in handler, only in helper method
 )
 
-// @RouterService name="test-service", prefix="/api"
+// @EndpointService name="test-service", prefix="/api"
 type TestService struct {
 }
 

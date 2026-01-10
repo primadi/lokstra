@@ -9,7 +9,7 @@ nav_order: 7
 
 ## Overview
 
-The `@Inject` annotation marks struct fields for automatic dependency injection. It works with both `@Service` and `@RouterService` annotations.
+The `@Inject` annotation marks struct fields for automatic dependency injection. It works with both `@Service` and `@EndpointService` annotations.
 
 ## Basic Syntax
 
@@ -250,10 +250,10 @@ func (s *PaymentService) ProcessPayment(amount float64, userID string) error {
 }
 ```
 
-## With @RouterService
+## With @EndpointService
 
 ```go
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo domain.UserRepository
@@ -405,6 +405,6 @@ type B struct {
 ## See Also
 
 - [@Service](06-service-annotation.md) - Service registration
-- [@RouterService](05-router-service-annotation.md) - HTTP services
-- [@InjectCfgValue](08-inject-cfg-annotation.md) - Configuration injection
+- [@EndpointService](05-router-service-annotation.md) - HTTP services
+- [@Inject "cfg:..."](08-inject-cfg-annotation.md) - Configuration injection
 - [Service Registry](09-service-registry.md) - Manual service registration
