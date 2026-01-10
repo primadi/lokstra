@@ -6,7 +6,7 @@ type GetUserRequest struct {
 
 type ListUsersRequest struct{}
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
 	// @Inject "user-repository"
 	UserRepo UserRepository

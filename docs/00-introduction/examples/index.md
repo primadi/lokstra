@@ -43,7 +43,7 @@ Learn services, dependency injection, auto-routers, annotations, and deployment 
 
 **What you'll learn:**
 - ✅ Service layer and dependency injection
-- ✅ **Annotation-driven development** (`@RouterService`, `@Inject`, `@Route`)
+- ✅ **Annotation-driven development** (`@EndpointService`, `@Inject`, `@Route`)
 - ✅ Auto-generated REST routers from service methods
 - ✅ Configuration-driven deployment (YAML or Code)
 - ✅ Monolith → Microservices migrations
@@ -67,7 +67,7 @@ Learn services, dependency injection, auto-routers, annotations, and deployment 
 | **Middleware** | ✅ Global, per-route | ✅ Plus registry-based |
 | **Services** | ❌ Not covered | ✅ Core pattern |
 | **Dependency Injection** | ❌ Not needed | ✅ Lazy, type-safe |
-| **Annotations** | ❌ Not covered | ✅ `@RouterService`, `@Inject`, `@Route` |
+| **Annotations** | ❌ Not covered | ✅ `@EndpointService`, `@Inject`, `@Route` |
 | **Auto-Router** | ❌ Manual only | ✅ From services |
 | **Configuration** | ❌ Code only | ✅ YAML or Code |
 | **Microservices** | ❌ Not covered | ✅ Multi-deployment |

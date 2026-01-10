@@ -4,7 +4,7 @@ import (
 	userentity "github.com/primadi/lokstra/core/annotation/internal/multifile_test/import_alias_test/pkga"
 )
 
-// @RouterService name="service-c", prefix="/api/c"
+// @EndpointService name="service-c", prefix="/api/c"
 type ServiceC struct {
 }
 

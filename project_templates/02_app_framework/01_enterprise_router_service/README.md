@@ -224,9 +224,9 @@ The `simple-auth` middleware provides basic Bearer token authentication:
 - Extracts user ID from token (e.g., `demo-user123` → user ID: `user123`)
 - Stores user info in request context
 
-**Usage in @RouterService:**
+**Usage in @EndpointService:**
 ```go
-// @RouterService name="user-service", prefix="/api", middlewares=["recovery", "request-logger", "simple-auth"]
+// @EndpointService name="user-service", prefix="/api", middlewares=["recovery", "request-logger", "simple-auth"]
 type UserServiceImpl struct {
     UserRepo domain.UserRepository
 }
@@ -296,9 +296,9 @@ func registerMiddlewareTypes() {
 }
 ```
 
-**Step 2:** Use in `@RouterService` annotation:
+**Step 2:** Use in `@EndpointService` annotation:
 ```go
-// @RouterService name="my-service", middlewares=["recovery", "my-middleware"]
+// @EndpointService name="my-service", middlewares=["recovery", "my-middleware"]
 type MyService struct {}
 ```
 

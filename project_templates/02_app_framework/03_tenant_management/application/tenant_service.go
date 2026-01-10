@@ -9,7 +9,7 @@ import (
 	"github.com/primadi/lokstra/project_templates/02_app_framework/03_tenant_management/repository"
 )
 
-// @RouterService name="tenant-service", prefix="${api-auth-prefix:/api/auth}/core/tenants", middlewares=["recovery", "request_logger"]
+// @EndpointService name="tenant-service", prefix="${api-auth-prefix:/api/auth}/core/tenants", middlewares=["recovery", "request_logger"]
 type TenantService struct {
 	// @Inject "@store.tenant-store"
 	TenantStore repository.TenantStore

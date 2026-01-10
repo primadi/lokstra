@@ -17,7 +17,7 @@ func TestErrorCleanup_InvalidAnnotation(t *testing.T) {
 	// Step 1: Create valid service with cache and generated file
 	validContent := `package application
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
 	ID string
 }
@@ -47,10 +47,10 @@ type UserService struct {
 	t.Logf("✓ Step 1: Cache and generated files created")
 
 	// Step 2: Create invalid annotation that will cause parsing error
-	// Invalid: @RouterService on function instead of struct
+	// Invalid: @EndpointService on function instead of struct
 	invalidContent := `package application
 
-// @RouterService name="invalid-service", prefix="/api/invalid"
+// @EndpointService name="invalid-service", prefix="/api/invalid"
 func InvalidService() {
 	// This should cause validation error
 }
@@ -88,7 +88,7 @@ func TestErrorCleanup_FileReadError(t *testing.T) {
 	// Create a file with valid annotation first
 	validContent := `package application
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {}
 `
 	filePath := filepath.Join(tmpDir, "user_service.go")
@@ -119,7 +119,7 @@ type UserService struct {}
 	invalidGoFile := filepath.Join(tmpDir, "invalid.go")
 	invalidContent := `package application
 
-// @RouterService name="bad-service"
+// @EndpointService name="bad-service"
 // This is not valid Go syntax
 type BadService struct {
 	unclosed string "json:"name
@@ -158,7 +158,7 @@ func TestErrorCleanup_ProcessingError(t *testing.T) {
 	// Create valid file
 	validContent := `package application
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {}
 `
 	filePath := filepath.Join(tmpDir, "user_service.go")

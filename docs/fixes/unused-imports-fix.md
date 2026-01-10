@@ -12,7 +12,7 @@ import (
 	core_repository "github.com/primadi/lokstra-auth/infrastructure/repository"  // USED in @Inject
 )
 
-// @RouterService name="credential-service", prefix="/api"
+// @EndpointService name="credential-service", prefix="/api"
 type CredentialService struct {
 	// @Inject "credential-repository"
 	Repo core_repository.CredentialRepository

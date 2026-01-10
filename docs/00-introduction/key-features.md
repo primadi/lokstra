@@ -647,7 +647,7 @@ lokstra_registry.RegisterRouter("user-router", setupUserRouter())
 **Annotations replace 70+ lines with 12 lines** - like NestJS decorators:
 
 ```go
-// @RouterService name="user-service", prefix="/api"
+// @EndpointService name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "database"
     DB *service.Cached[*Database]
@@ -670,7 +670,7 @@ func (s *UserServiceImpl) GetByID(p *GetByIDRequest) (*User, error) {
 
 **Step 1: Add Annotations**
 ```go
-// @RouterService name="user-service", prefix="/api", mount="/api"
+// @EndpointService name="user-service", prefix="/api", mount="/api"
 type UserServiceImpl struct {
     // @Inject "database"
     DB *service.Cached[*Database]
@@ -711,9 +711,9 @@ type UserServiceRemote struct { ... }
 
 ### Three Powerful Annotations
 
-#### 1. @RouterService - Define Service
+#### 1. @EndpointService - Define Service
 ```go
-// @RouterService name="user-service", prefix="/api", mount="/api"
+// @EndpointService name="user-service", prefix="/api", mount="/api"
 type UserServiceImpl struct {}
 ```
 

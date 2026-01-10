@@ -40,7 +40,7 @@ func main() {
 
 	fmt.Println(strings.Repeat("=", 70))
 	fmt.Println("\nExpected annotations:")
-	fmt.Println("  1. @RouterService on UserService (line 27)")
+	fmt.Println("  1. @EndpointService on UserService (line 27)")
 	fmt.Println("  2. @Inject on UserRepo field (line 30)")
 	fmt.Println("  3. @Route on GetByID method (line 34)")
 	fmt.Println("  4. @Route on Create method (line 38)")

@@ -18,9 +18,9 @@ func TestProcessComplexAnnotations_NoDuplicateFolders(t *testing.T) {
 
 	// Create nested folder structure with .go files
 	testStructure := map[string]string{
-		"module1/service.go":           "package module1\n\n// @RouterService name=\"service1\"\ntype Service1 struct {}",
-		"module1/submodule/handler.go": "package submodule\n\n// @RouterService name=\"service2\"\ntype Service2 struct {}",
-		"module2/api.go":               "package module2\n\n// @RouterService name=\"service3\"\ntype Service3 struct {}",
+		"module1/service.go":           "package module1\n\n// @EndpointService name=\"service1\"\ntype Service1 struct {}",
+		"module1/submodule/handler.go": "package submodule\n\n// @EndpointService name=\"service2\"\ntype Service2 struct {}",
+		"module2/api.go":               "package module2\n\n// @EndpointService name=\"service3\"\ntype Service3 struct {}",
 	}
 
 	for filePath, content := range testStructure {
@@ -100,7 +100,7 @@ func TestProcessComplexAnnotations_DifferentPathFormats(t *testing.T) {
 
 	// Create a test file
 	testFile := filepath.Join(tmpDir, "test.go")
-	if err := os.WriteFile(testFile, []byte("package test\n\n// @RouterService name=\"test\"\ntype Test struct {}"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package test\n\n// @EndpointService name=\"test\"\ntype Test struct {}"), 0644); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -179,7 +179,7 @@ func TestProcessComplexAnnotations_ParallelProcessing(t *testing.T) {
 			t.Fatalf("Failed to create directory: %v", err)
 		}
 		testFile := filepath.Join(folderPath, "service.go")
-		content := fmt.Sprintf("package module%d\n\n// @RouterService name=\"service%d\"\ntype Service%d struct {}", i, i, i)
+		content := fmt.Sprintf("package module%d\n\n// @EndpointService name=\"service%d\"\ntype Service%d struct {}", i, i, i)
 		if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
 			t.Fatalf("Failed to write file: %v", err)
 		}
@@ -229,9 +229,9 @@ func TestScenario1_OverlappingPaths(t *testing.T) {
 
 	// Create structure: root with modules subfolder
 	testStructure := map[string]string{
-		"main.go":                "package main\n\n// @RouterService name=\"main\"\ntype MainService struct {}",
-		"modules/user/user.go":   "package user\n\n// @RouterService name=\"user\"\ntype UserService struct {}",
-		"modules/order/order.go": "package order\n\n// @RouterService name=\"order\"\ntype OrderService struct {}",
+		"main.go":                "package main\n\n// @EndpointService name=\"main\"\ntype MainService struct {}",
+		"modules/user/user.go":   "package user\n\n// @EndpointService name=\"user\"\ntype UserService struct {}",
+		"modules/order/order.go": "package order\n\n// @EndpointService name=\"order\"\ntype OrderService struct {}",
 	}
 
 	for filePath, content := range testStructure {
@@ -292,7 +292,7 @@ func TestScenario2_SamePathDifferentForms(t *testing.T) {
 		t.Fatalf("Failed to create directory: %v", err)
 	}
 	testFile := filepath.Join(modulesPath, "service.go")
-	if err := os.WriteFile(testFile, []byte("package modules\n\n// @RouterService name=\"modules\"\ntype Service struct {}"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("package modules\n\n// @EndpointService name=\"modules\"\ntype Service struct {}"), 0644); err != nil {
 		t.Fatalf("Failed to write file: %v", err)
 	}
 
@@ -346,12 +346,12 @@ func TestScenario3_MultipleNestedPaths(t *testing.T) {
 
 	// Create nested structure
 	testStructure := map[string]string{
-		"main.go":                     "package main\n\n// @RouterService name=\"main\"\ntype MainService struct {}",
-		"modules/user/service.go":     "package user\n\n// @RouterService name=\"user\"\ntype UserService struct {}",
+		"main.go":                     "package main\n\n// @EndpointService name=\"main\"\ntype MainService struct {}",
+		"modules/user/service.go":     "package user\n\n// @EndpointService name=\"user\"\ntype UserService struct {}",
 		"modules/user/repository.go":  "package user\n\n// No RouterService here",
-		"modules/order/service.go":    "package order\n\n// @RouterService name=\"order\"\ntype OrderService struct {}",
+		"modules/order/service.go":    "package order\n\n// @EndpointService name=\"order\"\ntype OrderService struct {}",
 		"modules/order/repository.go": "package order\n\n// No RouterService here",
-		"modules/payment/service.go":  "package payment\n\n// @RouterService name=\"payment\"\ntype PaymentService struct {}",
+		"modules/payment/service.go":  "package payment\n\n// @EndpointService name=\"payment\"\ntype PaymentService struct {}",
 	}
 
 	for filePath, content := range testStructure {
@@ -403,7 +403,7 @@ func TestScenario3_MultipleNestedPaths(t *testing.T) {
 	}
 }
 
-// TestFileContainsRouterService tests the quick check function for @RouterService annotation
+// TestFileContainsRouterService tests the quick check function for @EndpointService annotation
 func TestFileContainsRouterService(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -414,7 +414,7 @@ func TestFileContainsRouterService(t *testing.T) {
 			name: "standard format",
 			content: `package app
 
-// @RouterService name="user-service"
+// @EndpointService name="user-service"
 type UserService struct {}
 `,
 			expected: true,
@@ -423,7 +423,7 @@ type UserService struct {}
 			name: "with_spaces_after_//",
 			content: `package app
 
-//   @RouterService name="user-service"
+//   @EndpointService name="user-service"
 type UserService struct {}
 `,
 			expected: false, // Changed: Multiple spaces (>1) are treated as indented (code example)
@@ -432,7 +432,7 @@ type UserService struct {}
 			name: "no space after //",
 			content: `package app
 
-//@RouterService name="user-service"
+//@EndpointService name="user-service"
 type UserService struct {}
 `,
 			expected: true,
@@ -441,7 +441,7 @@ type UserService struct {}
 			name: "in string (should not match - no comment)",
 			content: `package app
 
-const x = "@RouterService name=\"test\""
+const x = "@EndpointService name=\"test\""
 `,
 			expected: false,
 		},
@@ -449,16 +449,16 @@ const x = "@RouterService name=\"test\""
 			name: "in descriptive comment (should NOT match - not at start)",
 			content: `package app
 
-// This is about @RouterService annotation
+// This is about @EndpointService annotation
 type UserService struct {}
 `,
-			expected: false, // Should NOT match - @RouterService is not at the start of comment
+			expected: false, // Should NOT match - @EndpointService is not at the start of comment
 		},
 		{
 			name: "block comment (should not match)",
 			content: `package app
 
-/* @RouterService name="test" */
+/* @EndpointService name="test" */
 type UserService struct {}
 `,
 			expected: false,
@@ -484,7 +484,7 @@ func GetUsers() {}
 			name: "tab before comment",
 			content: `package app
 
-	// @RouterService name="test"
+	// @EndpointService name="test"
 type Service struct {}
 `,
 			expected: true,
@@ -494,7 +494,7 @@ type Service struct {}
 			content: `package app
 
 // @Route "GET /test"
-// @RouterService name="test"
+// @EndpointService name="test"
 type Service struct {}
 `,
 			expected: true,

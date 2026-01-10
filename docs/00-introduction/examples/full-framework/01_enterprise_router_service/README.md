@@ -34,7 +34,7 @@ This template demonstrates how to use **Lokstra Annotations** to automatically g
 
 **Write this:**
 ```go
-// @RouterService name="user-service", prefix="/api"
+// @EndpointService name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo *service.Cached[domain.UserRepository]
@@ -111,7 +111,7 @@ This template uses **three core annotations**:
 
 | Annotation | Purpose | Example |
 |------------|---------|---------|
-| `@RouterService` | Marks a service to be published as HTTP router | `@RouterService name="user-service"` |
+| `@EndpointService` | Marks a service to be published as HTTP router | `@EndpointService name="user-service"` |
 | `@Inject` | Auto-wires dependencies | `@Inject "user-repository"` |
 | `@Route` | Maps methods to HTTP endpoints | `@Route "GET /users/{id}"` |
 
@@ -121,7 +121,7 @@ This template uses **three core annotations**:
 modules/{module-name}/
 ├── domain/              # Business entities and interfaces
 ├── application/         # Service implementation with annotations
-│   ├── user_service.go  # @RouterService, @Inject, @Route
+│   ├── user_service.go  # @EndpointService, @Inject, @Route
 │   └── zz_generated.lokstra.go  # Auto-generated
 └── infrastructure/      # Data access implementations
 ```
@@ -131,7 +131,7 @@ Each layer has specific responsibilities:
 | Layer            | Responsibility                        | Annotations      |
 |------------------|---------------------------------------|------------------|
 | **Domain**       | Business entities and rules           | None             |
-| **Application**  | Service with annotations              | `@RouterService`, `@Inject`, `@Route` |
+| **Application**  | Service with annotations              | `@EndpointService`, `@Inject`, `@Route` |
 | **Infrastructure**| Repository implementations           | None             |
 
 ---
@@ -179,7 +179,7 @@ func main() {
 
 **user_service.go** - Annotated service:
 ```go
-// @RouterService name="user-service", prefix="/api"
+// @EndpointService name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo *service.Cached[domain.UserRepository]
@@ -231,13 +231,13 @@ func registerServiceTypes() {
 
 ## 📝 Lokstra Annotations Reference
 
-### @RouterService
+### @EndpointService
 
 **Marks a struct as a router service** - generates factory, remote proxy, and router registration.
 
 **Syntax:**
 ```go
-// @RouterService name="service-name", prefix="/api", middlewares=["recovery", "logger"]
+// @EndpointService name="service-name", prefix="/api", middlewares=["recovery", "logger"]
 type MyService struct { ... }
 ```
 
@@ -248,7 +248,7 @@ type MyService struct { ... }
 
 **Example:**
 ```go
-// @RouterService name="user-service", prefix="/api/v1", middlewares=["auth", "logging"]
+// @EndpointService name="user-service", prefix="/api/v1", middlewares=["auth", "logging"]
 type UserServiceImpl struct { ... }
 ```
 
@@ -392,7 +392,7 @@ func main() {
 The annotation processor scans your code for:
 
 ```go
-// @RouterService name="user-service", prefix="/api"
+// @EndpointService name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo *service.Cached[domain.UserRepository]
@@ -675,7 +675,7 @@ import (
     "github.com/primadi/lokstra/.../modules/product/domain"
 )
 
-// @RouterService name="product-service", prefix="/api", middlewares=["recovery", "request-logger"]
+// @EndpointService name="product-service", prefix="/api", middlewares=["recovery", "request-logger"]
 type ProductServiceImpl struct {
     // @Inject "product-repository"
     ProductRepo *service.Cached[domain.ProductRepository]
@@ -839,7 +839,7 @@ GET  /api/products/{id}
 
 ### Generated Files
 
-Every folder with `@RouterService` annotations gets:
+Every folder with `@EndpointService` annotations gets:
 
 **zz_generated.lokstra.go** - Generated Go code
 ```go
@@ -1061,7 +1061,7 @@ func init() {
 **12 lines of business logic:**
 
 ```go
-// @RouterService name="user-service", prefix="/api"
+// @EndpointService name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo *service.Cached[domain.UserRepository]
@@ -1119,7 +1119,7 @@ func Register() {}  // Trigger package load
 
 ```go
 // DECLARATIVE: What you want
-// @RouterService name="user-service", prefix="/api"
+// @EndpointService name="user-service", prefix="/api"
 // @Route "GET /users/{id}"
 
 // vs.
@@ -1168,28 +1168,28 @@ func (s *UserService) SpecialAction(...) { ... }
 
 ```go
 // ✅ Good - clear and concise
-// @RouterService name="user-service", prefix="/api"
+// @EndpointService name="user-service", prefix="/api"
 type UserServiceImpl struct { ... }
 
 // ❌ Bad - too complex
-// @RouterService name="user-service", prefix="/api/v1/internal/services", middlewares=["auth", "rbac", "logging", "metrics", "tracing"]
+// @EndpointService name="user-service", prefix="/api/v1/internal/services", middlewares=["auth", "rbac", "logging", "metrics", "tracing"]
 ```
 
 ### 2. Use Descriptive Service Names
 
 ```go
 // ✅ Good - follows naming convention
-// @RouterService name="user-service"
+// @EndpointService name="user-service"
 
 // ❌ Bad - inconsistent naming
-// @RouterService name="usrSvc"
+// @EndpointService name="usrSvc"
 ```
 
 ### 3. Group Related Routes
 
 ```go
 // ✅ Good - consistent prefix
-// @RouterService name="user-service", prefix="/api/v1/users"
+// @EndpointService name="user-service", prefix="/api/v1/users"
 
 // @Route "GET /{id}"
 func GetByID(...) { ... }
@@ -1603,7 +1603,7 @@ modules/order → modules/shared
 **Problem:** Annotation not being processed
 
 **Checklist:**
-- ✅ Correct syntax: `// @RouterService` (with space after `//`)
+- ✅ Correct syntax: `// @EndpointService` (with space after `//`)
 - ✅ Correct parameter format: `name="value"`
 - ✅ File saved before running
 - ✅ Not in test file (`_test.go`)

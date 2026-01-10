@@ -5,7 +5,7 @@ package main
 //
 // Example of annotation in code (this should be IGNORED - TAB indented):
 //
-//	@RouterService name="example-service", prefix="/api/example"
+//	@EndpointService name="example-service", prefix="/api/example"
 //
 // The above annotation is indented with TAB, so it's treated as code example.
 type RegisterMiddleware struct{}
@@ -23,7 +23,7 @@ func (r *RegisterMiddleware) Handle() {
 // The above is indented with multiple spaces, treated as code example.
 func AnotherFunction() {}
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
 	// @Inject "user-repository"
 	UserRepo UserRepository

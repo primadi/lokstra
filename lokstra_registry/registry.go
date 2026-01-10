@@ -224,7 +224,7 @@ func GetAllRouters() map[string]router.Router {
 //	)
 //
 // RegisterRouterServiceType registers a service type with HTTP routing configuration.
-// Use this for services that expose HTTP endpoints (annotated with @RouterService).
+// Use this for services that expose HTTP endpoints (annotated with @EndpointService).
 // For simple infrastructure services (DB, Redis, etc), use RegisterServiceType instead.
 //
 // Parameters:

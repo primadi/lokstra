@@ -58,7 +58,7 @@ defer finishTx → COMMIT or ROLLBACK
 ### Basic Transaction (Recommended Pattern)
 
 ```go
-// @RouterService name="tenant-service"
+// @EndpointService name="tenant-service"
 type TenantService struct {
     // @Inject "@store.tenant-store"
     TenantStore repository.TenantStore

@@ -9,7 +9,7 @@ import (
 )
 
 func registerRouters() {
-	// Register manual routers (not generated from @RouterService)
+	// Register manual routers (not generated from @EndpointService)
 	healthRouter := NewHealthRouter()
 	lokstra_registry.RegisterRouter("health-router", healthRouter)
 	logger.LogInfo("✅ Registered manual router: health-router")

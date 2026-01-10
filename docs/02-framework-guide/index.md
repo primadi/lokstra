@@ -174,7 +174,7 @@ deployments:
 Build REST APIs with explicit annotations.
 
 **What you'll learn:**
-- ✅ `@RouterService` for service definition
+- ✅ `@EndpointService` for service definition
 - ✅ `@Route` for explicit route mapping
 - ✅ `@Inject` for dependency injection
 - ✅ Variable support in routes (`${config-vars}`)
@@ -183,7 +183,7 @@ Build REST APIs with explicit annotations.
 **Key concepts:**
 ```go
 // Explicit route definitions with annotations
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository

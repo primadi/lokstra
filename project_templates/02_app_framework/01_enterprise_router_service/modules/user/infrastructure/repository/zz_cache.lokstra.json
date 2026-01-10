@@ -5,13 +5,13 @@
       "filename": "user_repository.go",
       "checksum": "b8d5736b4b8821d68c9ec0dc142c92962f7474e1e5a6e0496d3bd9652d93026d",
       "annotations": 1,
-      "last_scan": "2026-01-09T18:00:55.3558613+07:00",
+      "last_scan": "2026-01-11T03:01:08.6116839+07:00",
       "generated": [
         "zz_generated.lokstra.go"
       ],
-      "generated_mod_time": "2026-01-09T18:00:55.3558613+07:00"
+      "generated_mod_time": "2026-01-11T03:01:08.6116839+07:00"
     }
   },
-  "updated_at": "2026-01-09T18:00:55.3558613+07:00",
-  "generated_checksum": "16544a4ef45e64cb617be96ba3bd93700920239137edc8978c46f350e100dd4c"
+  "updated_at": "2026-01-11T03:01:08.6116839+07:00",
+  "generated_checksum": "b66fc9647b5ed728017ab3423902544615ade49c07c5ac130f93744464de4712"
 }

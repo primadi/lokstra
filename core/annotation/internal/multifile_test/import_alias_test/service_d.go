@@ -4,7 +4,7 @@ import (
 	pkgamodel "github.com/primadi/lokstra/core/annotation/internal/multifile_test/import_alias_test/pkga"
 )
 
-// @RouterService name="service-d", prefix="/api/d"
+// @EndpointService name="service-d", prefix="/api/d"
 type ServiceD struct {
 }
 

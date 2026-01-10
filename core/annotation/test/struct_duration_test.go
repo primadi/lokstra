@@ -27,7 +27,7 @@ type ServerConfig struct {
 	Timeout time.Duration
 }
 
-// @RouterService name="test-service", prefix="/api"
+// @EndpointService name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "cfg:server"
 	Server ServerConfig
@@ -53,7 +53,7 @@ type ServerConfig struct {
 	Timeout time.Duration
 }
 
-// @RouterService name="test-service", prefix="/api"
+// @EndpointService name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "cfg:server"
 	// NOTE: Default value not yet supported for struct config injection via @Inject
@@ -81,7 +81,7 @@ type ServerConfig struct {
 	Timeout time.Duration
 }
 
-// @RouterService name="test-service", prefix="/api"
+// @EndpointService name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "cfg:server"
 	Server ServerConfig
@@ -107,7 +107,7 @@ type ServerConfig struct {
 	Timeout time.Duration
 }
 
-// @RouterService name="test-service", prefix="/api"
+// @EndpointService name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "cfg:server"
 	Server ServerConfig

@@ -8,7 +8,7 @@ import (
 	"github.com/primadi/lokstra/core/annotation"
 )
 
-// TestRouterServiceValidation_MustBeOnStruct tests that @RouterService
+// TestRouterServiceValidation_MustBeOnStruct tests that @EndpointService
 // annotation must be placed above a struct declaration, not a function
 func TestRouterServiceValidation_MustBeOnStruct(t *testing.T) {
 	tests := []struct {
@@ -21,7 +21,7 @@ func TestRouterServiceValidation_MustBeOnStruct(t *testing.T) {
 			name: "valid - struct",
 			content: `package application
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
 	UserRepo UserRepository
 }
@@ -40,7 +40,7 @@ type User struct {
 			name: "invalid - function",
 			content: `package application
 
-// @RouterService name="register-service", prefix="/api/register"
+// @EndpointService name="register-service", prefix="/api/register"
 func Register() {
 	// This should fail validation
 }
@@ -52,7 +52,7 @@ func Register() {
 			name: "invalid - interface",
 			content: `package application
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService interface {
 	GetByID(id string) error
 }
@@ -64,7 +64,7 @@ type UserService interface {
 			name: "invalid - type alias",
 			content: `package application
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService = string
 `,
 			expectError: true,

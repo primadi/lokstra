@@ -46,7 +46,7 @@ func (s *MySQLStore) SaveUser(user *User) error {
 	return nil
 }
 
-// @RouterService name="user-service", prefix="/api/users"
+// @EndpointService name="user-service", prefix="/api/users"
 type UserService struct {
 	// Config-based injection - service name from config!
 	// @Inject "cfg:store.implementation"
