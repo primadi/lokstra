@@ -14,8 +14,8 @@ import (
 	"github.com/primadi/lokstra/core/deploy"
 	"github.com/primadi/lokstra/core/proxy"
 	"github.com/primadi/lokstra/lokstra_registry"
-	models "github.com/primadi/lokstra/core/annotation/internal/multifile_test/import_alias_test/pkga"
 	models "github.com/primadi/lokstra/core/annotation/internal/multifile_test/import_alias_test/pkgb"
+	userentity "github.com/primadi/lokstra/core/annotation/internal/multifile_test/import_alias_test/pkga"
 )
 
 // Auto-register on package import
@@ -45,13 +45,13 @@ func NewServiceARemote(proxyService *proxy.Service) *ServiceARemote {
 
 // GetUsers via HTTP
 // Generated from: @Route "GET /users"
-func (s *ServiceARemote) GetUsers() (*models.User, error) {
-	return proxy.CallWithData[*models.User](s.proxyService, "GetUsers", nil)
+func (s *ServiceARemote) GetUsers() (*userentity.User, error) {
+	return proxy.CallWithData[*userentity.User](s.proxyService, "GetUsers", nil)
 }
 
 // Process via HTTP
 // Generated from: @Route "POST /process"
-func (s *ServiceARemote) Process(p *models.Request) error {
+func (s *ServiceARemote) Process(p *userentity.Request) error {
 	return proxy.Call(s.proxyService, "Process", p)
 }
 
@@ -279,13 +279,13 @@ func NewServiceDRemote(proxyService *proxy.Service) *ServiceDRemote {
 
 // GetData via HTTP
 // Generated from: @Route "GET /data"
-func (s *ServiceDRemote) GetData() (*pkgamodel.User, error) {
-	return proxy.CallWithData[*pkgamodel.User](s.proxyService, "GetData", nil)
+func (s *ServiceDRemote) GetData() (*userentity.User, error) {
+	return proxy.CallWithData[*userentity.User](s.proxyService, "GetData", nil)
 }
 
 // PerformAction via HTTP
 // Generated from: @Route "POST /action"
-func (s *ServiceDRemote) PerformAction(p *pkgamodel.Request) error {
+func (s *ServiceDRemote) PerformAction(p *userentity.Request) error {
 	return proxy.Call(s.proxyService, "PerformAction", p)
 }
 

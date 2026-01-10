@@ -341,7 +341,7 @@ type DependencyInfo struct {
 	ConfigKey     string // e.g., "store.implementation" (only if IsConfigBased=true)
 }
 
-// ConfigInfo holds config injection information for @InjectCfgValue
+// ConfigInfo holds config injection information for @Inject "cfg:..."
 type ConfigInfo struct {
 	ConfigKey    string // e.g., "auth.jwt-secret" or "@jwt.key-path" for indirection
 	FieldName    string // e.g., "jwtSecret"

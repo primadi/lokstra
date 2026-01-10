@@ -799,7 +799,18 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 	}
 
 	// Filter imports to only used packages
-	allImports := make(map[string]string) // path -> alias
+	// Strategy:
+	// 1. Same path + different aliases → Merge to longest alias (canonical)
+	// 2. Different paths + same alias → Rename one with counter suffix
+
+	type importEntry struct {
+		Alias string
+		Path  string
+	}
+
+	// Step 1: Collect all (alias, path) pairs from source files
+	var allImportEntries []importEntry
+	seenCombinations := make(map[string]bool) // "alias:path" -> true
 
 	// Hardcoded imports - conditionally included based on usage
 	hardcodedImports := map[string]bool{
@@ -808,54 +819,164 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 		"github.com/primadi/lokstra/lokstra_registry": true, // Always needed
 	}
 
-	// First, add imports from updated services
+	// Collect from updated services
 	for _, service := range ctx.GeneratedCode.Services {
 		for alias, importPath := range service.Imports {
-			// Skip hardcoded imports that are conditionally included
 			if _, isHardcoded := hardcodedImports[importPath]; isHardcoded {
 				continue
 			}
-			// Only include if package is actually used in generated code
-			// This filters out imports from source file that are not used in handlers/dependencies
 			if usedPackages[alias] {
-				// Use path as key to deduplicate, prefer shorter alias
-				if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
-					allImports[importPath] = alias
+				combo := alias + ":" + importPath
+				if !seenCombinations[combo] {
+					allImportEntries = append(allImportEntries, importEntry{Alias: alias, Path: importPath})
+					seenCombinations[combo] = true
 				}
 			}
 		}
 	}
 
-	// Second, add imports from existing generated file if package is still used
+	// Collect from existing generated file
 	for alias, importPath := range existingImports {
-		// Skip hardcoded imports that are conditionally included
 		if _, isHardcoded := hardcodedImports[importPath]; isHardcoded {
 			continue
 		}
 		if usedPackages[alias] {
-			// Use path as key to deduplicate, prefer shorter alias
-			if existing, exists := allImports[importPath]; !exists || len(alias) < len(existing) {
-				allImports[importPath] = alias
+			combo := alias + ":" + importPath
+			if !seenCombinations[combo] {
+				allImportEntries = append(allImportEntries, importEntry{Alias: alias, Path: importPath})
+				seenCombinations[combo] = true
 			}
 		}
 	}
 
-	// Third, add "time" if time.Duration is used
+	// Step 2: Group by path and find canonical alias (longest) for same path
+	pathToAliases := make(map[string][]string) // path -> [aliases]
+	for _, entry := range allImportEntries {
+		pathToAliases[entry.Path] = append(pathToAliases[entry.Path], entry.Alias)
+	}
+
+	pathToCanonical := make(map[string]string) // path -> canonical alias (longest)
+
+	for path, aliases := range pathToAliases {
+		// Find longest alias as canonical; if tie, pick lexicographically smallest (alphabetically first)
+		canonical := aliases[0]
+		for i, alias := range aliases {
+			if i == 0 {
+				continue
+			}
+			if len(alias) > len(canonical) || (len(alias) == len(canonical) && alias < canonical) {
+				canonical = alias
+			}
+		}
+		pathToCanonical[path] = canonical
+	}
+
+	// Step 3: Build final import list with conflict resolution
+	aliasToPath := make(map[string]string)      // alias -> path (for conflict detection)
+	pathToFinalAlias := make(map[string]string) // path -> final alias (after conflict resolution)
+	var finalImports []importEntry
+
+	for path, canonical := range pathToCanonical {
+		// Check if canonical alias conflicts with another path
+		if existingPath, exists := aliasToPath[canonical]; exists && existingPath != path {
+			// Conflict! Rename this one
+			newAlias := canonical
+			counter := 1
+			for {
+				newAlias = fmt.Sprintf("%s_%d", canonical, counter)
+				if _, taken := aliasToPath[newAlias]; !taken {
+					break
+				}
+				counter++
+			}
+			finalImports = append(finalImports, importEntry{Alias: newAlias, Path: path})
+			aliasToPath[newAlias] = path
+			pathToFinalAlias[path] = newAlias
+		} else {
+			finalImports = append(finalImports, importEntry{Alias: canonical, Path: path})
+			aliasToPath[canonical] = path
+			pathToFinalAlias[path] = canonical
+		}
+	}
+
+	// Step 3.5: Build alias remap based on actual final aliases
+	// Map: (path, oldAlias) -> finalAlias
+	aliasRemap := make(map[string]map[string]string) // path -> (oldAlias -> finalAlias)
+
+	for path, aliases := range pathToAliases {
+		finalAlias := pathToFinalAlias[path]
+		aliasRemap[path] = make(map[string]string)
+
+		for _, oldAlias := range aliases {
+			aliasRemap[path][oldAlias] = finalAlias
+		}
+	}
+
+	// Step 4: Add standard library imports if needed
 	if usedPackages["time"] {
-		allImports["time"] = "time"
+		if _, exists := aliasToPath["time"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "time", Path: "time"})
+			aliasToPath["time"] = "time"
+		}
 	}
 
-	// Fourth, add "strconv" and "strings" if slice parsing is needed
 	if needsStrconv {
-		allImports["strconv"] = "strconv"
-	}
-	if needsStrings {
-		allImports["strings"] = "strings"
+		if _, exists := aliasToPath["strconv"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "strconv", Path: "strconv"})
+			aliasToPath["strconv"] = "strconv"
+		}
 	}
 
-	// Fifth, add "cast" if struct types are used
+	if needsStrings {
+		if _, exists := aliasToPath["strings"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "strings", Path: "strings"})
+			aliasToPath["strings"] = "strings"
+		}
+	}
+
 	if usedPackages["cast"] {
-		allImports["github.com/primadi/lokstra/common/cast"] = "cast"
+		if _, exists := aliasToPath["cast"]; !exists {
+			finalImports = append(finalImports, importEntry{Alias: "cast", Path: "github.com/primadi/lokstra/common/cast"})
+			aliasToPath["cast"] = "github.com/primadi/lokstra/common/cast"
+		}
+	}
+
+	// Step 5: Apply alias remapping to all services
+	// Update method signatures and dependency types to use final aliases
+	for _, service := range ctx.GeneratedCode.Services {
+		// Build remap for this service based on its imports
+		serviceRemap := make(map[string]string)
+		for oldAlias, path := range service.Imports {
+			if pathRemap, exists := aliasRemap[path]; exists {
+				if finalAlias, exists := pathRemap[oldAlias]; exists && finalAlias != oldAlias {
+					serviceRemap[oldAlias] = finalAlias
+				}
+			}
+		}
+
+		// Remap method signatures
+		for _, method := range service.Methods {
+			if method.ParamType != "" {
+				method.ParamType = remapTypeAliases(method.ParamType, serviceRemap)
+			}
+			if method.ReturnType != "" {
+				method.ReturnType = remapTypeAliases(method.ReturnType, serviceRemap)
+			}
+		}
+
+		// Remap dependency types
+		for _, dep := range service.Dependencies {
+			if dep.FieldType != "" {
+				dep.FieldType = remapTypeAliases(dep.FieldType, serviceRemap)
+			}
+		}
+
+		// Remap config dependency types
+		for _, cfg := range service.ConfigDependencies {
+			if cfg.FieldType != "" {
+				cfg.FieldType = remapTypeAliases(cfg.FieldType, serviceRemap)
+			}
+		}
 	}
 
 	// Generate code
@@ -864,7 +985,7 @@ func writeGenFile(path string, ctx *RouterServiceContext, existingImports map[st
 		"Package":           pkgName,
 		"Services":          ctx.GeneratedCode.Services,
 		"PreservedSections": ctx.GeneratedCode.PreservedSections,
-		"AllImports":        allImports,
+		"AllImports":        finalImports,
 		"AllStructNames":    allStructNames,
 		"NeedsDeploy":       needsDeploy,
 		"NeedsProxy":        needsProxy,
@@ -949,6 +1070,33 @@ func collectPackagesFromType(typeStr string, packages map[string]bool) {
 		}
 		packages[pkg] = true
 	}
+}
+
+// remapTypeAliases remaps package aliases in type strings
+// E.g., "models.User" -> "pkgamodel.User" if aliasMap["models"] = "pkgamodel"
+// Handles: pkg.Type, *pkg.Type, []pkg.Type, []*pkg.Type, map[pkg.Key]pkg.Value, etc.
+func remapTypeAliases(typeStr string, aliasMap map[string]string) string {
+	if typeStr == "" || len(aliasMap) == 0 {
+		return typeStr
+	}
+
+	// Replace all qualified identifiers: pkg.Type
+	// Pattern: word boundary + package name + dot + identifier
+	for oldAlias, newAlias := range aliasMap {
+		if oldAlias == newAlias {
+			continue // No change needed
+		}
+
+		// Use regex to match: (^|[^a-zA-Z0-9_])oldAlias\.
+		// This ensures we match "models.User" but not "mymodels.User"
+		pattern := `(^|[^a-zA-Z0-9_])` + regexp.QuoteMeta(oldAlias) + `\.`
+		re := regexp.MustCompile(pattern)
+
+		// Replace with: $1newAlias.
+		typeStr = re.ReplaceAllString(typeStr, "${1}"+newAlias+".")
+	}
+
+	return typeStr
 }
 
 // getPackageName gets package name from a folder
@@ -1813,8 +1961,8 @@ import (
 	"github.com/primadi/lokstra/core/proxy"
 {{- end }}
 	"github.com/primadi/lokstra/lokstra_registry"
-{{- range $path, $alias := .AllImports }}
-	{{$alias}} "{{$path}}"
+{{- range $entry := .AllImports }}
+	{{$entry.Alias}} "{{$entry.Path}}"
 {{- end }}
 )
 

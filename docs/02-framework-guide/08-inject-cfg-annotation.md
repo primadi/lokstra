@@ -11,8 +11,6 @@ nav_order: 8
 
 The `@Inject` annotation with `cfg:` prefix injects configuration values from `config.yaml` into service fields. It provides type-safe configuration injection with automatic type detection and optional default values.
 
-**Note:** Previously used `@InjectCfgValue` annotation - now unified under `@Inject` with `cfg:` prefix.
-
 ## Basic Syntax
 
 ```go
