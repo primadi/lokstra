@@ -52,9 +52,9 @@ CREATE TRIGGER sync_config_notify_trigger
     EXECUTE FUNCTION sync_config_notify();
 
 -- Add comments
-COMMENT ON TABLE sync_config IS 'Configuration key-value store with real-time sync support';
+COMMENT ON TABLE sync_config IS 'Configuration key-value repository with real-time sync support';
 COMMENT ON COLUMN sync_config.key IS 'Configuration key (unique identifier)';
-COMMENT ON COLUMN sync_config.value IS 'Configuration value stored as JSONB';
+COMMENT ON COLUMN sync_config.value IS 'Configuration value repositoryd as JSONB';
 COMMENT ON COLUMN sync_config.updated_at IS 'Timestamp of last update';
 COMMENT ON FUNCTION sync_config_notify() IS 'Trigger function to send NOTIFY on config changes';
 COMMENT ON TRIGGER sync_config_notify_trigger ON sync_config IS 'Automatically sends pg_notify when config changes';

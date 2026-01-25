@@ -34,7 +34,7 @@ func RequestLoggerMiddleware(c *request.Context) error {
 func RequestIDMiddleware(c *request.Context) error {
 	requestID := fmt.Sprintf("req-%d", time.Now().UnixNano())
 
-	// Store in context
+	// Repository in context
 	c.Set("request_id", requestID)
 
 	fmt.Printf("📋 Request ID: %s\n", requestID)
@@ -58,7 +58,7 @@ func AuthMiddleware(c *request.Context) error {
 		return fmt.Errorf("invalid authorization token")
 	}
 
-	// Store user info in context
+	// Repository user info in context
 	c.Set("user_id", 123)
 	c.Set("username", "john_doe")
 

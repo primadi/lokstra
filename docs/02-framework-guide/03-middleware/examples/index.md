@@ -19,7 +19,7 @@ Advanced middleware composition and chaining patterns.
 [View Example](./02-composition/) | [main.go](./02-composition/main.go) | [test.http](./02-composition/test.http)
 
 ### ✅ 03 - Context Management
-Store and retrieve request-scoped data safely.
+Repository and retrieve request-scoped data safely.
 
 **Topics**: Context storage, propagation, thread safety
 
@@ -81,8 +81,8 @@ func(c *request.Context) error
 
 - `c.Next()` - Call next middleware/handler
 - `c.R` - Access *http.Request
-- `c.Set(key, value)` - Store request-scoped data
-- `c.Get(key)` - Retrieve stored data
+- `c.Set(key, value)` - Repository request-scoped data
+- `c.Get(key)` - Retrieve repositoryd data
 
 ### Example
 

@@ -35,10 +35,10 @@ app.Run(30 * time.Second)
 ```go
 // main.go
 func main() {
-    // Auto-generates code when @EndpointService changes detected
+    // Auto-generates code when @Handler changes detected
     lokstra.Bootstrap()
 
-    // Import packages with @EndpointService annotations
+    // Import packages with @Handler annotations
     _ "myapp/modules/user/application"
 
     // Services auto-registered via annotations!
@@ -49,13 +49,13 @@ func main() {
 **Service with annotations:**
 
 ```go
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "user-repository"               - Direct service injection
     UserRepo UserRepository
 
-    // @Inject "@store.implementation"         - Service from config
-    Store Store  // Injected service name from config: store.implementation = "postgres-store"
+    // @Inject "@repository.implementation"         - Service from config
+    Repository Repository  // Injected service name from config: repository.implementation = "postgres-repository"
 
     // @Inject "cfg:app.name"                  - Config value injection
     AppName string
@@ -100,8 +100,8 @@ go run . --generate-only # Force rebuild all
 **Domain interface:**
 
 ```go
-// domain/store.go
-type Store interface {
+// domain/repository.go
+type Repository interface {
     GetUser(id string) (*User, error)
     SaveUser(user *User) error
 }
@@ -110,37 +110,37 @@ type Store interface {
 **Implementations with @Service:**
 
 ```go
-// infrastructure/postgres_store.go
-// @Service "postgres-store"
-type PostgresStore struct {
+// infrastructure/postgres_repository.go
+// @Service "postgres-repository"
+type PostgresRepository struct {
     // @Inject "db-pool"
     DB *sql.DB
 }
 
-var _ Store = (*PostgresStore)(nil)
+var _ Repository = (*PostgresRepository)(nil)
 
-func (s *PostgresStore) GetUser(id string) (*User, error) { /* ... */ }
+func (s *PostgresRepository) GetUser(id string) (*User, error) { /* ... */ }
 
-// infrastructure/mysql_store.go
-// @Service "mysql-store"
-type MySQLStore struct {
+// infrastructure/mysql_repository.go
+// @Service "mysql-repository"
+type MySQLRepository struct {
     // @Inject "db-pool"
     DB *sql.DB
 }
 
-var _ Store = (*MySQLStore)(nil)
+var _ Repository = (*MySQLRepository)(nil)
 
-func (s *MySQLStore) GetUser(id string) (*User, error) { /* ... */ }
+func (s *MySQLRepository) GetUser(id string) (*User, error) { /* ... */ }
 ```
 
 **Business service using config-based injection:**
 
 ```go
 // application/user_service.go
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
-    // @Inject "@store.implementation"
-    Store Store  // Actual service injected based on config!
+    // @Inject "@repository.implementation"
+    Repository Repository  // Actual service injected based on config!
 
     // @Inject "cfg:app.timeout"  // Config value injection
     Timeout time.Duration
@@ -151,7 +151,7 @@ type UserService struct {
 
 // @Route "GET /{id}"
 func (s *UserService) GetUser(id string) (*User, error) {
-    return s.Store.GetUser(id)
+    return s.Repository.GetUser(id)
 }
 ```
 
@@ -159,8 +159,8 @@ func (s *UserService) GetUser(id string) (*User, error) {
 
 ```yaml
 configs:
-  store:
-    implementation: "postgres-store" # Switch to "mysql-store" here!
+  repository:
+    implementation: "postgres-repository" # Switch to "mysql-repository" here!
 
   app:
     timeout: "30s"  # Direct config value
@@ -172,11 +172,11 @@ configs:
     production-jwt-secret: "super-secret-key"
 
 service-definitions:
-  postgres-store:
-    type: postgres-store
+  postgres-repository:
+    type: postgres-repository
 
-  mysql-store:
-    type: mysql-store
+  mysql-repository:
+    type: mysql-repository
 
 deployments:
   development:
@@ -188,12 +188,12 @@ deployments:
 
 **Injection Patterns Summary:**
 
-| Annotation                  | Syntax              | Purpose                        | Example                     |
-| --------------------------- | ------------------- | ------------------------------ | --------------------------- |
-| `@Inject "service-name"`    | Direct service      | Inject service                 | `@Inject "user-repo"`       |
-| `@Inject "@config.key"`     | Service from config | Service name from config       | `@Inject "@store.impl"`     |
-| `@Inject "cfg:config.key"`  | Config value        | Config value injection         | `@Inject "cfg:app.timeout"` |
-| `@Inject "cfg:@config.key"` | Indirect config     | Config key from another config | `@Inject "cfg:@jwt.path"`   |
+| Annotation                  | Syntax              | Purpose                        | Example                      |
+| --------------------------- | ------------------- | ------------------------------ | ---------------------------- |
+| `@Inject "service-name"`    | Direct service      | Inject service                 | `@Inject "user-repo"`        |
+| `@Inject "@config.key"`     | Service from config | Service name from config       | `@Inject "@repository.impl"` |
+| `@Inject "cfg:config.key"`  | Config value        | Config value injection         | `@Inject "cfg:app.timeout"`  |
+| `@Inject "cfg:@config.key"` | Indirect config     | Config key from another config | `@Inject "cfg:@jwt.path"`    |
 
 **Benefits:**
 
@@ -301,7 +301,7 @@ myapp/
 ├── infrastructure/
 │   └── user_repository.go
 └── application/
-    ├── user_service.go              # Contains @EndpointService
+    ├── user_service.go              # Contains @Handler
     └── zz_generated.lokstra.go      # Auto-generated
 ```
 
@@ -381,28 +381,26 @@ go run . --generate-only # Force rebuild all
 3. **Use pointer parameters** for request binding: `*CreateUserParams`
 4. **Follow domain-driven design**: domain → repository → service
 5. **Type-safe DI**: Use direct type assertions and `service.LazyLoad[T]` for lazy service loading
-6. **Prefer annotations** for business services: Use `@EndpointService` + `@Route` instead of manual registration
+6. **Prefer annotations** for business services: Use `@Handler` + `@Route` instead of manual registration
 
 ## When Suggesting Code
 
 1. **Ask about scale first:**
-
    - Small → Router mode
    - Medium → Framework mode with annotations
    - Large → Enterprise modular with annotations
 
 2. **Provide complete code:**
-
    - Include imports
    - Include error handling
    - Include validation tags
    - Include config.yaml if using framework mode
-   - Use `@EndpointService` annotations for business services
+   - Use `@Handler` annotations for business services
 
 3. **Follow project structure:**
    - Separate domain/application/infrastructure
    - Use interfaces in domain layer
-   - Business logic in application layer with `@EndpointService`
+   - Business logic in application layer with `@Handler`
    - Data access in infrastructure layer
 
 ## Resources

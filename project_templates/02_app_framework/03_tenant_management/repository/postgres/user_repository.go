@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"context"
@@ -6,18 +6,19 @@ import (
 	"fmt"
 
 	"github.com/primadi/lokstra/project_templates/02_app_framework/03_tenant_management/domain"
+	"github.com/primadi/lokstra/project_templates/02_app_framework/03_tenant_management/repository"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-// @Service "postgres-user-store"
-type PostgresUserStore struct {
-	// @Inject "db_auth"
+// @Service "postgres-user-repository"
+type PostgresUserRepository struct {
+	// @Inject "db_main"
 	dbPool serviceapi.DbPool
 }
 
-var _ UserStore = (*PostgresUserStore)(nil)
+var _ repository.UserRepository = (*PostgresUserRepository)(nil)
 
-func (s *PostgresUserStore) Create(ctx context.Context, user *domain.User) error {
+func (s *PostgresUserRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `
 		INSERT INTO users (
 			id, tenant_id, email, name, role, status,
@@ -32,7 +33,7 @@ func (s *PostgresUserStore) Create(ctx context.Context, user *domain.User) error
 	return err
 }
 
-func (s *PostgresUserStore) Get(ctx context.Context, userID string) (*domain.User, error) {
+func (s *PostgresUserRepository) Get(ctx context.Context, userID string) (*domain.User, error) {
 	query := `
 		SELECT id, tenant_id, email, name, role, status,
 		       created_at, updated_at, deleted_at
@@ -56,7 +57,7 @@ func (s *PostgresUserStore) Get(ctx context.Context, userID string) (*domain.Use
 	return user, nil
 }
 
-func (s *PostgresUserStore) Update(ctx context.Context, user *domain.User) error {
+func (s *PostgresUserRepository) Update(ctx context.Context, user *domain.User) error {
 	query := `
 		UPDATE users
 		SET email = $1, name = $2, role = $3, status = $4,
@@ -78,7 +79,7 @@ func (s *PostgresUserStore) Update(ctx context.Context, user *domain.User) error
 	return nil
 }
 
-func (s *PostgresUserStore) Delete(ctx context.Context, userID string) error {
+func (s *PostgresUserRepository) Delete(ctx context.Context, userID string) error {
 	query := `DELETE FROM users WHERE id = $1`
 
 	result, err := s.dbPool.Exec(ctx, query, userID)
@@ -92,7 +93,7 @@ func (s *PostgresUserStore) Delete(ctx context.Context, userID string) error {
 	return nil
 }
 
-func (s *PostgresUserStore) ListByTenant(ctx context.Context, tenantID string) ([]*domain.User, error) {
+func (s *PostgresUserRepository) ListByTenant(ctx context.Context, tenantID string) ([]*domain.User, error) {
 	query := `
 		SELECT id, tenant_id, email, name, role, status,
 		       created_at, updated_at, deleted_at
@@ -127,7 +128,7 @@ func (s *PostgresUserStore) ListByTenant(ctx context.Context, tenantID string) (
 	return users, nil
 }
 
-func (s *PostgresUserStore) GetByEmail(ctx context.Context, tenantID string, email string) (*domain.User, error) {
+func (s *PostgresUserRepository) GetByEmail(ctx context.Context, tenantID string, email string) (*domain.User, error) {
 	query := `
 		SELECT id, tenant_id, email, name, role, status,
 		       created_at, updated_at, deleted_at
@@ -151,7 +152,7 @@ func (s *PostgresUserStore) GetByEmail(ctx context.Context, tenantID string, ema
 	return user, nil
 }
 
-func (s *PostgresUserStore) Exists(ctx context.Context, userID string) (bool, error) {
+func (s *PostgresUserRepository) Exists(ctx context.Context, userID string) (bool, error) {
 	query := `SELECT 1 FROM users WHERE id = $1`
 	var exists int
 	err := s.dbPool.QueryRow(ctx, query, userID).Scan(&exists)

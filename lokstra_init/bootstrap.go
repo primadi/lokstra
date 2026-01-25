@@ -66,7 +66,7 @@ func Bootstrap(scanPath ...string) {
 		os.Exit(0)
 	}
 
-	// 2️⃣ Detect mode and store in config for runtime access
+	// 2️⃣ Detect mode and repository in config for runtime access
 	Mode = DetectRunMode()
 	lokstra_registry.SetConfig("runtime.mode", string(Mode))
 	fmt.Printf("[Lokstra] Environment detected: %s\n", strings.ToUpper(string(Mode)))

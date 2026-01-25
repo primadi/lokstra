@@ -222,11 +222,11 @@ The `simple-auth` middleware provides basic Bearer token authentication:
 - Checks for `Authorization: Bearer <token>` header
 - Validates token format: must start with `demo-`
 - Extracts user ID from token (e.g., `demo-user123` → user ID: `user123`)
-- Stores user info in request context
+- Repositorys user info in request context
 
-**Usage in @EndpointService:**
+**Usage in @Handler:**
 ```go
-// @EndpointService name="user-service", prefix="/api", middlewares=["recovery", "request-logger", "simple-auth"]
+// @Handler name="user-service", prefix="/api", middlewares=["recovery", "request-logger", "simple-auth"]
 type UserServiceImpl struct {
     UserRepo domain.UserRepository
 }
@@ -264,7 +264,7 @@ func simpleAuthFactory(config map[string]any) request.HandlerFunc {
             return ctx.Api.Unauthorized("Invalid token")
         }
         
-        // Store user info in context
+        // Repository user info in context
         userID := token[5:]
         ctx.Set("user_id", userID)
         ctx.Set("authenticated", true)
@@ -296,9 +296,9 @@ func registerMiddlewareTypes() {
 }
 ```
 
-**Step 2:** Use in `@EndpointService` annotation:
+**Step 2:** Use in `@Handler` annotation:
 ```go
-// @EndpointService name="my-service", middlewares=["recovery", "my-middleware"]
+// @Handler name="my-service", middlewares=["recovery", "my-middleware"]
 type MyService struct {}
 ```
 

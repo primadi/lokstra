@@ -86,7 +86,7 @@ func loggingMiddleware(c *lokstra.RequestContext) error {
 ---
 
 ### Set
-Stores a value in the request context.
+Repositorys a value in the request context.
 
 **Signature:**
 ```go
@@ -95,7 +95,7 @@ func (c *Context) Set(key string, value any)
 
 **Parameters:**
 - `key` - Storage key
-- `value` - Value to store
+- `value` - Value to repository
 
 **Example:**
 ```go
@@ -128,7 +128,7 @@ func (c *Context) Get(key string) any
 - `key` - Storage key
 
 **Returns:**
-- `any` - Stored value, or `nil` if not found
+- `any` - Repositoryd value, or `nil` if not found
 
 **Example:**
 ```go
@@ -144,7 +144,7 @@ if val := c.Get("optional_key"); val != nil {
 ---
 
 ### SetContextValue
-Stores a value in the standard Go context.
+Repositorys a value in the standard Go context.
 
 **Signature:**
 ```go
@@ -153,7 +153,7 @@ func (c *Context) SetContextValue(key string, value any)
 
 **Parameters:**
 - `key` - Context key
-- `value` - Value to store
+- `value` - Value to repository
 
 **Example:**
 ```go
@@ -180,7 +180,7 @@ func (c *Context) GetContextValue(key string) any
 - `key` - Context key
 
 **Returns:**
-- `any` - Stored value, or `nil` if not found
+- `any` - Repositoryd value, or `nil` if not found
 
 **Example:**
 ```go
@@ -589,7 +589,7 @@ func authMiddleware(c *lokstra.RequestContext) error {
         return c.Api.Unauthorized("Invalid token")
     }
     
-    // Store user in context
+    // Repository user in context
     c.Set("user", user)
     c.Set("user_id", user.ID)
     c.SetContextValue("user_id", user.ID)

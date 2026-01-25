@@ -21,7 +21,7 @@ func TestDurationStringFormat(t *testing.T) {
 
 import "time"
 
-// @EndpointService name="test-service", prefix="/api"
+// @Handler name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "cfg:timeout", "15m"
 	Timeout time.Duration
@@ -38,7 +38,7 @@ func (s *TestService) GetInfo() string { return "info" }
 
 import "time"
 
-// @EndpointService name="test-service", prefix="/api"
+// @Handler name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "cfg:timeout", "2h"
 	Timeout time.Duration
@@ -55,7 +55,7 @@ func (s *TestService) GetInfo() string { return "info" }
 
 import "time"
 
-// @EndpointService name="test-service", prefix="/api"
+// @Handler name="test-service", prefix="/api"
 type TestService struct {
 	// @Inject "cfg:timeout", "30s"
 	Timeout time.Duration

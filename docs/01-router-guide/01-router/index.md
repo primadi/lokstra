@@ -269,7 +269,7 @@ GET /v2/products
 
 ---
 
-### Method 2: Stored Groups
+### Method 2: Repositoryd Groups
 ```go
 v1 := r.AddGroup("/v1")
 v1.GET("/users", getUsersV1)
@@ -280,7 +280,7 @@ v2.GET("/users", getUsersV2)
 v2.GET("/products", getProductsV2)
 ```
 
-**💭 Tip**: Use inline for simple cases, stored for complex routing logic.
+**💭 Tip**: Use inline for simple cases, repositoryd for complex routing logic.
 
 ---
 

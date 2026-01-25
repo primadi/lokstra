@@ -25,7 +25,7 @@ vendor/
 *~
 
 # OS
-.DS_Store
+.DS_Repository
 Thumbs.db
 
 # Logs

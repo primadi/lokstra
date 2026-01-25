@@ -59,7 +59,7 @@ Standard services and service APIs:
 
 - **[Database Pool (PostgreSQL)](06-services/dbpool-pg)** - PostgreSQL connection pool
 - **[Redis](06-services/redis)** - Redis client service
-- **[KV Store](06-services/kvstore)** - Key-value store interface
+- **[KV Repository](06-services/kvrepository)** - Key-value repository interface
 - **[Metrics (Prometheus)](06-services/metrics)** - Prometheus metrics
 
 > **Note:** Authentication services have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
@@ -121,7 +121,7 @@ import _ "github.com/primadi/lokstra/services/redis"
 
 // Service APIs
 import "github.com/primadi/lokstra/serviceapi/db_pool"
-import "github.com/primadi/lokstra/serviceapi/kvstore"
+import "github.com/primadi/lokstra/serviceapi/kvrepository"
 // Auth service APIs moved to: github.com/primadi/lokstra-auth
 import "github.com/primadi/lokstra/serviceapi/auth"
 

@@ -466,7 +466,7 @@ Different servers can run with different configs in the same YAML file.
 ```
 LoadAndBuild(config.yaml)
   ├─ Load and parse YAML
-  ├─ Store original config in GlobalRegistry
+  ├─ Repository original config in GlobalRegistry
   ├─ Register GLOBAL definitions only
   └─ Build deployment topologies
 

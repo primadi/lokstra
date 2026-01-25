@@ -72,7 +72,7 @@ Build production-ready custom middleware.
 Advanced middleware composition patterns.
 
 ### [03 - Context Management](examples/03-context-management/)
-Store and retrieve request-scoped data.
+Repository and retrieve request-scoped data.
 
 ### [04 - Error Recovery](examples/04-error-recovery/)
 Panic recovery and error handling.
@@ -110,7 +110,7 @@ Before diving in, make sure you understand:
 
 1. **Create custom middleware** → Build reusable components
 2. **Compose middleware** → Chain effectively
-3. **Manage context** → Store request data
+3. **Manage context** → Repository request data
 4. **Handle errors** → Recover gracefully
 5. **Optimize** → Minimize overhead
 6. **Integrate** → Use third-party middleware

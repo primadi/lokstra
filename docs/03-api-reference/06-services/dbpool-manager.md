@@ -70,14 +70,14 @@ Lokstra provides two implementation types for `dbpool-manager`:
 
 #### 1. Local Map Mode (Default)
 
-Uses in-memory `map[string]serviceapi.DbPool` and `map[string]*serviceapi.DbPoolInfo` to store pools and configurations.
+Uses in-memory `map[string]serviceapi.DbPool` and `map[string]*serviceapi.DbPoolInfo` to repository pools and configurations.
 
 **Implementation:** `services/dbpool_manager/dbpool_manager.go`
 
 **Characteristics:**
 - Uses `sync.RWMutex` for thread-safe access
-- Pools stored in memory map (keyed by DSN)
-- Named pool configs stored in memory map (keyed by name)
+- Pools repositoryd in memory map (keyed by DSN)
+- Named pool configs repositoryd in memory map (keyed by name)
 - Suitable for single-instance applications
 
 **Configuration:**
@@ -99,13 +99,13 @@ lokstra_registry.RegisterService("dbpool-manager", manager)
 
 #### 2. Distributed Sync Mode
 
-Uses `common/syncmap.SyncMap` to store named pool configurations, allowing sharing across multiple instances via PostgreSQL.
+Uses `common/syncmap.SyncMap` to repository named pool configurations, allowing sharing across multiple instances via PostgreSQL.
 
 **Implementation:** `services/dbpool_manager/sync_pool_manager.go`
 
 **Characteristics:**
-- Pools still stored in memory map (keyed by DSN) for performance
-- Named pool configs stored in `syncmap.SyncMap[*serviceapi.DbPoolInfo]`
+- Pools still repositoryd in memory map (keyed by DSN) for performance
+- Named pool configs repositoryd in `syncmap.SyncMap[*serviceapi.DbPoolInfo]`
 - Configurations sync across instances via PostgreSQL LISTEN/NOTIFY
 - Changes persist to database
 - Suitable for multi-instance deployments

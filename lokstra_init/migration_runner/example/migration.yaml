@@ -7,7 +7,7 @@
 dbpool-name: main-db
 
 # Schema migrations tracking table name
-# This table stores which migrations have been applied
+# This table repositorys which migrations have been applied
 # If not specified, defaults to "schema_migrations"
 schema-table: schema_migrations
 

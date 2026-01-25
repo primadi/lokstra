@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"context"
@@ -7,18 +7,19 @@ import (
 
 	"github.com/primadi/lokstra/common/json"
 	"github.com/primadi/lokstra/project_templates/02_app_framework/03_tenant_management/domain"
+	"github.com/primadi/lokstra/project_templates/02_app_framework/03_tenant_management/repository"
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-// @Service "postgres-tenant-store"
-type PostgresTenantStore struct {
-	// @Inject "db_auth"
+// @Service "postgres-tenant-repository"
+type PostgresTenantRepository struct {
+	// @Inject "db_main"
 	dbPool serviceapi.DbPool
 }
 
-var _ TenantStore = (*PostgresTenantStore)(nil)
+var _ repository.TenantRepository = (*PostgresTenantRepository)(nil)
 
-func (s *PostgresTenantStore) Create(ctx context.Context, tenant *domain.Tenant) error {
+func (s *PostgresTenantRepository) Create(ctx context.Context, tenant *domain.Tenant) error {
 	metadata, _ := json.Marshal(tenant.Metadata)
 	settings, _ := json.Marshal(tenant.Settings)
 
@@ -36,7 +37,7 @@ func (s *PostgresTenantStore) Create(ctx context.Context, tenant *domain.Tenant)
 	return err
 }
 
-func (s *PostgresTenantStore) Get(ctx context.Context, tenantID string) (*domain.Tenant, error) {
+func (s *PostgresTenantRepository) Get(ctx context.Context, tenantID string) (*domain.Tenant, error) {
 	query := `
 		SELECT id, name, domain, db_dsn, db_schema, status,
 		       settings, metadata, created_at, updated_at, deleted_at
@@ -71,7 +72,7 @@ func (s *PostgresTenantStore) Get(ctx context.Context, tenantID string) (*domain
 	return tenant, nil
 }
 
-func (s *PostgresTenantStore) Update(ctx context.Context, tenant *domain.Tenant) error {
+func (s *PostgresTenantRepository) Update(ctx context.Context, tenant *domain.Tenant) error {
 	metadata, _ := json.Marshal(tenant.Metadata)
 	settings, _ := json.Marshal(tenant.Settings)
 
@@ -96,14 +97,14 @@ func (s *PostgresTenantStore) Update(ctx context.Context, tenant *domain.Tenant)
 	return nil
 }
 
-func (s *PostgresTenantStore) Delete(ctx context.Context, tenantID string) error {
+func (s *PostgresTenantRepository) Delete(ctx context.Context, tenantID string) error {
 	query := `DELETE FROM tenants WHERE id = $1`
 
 	_, err := s.dbPool.Exec(ctx, query, tenantID)
 	return err
 }
 
-func (s *PostgresTenantStore) List(ctx context.Context) ([]*domain.Tenant, error) {
+func (s *PostgresTenantRepository) List(ctx context.Context) ([]*domain.Tenant, error) {
 	query := `
 		SELECT id, name, domain, db_dsn, db_schema, status,
 		    settings, metadata, created_at, updated_at, deleted_at
@@ -120,7 +121,7 @@ func (s *PostgresTenantStore) List(ctx context.Context) ([]*domain.Tenant, error
 	return s.scanTenants(rows)
 }
 
-func (s *PostgresTenantStore) GetByName(ctx context.Context, name string) (*domain.Tenant, error) {
+func (s *PostgresTenantRepository) GetByName(ctx context.Context, name string) (*domain.Tenant, error) {
 	query := `
 		SELECT id, name, domain, db_dsn, db_schema, status,
 		       settings, metadata, created_at, updated_at, deleted_at
@@ -156,12 +157,12 @@ func (s *PostgresTenantStore) GetByName(ctx context.Context, name string) (*doma
 	return tenant, nil
 }
 
-func (s *PostgresTenantStore) Exists(ctx context.Context, tenantID string) (bool, error) {
+func (s *PostgresTenantRepository) Exists(ctx context.Context, tenantID string) (bool, error) {
 	query := `SELECT 1 FROM tenants WHERE id = $1`
 	return s.dbPool.IsExists(ctx, query, tenantID)
 }
 
-func (s *PostgresTenantStore) scanTenants(rows serviceapi.Rows) ([]*domain.Tenant, error) {
+func (s *PostgresTenantRepository) scanTenants(rows serviceapi.Rows) ([]*domain.Tenant, error) {
 	tenants := make([]*domain.Tenant, 0)
 
 	for rows.Next() {

@@ -4,7 +4,7 @@ import (
 	models "github.com/primadi/lokstra/core/annotation/internal/multifile_test/import_alias_test/pkgb"
 )
 
-// @EndpointService name="service-b", prefix="/api/b"
+// @Handler name="service-b", prefix="/api/b"
 type ServiceB struct {
 }
 

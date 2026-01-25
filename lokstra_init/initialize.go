@@ -75,7 +75,7 @@ func BootstrapAndRun(opts ...InitializeOption) error {
 		PanicOnConfigError:       true,
 		LogLevel:                 logger.LogLevelInfo,
 		EnableLoadConfig:         true,
-		EnableAnnotation:         true, // Auto-detect @EndpointService
+		EnableAnnotation:         true, // Auto-detect @Handler
 		EnablePgxSyncMap:         false,
 		SkipMigrationOnProd:      true,
 		PgxSyncMapDbPoolName:     "db_main",

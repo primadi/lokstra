@@ -8,71 +8,71 @@ import (
 )
 
 // Test interfaces
-type Store interface {
+type Repository interface {
 	GetData() string
 }
 
-type PostgresStore struct {
+type PostgresRepository struct {
 	name string
 }
 
-func (s *PostgresStore) GetData() string {
+func (s *PostgresRepository) GetData() string {
 	return "postgres:" + s.name
 }
 
-type MySQLStore struct {
+type MySQLRepository struct {
 	name string
 }
 
-func (s *MySQLStore) GetData() string {
+func (s *MySQLRepository) GetData() string {
 	return "mysql:" + s.name
 }
 
 type UserService struct {
-	Store  Store
-	Logger string
+	Repository Repository
+	Logger     string
 }
 
 func TestConfigBasedDependencyInjection(t *testing.T) {
 	// Clear registry for isolated test
 	deploy.ResetGlobalRegistryForTesting()
 
-	// Register store implementations
-	lokstra_registry.RegisterLazyService("postgres-store", func() any {
-		return &PostgresStore{name: "test-db"}
+	// Register repository implementations
+	lokstra_registry.RegisterLazyService("postgres-repository", func() any {
+		return &PostgresRepository{name: "test-db"}
 	}, nil)
 
-	lokstra_registry.RegisterLazyService("mysql-store", func() any {
-		return &MySQLStore{name: "test-db"}
+	lokstra_registry.RegisterLazyService("mysql-repository", func() any {
+		return &MySQLRepository{name: "test-db"}
 	}, nil)
 
 	// Register logger
 	lokstra_registry.RegisterService("logger", "test-logger")
 
 	// Set GLOBAL config (not service config!)
-	lokstra_registry.SetConfig("store.implementation", "postgres-store")
+	lokstra_registry.SetConfig("repository.implementation", "postgres-repository")
 
 	// DEBUG: Verify config is set
-	if val, ok := deploy.Global().GetConfig("store.implementation"); ok {
-		t.Logf("✅ Config set successfully: store.implementation = %v", val)
+	if val, ok := deploy.Global().GetConfig("repository.implementation"); ok {
+		t.Logf("✅ Config set successfully: repository.implementation = %v", val)
 	} else {
-		t.Fatalf("❌ Config NOT set: store.implementation")
+		t.Fatalf("❌ Config NOT set: repository.implementation")
 	}
 
 	// Register user service with @ prefix for config-based dependency
 	lokstra_registry.RegisterLazyService("user-service",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store:  deps["cfg"].(Store),
-				Logger: deps["logger"].(string),
+				Repository: deps["cfg"].(Repository),
+				Logger:     deps["logger"].(string),
 			}
 		},
 		map[string]any{
-			"depends-on": []string{"cfg:@store.implementation", "logger"},
+			"depends-on": []string{"cfg:@repository.implementation", "logger"},
 		},
 	)
 
-	// Get service - should resolve postgres-store
+	// Get service - should resolve postgres-repository
 	userSvc := lokstra_registry.MustGetService[*UserService]("user-service")
 
 	if userSvc == nil {
@@ -83,7 +83,7 @@ func TestConfigBasedDependencyInjection(t *testing.T) {
 		t.Errorf("expected logger 'test-logger', got '%s'", userSvc.Logger)
 	}
 
-	data := userSvc.Store.GetData()
+	data := userSvc.Repository.GetData()
 	if data != "postgres:test-db" {
 		t.Errorf("expected 'postgres:test-db', got '%s'", data)
 	}
@@ -93,42 +93,42 @@ func TestConfigBasedDependencyInjection_SwitchImplementation(t *testing.T) {
 	// Clear registry for isolated test
 	deploy.ResetGlobalRegistryForTesting()
 
-	// Register store implementations
-	lokstra_registry.RegisterLazyService("postgres-store-2", func() any {
-		return &PostgresStore{name: "pg-db"}
+	// Register repository implementations
+	lokstra_registry.RegisterLazyService("postgres-repository-2", func() any {
+		return &PostgresRepository{name: "pg-db"}
 	}, nil)
 
-	lokstra_registry.RegisterLazyService("mysql-store-2", func() any {
-		return &MySQLStore{name: "my-db"}
+	lokstra_registry.RegisterLazyService("mysql-repository-2", func() any {
+		return &MySQLRepository{name: "my-db"}
 	}, nil)
 
 	// Register logger
 	lokstra_registry.RegisterService("logger-2", "logger2")
 
 	// Set GLOBAL config to use MySQL
-	lokstra_registry.SetConfig("store.implementation", "mysql-store-2")
+	lokstra_registry.SetConfig("repository.implementation", "mysql-repository-2")
 
 	// Register user service with MySQL this time
 	lokstra_registry.RegisterLazyService("user-service-2",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store:  deps["cfg"].(Store),
-				Logger: deps["logger-2"].(string),
+				Repository: deps["cfg"].(Repository),
+				Logger:     deps["logger-2"].(string),
 			}
 		},
 		map[string]any{
-			"depends-on": []string{"cfg:@store.implementation", "logger-2"},
+			"depends-on": []string{"cfg:@repository.implementation", "logger-2"},
 		},
 	)
 
-	// Get service - should resolve mysql-store now
+	// Get service - should resolve mysql-repository now
 	userSvc := lokstra_registry.MustGetService[*UserService]("user-service-2")
 
 	if userSvc == nil {
 		t.Fatal("expected user service to be created")
 	}
 
-	data := userSvc.Store.GetData()
+	data := userSvc.Repository.GetData()
 	if data != "mysql:my-db" {
 		t.Errorf("expected 'mysql:my-db', got '%s'", data)
 	}
@@ -138,9 +138,9 @@ func TestConfigBasedDependency_MissingConfig(t *testing.T) {
 	// Clear registry for isolated test
 	deploy.ResetGlobalRegistryForTesting()
 
-	// Register store
-	lokstra_registry.RegisterLazyService("some-store", func() any {
-		return &PostgresStore{name: "test"}
+	// Register repository
+	lokstra_registry.RegisterLazyService("some-repository", func() any {
+		return &PostgresRepository{name: "test"}
 	}, nil)
 
 	// DO NOT set global config for "missing.config"
@@ -149,7 +149,7 @@ func TestConfigBasedDependency_MissingConfig(t *testing.T) {
 	lokstra_registry.RegisterLazyService("bad-service",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store: deps["cfg"].(Store),
+				Repository: deps["cfg"].(Repository),
 			}
 		},
 		map[string]any{
@@ -178,7 +178,7 @@ func TestConfigBasedDependency_EmptyConfig(t *testing.T) {
 	lokstra_registry.RegisterLazyService("bad-service-2",
 		func(deps map[string]any, config map[string]any) any {
 			return &UserService{
-				Store: deps["cfg"].(Store),
+				Repository: deps["cfg"].(Repository),
 			}
 		},
 		map[string]any{

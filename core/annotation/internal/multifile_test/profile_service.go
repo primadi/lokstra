@@ -2,7 +2,7 @@ package main
 
 import "github.com/primadi/lokstra/core/service"
 
-// @EndpointService name="profile-service", prefix="/api/profiles"
+// @Handler name="profile-service", prefix="/api/profiles"
 type ProfileService struct {
 	// @Inject "profile-repo"
 	ProfileRepo *service.Cached[any]

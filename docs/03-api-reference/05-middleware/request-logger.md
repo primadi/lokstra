@@ -263,7 +263,7 @@ router.Use(request_logger.Middleware(&request_logger.Config{
 router.Use(func(c *request.Context) error {
     requestID := c.RequestID
     
-    // Store original logger
+    // Repository original logger
     originalLogger := request_logger.DefaultConfig().CustomLogger
     
     // Override with request ID

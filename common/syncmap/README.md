@@ -141,8 +141,8 @@ userMap := syncmap.NewSyncMap[User](backend, "users")
 orderMap := syncmap.NewSyncMap[Order](backend, "orders")
 
 // Both can have "id123" key without conflict
-userMap.Set(ctx, "id123", user)   // Stored as "users:id123"
-orderMap.Set(ctx, "id123", order) // Stored as "orders:id123"
+userMap.Set(ctx, "id123", user)   // Repositoryd as "users:id123"
+orderMap.Set(ctx, "id123", order) // Repositoryd as "orders:id123"
 ```
 
 ## Real-World Example: Pool Manager

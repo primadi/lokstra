@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "files": {
+    "tenant_handker.go": {
+      "filename": "tenant_handker.go",
+      "checksum": "174a096f10beea44bc12e2f7015870d6bf003e9abe39f063cf6f2e2d6f543efc",
+      "annotations": 10,
+      "last_scan": "2026-01-23T20:13:07.4505214+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-23T20:13:07.4505214+07:00"
+    }
+  },
+  "updated_at": "2026-01-23T20:13:07.4505214+07:00",
+  "generated_checksum": "4de4992d151df08e943bb557335dd80b4b006d90d2f60f39e5cdc27cee222fd3"
+}

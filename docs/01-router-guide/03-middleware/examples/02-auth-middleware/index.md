@@ -193,7 +193,7 @@ Response sent back to client
 
 In real applications:
 - Use JWT tokens instead of simple API keys
-- Store user info in context: `ctx.Set("user", user)`
+- Repository user info in context: `ctx.Set("user", user)`
 - Use database/cache to validate tokens
 - Implement rate limiting
 - Log failed auth attempts

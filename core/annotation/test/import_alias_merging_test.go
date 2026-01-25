@@ -62,7 +62,7 @@ import (
 	models "myapp/pkga"
 )
 
-// @EndpointService name="service-a", prefix="/api/a"
+// @Handler name="service-a", prefix="/api/a"
 type ServiceA struct {}
 
 // @Route "GET /users"
@@ -81,7 +81,7 @@ import (
 	models "myapp/pkgb"
 )
 
-// @EndpointService name="service-b", prefix="/api/b"
+// @Handler name="service-b", prefix="/api/b"
 type ServiceB struct {}
 
 // @Route "GET /users"
@@ -216,7 +216,7 @@ import (
 	userentity "myapp/pkga"
 )
 
-// @EndpointService name="service-c", prefix="/api/c"
+// @Handler name="service-c", prefix="/api/c"
 type ServiceC struct {}
 
 // @Route "GET /entity"
@@ -235,7 +235,7 @@ import (
 	pkgamodel "myapp/pkga"
 )
 
-// @EndpointService name="service-d", prefix="/api/d"
+// @Handler name="service-d", prefix="/api/d"
 type ServiceD struct {}
 
 // @Route "GET /data"

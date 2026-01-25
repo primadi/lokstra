@@ -13,7 +13,7 @@ type RedisClient struct {
 	Addr string
 }
 
-// @EndpointService name="config-eager-service", prefix="/api/v1/config"
+// @Handler name="config-eager-service", prefix="/api/v1/config"
 type ConfigEagerService struct {
 	// @Inject "user-repository"
 	UserRepo *service.Cached[any] // Lazy (wrapped in service.Cached)

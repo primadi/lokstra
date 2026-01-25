@@ -35,7 +35,7 @@ Service-to-service communication:
 
 ### 3. Annotation-Driven Development
 Build services with annotations:
-- `@EndpointService` for service definition
+- `@Handler` for service definition
 - `@Route` for explicit route mapping
 - `@Inject` for dependency injection
 - Variable support in routes and prefixes

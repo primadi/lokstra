@@ -97,7 +97,7 @@ curl -X POST "http://localhost:3001/weather-reports?city=bandung&forecast=true&d
 
 ### 1. Simple URL Configuration
 
-Store URL directly in service config - no special definitions needed:
+Repository URL directly in service config - no special definitions needed:
 
 ```yaml
 service-definitions:

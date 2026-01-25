@@ -67,8 +67,8 @@ func (t *TxContext) IsRolledBack() bool {
 //		defer finish(&err)
 //
 //		// All operations using ctx will join the same transaction
-//		s.Store1.Create(ctx, ...)
-//		s.Store2.Update(ctx, ...)
+//		s.Repository1.Create(ctx, ...)
+//		s.Repository2.Update(ctx, ...)
 //
 //		return nil // Auto-commit on success, rollback on error
 //	}
@@ -143,11 +143,11 @@ func finalizeTx(ctx context.Context, txCtx *TxContext, err *error) {
 //	defer finish(&err)
 //
 //	// This joins the transaction
-//	store.Create(ctx, tenant)
+//	repository.Create(ctx, tenant)
 //
 //	// This uses a separate connection (e.g., for audit logs that must commit)
 //	isolatedCtx := serviceapi.WithoutTransaction(ctx)
-//	auditStore.Log(isolatedCtx, "tenant_created")
+//	auditRepository.Log(isolatedCtx, "tenant_created")
 func WithoutTransaction(ctx context.Context) context.Context {
 	return context.WithValue(ctx, ignoreTransactionKey, true)
 }

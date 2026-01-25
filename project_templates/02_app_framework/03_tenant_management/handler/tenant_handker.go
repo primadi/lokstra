@@ -1,4 +1,4 @@
-package application
+package handler
 
 import (
 	"fmt"
@@ -9,17 +9,17 @@ import (
 	"github.com/primadi/lokstra/project_templates/02_app_framework/03_tenant_management/repository"
 )
 
-// @EndpointService name="tenant-service", prefix="${api-auth-prefix:/api/auth}/core/tenants", middlewares=["recovery", "request_logger"]
-type TenantService struct {
-	// @Inject "@store.tenant-store"
-	TenantStore repository.TenantStore
+// @Handler name="tenant-handler", prefix="${api-auth-prefix:/api/auth}/core/tenants", middlewares=["recovery", "request_logger"]
+type TenantHandler struct {
+	// @Inject "@repository.tenant-repository"
+	TenantRepository repository.TenantRepository
 
-	// @Inject "@store.user-store"
-	UserStore repository.UserStore
+	// @Inject "@repository.user-repository"
+	UserRepository repository.UserRepository
 }
 
 // @Route "POST /"
-func (s *TenantService) CreateTenant(ctx *request.Context,
+func (s *TenantHandler) CreateTenant(ctx *request.Context,
 	req *domain.CreateTenantRequest) (*domain.Tenant, error) {
 
 	// Begin transaction - lazy created on first database operation
@@ -27,13 +27,13 @@ func (s *TenantService) CreateTenant(ctx *request.Context,
 	ctx.BeginTransaction("db_auth")
 
 	// Check if tenant name already exists
-	existing, err := s.TenantStore.GetByName(ctx, req.Name)
+	existing, err := s.TenantRepository.GetByName(ctx, req.Name)
 	if err == nil && existing != nil {
 		return nil, fmt.Errorf("tenant with name '%s' already exists", req.Name)
 	}
 
 	// Check if tenant ID already exists
-	existingByID, _ := s.TenantStore.Get(ctx, req.ID)
+	existingByID, _ := s.TenantRepository.Get(ctx, req.ID)
 	if existingByID != nil {
 		return nil, fmt.Errorf("tenant with ID '%s' already exists", req.ID)
 	}
@@ -68,7 +68,7 @@ func (s *TenantService) CreateTenant(ctx *request.Context,
 	}
 
 	// Create tenant (transaction auto-starts here)
-	if err := s.TenantStore.Create(ctx, tenant); err != nil {
+	if err := s.TenantRepository.Create(ctx, tenant); err != nil {
 		return nil, fmt.Errorf("failed to create tenant: %w", err)
 	}
 
@@ -84,7 +84,7 @@ func (s *TenantService) CreateTenant(ctx *request.Context,
 		UpdatedAt: time.Now(),
 	}
 
-	if err := s.UserStore.Create(ctx, ownerUser); err != nil {
+	if err := s.UserRepository.Create(ctx, ownerUser); err != nil {
 		return nil, fmt.Errorf("failed to create owner user: %w", err)
 	}
 
@@ -93,8 +93,8 @@ func (s *TenantService) CreateTenant(ctx *request.Context,
 }
 
 // @Route "GET /{id}"
-func (s *TenantService) GetTenant(ctx *request.Context, req *domain.GetTenantRequest) (*domain.Tenant, error) {
-	tenant, err := s.TenantStore.Get(ctx, req.ID)
+func (s *TenantHandler) GetTenant(ctx *request.Context, req *domain.GetTenantRequest) (*domain.Tenant, error) {
+	tenant, err := s.TenantRepository.Get(ctx, req.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
@@ -103,9 +103,9 @@ func (s *TenantService) GetTenant(ctx *request.Context, req *domain.GetTenantReq
 }
 
 // @Route "PUT /{id}"
-func (s *TenantService) UpdateTenant(ctx *request.Context, req *domain.UpdateTenantRequest) (*domain.Tenant, error) {
+func (s *TenantHandler) UpdateTenant(ctx *request.Context, req *domain.UpdateTenantRequest) (*domain.Tenant, error) {
 	// Get existing tenant
-	tenant, err := s.TenantStore.Get(ctx, req.ID)
+	tenant, err := s.TenantRepository.Get(ctx, req.ID)
 	if err != nil {
 		return nil, fmt.Errorf("tenant not found: %w", err)
 	}
@@ -130,8 +130,8 @@ func (s *TenantService) UpdateTenant(ctx *request.Context, req *domain.UpdateTen
 	// Update timestamp
 	tenant.UpdatedAt = time.Now()
 
-	// Save to store
-	if err := s.TenantStore.Update(ctx, tenant); err != nil {
+	// Save to repository
+	if err := s.TenantRepository.Update(ctx, tenant); err != nil {
 		return nil, fmt.Errorf("failed to update tenant: %w", err)
 	}
 
@@ -139,9 +139,9 @@ func (s *TenantService) UpdateTenant(ctx *request.Context, req *domain.UpdateTen
 }
 
 // @Route "DELETE /{id}"
-func (s *TenantService) DeleteTenant(ctx *request.Context, req *domain.DeleteTenantRequest) error {
+func (s *TenantHandler) DeleteTenant(ctx *request.Context, req *domain.DeleteTenantRequest) error {
 	// Check if tenant exists
-	exists, err := s.TenantStore.Exists(ctx, req.ID)
+	exists, err := s.TenantRepository.Exists(ctx, req.ID)
 	if err != nil {
 		return fmt.Errorf("failed to check tenant existence: %w", err)
 	}
@@ -149,8 +149,8 @@ func (s *TenantService) DeleteTenant(ctx *request.Context, req *domain.DeleteTen
 		return fmt.Errorf("tenant not found: %s", req.ID)
 	}
 
-	// Delete from store
-	if err := s.TenantStore.Delete(ctx, req.ID); err != nil {
+	// Delete from repository
+	if err := s.TenantRepository.Delete(ctx, req.ID); err != nil {
 		return fmt.Errorf("failed to delete tenant: %w", err)
 	}
 
@@ -158,8 +158,8 @@ func (s *TenantService) DeleteTenant(ctx *request.Context, req *domain.DeleteTen
 }
 
 // @Route "GET /"
-func (s *TenantService) ListTenants(ctx *request.Context, req *domain.ListTenantsRequest) ([]*domain.Tenant, error) {
-	tenants, err := s.TenantStore.List(ctx)
+func (s *TenantHandler) ListTenants(ctx *request.Context, req *domain.ListTenantsRequest) ([]*domain.Tenant, error) {
+	tenants, err := s.TenantRepository.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tenants: %w", err)
 	}
@@ -168,8 +168,8 @@ func (s *TenantService) ListTenants(ctx *request.Context, req *domain.ListTenant
 }
 
 // @Route "POST /{id}/activate"
-func (s *TenantService) ActivateTenant(ctx *request.Context, req *domain.ActivateTenantRequest) (*domain.Tenant, error) {
-	tenant, err := s.TenantStore.Get(ctx, req.ID)
+func (s *TenantHandler) ActivateTenant(ctx *request.Context, req *domain.ActivateTenantRequest) (*domain.Tenant, error) {
+	tenant, err := s.TenantRepository.Get(ctx, req.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
@@ -177,7 +177,7 @@ func (s *TenantService) ActivateTenant(ctx *request.Context, req *domain.Activat
 	tenant.Status = domain.TenantStatusActive
 	tenant.UpdatedAt = time.Now()
 
-	if err := s.TenantStore.Update(ctx, tenant); err != nil {
+	if err := s.TenantRepository.Update(ctx, tenant); err != nil {
 		return nil, fmt.Errorf("failed to activate tenant: %w", err)
 	}
 
@@ -185,8 +185,8 @@ func (s *TenantService) ActivateTenant(ctx *request.Context, req *domain.Activat
 }
 
 // @Route "POST /{id}/suspend"
-func (s *TenantService) SuspendTenant(ctx *request.Context, req *domain.SuspendTenantRequest) (*domain.Tenant, error) {
-	tenant, err := s.TenantStore.Get(ctx, req.ID)
+func (s *TenantHandler) SuspendTenant(ctx *request.Context, req *domain.SuspendTenantRequest) (*domain.Tenant, error) {
+	tenant, err := s.TenantRepository.Get(ctx, req.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
@@ -194,7 +194,7 @@ func (s *TenantService) SuspendTenant(ctx *request.Context, req *domain.SuspendT
 	tenant.Status = domain.TenantStatusSuspended
 	tenant.UpdatedAt = time.Now()
 
-	if err := s.TenantStore.Update(ctx, tenant); err != nil {
+	if err := s.TenantRepository.Update(ctx, tenant); err != nil {
 		return nil, fmt.Errorf("failed to suspend tenant: %w", err)
 	}
 

@@ -9,7 +9,7 @@ import (
 )
 
 func registerRouters() {
-	// Register manual routers (not generated from @EndpointService)
+	// Register manual routers (not generated from @Handler)
 	healthRouter := NewHealthRouter()
 	lokstra_registry.RegisterRouter("health-router", healthRouter)
 	logger.LogInfo("✅ Registered manual router: health-router")
@@ -84,7 +84,7 @@ func simpleAuthFactory(config map[string]any) request.HandlerFunc {
 			return ctx.Api.Unauthorized("Invalid token")
 		}
 
-		// Token is valid - store user info in context
+		// Token is valid - repository user info in context
 		userID := token[5:] // Extract user ID from "demo-{userID}"
 		ctx.Set("user_id", userID)
 		ctx.Set("authenticated", true)

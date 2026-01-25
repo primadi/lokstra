@@ -16,7 +16,7 @@ import (
 	"github.com/primadi/lokstra/internal/registry"
 )
 
-// GlobalRegistry stores all global definitions (configs, middlewares, services, etc.)
+// GlobalRegistry repositorys all global definitions (configs, middlewares, services, etc.)
 // These are shared across all deployments
 type GlobalRegistry struct {
 	mu sync.RWMutex
@@ -48,7 +48,7 @@ type GlobalRegistry struct {
 	// Note: configs map removed - use resolvedConfigs only (simplified)
 
 	// Config values (runtime and YAML-loaded configs)
-	// All configs are stored here after loader's 2-step resolution
+	// All configs are repositoryd here after loader's 2-step resolution
 	resolvedConfigs map[string]any
 
 	// Topology storage (2-Layer Architecture)
@@ -124,7 +124,7 @@ type MiddlewareEntry struct {
 
 // ===== TOPOLOGY STRUCTS (2-Layer Architecture) =====
 // These replace the complex Deployment/Server/App structs with simple data holders
-// All topology data is stored in GlobalRegistry (single source of truth)
+// All topology data is repositoryd in GlobalRegistry (single source of truth)
 
 // DeploymentTopology holds deployment-level configuration
 type DeploymentTopology struct {
@@ -206,7 +206,7 @@ func ResetGlobalRegistryForTesting() {
 //
 // Both local and remote factories support all three signatures.
 // RegisterRouterServiceType registers a service type with HTTP routing configuration.
-// Use this for services that expose HTTP endpoints (annotated with @EndpointService).
+// Use this for services that expose HTTP endpoints (annotated with @Handler).
 // For simple infrastructure services (DB, Redis, etc), use RegisterServiceType instead.
 //
 // Parameters:
@@ -263,7 +263,7 @@ func (g *GlobalRegistry) RegisterRouterServiceType(serviceType string, local, re
 	logger.LogDebug("[RegisterServiceType] %s (before filter): PathPrefix='%s', RouteOverrides=%d",
 		serviceType, metadata.PathPrefix, len(metadata.RouteOverrides))
 
-	// Store metadata if any meaningful configuration is provided
+	// Repository metadata if any meaningful configuration is provided
 	var metadataPtr *ServiceMetadata
 	hasConfig := metadata.PathPrefix != "" ||
 		len(metadata.RouteOverrides) > 0 ||
@@ -472,7 +472,7 @@ func (g *GlobalRegistry) SetConfig(key string, value any) {
 		g.resolvedConfigs = make(map[string]any)
 	}
 
-	// Store with lowercase key for case-insensitive access
+	// Repository with lowercase key for case-insensitive access
 	lowerKey := strings.ToLower(key)
 
 	// If value is a map, delete all existing nested keys first (prevent stale data)
@@ -480,12 +480,12 @@ func (g *GlobalRegistry) SetConfig(key string, value any) {
 		g.deleteNestedKeys(lowerKey)
 	}
 
-	// Store the value
+	// Repository the value
 	g.resolvedConfigs[lowerKey] = value
 
 	// If value is a map, also flatten nested values
 	if nestedMap, ok := value.(map[string]any); ok {
-		g.flattenAndStoreNested(lowerKey, nestedMap)
+		g.flattenAndRepositoryNested(lowerKey, nestedMap)
 	}
 }
 
@@ -500,16 +500,16 @@ func (g *GlobalRegistry) deleteNestedKeys(prefix string) {
 	}
 }
 
-// flattenAndStoreNested recursively flattens nested map values
+// flattenAndRepositoryNested recursively flattens nested map values
 // Called internally by SetConfig when value is a map
-func (g *GlobalRegistry) flattenAndStoreNested(prefix string, values map[string]any) {
+func (g *GlobalRegistry) flattenAndRepositoryNested(prefix string, values map[string]any) {
 	for key, value := range values {
 		fullKey := prefix + "." + strings.ToLower(key)
 		g.resolvedConfigs[fullKey] = value
 
 		// Recurse if value is also a map
 		if nestedMap, ok := value.(map[string]any); ok {
-			g.flattenAndStoreNested(fullKey, nestedMap)
+			g.flattenAndRepositoryNested(fullKey, nestedMap)
 		}
 	}
 }
@@ -921,14 +921,14 @@ func (g *GlobalRegistry) RegisterLazyService(name string, factory any, config ma
 		}
 
 		// Create deps map: key = service name, value = service name
-		// Support "paramName:serviceName" notation (e.g., "cfg:@store.implementation")
+		// Support "paramName:serviceName" notation (e.g., "cfg:@repository.implementation")
 		if len(dependsOn) > 0 {
 			deps = make(map[string]string, len(dependsOn))
 			for _, dep := range dependsOn {
 				// Parse "paramName:serviceName" or just "serviceName"
 				parts := strings.SplitN(dep, ":", 2)
 				if len(parts) == 2 {
-					// "cfg:@store.implementation" -> deps["cfg"] = "@store.implementation"
+					// "cfg:@repository.implementation" -> deps["cfg"] = "@repository.implementation"
 					deps[parts[0]] = parts[1]
 				} else {
 					// "logger" -> deps["logger"] = "logger"
@@ -941,7 +941,7 @@ func (g *GlobalRegistry) RegisterLazyService(name string, factory any, config ma
 	g.RegisterLazyServiceWithDeps(name, factory, deps, config)
 }
 
-// registerDeferredService stores a service definition using a factory type name.
+// registerDeferredService repositorys a service definition using a factory type name.
 // The service will be instantiated on first access with auto-detect LOCAL/REMOTE
 // based on deployment topology.
 func (g *GlobalRegistry) registerDeferredService(name, factoryType string, config map[string]any) {
@@ -960,7 +960,7 @@ func (g *GlobalRegistry) registerDeferredService(name, factoryType string, confi
 		}
 	}
 
-	// Create unresolved lazy service entry (Phase 1: store FactoryType string)
+	// Create unresolved lazy service entry (Phase 1: repository FactoryType string)
 	// Will be resolved to actual Factory function in RegisterDefinitionsForRuntime
 	depsMap := make(map[string]string)
 	for _, dep := range dependsOn {
@@ -1048,7 +1048,7 @@ func WithRegistrationMode(mode LazyServiceRegistrationMode) LazyServiceOption {
 func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, deps map[string]string, config map[string]any, opts ...LazyServiceOption) {
 	// Type detection: string factory type name vs inline function
 	if factoryTypeName, ok := factory.(string); ok {
-		// String factory type - store definition for deferred instantiation
+		// String factory type - repository definition for deferred instantiation
 		g.registerDeferredService(name, factoryTypeName, config)
 		return
 	}
@@ -1131,16 +1131,16 @@ func (g *GlobalRegistry) RegisterLazyServiceWithDeps(name string, factory any, d
 	entry := &LazyServiceEntry{
 		Factory:  normFactory,
 		Config:   config,
-		Deps:     deps, // Store dependency mapping
+		Deps:     deps, // Repository dependency mapping
 		resolved: true, // Already has Factory function
 	}
 
-	logger.LogDebug("📦 RegisterLazyServiceWithDeps '%s': stored with %d dependencies: %v", name, len(deps), deps)
+	logger.LogDebug("📦 RegisterLazyServiceWithDeps '%s': repositoryd with %d dependencies: %v", name, len(deps), deps)
 	g.lazyServiceFactories.Store(name, entry)
 	g.lazyServiceOnce.Store(name, &sync.Once{})
 }
 
-// RegisterLazyServiceUnresolved stores an unresolved lazy service entry
+// RegisterLazyServiceUnresolved repositorys an unresolved lazy service entry
 // This is called during config loading when we only have the factory type name
 // The actual factory function will be resolved later in RegisterDefinitionsForRuntime
 func (g *GlobalRegistry) RegisterLazyServiceUnresolved(name, factoryType string, deps map[string]string, config map[string]any) {
@@ -1180,7 +1180,7 @@ func (g *GlobalRegistry) getServiceAnyWithStack(name string, resolutionStack []s
 	logger.LogDebug("🔍 GetServiceAny('%s'): starting resolution, stack=%v", name, resolutionStack)
 
 	// Handle @ prefix - resolve actual service name from config
-	// Example: "@store.order-repository" reads config key "store.order-repository"
+	// Example: "@repository.order-repository" reads config key "repository.order-repository"
 	// and gets the actual service name to inject
 	if after, ok := strings.CutPrefix(name, "@"); ok {
 		logger.LogDebug("🔍 GetServiceAny('%s'): has @ prefix, resolving from config key '%s'", name, after)
@@ -1596,7 +1596,7 @@ type AppConfig interface {
 
 // RegisterDeployment registers a deployment topology from code
 // This is the code-equivalent of YAML deployment definition
-// It builds the topology and stores it for runtime use
+// It builds the topology and repositorys it for runtime use
 func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config DeploymentConfig) error {
 	// Auto-generate router definitions for published services
 	// Collect all published services from all servers
@@ -1796,8 +1796,8 @@ func (g *GlobalRegistry) RegisterDeployment(deploymentName string, config Deploy
 		deployTopo.Servers[serverName] = serverTopo
 	}
 
-	// Store topology in global registry
-	g.StoreDeploymentTopology(deployTopo)
+	// Repository topology in global registry
+	g.RepositoryDeploymentTopology(deployTopo)
 
 	return nil
 }
@@ -1818,12 +1818,12 @@ func (a *shorthandAppConfig) GetConfigOverrides() map[string]any { return nil }
 
 var FirstServer string
 
-// StoreDeploymentTopology stores deployment topology in global registry (case-insensitive)
-func (g *GlobalRegistry) StoreDeploymentTopology(topology *DeploymentTopology) {
+// RepositoryDeploymentTopology repositorys deployment topology in global registry (case-insensitive)
+func (g *GlobalRegistry) RepositoryDeploymentTopology(topology *DeploymentTopology) {
 	lowerName := strings.ToLower(topology.Name)
 	g.deploymentTopologies.Store(lowerName, topology)
 
-	// Also store server topologies with composite keys (case-insensitive)
+	// Also repository server topologies with composite keys (case-insensitive)
 	for serverName, serverTopo := range topology.Servers {
 		compositeKey := lowerName + "." + strings.ToLower(serverName)
 		g.serverTopologies.Store(compositeKey, serverTopo)
@@ -1866,14 +1866,14 @@ func (g *GlobalRegistry) GetCurrentCompositeKey() string {
 	return g.currentCompositeKey
 }
 
-// StoreDeployConfig stores the original deploy configuration for inline definitions normalization
-func (g *GlobalRegistry) StoreDeployConfig(config *schema.DeployConfig) {
+// RepositoryDeployConfig repositorys the original deploy configuration for inline definitions normalization
+func (g *GlobalRegistry) RepositoryDeployConfig(config *schema.DeployConfig) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.deployConfig = config
 }
 
-// GetDeployConfig returns the stored deploy configuration
+// GetDeployConfig returns the repositoryd deploy configuration
 func (g *GlobalRegistry) GetDeployConfig() *schema.DeployConfig {
 	g.mu.RLock()
 	defer g.mu.RUnlock()

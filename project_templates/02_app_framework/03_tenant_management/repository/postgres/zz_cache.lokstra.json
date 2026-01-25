@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "files": {
+    "tenant_repository.go": {
+      "filename": "tenant_repository.go",
+      "checksum": "3dd53d190e7ac82f63bc7c16dc6681b5a813b5b1e4c456b29a868ef2b867d087",
+      "annotations": 2,
+      "last_scan": "2026-01-23T20:13:07.4505214+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-23T20:13:07.4505214+07:00"
+    },
+    "user_repository.go": {
+      "filename": "user_repository.go",
+      "checksum": "cadb1a92a14e206387ebab0b6fc19c7d44bb76b5bbbfe2fbee42bf58ce303ebd",
+      "annotations": 2,
+      "last_scan": "2026-01-23T20:13:07.4505214+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-23T20:13:07.4505214+07:00"
+    }
+  },
+  "updated_at": "2026-01-23T20:13:07.4505214+07:00",
+  "generated_checksum": "3bddae5ae593588fc35a5730559790135e6b7cba087dff1e1d7d84bc129a0f0d"
+}

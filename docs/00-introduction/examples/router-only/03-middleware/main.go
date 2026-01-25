@@ -33,7 +33,7 @@ func CustomAuthMiddleware(ctx *request.Context) error {
 		return ctx.Api.Forbidden("Invalid API key")
 	}
 
-	// Store user info in context for later use
+	// Repository user info in context for later use
 	ctx.Set("authenticated", true)
 	ctx.Set("api_key", apiKey)
 

@@ -64,7 +64,7 @@ func RequestIDMiddleware() func(c *request.Context) error {
 }
 ```
 
-**Pattern**: Generate metadata and store in context with `c.Set()`
+**Pattern**: Generate metadata and repository in context with `c.Set()`
 
 ### 3. Authorization Middleware
 
@@ -181,7 +181,7 @@ ip := c.R.RemoteAddr
 Use `c.Set()` and `c.Get()` for request-scoped data:
 
 ```go
-// Store
+// Repository
 c.Set("user_id", "123")
 
 // Retrieve

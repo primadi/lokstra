@@ -5,7 +5,7 @@ import "context"
 // ConfigChangeCallback is called when a config value changes
 type ConfigChangeCallback func(key string, value any)
 
-// SyncConfig provides a synchronized key-value configuration store
+// SyncConfig provides a synchronized key-value configuration repository
 // with real-time updates across multiple instances
 type SyncConfig interface {
 	// Set sets a configuration value and notifies all listeners
@@ -29,7 +29,7 @@ type SyncConfig interface {
 	// GetCRC returns the current CRC32 checksum of all config data
 	GetCRC() uint32
 
-	// Sync forces a synchronization with the backend store
+	// Sync forces a synchronization with the backend repository
 	Sync(ctx context.Context) error
 
 	Shutdownable

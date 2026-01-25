@@ -1,6 +1,6 @@
 # Context Management Example
 
-Learn how to store and retrieve request-scoped data using the context system.
+Learn how to repository and retrieve request-scoped data using the context system.
 
 ## Running
 

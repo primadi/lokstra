@@ -45,7 +45,7 @@ services/
 │   ├── redis                   - Redis client wrapper
 │   ├── dbpool_pg               - PostgreSQL connection pooling
 │   ├── dbpool_manager          - Centralized pool management
-│   ├── kvstore_redis           - Key-value store with Redis
+│   ├── kvrepository_redis           - Key-value repository with Redis
 │   └── metrics_prometheus      - Prometheus metrics
 │
 └── Utilities
@@ -56,17 +56,17 @@ services/
 
 ```go
 // 1. Registration Phase (startup)
-kvstore_redis.Register()  // Registers factory function
+kvrepository_redis.Register()  // Registers factory function
 
 // 2. Creation Phase (when referenced)
-kvStore := lokstra_registry.NewService[serviceapi.KvStore](
-    "my_cache", "kvstore_redis", config)
+kvRepository := lokstra_registry.NewService[serviceapi.KvRepository](
+    "my_cache", "kvrepository_redis", config)
 
 // 3. Usage Phase (lazy loading)
-err := kvStore.Set(ctx, "key", "value", ttl)  // Service loads on first use
+err := kvRepository.Set(ctx, "key", "value", ttl)  // Service loads on first use
 
 // 4. Shutdown Phase (application shutdown)
-kvStore.Shutdown()  // Clean up resources
+kvRepository.Shutdown()  // Clean up resources
 ```
 
 ## Available Services
@@ -78,7 +78,7 @@ kvStore.Shutdown()  // Clean up resources
 | **[Redis](redis)** | `redis` | (custom) | Redis client wrapper with connection pooling |
 | **[DbPool](dbpool-pg)** | `dbpool_pg` | `serviceapi.DbPool` | PostgreSQL connection pool with pgx driver |
 | **[DbPool Manager](dbpool-manager)** | `dbpool_manager` | `serviceapi.DbPoolManager` | Centralized pool management with multi-tenancy and named pools |
-| **[KvStore](kvstore-redis)** | `kvstore_redis` | `serviceapi.KvStore` | Key-value store with Redis backend and prefix support |
+| **[KvRepository](kvrepository-redis)** | `kvrepository_redis` | `serviceapi.KvRepository` | Key-value repository with Redis backend and prefix support |
 | **[Metrics](metrics-prometheus)** | `metrics_prometheus` | `serviceapi.Metrics` | Prometheus metrics (counters, histograms, gauges) |
 
 ## Quick Start
@@ -99,7 +99,7 @@ func main() {
     services.RegisterAllServices()
     
     // Option 2: Register by category
-    services.RegisterCoreServices()   // Redis, KvStore, Metrics, DbPool
+    services.RegisterCoreServices()   // Redis, KvRepository, Metrics, DbPool
 }
 ```
 
@@ -111,10 +111,10 @@ import (
     "github.com/primadi/lokstra/serviceapi"
 )
 
-// Create a KvStore service
-kvStore := lokstra_registry.NewService[serviceapi.KvStore](
+// Create a KvRepository service
+kvRepository := lokstra_registry.NewService[serviceapi.KvRepository](
     "cache",              // Service name
-    "kvstore_redis",      // Service type
+    "kvrepository_redis",      // Service type
     map[string]any{
         "addr":   "localhost:6379",
         "prefix": "myapp",
@@ -123,10 +123,10 @@ kvStore := lokstra_registry.NewService[serviceapi.KvStore](
 
 // Use the service (lazy loads on first access)
 ctx := context.Background()
-kvStore.Set(ctx, "user:123", userData, 5*time.Minute)
+kvRepository.Set(ctx, "user:123", userData, 5*time.Minute)
 
 var user User
-kvStore.Get(ctx, "user:123", &user)
+kvRepository.Get(ctx, "user:123", &user)
 ```
 
 ### YAML Configuration
@@ -144,9 +144,9 @@ services:
       db: 0
       pool_size: 10
   
-  # KV Store using Redis
+  # KV Repository using Redis
   my_cache:
-    type: kvstore_redis
+    type: kvrepository_redis
     config:
       addr: localhost:6379
       prefix: myapp
@@ -229,7 +229,7 @@ func Register() {
 Some services depend on other services. Dependencies are resolved through lazy loading:
 
 ```
-kvstore_redis
+kvrepository_redis
 └── redis              (Redis client)
 
 dbpool_manager
@@ -242,7 +242,7 @@ dbpool_manager
 // Service with dependencies
 type cacheService struct {
     cfg         *Config
-    kvStore     *service.Cached[serviceapi.KvStore]  // Lazy-loaded dependency
+    kvRepository     *service.Cached[serviceapi.KvRepository]  // Lazy-loaded dependency
     metrics     *service.Cached[serviceapi.Metrics]  // Lazy-loaded dependency
 }
 
@@ -250,10 +250,10 @@ func ServiceFactory(params map[string]any) any {
     cfg := extractConfig(params)
     
     // Load dependencies lazily
-    kvStore := service.LazyLoad[serviceapi.KvStore](cfg.KvStoreServiceName)
+    kvRepository := service.LazyLoad[serviceapi.KvRepository](cfg.KvRepositoryServiceName)
     metrics := service.LazyLoad[serviceapi.Metrics](cfg.MetricsServiceName)
     
-    return Service(cfg, kvStore, metrics)
+    return Service(cfg, kvRepository, metrics)
 }
 ```
 
@@ -309,7 +309,7 @@ services:
       max_lifetime: 1h
       
   cache:
-    type: kvstore_redis
+    type: kvrepository_redis
     config:
       addr: ${REDIS_ADDR:localhost:6379}  # Default value
       prefix: ${APP_NAME}
@@ -544,11 +544,11 @@ cfg := &Config{
 
 ```go
 ✓ DO: Use lazy loading for dependencies
-kvStore := service.LazyLoad[serviceapi.KvStore]("cache")
+kvRepository := service.LazyLoad[serviceapi.KvRepository]("cache")
 // Loads only when .MustGet() is called
 
 ✗ DON'T: Eagerly load dependencies
-kvStore := lokstra_registry.GetService[serviceapi.KvStore]("cache")
+kvRepository := lokstra_registry.GetService[serviceapi.KvRepository]("cache")
 // May fail if service not yet registered
 ```
 
@@ -605,14 +605,14 @@ func (s *myService) Shutdown() error {
 
 ```go
 ✓ DO: Use interface assertions
-var _ serviceapi.KvStore = (*kvStoreService)(nil)  // Compile-time check
+var _ serviceapi.KvRepository = (*kvRepositoryService)(nil)  // Compile-time check
 
 ✓ DO: Use generics for type-safe access
-svc := lokstra_registry.NewService[serviceapi.KvStore]("cache", "kvstore_redis", cfg)
-// svc is typed as serviceapi.KvStore
+svc := lokstra_registry.NewService[serviceapi.KvRepository]("cache", "kvrepository_redis", cfg)
+// svc is typed as serviceapi.KvRepository
 
 ✗ DON'T: Use untyped access
-svc := lokstra_registry.NewService[any]("cache", "kvstore_redis", cfg)
+svc := lokstra_registry.NewService[any]("cache", "kvrepository_redis", cfg)
 // Loses type information
 ```
 

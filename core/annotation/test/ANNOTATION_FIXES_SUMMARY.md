@@ -13,7 +13,7 @@ Annotations dalam dokumentasi (TAB-indented code examples) dianggap sebagai anno
 ```go
 // Example usage in documentation:
 //
-//	@EndpointService name="example-service"
+//	@Handler name="example-service"
 //	type ExampleService struct {}
 ```
 
@@ -21,8 +21,8 @@ File `zz_generated.lokstra.go` dibuat meskipun annotation di dalam code example.
 
 ### Root Cause
 Go documentation convention menggunakan TAB setelah `//` untuk code examples:
-- `// @EndpointService` → Real annotation ✅
-- `//	@EndpointService` (TAB) → Code example in docs ❌
+- `// @Handler` → Real annotation ✅
+- `//	@Handler` (TAB) → Code example in docs ❌
 
 Parser tidak membedakan antara annotation yang valid dengan code examples.
 
@@ -34,13 +34,13 @@ Parser tidak membedakan antara annotation yang valid dengan code examples.
 **Detection Rules:**
 ```go
 // Valid annotations (ALLOWED):
-// @EndpointService name="user-service"
-//@EndpointService name="user-service"
+// @Handler name="user-service"
+//@Handler name="user-service"
 
 // Invalid annotations (IGNORED):
-//	@EndpointService name="user-service"    // TAB after //
-//  @EndpointService name="user-service"    // Multiple spaces after //
-//   @EndpointService name="user-service"   // Multiple spaces after //
+//	@Handler name="user-service"    // TAB after //
+//  @Handler name="user-service"    // Multiple spaces after //
+//   @Handler name="user-service"   // Multiple spaces after //
 ```
 
 **Implementation:**
@@ -82,7 +82,7 @@ Both detection steps now use same logic:
 
 **Step 1:** `fileContainsRouterService()` - Quick check
 ```go
-if strings.Contains(line, "@EndpointService") {
+if strings.Contains(line, "@Handler") {
     afterSlashes := line[2:]
     if len(afterSlashes) > 0 && afterSlashes[0] == '\t' {
         continue
@@ -101,13 +101,13 @@ if strings.Contains(line, "@EndpointService") {
 ## 2. Struct Validation ✅
 
 ### Problem
-`@EndpointService` bisa ditulis di atas function, interface, atau type alias:
+`@Handler` bisa ditulis di atas function, interface, atau type alias:
 
 ```go
-// @EndpointService name="invalid-service"
+// @Handler name="invalid-service"
 func GetUser() {}  // ❌ Invalid tapi tidak error!
 
-// @EndpointService name="invalid-service"
+// @Handler name="invalid-service"
 type UserRepository interface {}  // ❌ Invalid tapi tidak error!
 ```
 
@@ -140,10 +140,10 @@ func isStructDeclaration(fset *token.FileSet, file *ast.File, line int) bool {
 **Validation in:** `processFileForCodeGen()`
 ```go
 if routerService != nil {
-    // Validate that @EndpointService is on a struct
+    // Validate that @Handler is on a struct
     if !isStructDeclaration(fset, file, routerService.Line) {
         return nil, fmt.Errorf(
-            "@EndpointService at line %d must be placed above a struct declaration, "+
+            "@Handler at line %d must be placed above a struct declaration, "+
             "not a function, interface, or type alias",
             routerService.Line+1,
         )
@@ -190,7 +190,7 @@ if len(ctx.UpdatedFiles) == 0 && len(ctx.DeletedFiles) == 0 {
 ```
 
 **Scenario yang bermasalah:**
-1. User punya `user_service.go` dengan `@EndpointService` → generated file dibuat ✅
+1. User punya `user_service.go` dengan `@Handler` → generated file dibuat ✅
 2. User hapus annotation dari `user_service.go`
 3. Cache mendeteksi file checksum sama → file di-skip
 4. `UpdatedFiles` dan `DeletedFiles` kosong → early return

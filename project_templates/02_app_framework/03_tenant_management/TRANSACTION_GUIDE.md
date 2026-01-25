@@ -22,13 +22,13 @@ BeginTransaction("db_auth")
     ↓
 Context with TxContext marker
     ↓
-First DB Operation (Store.Create)
+First DB Operation (repository.Create)
     ↓
 getExecutor checks context → finds TxContext
     ↓
 Lazy create transaction (BEGIN)
     ↓
-Second DB Operation (Store.Update)
+Second DB Operation (repository.Update)
     ↓
 getExecutor checks context → reuses existing tx
     ↓
@@ -58,13 +58,13 @@ defer finishTx → COMMIT or ROLLBACK
 ### Basic Transaction (Recommended Pattern)
 
 ```go
-// @EndpointService name="tenant-service"
+// @Handler name="tenant-service"
 type TenantService struct {
-    // @Inject "@store.tenant-store"
-    TenantStore repository.TenantStore
+    // @Inject "@repository.tenant-repository"
+    TenantRepository repository.TenantRepository
     
-    // @Inject "@store.user-store"
-    UserStore repository.UserStore
+    // @Inject "@repository.user-repository"
+    UserRepository repository.UserRepository
     
     // ❌ NO NEED to inject DbPool anymore!
 }
@@ -78,12 +78,12 @@ func (s *TenantService) CreateTenant(ctx *request.Context,
     defer finishTx(&err)
     
     // First operation - transaction created here
-    if err := s.TenantStore.Create(newCtx, tenant); err != nil {
+    if err := s.TenantRepository.Create(newCtx, tenant); err != nil {
         return nil, err // Auto rollback
     }
     
     // Second operation - joins same transaction
-    if err := s.UserStore.Create(newCtx, user); err != nil {
+    if err := s.UserRepository.Create(newCtx, user); err != nil {
         return nil, err // Auto rollback
     }
     
@@ -103,8 +103,8 @@ func (s *TenantService) CreateWithAudit(ctx *request.Context, ...) (err error) {
     ctx, finish2 := serviceapi.BeginTransaction(ctx, "db_auth")
     defer finish2(&err)
     
-    s.TenantStore.Create(ctx, tenant)
-    s.UserStore.Create(ctx, user)
+    s.TenantRepository.Create(ctx, tenant)
+    s.UserRepository.Create(ctx, user)
     
     // Both finish functions work together
     // Only commits when counter reaches 0
@@ -120,11 +120,11 @@ func (s *TenantService) CreateWithAuditLog(ctx *request.Context, ...) (err error
     defer finish(&err)
     
     // This joins transaction
-    s.TenantStore.Create(ctx, tenant)
+    s.TenantRepository.Create(ctx, tenant)
     
     // Audit log MUST commit even if transaction rollbacks
     isolatedCtx := serviceapi.WithoutTransaction(ctx)
-    s.AuditStore.Log(isolatedCtx, "tenant_created") // New connection
+    s.AuditRepository.Log(isolatedCtx, "tenant_created") // New connection
     
     // If error here, tenant rollbacks but audit committed
     return someError
@@ -143,25 +143,25 @@ func (s *Service) CrossDatabaseOperation(ctx *request.Context) (err error) {
     ctx2, finish2 := serviceapi.BeginTransaction(ctx1, "db_tenant")
     defer finish2(&err)
     
-    s.AuthStore.Create(ctx1, ...)   // Uses db_auth transaction
-    s.TenantStore.Create(ctx2, ...) // Uses db_tenant transaction
+    s.AuthRepository.Create(ctx1, ...)   // Uses db_auth transaction
+    s.TenantRepository.Create(ctx2, ...) // Uses db_tenant transaction
     
     return nil
 }
 ```
 
-## Store Implementation
+## repository Implementation
 
-Stores tidak perlu tahu tentang transaction! Tetap sederhana:
+Repositorys tidak perlu tahu tentang transaction! Tetap sederhana:
 
 ```go
-// @Service "postgres-tenant-store"
-type PostgresTenantStore struct {
+// @Service "postgres-tenant-repository"
+type PostgresTenantRepository struct {
     // @Inject "db_auth"
     dbPool serviceapi.DbPool
 }
 
-func (s *PostgresTenantStore) Create(ctx context.Context, tenant *domain.Tenant) error {
+func (s *PostgresTenantRepository) Create(ctx context.Context, tenant *domain.Tenant) error {
     query := `INSERT INTO tenants (...) VALUES (...)`
     
     // DbPool.Exec otomatis cek context dan join transaction jika ada
@@ -176,9 +176,9 @@ func (s *PostgresTenantStore) Create(ctx context.Context, tenant *domain.Tenant)
 
 ```yaml
 configs:
-  store:
-    tenant-store: postgres-tenant-store
-    user-store: postgres-user-store
+  repository:
+    tenant-repository: postgres-tenant-repository
+    user-repository: postgres-user-repository
 
 dbpool-definitions:
   db_auth:
@@ -221,10 +221,10 @@ CREATE TABLE users (
 |---------|--------|-------|
 | **Service Code** | Inject DbPool + manual tx management | Clean, just use BeginTransaction |
 | **Transaction Creation** | Eager (upfront cost) | Lazy (only when needed) |
-| **Multi-Store Operations** | Manual coordination | Automatic join |
+| **Multi-repository Operations** | Manual coordination | Automatic join |
 | **Nested Calls** | Complex savepoint logic | Simple counter |
 | **Pool Isolation** | By instance pointer | By pool name (cleaner) |
-| **Store Implementation** | Complex (check tx manually) | Simple (transparent) |
+| **repository Implementation** | Complex (check tx manually) | Simple (transparent) |
 
 ## Testing
 

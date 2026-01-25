@@ -244,7 +244,7 @@ apps:
 func noCacheMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         if strings.HasSuffix(r.URL.Path, ".html") {
-            w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+            w.Header().Set("Cache-Control", "no-cache, no-repository, must-revalidate")
         }
         next.ServeHTTP(w, r)
     })

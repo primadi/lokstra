@@ -173,7 +173,7 @@ func runCurrentServer(timeout time.Duration) error {
 	deploymentName := GetCurrentDeploymentName()
 	serverName := GetCurrentServerName()
 
-	// NOTE: Config overrides already applied in LoadConfig and stored via flattenAndStoreConfigs
+	// NOTE: Config overrides already applied in LoadConfig and repositoryd via flattenAndRepositoryConfigs
 	// No need to apply again here - this was redundant
 
 	// Get original config for inline definitions normalization

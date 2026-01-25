@@ -184,12 +184,12 @@ func (sm *SyncMap[V]) Load(key string) (V, bool) {
 	return typedVal, true
 }
 
-func (sm *SyncMap[V]) Store(key string, value V) error {
+func (sm *SyncMap[V]) Repository(key string, value V) error {
 	fullKey := sm.makeFullKey(key)
 	return sm.config.Set(context.Background(), fullKey, value)
 }
 
-func (sm *SyncMap[V]) LoadOrStore(key string, newFunc func() (V, error)) (V, bool, error) {
+func (sm *SyncMap[V]) LoadOrRepository(key string, newFunc func() (V, error)) (V, bool, error) {
 	var zero V
 	fullKey := sm.makeFullKey(key)
 	val, err := sm.config.Get(context.Background(), fullKey)
@@ -207,8 +207,8 @@ func (sm *SyncMap[V]) LoadOrStore(key string, newFunc func() (V, error)) (V, boo
 		return zero, false, err
 	}
 
-	// Store the new value
-	if err := sm.Store(key, newVal); err != nil {
+	// Repository the new value
+	if err := sm.Repository(key, newVal); err != nil {
 		return zero, false, err
 	}
 

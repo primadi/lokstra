@@ -607,7 +607,7 @@ func GetConfig[T any](name string, defaultValue T) T
 - Config value of type `T`, or `defaultValue` if not found
 
 **Type Conversion:**
-The function attempts to convert the stored value to type `T`:
+The function attempts to convert the repositoryd value to type `T`:
 - String → String (direct)
 - Number → Number (with type conversion)
 - Bool → Bool (direct)

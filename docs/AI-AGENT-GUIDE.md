@@ -196,13 +196,13 @@ import (
     "github.com/primadi/lokstra/core/deploy"
     "github.com/primadi/lokstra/lokstra_registry"
     
-    // Import packages with @EndpointService annotations
+    // Import packages with @Handler annotations
     _ "myapp/modules/user/application"
     _ "myapp/modules/order/application"
 )
 
 func main() {
-    // Auto-generates code when @EndpointService changes detected
+    // Auto-generates code when @Handler changes detected
     lokstra.Bootstrap()
     
     deploy.SetLogLevelFromEnv() // LOKSTRA_LOG_LEVEL=debug
@@ -221,7 +221,7 @@ import (
     "myapp/modules/user/infrastructure"
 )
 
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo domain.UserRepository
@@ -288,7 +288,7 @@ service-definitions:
       dsn: "memory://users"
   
   user-service:
-    # Type auto-registered via @EndpointService annotation
+    # Type auto-registered via @Handler annotation
     depends-on:
       - user-repository
 
@@ -797,7 +797,7 @@ LOKSTRA_DEPLOYMENT=production go run .
 
 ## Annotation System
 
-### @EndpointService Annotation (HTTP Controllers)
+### @Handler Annotation (HTTP Controllers)
 
 Generate REST routers automatically from service methods. Use for services that expose HTTP endpoints.
 
@@ -809,7 +809,7 @@ import (
     "myapp/domain"
 )
 
-// @EndpointService name="user-service", prefix="/api", middlewares=["recovery", "request-logger"]
+// @Handler name="user-service", prefix="/api", middlewares=["recovery", "request-logger"]
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo domain.UserRepository
@@ -929,7 +929,7 @@ configs:
 **Recommended: Automatic with Bootstrap**
 ```go
 func main() {
-    lokstra.Bootstrap() // Auto-generates when @Service/@EndpointService changes detected
+    lokstra.Bootstrap() // Auto-generates when @Service/@Handler changes detected
     // App code...
 }
 ```
@@ -952,12 +952,12 @@ go run . --generate-only
 
 | Annotation | Purpose | Example |
 |------------|---------|---------|
-| `@EndpointService` | HTTP service with routes | `@EndpointService name="user-service", prefix="/api"` |
+| `@Handler` | HTTP service with routes | `@Handler name="user-service", prefix="/api"` |
 | `@Service` | Pure service (no HTTP) | `@Service name="auth-service"` |
 | `@Inject` | Dependency/config injection | `@Inject "user-repository"` or `@Inject "cfg:timeout", "30s"` |
 | `@Route` | HTTP route mapping | `@Route "GET /users/{id}"` |
 
-**@EndpointService Parameters:**
+**@Handler Parameters:**
 - `name`: Service name (required)
 - `prefix`: URL prefix (optional, default: "/")
   - **Supports variables**: `prefix="${api-prefix}"` resolves from config
@@ -993,7 +993,7 @@ configs:
 
 ```go
 // Usage in annotations
-// @EndpointService name="user-service", prefix="${api-prefix}"
+// @Handler name="user-service", prefix="${api-prefix}"
 // Resolves to: prefix="/api/v1"
 
 // @Route "GET ${api-version}/users/{id}"
@@ -1268,7 +1268,7 @@ myapp/
         │   ├── repository.go
         │   └── service.go
         ├── application/
-        │   ├── user_service.go           # Contains @EndpointService, @Route
+        │   ├── user_service.go           # Contains @Handler, @Route
         │   └── zz_generated.lokstra.go  # Auto-generated
         └── infrastructure/
             └── user_repository.go
@@ -1453,7 +1453,7 @@ panic: service 'user-service' not found in registry
 ```
 
 **Solution:**
-- **For business services**: Use `@EndpointService` annotation + `lokstra autogen .`
+- **For business services**: Use `@Handler` annotation + `lokstra autogen .`
 - **For infrastructure services**: Check service registered: `lokstra_registry.RegisterServiceType("user-service-factory", ...)`
 - Check config.yaml: Service name must match factory type
 - Check annotation-generated file: `zz_generated.lokstra.go` exists
@@ -1507,7 +1507,7 @@ zz_generated.lokstra.go not created
 lokstra autogen ./path/to/service
 
 # Ensure annotations are correct
-# @EndpointService name="service-name", prefix="/api"
+# @Handler name="service-name", prefix="/api"
 # @Route "GET /users/{id}"
 ```
 
@@ -1614,12 +1614,12 @@ LOKSTRA_CONFIG=./config.yaml
    - Include error handling
    - Include validation tags
    - Include config.yaml if using framework mode
-   - **Use `@EndpointService` annotations for business services**
+   - **Use `@Handler` annotations for business services**
 
 4. **Follow project structure:**
    - `domain/` for interfaces and models
    - `infrastructure/` for data access (repositories)
-   - `application/` for business logic (services with `@EndpointService`)
+   - `application/` for business logic (services with `@Handler`)
    - `main.go` for bootstrap (import annotation packages)
 
 5. **Use type-safe patterns:**
@@ -1628,7 +1628,7 @@ LOKSTRA_CONFIG=./config.yaml
    - **Prefer annotations over manual registration for business services**
 
 6. **Recommend annotation workflow:**
-   - Define service with `@EndpointService` annotation
+   - Define service with `@Handler` annotation
    - Add routes with `@Route` annotation
    - Run `lokstra autogen .` to generate code
    - Manual registration only for infrastructure/custom factories

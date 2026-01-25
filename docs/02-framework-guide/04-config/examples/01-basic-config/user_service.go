@@ -12,7 +12,7 @@ type CreateUserRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
-// @EndpointService name="user-service", prefix="/api/users", middlewares=["recovery", "request-logger"]
+// @Handler name="user-service", prefix="/api/users", middlewares=["recovery", "request-logger"]
 type UserService struct {
 	// @Inject "user-repository"
 	UserRepo UserRepository

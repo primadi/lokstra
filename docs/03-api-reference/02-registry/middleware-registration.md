@@ -376,7 +376,7 @@ func main() {
                 return ctx.Api.Unauthorized("Invalid token")
             }
             
-            // Store user in context
+            // Repository user in context
             ctx.Set("user", user)
             
             return ctx.Next()
@@ -511,7 +511,7 @@ func main() {
                 requestID = uuid.New().String()
             }
             
-            // Store in context
+            // Repository in context
             ctx.Set("request_id", requestID)
             
             // Add to response headers

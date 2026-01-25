@@ -396,7 +396,7 @@ if err != nil {
     return fmt.Errorf("failed to hash password: %w", err)
 }
 
-// Store hashedPassword in database
+// Repository hashedPassword in database
 user.PasswordHash = hashedPassword
 
 // Later, verify password
@@ -577,7 +577,7 @@ if err != nil {
 }
 user.PasswordHash = hashedPassword
 
-✗ DON'T: Store plaintext passwords
+✗ DON'T: Repository plaintext passwords
 user.Password = password  // BAD: Security vulnerability
 
 ✗ DON'T: Use weak hashing

@@ -36,7 +36,7 @@ type MyService struct {
 | Syntax | Purpose | Example |
 |--------|---------|---------|
 | `@Inject "service-name"` | Direct service | `@Inject "user-repo"` |
-| `@Inject "@config.key"` | Service from config | `@Inject "@store.impl"` |
+| `@Inject "@config.key"` | Service from config | `@Inject "@repository.impl"` |
 | `@Inject "cfg:config.key"` | Config value | `@Inject "cfg:app.timeout"` |
 | `@Inject "cfg:@config.key"` | Indirect config | `@Inject "cfg:@jwt.path"` |
 

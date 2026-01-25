@@ -47,7 +47,7 @@ func TestInjectCfgValue_AllTypes(t *testing.T) {
 
 import "time"
 
-// @EndpointService name="basic-service", prefix="/api/basic"
+// @Handler name="basic-service", prefix="/api/basic"
 type BasicService struct {
 	// @Inject "cfg:app.name"
 	AppName string
@@ -66,7 +66,7 @@ func (s *BasicService) GetInfo() string { return "info" }
 			name: "ByteSlice",
 			serviceCode: `package testservice
 
-// @EndpointService name="byte-service", prefix="/api/bytes"
+// @Handler name="byte-service", prefix="/api/bytes"
 type ByteService struct {
 	// @Inject "cfg:secret"
 	Secret []byte
@@ -81,7 +81,7 @@ func (s *ByteService) GetInfo() string { return "info" }
 			name: "StringSlice",
 			serviceCode: `package testservice
 
-// @EndpointService name="string-slice-service", prefix="/api/strings"
+// @Handler name="string-slice-service", prefix="/api/strings"
 type StringSliceService struct {
 	// @Inject "cfg:hosts"
 	Hosts []string
@@ -96,7 +96,7 @@ func (s *StringSliceService) GetInfo() string { return "info" }
 			name: "IntSlices",
 			serviceCode: `package testservice
 
-// @EndpointService name="int-slice-service", prefix="/api/ints"
+// @Handler name="int-slice-service", prefix="/api/ints"
 type IntSliceService struct {
 	// @Inject "cfg:ports"
 	Ports []int
@@ -120,7 +120,7 @@ type DatabaseConfig struct {
 	Port int
 }
 
-// @EndpointService name="struct-service", prefix="/api/struct"
+// @Handler name="struct-service", prefix="/api/struct"
 type StructService struct {
 	// @Inject "cfg:database"
 	DBConfig DatabaseConfig
@@ -140,7 +140,7 @@ type ServerConfig struct {
 	Port int
 }
 
-// @EndpointService name="server-service", prefix="/api/servers"
+// @Handler name="server-service", prefix="/api/servers"
 type ServerService struct {
 	// @Inject "cfg:servers"
 	Servers []ServerConfig
@@ -161,7 +161,7 @@ type AuthConfig struct {
 	Provider string
 }
 
-// @EndpointService name="mixed-service", prefix="/api/mixed"
+// @Handler name="mixed-service", prefix="/api/mixed"
 type MixedService struct {
 	// @Inject "cfg:name"
 	Name string
@@ -206,7 +206,7 @@ type ComplexConfig struct {
 	Servers  []NestedConfig
 }
 
-// @EndpointService name="complex-service", prefix="/api/complex"
+// @Handler name="complex-service", prefix="/api/complex"
 type ComplexService struct {
 	// @Inject "cfg:config"
 	Config ComplexConfig
@@ -230,7 +230,7 @@ type AppConfig struct {
 	Port int
 }
 
-// @EndpointService name="default-service", prefix="/api/default"
+// @Handler name="default-service", prefix="/api/default"
 type DefaultService struct {
 	// @Inject "cfg:appconfig", "AppConfig{Name: \"myapp\", Port: 8080}"
 	Config AppConfig
@@ -277,7 +277,7 @@ type ScheduleConfig struct {
 	Duration  time.Duration
 }
 
-// @EndpointService name="schedule-service", prefix="/api/schedule"
+// @Handler name="schedule-service", prefix="/api/schedule"
 type ScheduleService struct {
 	// @Inject "cfg:schedule"
 	Config ScheduleConfig
@@ -323,7 +323,7 @@ type ScheduleConfig struct {
 	Duration  time.Duration
 }
 
-// @EndpointService name="schedule-service", prefix="/api/schedule"
+// @Handler name="schedule-service", prefix="/api/schedule"
 type ScheduleService struct {
 	// @Inject "cfg:schedule", "ScheduleConfig{EventName: \"DefaultEvent\", Duration: 3600000000000}"
 	Config ScheduleConfig
@@ -348,7 +348,7 @@ type AppConfig struct {
 	Port int
 }
 
-// @EndpointService name="default-service", prefix="/api/default"
+// @Handler name="default-service", prefix="/api/default"
 type DefaultService struct {
 	// @Inject "cfg:appconfig", ` + "`AppConfig{Name: \"myapp\", Port: 8080}`" + `
 	Config AppConfig

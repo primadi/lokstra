@@ -273,7 +273,7 @@ If you're unsure whether manual control is safe:
 ```
 BeginTransaction(poolName)
     ↓
-Store finalizer in map[poolName]
+Repository finalizer in map[poolName]
     ↓
 Handler executes
     ↓

@@ -14,7 +14,7 @@ title: Full Framework Examples
 
 This track covers the **complete Lokstra framework** with dependency injection, auto-generated routers, and deployment patterns:
 
-- ✅ Annotation-based service development (`@EndpointService`, `@Inject`, `@Route`)
+- ✅ Annotation-based service development (`@Handler`, `@Inject`, `@Route`)
 - ✅ Auto-generated REST routers from service methods
 - ✅ Type-safe dependency injection (eager loading)
 - ✅ Configuration-driven deployment (YAML or Code)
@@ -34,7 +34,7 @@ This track covers the **complete Lokstra framework** with dependency injection, 
 
 ```go
 // Write this:
-// @EndpointService name="user-service", prefix="/api"
+// @Handler name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo domain.UserRepository
@@ -53,7 +53,7 @@ func (s *UserServiceImpl) GetByID(p *GetUserRequest) (*User, error) {
 ```
 
 **What you'll learn:**
-- **Lokstra Annotations** - `@EndpointService`, `@Inject`, `@Route`
+- **Lokstra Annotations** - `@Handler`, `@Inject`, `@Route`
 - Auto-code generation with `lokstra.Bootstrap()`
 - Zero boilerplate router services
 - Hot reload in dev mode (auto-regenerates on changes)
@@ -108,7 +108,7 @@ go run . -server=microservices.user-server
 
 **What you'll learn:**
 - YAML-based configuration
-- Annotation-driven development with @EndpointService
+- Annotation-driven development with @Handler
 - Service interfaces (local vs remote)
 - Proxy pattern for remote calls
 - Monolith vs microservices topology
@@ -263,7 +263,7 @@ Example 05:  Quick Integration
     → proxy.Router, simple HTTP calls
 
 Example 07:  Annotation-Driven (RECOMMENDED)
-    → @EndpointService, @Inject, @Route, auto-generation, zero boilerplate
+    → @Handler, @Inject, @Route, auto-generation, zero boilerplate
 ```
 
 ---
@@ -313,7 +313,7 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 
 **Lokstra advantages:**
 - ✅ Type-safe generics (no `any`)
-- ✅ Annotation-driven routes with @EndpointService
+- ✅ Annotation-driven routes with @Handler
 - ✅ Zero-code deployment topology changes
 - ✅ Code or YAML configuration (your choice)
 - ✅ **Annotation-driven development (Example 01)** - Like NestJS decorators, but with Go code generation
@@ -331,7 +331,7 @@ Example 07:  Annotation-Driven (RECOMMENDED)
 **STRONGLY RECOMMENDED for all developers** - annotation-driven, minimal boilerplate
 
 ```go
-// @EndpointService, @Inject, @Route - that's it!
+// @Handler, @Inject, @Route - that's it!
 // Everything auto-generated with lokstra.Bootstrap()
 ```
 
@@ -347,4 +347,4 @@ External APIs, payment gateways, third-party services
 
 **Ready to start?** → [01 - Enterprise Router Service (Annotations)](./01_enterprise_router_service/) ⭐⭐⭐ **START HERE**
 
-**Coming from Router Track?** Full Framework eliminates manual routing with `@EndpointService` annotations!
+**Coming from Router Track?** Full Framework eliminates manual routing with `@Handler` annotations!

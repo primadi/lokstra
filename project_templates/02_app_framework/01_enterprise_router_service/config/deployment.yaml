@@ -2,7 +2,7 @@
 
 configs:
   server: ${SERVER:development.api-server}
-  store:
+  repository:
     order-repository: order-repository
 
 service-definitions:
