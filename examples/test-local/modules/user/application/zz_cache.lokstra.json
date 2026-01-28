@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "files": {
+    "user_service.go": {
+      "filename": "user_service.go",
+      "checksum": "df5b3ffc03f706f6ef30261b152baf0a1754c848481f60d8d2c9e51370c74c21",
+      "annotations": 9,
+      "last_scan": "2026-01-11T03:01:08.6135279+07:00",
+      "generated": [
+        "zz_generated.lokstra.go"
+      ],
+      "generated_mod_time": "2026-01-11T03:01:08.6135279+07:00"
+    }
+  },
+  "updated_at": "2026-01-19T14:30:01.4135558+07:00",
+  "generated_checksum": "feac625ae8d96928abcf5febce937226d58824d36b4c991fb8eed48d5b6ffdd3"
+}
