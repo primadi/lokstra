@@ -10,6 +10,7 @@ import (
 
 	"github.com/primadi/lokstra/common/utils"
 	"github.com/primadi/lokstra/core/deploy/loader"
+	"github.com/primadi/lokstra/lokstra_init"
 	"github.com/primadi/lokstra/lokstra_init/migration_runner"
 	"github.com/primadi/lokstra/lokstra_registry"
 	"github.com/primadi/lokstra/serviceapi"
@@ -127,19 +128,57 @@ func executeMigration(subCmd, configFile, migrationDir, dbPoolName string, steps
 		return fmt.Errorf("failed to load config file '%s': %w", filepath.Base(cfgFile), err)
 	}
 
+	// Try to load migration.yaml from migrations directory
+	yamlPath := filepath.Join(migDir, "migration.yaml")
+	yamlCfg, err := lokstra_init.LoadMigrationYaml(yamlPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("failed to load migration config '%s': %w", yamlPath, err)
+		}
+		yamlCfg = nil
+	}
+
+	// If explicitly disabled, skip mutating operations.
+	if yamlCfg != nil && yamlCfg.Enabled != nil && !*yamlCfg.Enabled {
+		switch subCmd {
+		case "up", "down":
+			fmt.Printf("ℹ️  Migration is disabled by %s (enabled: false)\n", yamlPath)
+			return nil
+		}
+	}
+
+	// Determine database pool name
+	resolvedDbPoolName := dbPoolName
+	if yamlCfg != nil && yamlCfg.DbPoolName != "" {
+		resolvedDbPoolName = yamlCfg.DbPoolName
+	}
+
+	// If still empty, error
+	if resolvedDbPoolName == "" {
+		return fmt.Errorf("database pool not found. Either:\n"+
+			"  1. Specify with: -db <pool-name>\n"+
+			"  2. Or create migration.yaml with 'dbpool-name' in %s", migrationDir)
+	}
+
 	// Get database pool
-	poolAny, ok := lokstra_registry.GetServiceAny(dbPoolName)
+	poolAny, ok := lokstra_registry.GetServiceAny(resolvedDbPoolName)
 	if !ok {
-		return fmt.Errorf("database pool '%s' not found in registry", dbPoolName)
+		return fmt.Errorf("database pool '%s' not found in registry", resolvedDbPoolName)
 	}
 
 	pool, ok := poolAny.(serviceapi.DbPool)
 	if !ok {
-		return fmt.Errorf("database pool '%s' does not implement DbPool interface", dbPoolName)
+		return fmt.Errorf("database pool '%s' does not implement DbPool interface", resolvedDbPoolName)
 	}
 
 	// Create migration runner
 	runner := migration_runner.New(pool, migDir)
+
+	// Apply custom schema table if specified in YAML
+	if yamlCfg != nil && yamlCfg.SchemaTable != "" {
+		runner = runner.WithSchemaTable(yamlCfg.SchemaTable)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

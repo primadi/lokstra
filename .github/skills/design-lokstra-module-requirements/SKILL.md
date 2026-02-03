@@ -1,14 +1,12 @@
 ---
 name: lokstra-module-requirements
 description: Generate module-specific requirements from approved BRD for Lokstra projects. Breaks down business requirements into bounded contexts (DDD modules) with detailed functional requirements, use cases, and acceptance criteria. Use after BRD approval.
+phase: design
+order: 3
 license: MIT
-metadata:
-  author: lokstra-framework
-  version: "1.0"
-  framework: lokstra
-  phase: design
-  order: 3
-compatibility: Designed for GitHub Copilot, Cursor, Claude Code
+compatibility:
+  lokstra_version: ">=0.1.0"
+  go_version: ">=1.18"
 ---
 
 # Lokstra Module Requirements Generation
@@ -274,13 +272,27 @@ List which modules this one depends on and why, under "9. Integration Points" se
 Before proceeding to API specification:
 
 - [ ] All modules identified with clear boundaries
-- [ ] No circular dependencies
+- [ ] No circular dependencies (use dependency diagram to verify)
 - [ ] Each FR has acceptance criteria
-- [ ] Domain entities defined
+- [ ] Domain entities defined with tenant_id (multi-tenant)
 - [ ] Use cases documented
 - [ ] Validation rules specified
 - [ ] Performance requirements measurable
+- [ ] Multi-tenant isolation strategy documented
 - [ ] Module owner assigned
+
+See [references/VALIDATION_CHECKLIST.md](references/VALIDATION_CHECKLIST.md) for comprehensive 12-section validation.
+
+## Common Mistakes to Avoid
+
+Review [references/ANTI_PATTERNS.md](references/ANTI_PATTERNS.md) for 14 common anti-patterns:
+- God Module (one module does everything)
+- Circular dependencies
+- Leaky tenant isolation (missing tenant_id filters)
+- Vague requirements ("should be fast")
+- Missing bounded context
+- No multi-tenant strategy (adding later = expensive)
+- Ignoring NFRs, integration points, validation, errors
 
 ## Next Steps
 
@@ -289,7 +301,15 @@ After module requirements approved:
 2. Use `lokstra-schema-design` skill for database design
 3. Then proceed to code generation
 
-## Resources
+## Reference Files
 
-- **Template:** [references/MODULE_REQUIREMENTS_TEMPLATE.md](references/MODULE_REQUIREMENTS_TEMPLATE.md)
-- **DDD Guide:** See Lokstra documentation on bounded contexts
+**For Getting Started:**
+- [MODULE_REQUIREMENTS_TEMPLATE.md](references/MODULE_REQUIREMENTS_TEMPLATE.md) - Comprehensive 16-section template (Overview, FRs, Domain Model, Use Cases, Validation, Security, Performance, Integration, Multi-Tenant, Testing, etc.)
+
+**For Examples & Diagrams:**
+- [AUTH_MODULE_EXAMPLE.md](references/AUTH_MODULE_EXAMPLE.md) - Real-world multi-tenant authentication module with RBAC, tenant isolation, JWT, and all sections completed
+- [MODULE_DEPENDENCY_DIAGRAMS.md](references/MODULE_DEPENDENCY_DIAGRAMS.md) - 8 Mermaid diagram templates (Dependency Graph, Tenant Context Flow, Architecture Layers, Interaction, Bounded Context Map, Circular Detection, Maturity Levels, Isolation Strategy)
+
+**For Quality & Validation:**
+- [VALIDATION_CHECKLIST.md](references/VALIDATION_CHECKLIST.md) - 12-section comprehensive checklist with 100+ validation points, quality scoring, common failures, and multi-tenant specific checks
+- [ANTI_PATTERNS.md](references/ANTI_PATTERNS.md) - 14 common mistakes with examples and solutions (God Module, Circular Dependencies, Leaky Isolation, Vague Requirements, etc.)

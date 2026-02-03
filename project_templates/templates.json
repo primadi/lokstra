@@ -2,15 +2,6 @@
   "version": "1.0.0",
   "templates": [
     {
-      "path": "03_ai_driven/01_starter",
-      "name": "AI-Driven Development Starter (Recommended)",
-      "description": "Design-first development with AI agent skills - Generate code from specs",
-      "category": "AI-Driven Development",
-      "complexity": 1,
-      "tags": ["ai", "design-first", "recommended", "production"],
-      "minGoVersion": "1.22"
-    },
-    {
       "path": "01_router/01_router_only",
       "name": "Router Only",
       "description": "Pure router with CRUD operations - Learn Lokstra routing basics",
@@ -54,6 +45,15 @@
       "complexity": 4,
       "tags": ["configuration", "postgresql", "sync-config", "advanced"],
       "minGoVersion": "1.23"
-    }
+    },
+    {
+      "path": "03_ai_driven/01_starter",
+      "name": "AI-Driven Development Starter (Recommended)",
+      "description": "Design-first development with AI agent skills - Generate code from specs",
+      "category": "AI-Driven Development",
+      "complexity": 1,
+      "tags": ["ai", "design-first", "recommended", "production"],
+      "minGoVersion": "1.22"
+    }    
   ]
 }

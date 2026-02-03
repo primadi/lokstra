@@ -142,9 +142,15 @@ lokstra migration version
 
 **Migration Flags:**
 - `-dir <path>` - Migrations directory (default: `migrations`)
-- `-db <name>` - Database pool name from config.yaml (default: `db_main`)
+- `-db <name>` - Database pool name from config.yaml (used when `migration.yaml` is missing or doesn't specify `dbpool-name`; default: `db_main`)
 - `-steps <n>` - Number of migrations to rollback (default: 1)
 - `-config <file>` - Config file path (default: `config.yaml`)
+
+**Database Pool Resolution:**
+
+The database pool name is resolved in this order:
+1. If `{dir}/migration.yaml` exists and has `dbpool-name` → use that
+2. Otherwise → use `-db <name>`
 
 **Two Migration Strategies:**
 
@@ -191,6 +197,12 @@ lokstra migration version
 - Subfolders without `migration.yaml` are ignored
 - Use numeric prefixes (01_, 02_) for execution order
 - Migration files format: `{version}_{name}.{up|down}.sql`
+
+**migration.yaml fields:**
+- `dbpool-name` (recommended) - Database pool name from config.yaml `service-definitions`
+- `schema-table` (optional) - Migration tracking table (default: `schema_migrations`)
+- `enabled` (optional) - If `false`, `up`/`down` will be skipped
+- `description` (optional) - Documentation only
 
 ### Use different branch
 

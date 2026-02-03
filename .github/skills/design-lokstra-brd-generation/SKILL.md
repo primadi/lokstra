@@ -1,14 +1,12 @@
 ---
 name: lokstra-brd-generation
 description: Generate Business Requirements Document (BRD) for new Lokstra projects. Use when starting a new project or adding major features to establish clear, stakeholder-approved requirements before implementation. Asks clarifying questions and produces versioned BRD.
+phase: design
+order: 2
 license: MIT
-metadata:
-  author: lokstra-framework
-  version: "1.0"
-  framework: lokstra
-  phase: design
-  order: 2
-compatibility: Designed for GitHub Copilot, Cursor, Claude Code
+compatibility:
+  lokstra_version: ">=0.1.0"
+  go_version: ">=1.18"
 ---
 
 # Lokstra BRD Generation
@@ -21,6 +19,30 @@ Use this skill when:
 - Need stakeholder-approved requirements before coding
 - Transitioning from business idea to technical implementation
 - Documenting business objectives and success metrics
+
+## Quick Mode Selection
+
+Choose the right mode based on project complexity:
+
+| Criteria | Mode 1: Detailed | Mode 2: Quick |
+|----------|------------------|---------------|
+| **Features** | 10+ features | 5-8 features |
+| **User Roles** | 4+ roles | 2-3 roles |
+| **Stakeholders** | 3+ approvers | Single/small team |
+| **Compliance** | Required (HIPAA, GDPR) | Not required |
+| **Duration** | 30-45 min Q&A | 10-15 min Q&A |
+| **BRD Output** | 22+ sections | 12-15 sections |
+| **Best For** | Enterprise, healthcare, finance | MVP, internal tools, learning |
+
+**Decision Rule:**
+```
+IF (features >= 10 OR compliance_required OR stakeholders >= 3):
+    → Use Mode 1: Detailed Interactive
+ELSE:
+    → Use Mode 2: Quick Proposal
+```
+
+See [references/INTERACTIVE_MODE_GUIDE.md](references/INTERACTIVE_MODE_GUIDE.md) for complete guide.
 
 ## Document Versioning & Workflow
 
@@ -158,7 +180,7 @@ Before proceeding to module requirements:
 **Acceptance Criteria:**
 - [Specific, measurable criterion 1]
 - [Specific, measurable criterion 2]
-
+mode
 **Business Rules:**
 - [Rule 1]
 - [Rule 2]
@@ -257,7 +279,20 @@ After BRD is published with approval section:
 
 **Note:** Can proceed with approved revision (e.g., v1.1), doesn't have to be final version
 
-## Resources
+## Reference Files
 
-- **Template:** [references/BRD_TEMPLATE.md](references/BRD_TEMPLATE.md)
-- **Example:** See example BRD in Lokstra documentation
+**For Getting Started:**
+- [BRD_TEMPLATE.md](references/BRD_TEMPLATE.md) - 22-section comprehensive template with RBAC & Tech Stack
+- [KLINIK_BRD_EXAMPLE.md](references/KLINIK_BRD_EXAMPLE.md) - Real-world clinic system example with 3 Mermaid diagrams
+
+**For Agents (Workflow & Questions):**
+- [CLARIFYING_QUESTIONS.md](references/CLARIFYING_QUESTIONS.md) - 20+ structured questions organized by category (Problem, Scope, Technical, Timeline, Metrics, Additional)
+- [INTERACTIVE_MODE_GUIDE.md](references/INTERACTIVE_MODE_GUIDE.md) - Complete guide for Mode 1 (detailed, 30-45 min) vs Mode 2 (quick, 10-15 min) with Phase-by-phase breakdown
+
+**For Diagrams & Visualization:**
+- [MERMAID_DIAGRAMS.md](references/MERMAID_DIAGRAMS.md) - 9 reusable diagram templates (Context, User Flow, ERD, Sequence, Gantt, State, Decision Tree, Architecture, RBAC Matrix)
+
+**For Versioning & Quality:**
+- [REVISION_TRACKING.md](references/REVISION_TRACKING.md) - Version control system (draft vs published, versioning scheme, change tracking)
+- [VALIDATION_CHECKLIST.md](references/VALIDATION_CHECKLIST.md) - Pre-publication quality gates (95+ validation items, auto-validation with red/yellow/green flags)
+- [CHANGELOG_TEMPLATE.md](references/CHANGELOG_TEMPLATE.md) - Track BRD version history and changes

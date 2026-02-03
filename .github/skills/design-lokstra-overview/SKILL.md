@@ -1,15 +1,12 @@
 ---
 name: lokstra-overview
 description: Provides foundational understanding of Lokstra Framework architecture, design principles, annotation-based code generation, and decision-making guidelines for AI agents building Go web applications. Use when starting any Lokstra project or when agents need framework context.
+phase: design
+order: 1
 license: MIT
-metadata:
-  author: lokstra-framework
-  version: "1.0"
-  framework: lokstra
-  framework-version: "0.1.x"
-  phase: design
-  order: 1
-compatibility: Designed for GitHub Copilot, Cursor, Claude Code, and similar AI coding assistants
+compatibility:
+  lokstra_version: ">=0.1.0"
+  go_version: ">=1.18"
 ---
 
 # Lokstra Framework - Overview & Philosophy
@@ -18,310 +15,330 @@ compatibility: Designed for GitHub Copilot, Cursor, Claude Code, and similar AI 
 
 Use this skill when:
 - Starting any new Lokstra project with AI agents
-- Need to understand annotation system (`@Handler`, `@Service`, `@Route`, `@Inject`)
-- Understanding code generation and dependency injection
+- Need to understand overall framework philosophy
+- Understanding 2-phase workflow: Design → Implementation
 - Determining module structure (DDD bounded contexts)
-- Need framework-specific best practices
+- Need high-level architecture guidance
 
-## Framework Mode Overview
+## Framework Overview
 
-Lokstra is a **Go web framework** with annotation-based code generation.
+Lokstra is a **Go web framework** with:
+- Design-first development approach (BRD → Code)
+- Annotation-based code generation
+- Full dependency injection framework
+- Modular architecture using DDD bounded contexts
+- Auto-code generation for routes, services, dependencies
 
-**Key Features:**
-- Annotation-based code generation (`@Handler`, `@Service`, `@Route`, `@Inject`)
-- Full dependency injection (like NestJS, Spring Boot)
-- Type-safe with compile-time verification
-- Modular architecture (DDD bounded contexts)
-- Auto-generates service registration, routes, middleware
+**Two Main Phases:**
+
+### Phase 1: Design (Using Design Skills)
+```
+BRD → Module Requirements → API Spec → Database Schema
+```
+- Focus on planning, requirements, and specifications
+- Human-readable documents for stakeholder approval
+- No code written yet
+
+### Phase 2: Implementation (Using Implementation Skills)
+```
+Initialize Framework → Config → Handlers → Services → Migrations → Tests
+```
+- Focus on code generation based on design phase
+- Microskills for each implementation concern
+- Annotation-based code (minimal boilerplate)
 
 ---
+
+## Development Workflow
+
+**Design Phase → Implementation Phase:**
+
+```
+1. lokstra-overview (framework fundamentals)
+   ↓
+2. lokstra-brd-generation (define business requirements)
+   ↓
+3. lokstra-module-requirements (break into modules)
+   ↓
+4. lokstra-api-specification (define API endpoints)
+   ↓
+5. lokstra-schema-design (define database schema)
+   ↓
+   SPECIFICATIONS READY
+   ↓
+6. implementation-lokstra-init-framework (initialize)
+7. implementation-lokstra-yaml-config (config)
+8. implementation-lokstra-create-handler (@Handler)
+9. implementation-lokstra-create-service (@Service)
+10. implementation-lokstra-create-migrations (migrations)
+11. implementation-lokstra-generate-http-files (HTTP client)
+    ↓
+    CODE READY
+    ↓
+12. advanced-lokstra-tests (testing)
+13. advanced-lokstra-middleware (custom middleware)
+14. advanced-lokstra-validate-consistency (validation)
+```
+
+**Migrations note:** Apply migrations explicitly with `lokstra migration up` (not auto-run). If `migration.yaml` exists in a folder, it supplies `dbpool-name` / optional `schema-table` / optional `enabled: false`; otherwise use `-db` to pick the pool.
 
 ## Core Design Philosophy
 
 ### 1. Document-Driven Development
 
-**Problem:** Code-first approaches lead to inconsistencies, rework cycles, and technical debt.
+**Problem:** Code-first approaches lead to rework, inconsistencies, technical debt.
 
-**Solution:** Enforce design-first workflow:
-```
-BRD → Module Requirements → API Spec → Schema → Implementation
-```
-
-**Benefits:**
-- 10x productivity improvement (estimated)
-- Eliminates "code-then-fix" cycles
+**Solution:** Design-first workflow (specs before code):
+- Clear stakeholder alignment
 - Built-in compliance documentation
-- Stakeholder alignment before coding
+- Eliminates "code-then-fix" cycles
+- Estimated 10x productivity improvement
 
 ### 2. Bounded Context (DDD)
 
 **Module Granularity:**
-- ❌ Wrong: Monolithic `user` module handling auth + profile + notifications
-- ✅ Right: Separate modules - `auth`, `user_profile`, `notification`
+- ❌ Wrong: One `user` module handling auth + profile + notifications
+- ✅ Right: Separate `auth`, `user_profile`, `notification` modules
 
-**Cross-Module Communication:**
-- Via repository injection (not direct service calls)
-- Shared domain models in `/modules/shared/domain/`
-- Event-driven for async operations
+**Benefits:** Independent scaling, clear responsibilities, easier testing
 
 ### 3. Project Structure Consistency
 
-**Universal Pattern:**
+All Lokstra projects follow same structure (simple → enterprise):
+
 ```
 myapp/
-├── .github/
-│   ├── skills/                    # AI Agent instructions (auto-copied)
-│   └── copilot-instructions.md
-├── configs/                       # YAML config files (auto-merged)
+├── .github/skills/              # AI Agent instructions
+├── configs/                     # YAML config files (auto-merged)
 │   ├── config.yaml
 │   ├── database-config.yaml
 │   └── <module-name>-config.yaml
-├── migrations/                    # Database migrations per module
+├── migrations/                  # Database migrations per module
 │   ├── shared/
-│   │   ├── 001_init.up.sql
-│   │   └── 001_init.down.sql
 │   └── <module_name>/
-│       ├── 001_create_table.up.sql
-│       └── 001_create_table.down.sql
 ├── docs/
-│   ├── drafts/                    # BRD/requirements draft versions
-│   └── modules/                   # Published BRD/requirements
-│       └── <module_name>/
-│           ├── BRD-*.md
-│           ├── REQUIREMENTS-*.md
-│           ├── API_SPEC.md
-│           └── SCHEMA.md
+│   ├── drafts/                  # BRD/requirements drafts
+│   └── modules/                 # Published specs
 └── modules/
-    ├── shared/
-    │   └── domain/                # Cross-module models
+    ├── shared/domain/           # Cross-module models
     └── <module_name>/
-        ├── handler/               # @Handler files (1 per entity)
-        │   └── user_handler.go
-        ├── repository/            # Data access (1 per entity)
-        │   └── user_repository.go
-        └── domain/                # Business logic & DTOs
-            ├── user.go
-            └── user_dto.go
+        ├── handler/             # @Handler (1 per entity)
+        ├── repository/          # Data access (1 per entity)
+        └── domain/              # Business logic & DTOs
 ```
 
-**Key Rules:**
-- Multi-file YAML config in `/configs/` - all files auto-merged
-- Migrations organized by module in `/migrations/{module}/`
-- 1 handler file per entity (user_handler.go, not handlers.go)
-- 1 repository file per entity
-- DTOs with `validate` tags in domain layer
+**Rules:**
+- Multi-file YAML config in `/configs/` - auto-merged
+- Migrations by module in `/migrations/{module}/`
+- 1 handler per entity (not `handlers.go` with 10+ entities)
+- DTOs with validation tags in domain layer
 
 ---
 
-## Annotation System
+## Annotations & Code Generation
 
-### @Handler (Business Services)
+**Why Annotations?**
+- Reduce boilerplate code
+- Type-safe at compile time
+- Clear service dependencies
+- Auto-generates routing, DI, service registration
 
-```go
-// @Handler name="user-handler", prefix="/api/users"
-type UserHandler struct {
-    // @Inject "user-repository"
-    UserRepo UserRepository
-    
-    // @Inject "@repository.implementation"  // From config
-    Repository Repository
-    
-    // @Inject "cfg:app.timeout"             // Config value
-    Timeout time.Duration
-}
+**Core Annotations:**
+- `@Handler` - Business service with routes
+- `@Service` - Infrastructure service
+- `@Route` - HTTP endpoint mapping
+- `@Inject` - Dependency injection
 
-// @Route "GET /{id}"
-func (h *UserHandler) GetByID(id string) (*User, error) {
-    return h.UserRepo.GetByID(id)
-}
-
-// @Route "POST /", middlewares=["auth"]
-func (h *UserHandler) Create(req *CreateUserRequest) (*User, error) {
-    // Auto-validated via struct tags
-}
-```
-
-### @Service (Infrastructure Services)
-
-```go
-// @Service "postgres-user-repository"
-type PostgresUserRepository struct {
-    // @Inject "db-pool"
-    DB *sql.DB
-}
-
-func (r *PostgresUserRepository) GetByID(id string) (*User, error) {
-    // Implementation
-}
-```
-
-### Injection Patterns
-
-| Pattern                     | Syntax                  | Example                      |
-| --------------------------- | ----------------------- | ---------------------------- |
-| Direct service              | `@Inject "service-name"`| `@Inject "user-repository"`  |
-| Service from config         | `@Inject "@config.key"` | `@Inject "@repository.impl"` |
-| Config value                | `@Inject "cfg:key"`     | `@Inject "cfg:app.timeout"`  |
-| Indirect config (reference) | `@Inject "cfg:@key"`    | `@Inject "cfg:@jwt.path"`    |
+**Code Details:** See implementation-phase skills for specific syntax
 
 ---
 
-## Code Generation
+## Cross-Module Communication
 
-**Automatic (Development):**
-```go
-func main() {
-    lokstra.Bootstrap()  // Auto-generates on @Handler changes
-    _ "myapp/modules/user/handler"  // Import triggers scan
-    lokstra_registry.RunServerFromConfig()
-}
+**Pattern:** Via dependency injection (not direct calls)
+
+**Shared Models:** `/modules/shared/domain/`
+
+**Async Operations:** Event-driven for loose coupling
+
+**Details:** See design-lokstra-module-requirements for integration points
+
+---
+
+## Configuration Management
+
+**Multi-file YAML:**
+- All files in `/configs/` auto-merged
+- Environment variables supported (${VAR:default})
+- Service definitions with dependencies
+- Deployment configurations
+
+**Details:** See implementation-lokstra-yaml-config skill
+
+---
+
+## Best Practices Summary
+
+- ✅ Design first, code second
+- ✅ Document-driven development
+- ✅ DDD bounded contexts (separate modules)
+- ✅ 1 file per entity
+- ✅ Annotations over manual code
+- ✅ Type-safe dependency injection
+- ✅ Validation tags on DTOs
 ```
-
-**Manual (Before Build/Deploy):**
-```bash
-lokstra autogen .        # Scan and generate
-go run . --generate-only # Force rebuild all
-```
-
-**Generated Files:**
-- `zz_generated.lokstra.go` in same package as `@Handler`
-- `zz_lokstra_imports.go` at project root
-- `zz_cache.lokstra.json` for metadata tracking
-- Registers services, routes, dependencies
-
----
-
-## Configuration (config.yaml)
-
-```yaml
-configs:
-  # Service selection (interface injection)
-  repository:
-    implementation: "postgres-user-repository"  # Switch here!
-  
-  # Application settings
-  app:
-    timeout: "30s"
-    jwt-secret: "super-secret"
-
-# Service definitions
-service-definitions:
-  postgres-user-repository:
-    type: postgres-user-repository
-    depends-on: [db-pool]
-
-# Deployment
-deployments:
-  development:
-    servers:
-      api:
-        addr: ":8080"
-        published-services: [user-handler]
-```
-
----
-
-## Handler Signatures (29+ Supported)
-
-```go
-// Simple
-func() string
-
-// With error
-func(id string) (*User, error)
-
-// Request body (auto-validated)
-func(req *CreateUserRequest) (*User, error)
-
-// Context + body
-func(ctx *request.Context, req *CreateUserRequest) error {
-    return ctx.Api.Created(user)
-}
-
-// Path param + body
-func(ctx *request.Context, id string, req *UpdateRequest) error
-```
-
----
-
-## Response Helpers
-
-```go
-ctx.Api.Ok(data)                    // 200
-ctx.Api.Created(data)               // 201
-ctx.Api.BadRequest("message")       // 400
-ctx.Api.Unauthorized("message")     // 401
-ctx.Api.NotFound("message")         // 404
-ctx.Api.InternalServerError("msg")  // 500
-```
-
----
-
-## Decision Guidelines for AI Agents
-
-### When to use Framework Mode:
-- 2+ entities/modules
-- Dependency injection needed
-- Interface-based design (swappable implementations)
-- Enterprise requirements (testing, modularity)
-
-### When to use Router Mode:
-- Learning/prototyping
-- Single-file APIs
-- No DI requirements
-- < 5 endpoints
-
-### Module Granularity:
-- Ask: "Can this be a separate microservice?" → If yes, separate module
-- Example: Auth, User Profile, Notification = 3 modules (not 1 User module)
-
-### File Organization:
-- 1 entity = 1 handler file + 1 repository file + 1 domain file
-- No `handlers.go` with 10+ entities
-- DTOs in domain layer, not in handler
-
----
-
-## Best Practices Checklist
-
-- ✅ Always include error handling
-- ✅ Use validation tags: `validate:"required,email"`
-- ✅ Use pointer parameters: `*CreateUserRequest`
-- ✅ Follow DDD: domain → repository → handler
-- ✅ Type-safe DI: Direct type assertions
-- ✅ Prefer annotations over manual registration
-- ✅ 1 file per entity (maintainability)
-- ✅ Document-driven: BRD → specs → code
-
----
-
-## Common Imports
-
-```go
-import "github.com/primadi/lokstra"
-import "github.com/primadi/lokstra/core/request"
-import "github.com/primadi/lokstra/core/service"
-import "github.com/primadi/lokstra/lokstra_registry"
-import "github.com/primadi/lokstra/middleware/recovery"
-import "github.com/primadi/lokstra/middleware/cors"
-```
-
----
-
-## Resources
-
-- **AI Agent Guide:** [AI-AGENT-GUIDE.md](https://primadi.github.io/lokstra/AI-AGENT-GUIDE)
-- **Quick Reference:** [QUICK-REFERENCE.md](https://primadi.github.io/lokstra/QUICK-REFERENCE)
-- **Full Documentation:** https://primadi.github.io/lokstra/
-- **Examples:** https://primadi.github.io/lokstra/00-introduction/examples/
 
 ---
 
 ## Next Steps
 
 After understanding the framework overview:
-1. Use `lokstra-brd-generation` skill to create Business Requirements
-2. Use `lokstra-module-requirements` skill to define modules
-3. Use `lokstra-api-specification` skill to design APIs
-4. Use `lokstra-schema-design` skill to create database schema
-5. Use `lokstra-code-implementation` and `lokstra-code-advanced` skills to generate code
+
+### DESIGN PHASE (Specifications)
+
+1. **[design-lokstra-brd-generation](../design-lokstra-brd-generation/SKILL.md)**
+   - Create Business Requirements Document
+   - Define stakeholder requirements, user stories, acceptance criteria
+
+2. **[design-lokstra-module-requirements](../design-lokstra-module-requirements/SKILL.md)**
+   - Break BRD into modules (Bounded Contexts using DDD)
+   - Define module responsibilities and integration points
+
+3. **[design-lokstra-api-specification](../design-lokstra-api-specification/SKILL.md)**
+   - Design API endpoints, request/response schemas
+   - Create endpoint specs with validation rules and examples
+
+4. **[design-lokstra-schema-design](../design-lokstra-schema-design/SKILL.md)**
+   - Design database schema with tables, indexes, constraints
+   - Create migration files (UP/DOWN SQL)
+
+### IMPLEMENTATION PHASE (Code Generation)
+
+5. **[implementation-lokstra-init-framework](../implementation-lokstra-init-framework/SKILL.md)**
+   - Initialize main.go with lokstra.Bootstrap()
+   - Register services and middleware
+
+6. **[implementation-lokstra-yaml-config](../implementation-lokstra-yaml-config/SKILL.md)**
+   - Create multi-file YAML configuration
+   - Set up service definitions and deployments
+
+7. **[implementation-lokstra-create-handler](../implementation-lokstra-create-handler/SKILL.md)**
+   - Create @Handler annotated endpoints
+   - Implement @Route decorators with request/response handling
+
+8. **[implementation-lokstra-create-service](../implementation-lokstra-create-service/SKILL.md)**
+   - Create @Service repository implementations
+   - Implement data access layer
+
+9. **[implementation-lokstra-create-migrations](../implementation-lokstra-create-migrations/SKILL.md)**
+   - Create database migration files
+   - Generate UP/DOWN SQL from schema design
+
+10. **[implementation-lokstra-generate-http-files](../implementation-lokstra-generate-http-files/SKILL.md)**
+    - Create .http client files for testing
+    - Generate REST examples with environment variables
+
+### ADVANCED PHASE (Testing & Validation)
+
+11. **[advanced-lokstra-tests](../advanced-lokstra-tests/SKILL.md)**
+    - Write unit tests for handlers and services
+    - Create integration tests with test database
+
+12. **[advanced-lokstra-middleware](../advanced-lokstra-middleware/SKILL.md)**
+    - Implement custom middleware (auth, logging, rate limiting)
+    - Add cross-cutting concerns
+
+13. **[advanced-lokstra-validate-consistency](../advanced-lokstra-validate-consistency/SKILL.md)**
+    - Validate circular dependencies
+    - Check configuration completeness
+    - Pre-deployment validation
+
+---
+
+## Key Principles
+
+**1. Design First, Code Second**
+- Always create specifications before implementation
+- Clear requirements prevent rework
+
+**2. Document-Driven Development**
+- Use BRD → Requirements → Specs as single source of truth
+- Generated code directly maps to specifications
+
+**3. Bounded Contexts (DDD)**
+- Each module is independent and self-contained
+- Clear interfaces between modules
+- Easier to test and deploy
+
+**4. Type-Safe Dependency Injection**
+- Compile-time verification of dependencies
+- Configuration-based service selection
+- No runtime surprises
+
+**5. Annotation-Based Code Generation**
+- Minimize boilerplate code
+- Auto-generated routing and service registration
+- Consistent code patterns
+
+---
+
+## When to Choose Lokstra
+
+### ✅ Use Lokstra When
+
+- Building production applications (2+ entities/modules)
+- Team size: 2-50 developers
+- Complexity: Medium to high (multiple services)
+- Scale: Growing from MVP to enterprise
+- Need: Strong type safety and structured DI
+
+### ❌ Consider Alternatives When
+
+- Single-file scripts or prototypes
+- Learning Go fundamentals
+- Very simple APIs (<5 endpoints)
+- Extreme performance requirements (1M+ requests/sec)
+
+---
+
+## Framework Comparison
+
+| Aspect | Lokstra | Echo | Gin | Spring Boot |
+|--------|---------|------|-----|------------|
+| **Language** | Go | Go | Go | Java |
+| **DI** | Full Framework | Optional | Optional | Built-in |
+| **Code Gen** | Annotations ✅ | Manual | Manual | Annotations |
+| **Type Safety** | Excellent | Good | Good | Good |
+| **Learning Curve** | Moderate | Easy | Easy | Steep |
+| **Enterprise Ready** | ✅ | Good | Good | ✅ |
+
+---
+
+## Common Questions
+
+**Q: Do I need to use all 14 skills?**  
+A: For a typical project: Yes. Design phase → Implementation phase → Advanced phase. Optional: Skip advanced if no tests needed.
+
+**Q: Can I skip the design phase?**  
+A: Not recommended. Design phase prevents implementation errors. Estimated 10x productivity gain.
+
+**Q: How long does a complete project take?**  
+A: Small module: 4-6 hours. Medium module: 1-2 days. Large module: 3-5 days.
+
+**Q: Do I need to use all 6 implementation skills?**  
+A: Yes. They're sequential: init → config → handlers → services → migrations → tests.
+
+**Q: Can multiple teams work in parallel?**  
+A: Yes. After design phase, each team works on separate modules (bounded contexts).
+
+---
+
+## Summary
+
+Lokstra Framework combines:
+- ✅ **Strong typing** from Go
+- ✅ **Elegant architecture** from Spring Boot/NestJS
+- ✅ **Rapid development** from annotation-based code generation
+- ✅ **Production readiness** from dependency injection and modular design
+
+With the 14 AI skills, you can go from business requirement to production-ready application in days instead of weeks. 
