@@ -4,7 +4,7 @@ import (
 	"github.com/primadi/lokstra/project_templates/02_app_framework/01_enterprise_router_service/modules/user/domain"
 )
 
-// @EndpointService name="user-service", prefix="/api", middlewares=["recovery", "request-logger", "simple-auth"]
+// @Handler name="user-service", prefix="/api", middlewares=["recovery", "request-logger", "simple-auth"]
 type UserServiceImpl struct {
 	// @Inject "user-repository"
 	UserRepo domain.UserRepository

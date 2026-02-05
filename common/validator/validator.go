@@ -15,7 +15,7 @@ import (
 type ValidatorFunc func(fieldName string, fieldValue reflect.Value, ruleValue string) error
 
 var (
-	// validatorRegistry stores registered validator functions
+	// validatorRegistry repositorys registered validator functions
 	validatorRegistry sync.Map // map[string]ValidatorFunc
 
 	validatorMetaCache sync.Map // map[reflect.Type]*validatorMeta
@@ -127,7 +127,7 @@ func getOrBuildValidatorMeta(t reflect.Type) *validatorMeta {
 		})
 	}
 
-	// Store in cache
+	// Repository in cache
 	validatorMetaCache.Store(t, meta)
 
 	return meta

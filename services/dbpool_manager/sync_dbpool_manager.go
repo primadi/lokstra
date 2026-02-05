@@ -139,7 +139,7 @@ func (p *SyncDbPoolManager) RemoveDbPoolManager(name string) {
 // SetDbPoolManager implements serviceapi.DbPoolManager.
 func (p *SyncDbPoolManager) SetDbPoolManager(name string, dsn string, schema string, rlsContext map[string]string) {
 	p.ensureSyncMapInitialized()
-	p.namedPools.Store(name, &serviceapi.DbPoolInfo{
+	p.namedPools.Repository(name, &serviceapi.DbPoolInfo{
 		Dsn:        dsn,
 		Schema:     schema,
 		RlsContext: rlsContext,

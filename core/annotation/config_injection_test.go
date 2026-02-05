@@ -4,7 +4,7 @@ package annotation_test
 // This demonstrates the new @Inject "cfg:..." feature
 
 // Domain interface
-type Store interface {
+type Repository interface {
 	GetUser(id string) (*User, error)
 	SaveUser(user *User) error
 }
@@ -14,43 +14,43 @@ type User struct {
 	Name string
 }
 
-// @Service "postgres-store"
-type PostgresStore struct {
+// @Service "postgres-repository"
+type PostgresRepository struct {
 	// @Inject "db-pool"
 	DB any
 }
 
-var _ Store = (*PostgresStore)(nil)
+var _ Repository = (*PostgresRepository)(nil)
 
-func (s *PostgresStore) GetUser(id string) (*User, error) {
+func (s *PostgresRepository) GetUser(id string) (*User, error) {
 	return &User{ID: id, Name: "User from Postgres"}, nil
 }
 
-func (s *PostgresStore) SaveUser(user *User) error {
+func (s *PostgresRepository) SaveUser(user *User) error {
 	return nil
 }
 
-// @Service "mysql-store"
-type MySQLStore struct {
+// @Service "mysql-repository"
+type MySQLRepository struct {
 	// @Inject "db-pool"
 	DB any
 }
 
-var _ Store = (*MySQLStore)(nil)
+var _ Repository = (*MySQLRepository)(nil)
 
-func (s *MySQLStore) GetUser(id string) (*User, error) {
+func (s *MySQLRepository) GetUser(id string) (*User, error) {
 	return &User{ID: id, Name: "User from MySQL"}, nil
 }
 
-func (s *MySQLStore) SaveUser(user *User) error {
+func (s *MySQLRepository) SaveUser(user *User) error {
 	return nil
 }
 
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
 	// Config-based injection - service name from config!
-	// @Inject "cfg:store.implementation"
-	Store Store
+	// @Inject "cfg:repository.implementation"
+	Repository Repository
 
 	// Direct injection (existing behavior)
 	// @Inject "logger"
@@ -63,7 +63,7 @@ type UserService struct {
 
 // @Route "GET /{id}"
 func (s *UserService) GetUser(id string) (*User, error) {
-	return s.Store.GetUser(id)
+	return s.Repository.GetUser(id)
 }
 
 /*
@@ -71,9 +71,9 @@ Expected generated code in zz_generated.lokstra.go:
 
 func UserServiceFactory(deps map[string]any, config map[string]any) any {
 	svc := &UserService{
-		// Config-based: registry resolves config["store.implementation"] -> "postgres-store"
-		// Then auto-injects deps["cfg:store.implementation"] (already resolved!)
-		Store: deps["cfg:store.implementation"].(Store),
+		// Config-based: registry resolves config["repository.implementation"] -> "postgres-repository"
+		// Then auto-injects deps["cfg:repository.implementation"] (already resolved!)
+		Repository: deps["cfg:repository.implementation"].(Repository),
 
 		// Direct injection (as before)
 		Logger: deps["logger"].(any),
@@ -94,10 +94,10 @@ func RegisterUserService() {
 		"user-service-factory",
 		map[string]any{
 			// Both direct and config-based dependencies in depends-on
-			"depends-on": []string{"cfg:store.implementation", "logger"},
+			"depends-on": []string{"cfg:repository.implementation", "logger"},
 
 			// Config value that specifies which service to inject
-			"store.implementation": lokstra_registry.GetConfig("store.implementation", ""),
+			"repository.implementation": lokstra_registry.GetConfig("repository.implementation", ""),
 
 			// Config values
 			"app.name": lokstra_registry.GetConfig("app.name", ""),
@@ -107,8 +107,8 @@ func RegisterUserService() {
 config.yaml:
 ---
 configs:
-  store:
-    implementation: "postgres-store"  # Change to "mysql-store" to switch!
+  repository:
+    implementation: "postgres-repository"  # Change to "mysql-repository" to switch!
   app:
     name: "MyApp"
 
@@ -116,11 +116,11 @@ service-definitions:
   db-pool:
     type: db-pool
 
-  postgres-store:
-    type: postgres-store
+  postgres-repository:
+    type: postgres-repository
 
-  mysql-store:
-    type: mysql-store
+  mysql-repository:
+    type: mysql-repository
 
 deployments:
   development:

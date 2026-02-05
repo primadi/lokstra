@@ -33,7 +33,7 @@ func (c *pgxConnWrapper) getExecutor(ctx context.Context) (dbExecutor, error) {
 			return nil, err
 		}
 
-		// Store in context for reuse
+		// Repository in context for reuse
 		txCtx.Tx = &pgxTxWrapper{tx: tx, txCtx: txCtx}
 		txCtx.Conn = c
 

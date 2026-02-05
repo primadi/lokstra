@@ -2,7 +2,7 @@ package main
 
 import "github.com/primadi/lokstra/core/service"
 
-// @EndpointService name="config-service", prefix="/api/config"
+// @Handler name="config-service", prefix="/api/config"
 type ConfigService struct {
 	// @Inject "config-repo"
 	ConfigRepo *service.Cached[any]

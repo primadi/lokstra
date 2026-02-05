@@ -303,7 +303,7 @@ lokstra_registry.RegisterRouter("user-router", setupUserRouter())
 
 #### The Lokstra Annotation Way (12 Lines!)
 ```go
-// @EndpointService name="user-service", prefix="/api"
+// @Handler name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "database"
     DB *Database
@@ -361,9 +361,9 @@ type UserServiceRemote struct { ... }
 
 **Three Powerful Annotations**:
 
-1. **@EndpointService** - Define service + router
+1. **@Handler** - Define service + router
    ```go
-   // @EndpointService name="user-service", prefix="/api", mount="/api"
+   // @Handler name="user-service", prefix="/api", mount="/api"
    type UserServiceImpl struct {}
    ```
 

@@ -127,7 +127,7 @@ func (c *Context) BeginTransaction(poolName string) {
 		c.txFinalizers = make(map[string]func(*error))
 	}
 
-	// Store finalizer by actual pool name (not the @ prefixed name)
+	// Repository finalizer by actual pool name (not the @ prefixed name)
 	c.txFinalizers[actualPoolName] = finalizeCtx
 	c.txPoolOrder = append(c.txPoolOrder, actualPoolName)
 }

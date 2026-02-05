@@ -36,6 +36,8 @@ func main() {
 	switch command {
 	case "new":
 		newCmd()
+	case "update-skills":
+		updateSkillsCmd()
 	case "autogen", "generate":
 		autogenCmd()
 	case "migration", "migrate":
@@ -56,6 +58,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  lokstra new <project-name> [flags]")
+	fmt.Println("  lokstra update-skills [flags]")
 	fmt.Println("  lokstra autogen|generate [folder] [flags]")
 	fmt.Println("  lokstra migration|migrate <command> [flags]")
 	fmt.Println("  lokstra version")
@@ -65,7 +68,10 @@ func printUsage() {
 	fmt.Println("  -template <name>    Template to use (optional, interactive if not specified)")
 	fmt.Println("  -branch <name>      Git branch to download from (default: main)")
 	fmt.Println()
-	fmt.Println("Flags for 'generate' command:")
+	fmt.Println("Flags for 'update-skills' command:")
+	fmt.Println("  -branch <name>      Git branch to download from (default: main)")
+	fmt.Println()
+	fmt.Println("Flags for 'autogen'|'generate' command:")
 	fmt.Println("  -force              Force rebuild by deleting all cache files")
 	fmt.Println()
 	fmt.Println("Migration commands:")
@@ -84,6 +90,10 @@ func printUsage() {
 	fmt.Println("  lokstra new myapp")
 	fmt.Println("  lokstra new myapp -template 02_app_framework/01_medium_system")
 	fmt.Println("  lokstra new myapp -template 01_router/01_router_only -branch main")
+	fmt.Println("  lokstra new myapp -local        # Use local framework (for development)")
+	fmt.Println()
+	fmt.Println("  lokstra update-skills           # Update AI agent skills from GitHub")
+	fmt.Println("  lokstra update-skills -branch dev")
 	fmt.Println()
 	fmt.Println("  lokstra autogen                 # Generate code in current directory")
 	fmt.Println("  lokstra generate                # Generate code in current directory")
@@ -101,6 +111,7 @@ func newCmd() {
 	newFlags := flag.NewFlagSet("new", flag.ExitOnError)
 	templateFlag := newFlags.String("template", "", "Template to use")
 	branchFlag := newFlags.String("branch", "main", "Git branch to download from")
+	localFlag := newFlags.Bool("local", false, "Use local framework files (for development)")
 
 	// Get project name (first argument after 'new')
 	if len(os.Args) < 3 {
@@ -116,13 +127,13 @@ func newCmd() {
 	newFlags.Parse(os.Args[3:])
 
 	// Execute new command
-	if err := executeNew(projectName, *templateFlag, *branchFlag); err != nil {
+	if err := executeNew(projectName, *templateFlag, *branchFlag, *localFlag); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func executeNew(projectName, templatePath, branch string) error {
+func executeNew(projectName, templatePath, branch string, useLocal bool) error {
 	fmt.Printf("🚀 Creating new Lokstra project: %s\n\n", projectName)
 
 	// If template not specified, show interactive selection
@@ -139,7 +150,37 @@ func executeNew(projectName, templatePath, branch string) error {
 
 	// Execute the creation process
 	creator := NewProjectCreator(projectName, templatePath, branch)
+	creator.UseLocal = useLocal
 	return creator.Create()
+}
+
+func updateSkillsCmd() {
+	// Parse flags for 'update-skills' command
+	updateFlags := flag.NewFlagSet("update-skills", flag.ExitOnError)
+	branchFlag := updateFlags.String("branch", "main", "Git branch to download from")
+
+	// Parse flags
+	updateFlags.Parse(os.Args[2:])
+
+	// Execute update
+	if err := executeUpdateSkills(*branchFlag); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func executeUpdateSkills(branch string) error {
+	fmt.Println("🤖 Updating AI agent skills and templates...")
+	fmt.Printf("🌿 Branch: %s\n\n", branch)
+
+	// Check if we're in a Lokstra project (has config.yaml or go.mod)
+	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
+		return fmt.Errorf("not a Go project (go.mod not found). Run this command from your project root")
+	}
+
+	// Create updater
+	updater := NewSkillsUpdater(".", branch)
+	return updater.Update()
 }
 
 func autogenCmd() {

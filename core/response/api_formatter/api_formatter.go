@@ -89,7 +89,7 @@ func (f *ApiResponseFormatter) ParseClientResponse(resp *http.Response, cr *Clie
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Store raw body and status code
+	// Repository raw body and status code
 	cr.RawBody = body
 	cr.StatusCode = resp.StatusCode
 

@@ -33,8 +33,8 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 		if after, ok := strings.CutPrefix(line, "//"); ok {
 			// CRITICAL: Detect code examples in Go documentation
 			// Go doc convention: use TAB after // for code examples
-			// Valid annotation:   // @EndpointService  (space after //)
-			// Invalid annotation: //	@EndpointService  (TAB after // - code example)
+			// Valid annotation:   // @Handler  (space after //)
+			// Invalid annotation: //	@Handler  (TAB after // - code example)
 
 			// Extract the content after //
 			commentStart := strings.Index(originalLine, "//")
@@ -55,8 +55,8 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 				if strings.HasPrefix(trimmedAfter, "@") {
 					leadingWhitespace := afterComment[:len(afterComment)-len(trimmedAfter)]
 
-					// Allow single space (normal comment formatting: "// @EndpointService")
-					// Reject TAB or multiple spaces (code examples: "//  @EndpointService" or "//\t@EndpointService")
+					// Allow single space (normal comment formatting: "// @Handler")
+					// Reject TAB or multiple spaces (code examples: "//  @Handler" or "//\t@Handler")
 					if len(leadingWhitespace) > 1 || (len(leadingWhitespace) == 1 && leadingWhitespace[0] == '\t') {
 						// Indented annotation - skip it (likely example code)
 						continue
@@ -113,15 +113,15 @@ func ParseFileAnnotations(path string) ([]*ParsedAnnotation, error) {
 // parseAnnotationLine parses a single annotation line
 // Supports both formats:
 //
-//	@EndpointService name="user-service", prefix="/api"
-//	@EndpointService "user-service", "/api"
+//	@Handler name="user-service", prefix="/api"
+//	@Handler "user-service", "/api"
 func parseAnnotationLine(line string, lineNum int) (*ParsedAnnotation, error) {
 	// Extract annotation name
 	parts := strings.SplitN(line, "(", 2)
 	if len(parts) == 1 {
 		// No parentheses - might have args without parens or no args
-		// @EndpointService name="value"
-		// @EndpointService
+		// @Handler name="value"
+		// @Handler
 		nameAndArgs := strings.TrimSpace(parts[0])
 		spaceIdx := strings.Index(nameAndArgs, " ")
 

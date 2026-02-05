@@ -16,7 +16,7 @@ import (
 // default timeout for HTTP client requests
 var DefaultHTTPTimeout = 30 * time.Second
 
-// ClientRouter stores information about where a router can be accessed
+// ClientRouter repositorys information about where a router can be accessed
 type ClientRouter struct {
 	RouterName string
 	ServerName string

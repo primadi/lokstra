@@ -30,7 +30,7 @@ go.work.sum
 *~
 
 # OS
-.DS_Store
+.DS_Repository
 Thumbs.db
 
 # Temporary files

@@ -16,7 +16,7 @@ func main() {
     services.RegisterAllServices()
     
     // Or register selectively:
-    // services.RegisterCoreServices()    // Only Redis, KvStore, Metrics, DbPool
+    // services.RegisterCoreServices()    // Only Redis, KvRepository, Metrics, DbPool
 }
 
 > **Note:** Authentication services have been moved to [github.com/primadi/lokstra-auth](https://github.com/primadi/lokstra-auth)
@@ -29,7 +29,7 @@ func main() {
 | Service | Type | Contract | Description |
 |---------|------|----------|-------------|
 | **Redis** | `redis` | `serviceapi.Redis` | Redis client wrapper |
-| **KvStore** | `kvstore_redis` | `serviceapi.KvStore` | Key-value store with Redis backend |
+| **KvRepository** | `kvrepository_redis` | `serviceapi.KvRepository` | Key-value repository with Redis backend |
 | **Metrics** | `metrics_prometheus` | `serviceapi.Metrics` | Prometheus metrics collection |
 | **DbPool** | `dbpool_pg` | `serviceapi.DbPool` | PostgreSQL connection pool |
 | **Email** | `email_smtp` | `serviceapi.EmailSender` | SMTP email sender with attachments support |
@@ -101,18 +101,18 @@ dbPool := old_registry.NewService[any](
 )
 ```
 
-### 2. Creating a KvStore
+### 2. Creating a KvRepository
 
 ```go
 import (
     "github.com/primadi/lokstra/old_registry"
-    "github.com/primadi/lokstra/services/kvstore_redis"
+    "github.com/primadi/lokstra/services/kvrepository_redis"
 )
 
-kvstore_redis.Register()
+kvrepository_redis.Register()
 
-kvStore := old_registry.NewService[any](
-    "my_cache", "kvstore_redis",
+kvRepository := old_registry.NewService[any](
+    "my_cache", "kvrepository_redis",
     map[string]any{
         "addr":   "localhost:6379",
         "prefix": "myapp",

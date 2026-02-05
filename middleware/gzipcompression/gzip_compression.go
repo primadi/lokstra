@@ -87,7 +87,7 @@ func Middleware(cfg *Config) request.HandlerFunc {
 			gzipWriter.gzipWriter.Close()
 		}
 
-		// Restore original writer
+		// Rerepository original writer
 		c.W.ResponseWriter = originalWriter
 
 		return err

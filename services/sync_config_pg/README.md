@@ -1,6 +1,6 @@
 # SyncConfig PostgreSQL Service
 
-PostgreSQL-based synchronized configuration store with real-time updates across multiple instances using LISTEN/NOTIFY and CRC heartbeat validation.
+PostgreSQL-based synchronized configuration repository with real-time updates across multiple instances using LISTEN/NOTIFY and CRC heartbeat validation.
 
 ## Features
 
@@ -137,10 +137,10 @@ maxUsers := configService.GetInt(ctx, "max_users", 100)
 appName := configService.GetString(ctx, "app_name", "MyApp")
 ```
 
-### With Annotation (@EndpointService)
+### With Annotation (@Handler)
 
 ```go
-// @EndpointService name="settings-service"
+// @Handler name="settings-service"
 type SettingsService struct {
     // @Inject "config-service"
     Config serviceapi.SyncConfig
@@ -292,7 +292,7 @@ crc := configService.GetCRC()
 ## Best Practices
 
 1. **Use Namespaces**: Prefix keys with category (`feature:`, `limit:`, `cache:`)
-2. **Keep Values Small**: Store references, not large objects
+2. **Keep Values Small**: Repository references, not large objects
 3. **Handle Callbacks Async**: Don't block in subscription callbacks
 4. **Graceful Shutdown**: Always call `Shutdown()` to cleanup connections
 5. **Monitor CRC**: Log CRC mismatches to detect issues

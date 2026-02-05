@@ -12,7 +12,7 @@ import (
 // (typically in documentation examples) are correctly ignored
 func TestParseFileAnnotations_IgnoreIndentedAnnotations(t *testing.T) {
 	// Create temp test file with indented annotation in doc comment
-	// NOTE: The line "//\t@EndpointService" uses actual TAB character for Go doc code example format
+	// NOTE: The line "//\t@Handler" uses actual TAB character for Go doc code example format
 	content := "package middleware\n\n" +
 		"import (\n" +
 		"\t\"github.com/primadi/lokstra/lokstra_registry\"\n" +
@@ -21,11 +21,11 @@ func TestParseFileAnnotations_IgnoreIndentedAnnotations(t *testing.T) {
 		"// TODO: Implement actual middleware registration when Lokstra framework supports it\n" +
 		"//\n" +
 		"// For now, middlewares should be applied manually in route setup or\n" +
-		"// specified in @EndpointService annotations for documentation purposes.\n" +
+		"// specified in @Handler annotations for documentation purposes.\n" +
 		"//\n" +
-		"// Example @EndpointService annotation:\n" +
+		"// Example @Handler annotation:\n" +
 		"//\n" +
-		"//\t@EndpointService name=\"tenant-service\", prefix=\"/api/tenants\", middlewares=[\"recovery\", \"request_logger\", \"auth\"]\n" +
+		"//\t@Handler name=\"tenant-service\", prefix=\"/api/tenants\", middlewares=[\"recovery\", \"request_logger\", \"auth\"]\n" +
 		"//\n" +
 		"// The \"auth\" middleware indicates that the endpoint requires authentication.\n" +
 		"// Actual middleware implementation should be set up in your main.go or route configuration.\n" +
@@ -46,7 +46,7 @@ func TestParseFileAnnotations_IgnoreIndentedAnnotations(t *testing.T) {
 		t.Fatalf("ParseFileAnnotations() error = %v", err)
 	}
 
-	// Should find NO annotations (the @EndpointService is indented with TAB, so should be ignored)
+	// Should find NO annotations (the @Handler is indented with TAB, so should be ignored)
 	if len(annotations) != 0 {
 		t.Errorf("Expected 0 annotations (indented should be ignored), got %d", len(annotations))
 		for _, ann := range annotations {
@@ -59,7 +59,7 @@ func TestParseFileAnnotations_IgnoreIndentedAnnotations(t *testing.T) {
 func TestParseFileAnnotations_ValidAnnotations(t *testing.T) {
 	content := `package application
 
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
 	// @Inject "user-repository"
 	UserRepo UserRepository
@@ -82,7 +82,7 @@ func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
 		t.Fatalf("ParseFileAnnotations() error = %v", err)
 	}
 
-	// Should find 3 annotations: @EndpointService, @Inject, @Route
+	// Should find 3 annotations: @Handler, @Inject, @Route
 	if len(annotations) != 3 {
 		t.Errorf("Expected 3 annotations, got %d", len(annotations))
 		for _, ann := range annotations {
@@ -92,9 +92,9 @@ func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
 
 	// Verify annotations
 	expectedAnnotations := map[string]string{
-		"EndpointService": "UserService",
-		"Inject":          "UserRepo",
-		"Route":           "GetByID",
+		"Handler": "UserService",
+		"Inject":  "UserRepo",
+		"Route":   "GetByID",
 	}
 
 	foundAnnotations := make(map[string]string)
@@ -116,7 +116,7 @@ func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
 func TestParseFileAnnotations_MultipleEmptyLinesAfterAnnotation(t *testing.T) {
 	content := `package test
 
-// @EndpointService name="test-service"
+// @Handler name="test-service"
 //
 //
 //
@@ -152,7 +152,7 @@ type TestService struct {}
 func TestParseFileAnnotations_AnnotationWithFewEmptyLines(t *testing.T) {
 	content := `package test
 
-// @EndpointService name="test-service"
+// @Handler name="test-service"
 //
 // Some documentation
 type TestService struct {}
@@ -174,8 +174,8 @@ type TestService struct {}
 		t.Errorf("Expected 1 annotation, got %d", len(annotations))
 	} else {
 		ann := annotations[0]
-		if ann.Name != "EndpointService" {
-			t.Errorf("Expected @EndpointService, got @%s", ann.Name)
+		if ann.Name != "Handler" {
+			t.Errorf("Expected @Handler, got @%s", ann.Name)
 		}
 		if ann.TargetName != "TestService" {
 			t.Errorf("Expected target TestService, got %s", ann.TargetName)

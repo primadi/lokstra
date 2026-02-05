@@ -326,7 +326,7 @@ func (h *RequestHelper) BindQuery(v any) error {
 			query := h.ctx.R.URL.Query()
 			for k, vals := range query {
 				if len(vals) > 1 {
-					// store slice of strings
+					// repository slice of strings
 					arr := make([]any, len(vals))
 					for i, vv := range vals {
 						arr[i] = vv
@@ -501,7 +501,7 @@ func (h *RequestHelper) BindAll(v any) error {
 			query := h.ctx.R.URL.Query()
 			for k, vals := range query {
 				if len(vals) > 1 {
-					// store slice of strings
+					// repository slice of strings
 					arr := make([]any, len(vals))
 					for i, vv := range vals {
 						arr[i] = vv
@@ -614,7 +614,7 @@ func (h *RequestHelper) BindAllAuto(v any) error {
 			query := h.ctx.R.URL.Query()
 			for k, vals := range query {
 				if len(vals) > 1 {
-					// store slice of strings
+					// repository slice of strings
 					arr := make([]any, len(vals))
 					for i, vv := range vals {
 						arr[i] = vv

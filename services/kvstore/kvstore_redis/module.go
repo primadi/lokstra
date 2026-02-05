@@ -14,7 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const SERVICE_TYPE = "kvstore_redis"
+const SERVICE_TYPE = "kvrepository_redis"
 
 var ErrKeyNotFound = errors.New("key not found")
 
@@ -23,7 +23,7 @@ var (
 	poolClient = make(map[Config]*redis.Client)
 )
 
-// Config represents the configuration for Redis-based KvStore service.
+// Config represents the configuration for Redis-based KvRepository service.
 type Config struct {
 	Addr     string `json:"addr" yaml:"addr"`         // host:port address
 	Password string `json:"password" yaml:"password"` // password
@@ -32,31 +32,31 @@ type Config struct {
 	Prefix   string `json:"prefix" yaml:"prefix"` // key prefix for namespacing
 }
 
-type kvStoreRedis struct {
+type kvRepositoryRedis struct {
 	client *redis.Client
 	prefix string
 }
 
-var _ serviceapi.KvStore = (*kvStoreRedis)(nil)
+var _ serviceapi.KvRepository = (*kvRepositoryRedis)(nil)
 
-// GetPrefix implements [serviceapi.KvStore].
-func (k *kvStoreRedis) GetPrefix() string {
+// GetPrefix implements [serviceapi.KvRepository].
+func (k *kvRepositoryRedis) GetPrefix() string {
 	return k.prefix
 }
 
-// SetPrefix implements [serviceapi.KvStore].
-func (k *kvStoreRedis) SetPrefix(prefix string) {
+// SetPrefix implements [serviceapi.KvRepository].
+func (k *kvRepositoryRedis) SetPrefix(prefix string) {
 	k.prefix = prefix
 }
 
-func (k *kvStoreRedis) prefixKey(key string) string {
+func (k *kvRepositoryRedis) prefixKey(key string) string {
 	if k.prefix != "" {
 		return k.prefix + ":" + key
 	}
 	return key
 }
 
-func (k *kvStoreRedis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+func (k *kvRepositoryRedis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (k *kvStoreRedis) Set(ctx context.Context, key string, value any, ttl time.
 	return k.client.Set(ctx, k.prefixKey(key), data, ttl).Err()
 }
 
-func (k *kvStoreRedis) Get(ctx context.Context, key string, dest any) error {
+func (k *kvRepositoryRedis) Get(ctx context.Context, key string, dest any) error {
 	data, err := k.client.Get(ctx, k.prefixKey(key)).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -78,11 +78,11 @@ func (k *kvStoreRedis) Get(ctx context.Context, key string, dest any) error {
 	return nil
 }
 
-func (k *kvStoreRedis) Delete(ctx context.Context, key string) error {
+func (k *kvRepositoryRedis) Delete(ctx context.Context, key string) error {
 	return k.client.Del(ctx, k.prefixKey(key)).Err()
 }
 
-func (k *kvStoreRedis) DeleteKeys(ctx context.Context, keys ...string) error {
+func (k *kvRepositoryRedis) DeleteKeys(ctx context.Context, keys ...string) error {
 	if len(keys) == 0 {
 		return nil
 	}
@@ -93,7 +93,7 @@ func (k *kvStoreRedis) DeleteKeys(ctx context.Context, keys ...string) error {
 	return k.client.Del(ctx, prefixedKeys...).Err()
 }
 
-func (k *kvStoreRedis) Keys(ctx context.Context, pattern string) ([]string, error) {
+func (k *kvRepositoryRedis) Keys(ctx context.Context, pattern string) ([]string, error) {
 	prefixedPattern := k.prefixKey(pattern)
 	keys, err := k.client.Keys(ctx, prefixedPattern).Result()
 	if err != nil {
@@ -114,14 +114,14 @@ func (k *kvStoreRedis) Keys(ctx context.Context, pattern string) ([]string, erro
 	return keys, nil
 }
 
-func (k *kvStoreRedis) Shutdown() error {
+func (k *kvRepositoryRedis) Shutdown() error {
 	if k.client != nil {
 		return k.client.Close()
 	}
 	return nil
 }
 
-func Service(cfg *Config) *kvStoreRedis {
+func Service(cfg *Config) *kvRepositoryRedis {
 	mu.Lock()
 	client, exists := poolClient[*cfg]
 	if !exists {
@@ -135,7 +135,7 @@ func Service(cfg *Config) *kvStoreRedis {
 	}
 	mu.Unlock()
 
-	return &kvStoreRedis{
+	return &kvRepositoryRedis{
 		client: client,
 		prefix: cfg.Prefix,
 	}

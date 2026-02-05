@@ -17,7 +17,7 @@ including **DDD modules**, **annotation-based routers**, and **config-driven dep
 This template shows how to build a **large, modular application** with:
 
 - ✅ **DDD modules** (`modules/user`, `modules/order`, `modules/shared`)
-- ✅ `@EndpointService` / `@Route` annotations and **generated routers**
+- ✅ `@Handler` / `@Route` annotations and **generated routers**
 - ✅ Per-environment deployments (`development` vs `microservice`) via `config/deployment.yaml`
 - ✅ Custom middleware: `request-logger`, `simple-auth`, `mw-test`
 - ✅ New bootstrap flow using `lokstra_init.BootstrapAndRun`
@@ -46,7 +46,7 @@ that uses Lokstra features such as:
   - `WithPgSyncMap`
   - `WithDbPoolManager`
   - `WithDbMigrations`
-- ✅ Database migrations stored under `migrations/`
+- ✅ Database migrations repositoryd under `migrations/`
 - ✅ Central configuration in `config/config.yaml`
 
 **Use when**:
@@ -59,12 +59,12 @@ that uses Lokstra features such as:
 
 ### 3. [`03_tenant_management`](./03_tenant_management/)
 
-**Tenant service with Postgres-backed store**
+**Tenant service with Postgres-backed repository**
 
 This template focuses on a **single bounded context (tenant management)** and shows:
 
 - ✅ Annotation-based service & router for `tenant-service`
-- ✅ Postgres-backed tenant store configured via `config/config.yaml`
+- ✅ Postgres-backed tenant repository configured via `config/config.yaml`
 - ✅ Usage of built-in middleware (`recovery`, `request_logger`)
 - ✅ Simple but realistic domain + repository pattern
 

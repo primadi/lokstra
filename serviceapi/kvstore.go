@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type KvStore interface {
+type KvRepository interface {
 	// Set sets a value with a key and optional TTL.
 	Set(ctx context.Context, key string, value any, ttl time.Duration) error
 

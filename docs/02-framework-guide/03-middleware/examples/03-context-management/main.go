@@ -17,7 +17,7 @@ func UserMiddleware(c *request.Context) error {
 		userID = "anonymous"
 	}
 
-	// Store in context
+	// Repository in context
 	c.Set("user_id", userID)
 	c.Set("user_role", "user")
 
@@ -26,7 +26,7 @@ func UserMiddleware(c *request.Context) error {
 }
 
 func RequestMetadataMiddleware(c *request.Context) error {
-	// Store request metadata
+	// Repository request metadata
 	c.Set("request_path", c.R.URL.Path)
 	c.Set("request_method", c.R.Method)
 	c.Set("client_ip", c.R.RemoteAddr)

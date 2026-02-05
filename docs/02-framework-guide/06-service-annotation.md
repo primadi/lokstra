@@ -18,7 +18,7 @@ The `@Service` annotation is used to register **pure service classes** (non-HTTP
 - Any service that doesn't expose HTTP endpoints
 
 **Key Differences:**
-- `@EndpointService` → HTTP handlers (controllers) with routes
+- `@Handler` → HTTP handlers (controllers) with routes
 - `@Service` → Pure services without HTTP endpoints
 
 ## Basic Syntax
@@ -310,7 +310,7 @@ type PaymentProcessor struct {
 ❌ **Bad:**
 ```go
 // Don't use @Service for HTTP controllers
-// Use @EndpointService instead
+// Use @Handler instead
 ```
 
 ### 2. Separate Configuration Concerns
@@ -382,9 +382,9 @@ type ConfigService struct {
 }
 ```
 
-## Comparison: @Service vs @EndpointService
+## Comparison: @Service vs @Handler
 
-| Feature | @Service | @EndpointService |
+| Feature | @Service | @Handler |
 |---------|----------|----------------|
 | HTTP Routes | ❌ No | ✅ Yes (@Route) |
 | Dependency Injection | ✅ @Inject | ✅ @Inject |
@@ -418,7 +418,7 @@ go run . --generate-only
 
 ## See Also
 
-- [@EndpointService](05-router-service-annotation.md) - For HTTP endpoints
+- [@Handler](05-router-service-annotation.md) - For HTTP endpoints
 - [@Inject](07-inject-annotation.md) - Dependency injection details
 - [@Inject "cfg:..."](08-inject-cfg-annotation.md) - Configuration injection
 - [Service Registry](09-service-registry.md) - Manual service registration

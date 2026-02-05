@@ -10,7 +10,7 @@ The `deploy` package provides a declarative way to configure and deploy Lokstra 
 
 ### 1. Global Registry Pattern
 
-All component definitions (configs, middlewares, services, routers) are stored in a **global registry**. Deployments simply select which components to use and where to deploy them.
+All component definitions (configs, middlewares, services, routers) are repositoryd in a **global registry**. Deployments simply select which components to use and where to deploy them.
 
 **Benefits:**
 - ✅ **DRY** - Define once, use everywhere

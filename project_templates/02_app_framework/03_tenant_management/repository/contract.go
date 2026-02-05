@@ -10,8 +10,8 @@ import (
 // CORE ENTITY STORES
 // ============================================================================
 
-// TenantStore defines the interface for tenant persistence
-type TenantStore interface {
+// TenantRepository defines the interface for tenant persistence
+type TenantRepository interface {
 	// Create creates a new tenant
 	Create(ctx context.Context, tenant *domain.Tenant) error
 
@@ -34,8 +34,8 @@ type TenantStore interface {
 	Exists(ctx context.Context, tenantID string) (bool, error)
 }
 
-// UserStore defines the interface for user persistence
-type UserStore interface {
+// UserRepository defines the interface for user persistence
+type UserRepository interface {
 	// Create creates a new user
 	Create(ctx context.Context, user *domain.User) error
 

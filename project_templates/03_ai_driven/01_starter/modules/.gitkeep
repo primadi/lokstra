@@ -1,0 +1,23 @@
+# This folder will contain your generated modules
+
+Example structure after generation:
+
+```
+modules/
+├── auth/
+│   ├── domain/
+│   │   ├── user.go
+│   │   └── auth_dto.go
+│   ├── handler/
+│   │   ├── auth_handler.go
+│   │   └── zz_generated.lokstra.go
+│   └── repository/
+│       └── user_repository.go
+│
+└── product/
+    ├── domain/
+    ├── handler/
+    └── repository/
+```
+
+Follow the guide in `docs/HOW_TO_DEVELOP.md` to generate your first module!

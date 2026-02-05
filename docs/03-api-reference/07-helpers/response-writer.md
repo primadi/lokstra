@@ -531,7 +531,7 @@ func CachingMiddleware(next http.Handler) http.Handler {
                 Headers:    buffered.Header(),
                 Body:       buffered.Buf.Bytes(),
             }
-            responseCache.Store(cacheKey, cachedResp)
+            responseCache.Repository(cacheKey, cachedResp)
         }
         
         // Send response

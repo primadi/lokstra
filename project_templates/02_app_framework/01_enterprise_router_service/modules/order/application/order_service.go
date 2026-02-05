@@ -7,9 +7,9 @@ import (
 	userDomain "github.com/primadi/lokstra/project_templates/02_app_framework/01_enterprise_router_service/modules/user/domain"
 )
 
-// @EndpointService name="order-service", prefix="/api", middlewares=["recovery", "request-logger"]
+// @Handler name="order-service", prefix="/api", middlewares=["recovery", "request-logger"]
 type OrderServiceImpl struct {
-	// @Inject "@store.order-repository"
+	// @Inject "@repository.order-repository"
 	OrderRepo domain.OrderRepository
 	// @Inject "user-service"
 	UserService userDomain.UserService

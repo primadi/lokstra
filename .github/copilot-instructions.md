@@ -1,349 +1,48 @@
 # GitHub Copilot Instructions for Lokstra Framework
 
-This file provides instructions to GitHub Copilot when working with the Lokstra Framework.
+This file provides quick syntax reference for Lokstra Framework development.
 
-## Framework Overview
+**For comprehensive guides:** Use AI skills in `.github/skills/` or run `lokstra update-skills`
 
-Lokstra is a Go web framework with two modes:
+## Quick Reference
 
-1. **Router Mode** - Simple HTTP routing (like Echo, Gin, Chi)
-2. **Framework Mode** - Full DI framework (like NestJS, Spring Boot)
+### Annotations Syntax
 
-## Key Documentation
+```
+@Handler name="service-name", prefix="/api/path"
+@Service "service-name"
+@Route "METHOD /path", middlewares=["auth"]
+@Inject "service-name" or "cfg:config.key" or "@config.impl"
+```
 
-When helping with Lokstra:
+### Injection Patterns
 
-- **Complete AI Guide:** [AI-AGENT-GUIDE.md](https://primadi.github.io/lokstra/AI-AGENT-GUIDE)
-- **Quick Reference:** [QUICK-REFERENCE.md](https://primadi.github.io/lokstra/QUICK-REFERENCE)
-- **Full Documentation:** https://primadi.github.io/lokstra/
+| Pattern         | Syntax                   | Example                      |
+| --------------- | ------------------------ | ---------------------------- |
+| Direct service  | `@Inject "service-name"` | `@Inject "user-repo"`        |
+| From config     | `@Inject "@config.key"`  | `@Inject "@repository.impl"` |
+| Config value    | `@Inject "cfg:key"`      | `@Inject "cfg:app.timeout"`  |
+| Indirect config | `@Inject "cfg:@key"`     | `@Inject "cfg:@jwt.path"`    |
 
-## Common Patterns
-
-### 1. Simple Router (No DI)
+### Handler Signatures (29+ supported)
 
 ```go
-r := lokstra.NewRouter("api")
-r.GET("/users", func() []User { return getUsers() })
-app := lokstra.NewApp("myapp", ":8080", r)
-app.Run(30 * time.Second)
-```
-
-### 2. Framework Mode with Annotations (Recommended)
-
-**Use annotations for business services - minimal boilerplate:**
-
-```go
-// main.go
-func main() {
-    // Auto-generates code when @EndpointService changes detected
-    lokstra.Bootstrap()
-
-    // Import packages with @EndpointService annotations
-    _ "myapp/modules/user/application"
-
-    // Services auto-registered via annotations!
-    lokstra_registry.RunServerFromConfig()
-}
-```
-
-**Service with annotations:**
-
-```go
-// @EndpointService name="user-service", prefix="/api/users"
-type UserService struct {
-    // @Inject "user-repository"               - Direct service injection
-    UserRepo UserRepository
-
-    // @Inject "@store.implementation"         - Service from config
-    Store Store  // Injected service name from config: store.implementation = "postgres-store"
-
-    // @Inject "cfg:app.name"                  - Config value injection
-    AppName string
-}// @Route "GET /{id}"
-func (s *UserService) GetByID(p *GetUserParams) (*User, error) {
-    return s.UserRepo.GetByID(p.ID)
-}
-
-// @Route "POST /", middlewares=["auth"]
-func (s *UserService) Create(p *CreateUserParams) (*User, error) {
-    // ...
-}
-
-// @Route "DELETE /{id}", middlewares=["auth", "admin"]
-func (s *UserService) Delete(p *DeleteUserParams) error {
-    // ...
-}
-```
-
-**Code generation (automatic):**
-
-```go
-func main() {
-    lokstra.Bootstrap() // Auto-generates when changes detected
-    // ...
-}
-```
-
-**Manual generation (before build/deploy):**
-
-```bash
-lokstra autogen .        # Manual generation
-go run . --generate-only # Force rebuild all
-```
-
-**Per-route middleware:** Add `middlewares=["mw1", "mw2"]` to `@Route`
-
-### 3. Interface Injection Pattern (Config-Based Selection)
-
-**Use case:** Multiple implementations of an interface, selectable via config.
-
-**Domain interface:**
-
-```go
-// domain/store.go
-type Store interface {
-    GetUser(id string) (*User, error)
-    SaveUser(user *User) error
-}
-```
-
-**Implementations with @Service:**
-
-```go
-// infrastructure/postgres_store.go
-// @Service "postgres-store"
-type PostgresStore struct {
-    // @Inject "db-pool"
-    DB *sql.DB
-}
-
-var _ Store = (*PostgresStore)(nil)
-
-func (s *PostgresStore) GetUser(id string) (*User, error) { /* ... */ }
-
-// infrastructure/mysql_store.go
-// @Service "mysql-store"
-type MySQLStore struct {
-    // @Inject "db-pool"
-    DB *sql.DB
-}
-
-var _ Store = (*MySQLStore)(nil)
-
-func (s *MySQLStore) GetUser(id string) (*User, error) { /* ... */ }
-```
-
-**Business service using config-based injection:**
-
-```go
-// application/user_service.go
-// @EndpointService name="user-service", prefix="/api/users"
-type UserService struct {
-    // @Inject "@store.implementation"
-    Store Store  // Actual service injected based on config!
-
-    // @Inject "cfg:app.timeout"  // Config value injection
-    Timeout time.Duration
-
-    // @Inject "cfg:@jwt.key-path"  // Indirect config
-    JWTSecret string  // Key resolved from another config value
-}
-
-// @Route "GET /{id}"
-func (s *UserService) GetUser(id string) (*User, error) {
-    return s.Store.GetUser(id)
-}
-```
-
-**config.yaml:**
-
-```yaml
-configs:
-  store:
-    implementation: "postgres-store" # Switch to "mysql-store" here!
-
-  app:
-    timeout: "30s"  # Direct config value
-
-  jwt:
-    key-path: "app.production-jwt-secret"  # Points to actual key
-
-  app:
-    production-jwt-secret: "super-secret-key"
-
-service-definitions:
-  postgres-store:
-    type: postgres-store
-
-  mysql-store:
-    type: mysql-store
-
-deployments:
-  development:
-    servers:
-      api:
-        addr: ":8080"
-        published-services: [user-service]
-```
-
-**Injection Patterns Summary:**
-
-| Annotation                  | Syntax              | Purpose                        | Example                     |
-| --------------------------- | ------------------- | ------------------------------ | --------------------------- |
-| `@Inject "service-name"`    | Direct service      | Inject service                 | `@Inject "user-repo"`       |
-| `@Inject "@config.key"`     | Service from config | Service name from config       | `@Inject "@store.impl"`     |
-| `@Inject "cfg:config.key"`  | Config value        | Config value injection         | `@Inject "cfg:app.timeout"` |
-| `@Inject "cfg:@config.key"` | Indirect config     | Config key from another config | `@Inject "cfg:@jwt.path"`   |
-
-**Benefits:**
-
-- Switch implementation by changing ONE line in config
-- No code changes needed
-- Type-safe (compile-time interface checking)
-- Perfect for: database drivers, cache providers, storage backends
-
-### 4. Manual Registration (Advanced/Infrastructure Services)
-
-**For infrastructure services or custom factories:**
-
-```go
-func UserServiceFactory(deps map[string]any, config map[string]any) any {
-    // Access global config from YAML
-    dbDSN := lokstra_registry.GetConfig("database.dsn", "postgres://localhost/mydb")
-
-    return &UserService{
-        UserRepo: deps["user-repository"].(UserRepository),
-    }
-}
-```
-
-**Registration:**
-
-```go
-lokstra_registry.RegisterServiceType(
-    "user-service-factory",
-    UserServiceFactory,
-    nil, // Remote factory (optional)
-)
-```
-
-**config.yaml:**
-
-```yaml
-# Global config (optional)
-configs:
-  database:
-    dsn: "postgres://localhost:5432/mydb"
-
-service-definitions:
-  user-service:
-    type: user-service-factory
-    depends-on: [user-repository]
-
-deployments:
-  development:
-    servers:
-      api:
-        addr: ":8080"
-        published-services: [user-service]
-```
-
-### 5. Handler Signatures (29+ supported)
-
-```go
-// Simple
 func() string { return "Hello" }
-
-// With error
-func(id string) (*User, error) { return user, nil }
-
-// Request body (auto-validated)
-func(ctx *request.Context, params *CreateUserParams) error {
-    return ctx.Api.Created(params)
-}
-
-// Path + body
-func(ctx *request.Context, id string, params *UpdateParams) error {
-    return ctx.Api.Ok(params)
-}
+func(id string) (*User, error) { /* ... */ }
+func(ctx *request.Context, params *CreateUserParams) error { /* ... */ }
+func(ctx *request.Context, id string, params *UpdateParams) error { /* ... */ }
 ```
 
-### 6. Domain Models
-
-```go
-type CreateUserParams struct {
-    Name  string `json:"name" validate:"required,min=3,max=50"`
-    Email string `json:"email" validate:"required,email"`
-}
-```
-
-## Project Structure
-
-### Simple (Router Only)
-
-```
-myapp/
-├── main.go
-└── handlers.go
-```
-
-### Medium (DDD with Annotations)
-
-```
-myapp/
-├── main.go
-├── config.yaml
-├── domain/
-│   └── user/
-│       ├── models.go
-│       ├── repository.go
-│       └── service.go
-├── infrastructure/
-│   └── user_repository.go
-└── application/
-    ├── user_service.go              # Contains @EndpointService
-    └── zz_generated.lokstra.go      # Auto-generated
-```
-
-### Enterprise (Modular)
-
-```
-myapp/
-├── main.go
-├── register.go
-├── config.yaml
-└── modules/
-    ├── user/
-    │   ├── domain/
-    │   ├── application/
-    │   └── infrastructure/
-    └── order/
-        ├── domain/
-        ├── application/
-        └── infrastructure/
-```
-
-## Common Imports
+### Common Imports
 
 ```go
 import "github.com/primadi/lokstra"
 import "github.com/primadi/lokstra/core/request"
 import "github.com/primadi/lokstra/core/service"
 import "github.com/primadi/lokstra/lokstra_registry"
-import "github.com/primadi/lokstra/middleware/recovery"
-import "github.com/primadi/lokstra/middleware/cors"
 ```
 
-## Middleware Order (Best Practice)
-
-```go
-r.Use(recovery.Middleware(nil))           // 1. Catch panics
-r.Use(request_logger.Middleware(nil))     // 2. Log requests
-r.Use(cors.Middleware([]string{"*"}))     // 3. CORS
-r.Use(body_limit.Middleware(nil))         // 4. Limit body size
-```
-
-## Response Helpers
+### Response Helpers
 
 ```go
 ctx.Api.Ok(data)                    // 200
@@ -354,61 +53,33 @@ ctx.Api.NotFound("message")         // 404
 ctx.Api.InternalServerError("msg")  // 500
 ```
 
+### DTO Validation Tags
+
+```go
+type CreateUserParams struct {
+    Name  string `json:"name" validate:"required,min=3,max=50"`
+    Email string `json:"email" validate:"required,email"`
+}
+```
+
 ## CLI Commands
 
 ```bash
-# Create new project
-lokstra new myapp
-lokstra new myapp -template 02_app_framework/01_medium_system
-
-# Generate code from annotations
-lokstra autogen .        # Manual generation
-go run . --generate-only # Force rebuild all
-
-# Recommended: Use lokstra.Bootstrap() in main() for auto-generation
+lokstra new myapp                    # Create new project
+lokstra update-skills                # Download latest skills
+lokstra autogen .                    # Manual code generation
+go run . --generate-only             # Force rebuild
 ```
 
-## Templates
+---
 
-- `01_router/01_router_only` - Learning, simple APIs
-- `02_app_framework/01_medium_system` - Production apps (2-10 entities)
-- `02_app_framework/03_enterprise_router_service` - Enterprise with annotations
+## For Complete Guidance
 
-## Best Practices
+This file provides quick syntax reference only. For comprehensive guides on:
 
-1. **Always include error handling** in handlers
-2. **Use validation tags** on request structs: `validate:"required,email"`
-3. **Use pointer parameters** for request binding: `*CreateUserParams`
-4. **Follow domain-driven design**: domain → repository → service
-5. **Type-safe DI**: Use direct type assertions and `service.LazyLoad[T]` for lazy service loading
-6. **Prefer annotations** for business services: Use `@EndpointService` + `@Route` instead of manual registration
+- **Framework fundamentals & philosophy** → Use `lokstra-overview` skill
+- **Complete project setup** → Use `lokstra-brd-generation` skill
+- **Building handlers, services, configs** → Use relevant Phase 2 implementation skills
+- **Testing & validation** → Use Phase 3 advanced skills
 
-## When Suggesting Code
-
-1. **Ask about scale first:**
-
-   - Small → Router mode
-   - Medium → Framework mode with annotations
-   - Large → Enterprise modular with annotations
-
-2. **Provide complete code:**
-
-   - Include imports
-   - Include error handling
-   - Include validation tags
-   - Include config.yaml if using framework mode
-   - Use `@EndpointService` annotations for business services
-
-3. **Follow project structure:**
-   - Separate domain/application/infrastructure
-   - Use interfaces in domain layer
-   - Business logic in application layer with `@EndpointService`
-   - Data access in infrastructure layer
-
-## Resources
-
-- AI Agent Guide: [AI-AGENT-GUIDE.md](https://primadi.github.io/lokstra/AI-AGENT-GUIDE) - **READ THIS FIRST**
-- Quick Reference: [QUICK-REFERENCE.md](https://primadi.github.io/lokstra/QUICK-REFERENCE)
-- Full Docs: https://primadi.github.io/lokstra/
-- Examples: https://primadi.github.io/lokstra/00-introduction/examples/
-- Templates: [project_templates/](https://github.com/primadi/lokstra/tree/main/project_templates)
+Run `lokstra update-skills` in your project to download all skills locally.

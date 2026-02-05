@@ -169,7 +169,7 @@ export class AppModule {}
 
 ```go
 // Lokstra - Annotation-driven routes (explicit)
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository

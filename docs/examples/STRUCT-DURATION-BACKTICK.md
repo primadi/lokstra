@@ -21,7 +21,7 @@ type RetryConfig struct {
     MaxDelay   time.Duration `json:"max_delay"`
 }
 
-// @EndpointService name="app-service", prefix="/api"
+// @Handler name="app-service", prefix="/api"
 type AppService struct {
     // @Inject "cfg:server"
     Server ServerConfig
@@ -107,7 +107,7 @@ type DatabaseConfig struct {
     IdleTimeout     time.Duration `json:"idle_timeout"`
 }
 
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "cfg:database", `DatabaseConfig{Host: "localhost", Port: 5432, MaxConnections: 10, ConnectTimeout: 5*time.Second, QueryTimeout: 30*time.Second, IdleTimeout: 10*time.Minute}`
     DB DatabaseConfig

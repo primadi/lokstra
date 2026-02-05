@@ -1,17 +1,12 @@
 # yaml-language-server: $schema=https://primadi.github.io/lokstra/schema/lokstra.schema.json
 
 configs:
-  store:
-    tenant-store: postgres-tenant-store
-    user-store: postgres-user-store
+  repository:
+    tenant-repository: postgres-tenant-repository
+    user-repository: postgres-user-repository
 
 service-definitions:
-  db_core:
-    type: dbpool_pg
-    config:
-      dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db2}
-      schema: ${GLOBAL_DB_SCHEMA:lokstra_auth}
-  db_auth:
+  db_main:
     type: dbpool_pg
     config:
       dsn: ${GLOBAL_DB_DSN:postgres://postgres:adm1n@localhost:5432/lokstra_db2}
@@ -21,5 +16,4 @@ servers:
   api-server:
     base-url: "http://localhost"
     addr: ":3000"
-    published-services: [tenant-service]
-
+    published-services: [tenant-handler]

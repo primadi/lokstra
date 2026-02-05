@@ -63,23 +63,23 @@ func getServerDef(deployment *schema.DeploymentDefMap, name string) (*schema.Ser
 	return srv, ok
 }
 
-// flattenAndStoreConfigs flattens configs and stores them to registry.resolvedConfigs
+// flattenAndRepositoryConfigs flattens configs and repositorys them to registry.resolvedConfigs
 // This populates the config registry that GetConfig() reads from
-func flattenAndStoreConfigs(registry *deploy.GlobalRegistry, configs map[string]any, prefix string) {
+func flattenAndRepositoryConfigs(registry *deploy.GlobalRegistry, configs map[string]any, prefix string) {
 	for key, value := range configs {
 		fullKey := key
 		if prefix != "" {
 			fullKey = prefix + "." + key
 		}
 
-		// If value is a map, recurse AND store the map itself
+		// If value is a map, recurse AND repository the map itself
 		if nestedMap, ok := value.(map[string]any); ok {
-			// Store the map at this level (for GetConfig[map[string]any]("db"))
+			// Repository the map at this level (for GetConfig[map[string]any]("db"))
 			registry.SetConfig(fullKey, nestedMap)
 			// Recurse to flatten nested values
-			flattenAndStoreConfigs(registry, nestedMap, fullKey)
+			flattenAndRepositoryConfigs(registry, nestedMap, fullKey)
 		} else {
-			// Store leaf value
+			// Repository leaf value
 			registry.SetConfig(fullKey, value)
 		}
 	}
@@ -448,20 +448,20 @@ func NormalizeInlineDefinitionsForServer(
 	return nil
 }
 
-// StoreDefinitionsToRegistry stores all definitions to the global registry WITHOUT runtime registration
+// RepositoryDefinitionsToRegistry repositorys all definitions to the global registry WITHOUT runtime registration
 // This is called during LoadAndBuild to prepare definitions for later lazy registration
 // Runtime registration happens in RunCurrentServer after normalization
-func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
-	// Flatten and store configs to resolvedConfigs
+func RepositoryDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.DeployConfig) error {
+	// Flatten and repository configs to resolvedConfigs
 	// Configs are already resolved at YAML byte level by loader (2-step resolution)
 	// Now we flatten nested maps to dot notation for easy access via GetConfig()
-	flattenAndStoreConfigs(registry, config.Configs, "")
+	flattenAndRepositoryConfigs(registry, config.Configs, "")
 
-	// Store middleware definitions to registry (no runtime registration yet)
+	// Repository middleware definitions to registry (no runtime registration yet)
 	// Middlewares will be registered in RegisterDefinitionsForRuntime
-	// For now, we don't need to store them - they're in config.MiddlewareDefinitions
+	// For now, we don't need to repository them - they're in config.MiddlewareDefinitions
 
-	// Store service definitions as unresolved lazy service entries
+	// Repository service definitions as unresolved lazy service entries
 	// Factory will be resolved later in RegisterDefinitionsForRuntime
 	for name, svc := range config.ServiceDefinitions {
 		svc.Name = name
@@ -482,7 +482,7 @@ func StoreDefinitionsToRegistry(registry *deploy.GlobalRegistry, config *schema.
 		registry.RegisterLazyServiceUnresolved(name, svc.Type, deps, svc.Config)
 	}
 
-	// Store router definitions to registry (deferred)
+	// Repository router definitions to registry (deferred)
 	for name, rtr := range config.RouterDefinitions {
 		registry.DefineRouter(name, rtr)
 	}
@@ -585,7 +585,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			// Register REMOTE service
 			registry.AutoRegisterRemoteService(serviceName, svc, remoteURL)
 		} else {
-			// Check if already stored as unresolved entry from StoreDefinitionsToRegistry
+			// Check if already repositoryd as unresolved entry from RepositoryDefinitionsToRegistry
 			if existingEntry := registry.GetLazyServiceEntry(serviceName); existingEntry != nil && !existingEntry.IsResolved() {
 				// Resolve existing unresolved entry
 				serviceType := svc.Type
@@ -707,7 +707,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			Custom:       custom,
 		}
 
-		// Store to config.RouterDefinitions so it's available for later lookup (lowercase key)
+		// Repository to config.RouterDefinitions so it's available for later lookup (lowercase key)
 		config.RouterDefinitions[strings.ToLower(routerName)] = autoRouter
 
 		// Also define in registry
@@ -758,7 +758,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 			continue
 		}
 
-		// Get service type metadata (has router config from @EndpointService annotation)
+		// Get service type metadata (has router config from @Handler annotation)
 		metadata := registry.GetServiceMetadata(serviceDef.Type)
 		if metadata == nil {
 			// Skip services without metadata
@@ -856,7 +856,7 @@ func RegisterDefinitionsForRuntime(registry *deploy.GlobalRegistry, config *sche
 }
 
 // LoadConfig loads config and builds ALL deployments into Global registry
-// Returns error only - deployments are stored in deploy.Global()
+// Returns error only - deployments are repositoryd in deploy.Global()
 func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
 	if len(configPaths) == 0 {
 		configPaths = []string{"config"}
@@ -869,16 +869,16 @@ func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
 
 	registry := deploy.Global()
 
-	// Store original config for inline definitions normalization
-	registry.StoreDeployConfig(config)
+	// Repository original config for inline definitions normalization
+	registry.RepositoryDeployConfig(config)
 
 	// NOTE: normalizeServerDefinitions already called in LoadConfig STEP 9
 	// No need to call again here
 
-	// Store definitions to registry (NO runtime registration, just store data)
+	// Repository definitions to registry (NO runtime registration, just repository data)
 	// Runtime registration will happen in RunCurrentServer
-	if err := StoreDefinitionsToRegistry(registry, config); err != nil {
-		return nil, fmt.Errorf("failed to store definitions: %w", err)
+	if err := RepositoryDefinitionsToRegistry(registry, config); err != nil {
+		return nil, fmt.Errorf("failed to repository definitions: %w", err)
 	}
 
 	// Build ALL deployments (2-Layer Architecture: YAML -> Topology only)
@@ -898,7 +898,7 @@ func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
 			}
 		}
 
-		// Create and store topology (NEW 2-Layer Architecture)
+		// Create and repository topology (NEW 2-Layer Architecture)
 		deployTopo := &deploy.DeploymentTopology{
 			Name:            deploymentName,
 			ConfigOverrides: make(map[string]any),
@@ -969,8 +969,8 @@ func LoadConfig(configPaths ...string) (*schema.DeployConfig, error) {
 			deployTopo.Servers[serverName] = serverTopo
 		}
 
-		// Store topology in global registry
-		registry.StoreDeploymentTopology(deployTopo)
+		// Repository topology in global registry
+		registry.RepositoryDeploymentTopology(deployTopo)
 	}
 
 	logger.LogDebug("✅ Config loaded successfully from: %v", configPaths)

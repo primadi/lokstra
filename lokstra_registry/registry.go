@@ -224,7 +224,7 @@ func GetAllRouters() map[string]router.Router {
 //	)
 //
 // RegisterRouterServiceType registers a service type with HTTP routing configuration.
-// Use this for services that expose HTTP endpoints (annotated with @EndpointService).
+// Use this for services that expose HTTP endpoints (annotated with @Handler).
 // For simple infrastructure services (DB, Redis, etc), use RegisterServiceType instead.
 //
 // Parameters:
@@ -480,10 +480,10 @@ func CreateMiddleware(name string) request.HandlerFunc {
 //
 // Example:
 //
-//	// Store runtime mode
+//	// Repository runtime mode
 //	lokstra_registry.SetConfig("runtime.mode", "dev")
 //
-//	// Store computed license key
+//	// Repository computed license key
 //	licenseKey := generateComplexLicenseKey() // expensive
 //	lokstra_registry.SetConfig("computed.license-key", licenseKey)
 //

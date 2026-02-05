@@ -1,6 +1,6 @@
-# KvStore (Redis)
+# KvRepository (Redis)
 
-The `kvstore_redis` service provides a Redis-backed key-value store with automatic JSON serialization, key prefixing for namespacing, and TTL support.
+The `kvrepository_redis` service provides a Redis-backed key-value repository with automatic JSON serialization, key prefixing for namespacing, and TTL support.
 
 ## Table of Contents
 
@@ -15,9 +15,9 @@ The `kvstore_redis` service provides a Redis-backed key-value store with automat
 
 ## Overview
 
-**Service Type:** `kvstore_redis`
+**Service Type:** `kvrepository_redis`
 
-**Interface:** `serviceapi.KvStore`
+**Interface:** `serviceapi.KvRepository`
 
 **Key Features:**
 
@@ -50,7 +50,7 @@ type Config struct {
 ```yaml
 services:
   cache:
-    type: kvstore_redis
+    type: kvrepository_redis
     config:
       addr: localhost:6379
       prefix: myapp
@@ -61,7 +61,7 @@ services:
 ```yaml
 services:
   cache:
-    type: kvstore_redis
+    type: kvrepository_redis
     config:
       addr: ${REDIS_ADDR:localhost:6379}
       password: ${REDIS_PASSWORD}
@@ -70,13 +70,13 @@ services:
       prefix: ${APP_NAME:myapp}
 ```
 
-**Multiple KvStore Instances:**
+**Multiple KvRepository Instances:**
 
 ```yaml
 services:
   # User cache
   user_cache:
-    type: kvstore_redis
+    type: kvrepository_redis
     config:
       addr: localhost:6379
       db: 0
@@ -84,7 +84,7 @@ services:
       
   # Session cache
   session_cache:
-    type: kvstore_redis
+    type: kvrepository_redis
     config:
       addr: localhost:6379
       db: 1
@@ -92,7 +92,7 @@ services:
       
   # Rate limit cache
   ratelimit_cache:
-    type: kvstore_redis
+    type: kvrepository_redis
     config:
       addr: localhost:6379
       db: 2
@@ -105,15 +105,15 @@ services:
 import (
     "github.com/primadi/lokstra/lokstra_registry"
     "github.com/primadi/lokstra/serviceapi"
-    "github.com/primadi/lokstra/services/kvstore_redis"
+    "github.com/primadi/lokstra/services/kvrepository_redis"
 )
 
 // Register service
-kvstore_redis.Register()
+kvrepository_redis.Register()
 
-// Create kvstore
-kvStore := lokstra_registry.NewService[serviceapi.KvStore](
-    "cache", "kvstore_redis",
+// Create kvrepository
+kvRepository := lokstra_registry.NewService[serviceapi.KvRepository](
+    "cache", "kvrepository_redis",
     map[string]any{
         "addr":      "localhost:6379",
         "password":  "",
@@ -129,10 +129,10 @@ kvStore := lokstra_registry.NewService[serviceapi.KvStore](
 ### Basic Registration
 
 ```go
-import "github.com/primadi/lokstra/services/kvstore_redis"
+import "github.com/primadi/lokstra/services/kvrepository_redis"
 
 func init() {
-    kvstore_redis.Register()
+    kvrepository_redis.Register()
 }
 ```
 
@@ -142,7 +142,7 @@ func init() {
 import "github.com/primadi/lokstra/services"
 
 func main() {
-    // Registers all services including kvstore_redis
+    // Registers all services including kvrepository_redis
     services.RegisterAllServices()
     
     // Or register only core services
@@ -155,7 +155,7 @@ func main() {
 ### Interface Definition
 
 ```go
-type KvStore interface {
+type KvRepository interface {
     Set(ctx context.Context, key string, value any, ttl time.Duration) error
     Get(ctx context.Context, key string, dest any) error
     Delete(ctx context.Context, key string) error
@@ -172,10 +172,10 @@ type KvStore interface {
 ctx := context.Background()
 
 // Set without expiration (permanent)
-err := kvStore.Set(ctx, "user:123", userData, 0)
+err := kvRepository.Set(ctx, "user:123", userData, 0)
 
 // Set with TTL (expires after 5 minutes)
-err = kvStore.Set(ctx, "session:abc", sessionData, 5*time.Minute)
+err = kvRepository.Set(ctx, "session:abc", sessionData, 5*time.Minute)
 ```
 
 **Set Different Types:**
@@ -189,7 +189,7 @@ type User struct {
 }
 
 user := User{ID: 123, Name: "John", Email: "john@example.com"}
-err := kvStore.Set(ctx, "user:123", user, time.Hour)
+err := kvRepository.Set(ctx, "user:123", user, time.Hour)
 
 // Map
 data := map[string]any{
@@ -197,15 +197,15 @@ data := map[string]any{
     "name":  "John",
     "email": "john@example.com",
 }
-err = kvStore.Set(ctx, "user:123", data, time.Hour)
+err = kvRepository.Set(ctx, "user:123", data, time.Hour)
 
 // Slice
 tags := []string{"go", "redis", "cache"}
-err = kvStore.Set(ctx, "user:123:tags", tags, time.Hour)
+err = kvRepository.Set(ctx, "user:123:tags", tags, time.Hour)
 
 // Primitive types
-err = kvStore.Set(ctx, "counter", 42, 0)
-err = kvStore.Set(ctx, "message", "Hello, World!", 10*time.Minute)
+err = kvRepository.Set(ctx, "counter", 42, 0)
+err = kvRepository.Set(ctx, "message", "Hello, World!", 10*time.Minute)
 ```
 
 ### Get Values
@@ -214,7 +214,7 @@ err = kvStore.Set(ctx, "message", "Hello, World!", 10*time.Minute)
 
 ```go
 var user User
-err := kvStore.Get(ctx, "user:123", &user)
+err := kvRepository.Get(ctx, "user:123", &user)
 if err != nil {
     if errors.Is(err, redis.Nil) {
         // Key doesn't exist
@@ -229,29 +229,29 @@ if err != nil {
 ```go
 // Struct
 var user User
-err := kvStore.Get(ctx, "user:123", &user)
+err := kvRepository.Get(ctx, "user:123", &user)
 
 // Map
 var data map[string]any
-err = kvStore.Get(ctx, "user:123", &data)
+err = kvRepository.Get(ctx, "user:123", &data)
 
 // Slice
 var tags []string
-err = kvStore.Get(ctx, "user:123:tags", &tags)
+err = kvRepository.Get(ctx, "user:123:tags", &tags)
 
 // Primitive types
 var count int
-err = kvStore.Get(ctx, "counter", &count)
+err = kvRepository.Get(ctx, "counter", &count)
 
 var message string
-err = kvStore.Get(ctx, "message", &message)
+err = kvRepository.Get(ctx, "message", &message)
 ```
 
 **Handle Missing Keys:**
 
 ```go
 var user User
-err := kvStore.Get(ctx, "user:123", &user)
+err := kvRepository.Get(ctx, "user:123", &user)
 if err != nil {
     if errors.Is(err, redis.Nil) {
         // Key doesn't exist - return default value or error
@@ -267,7 +267,7 @@ if err != nil {
 **Delete Single Key:**
 
 ```go
-err := kvStore.Delete(ctx, "user:123")
+err := kvRepository.Delete(ctx, "user:123")
 if err != nil {
     return err
 }
@@ -276,14 +276,14 @@ if err != nil {
 **Delete Multiple Keys:**
 
 ```go
-err := kvStore.DeleteKeys(ctx, "user:1", "user:2", "user:3")
+err := kvRepository.DeleteKeys(ctx, "user:1", "user:2", "user:3")
 if err != nil {
     return err
 }
 
 // Delete with slice
 userIDs := []string{"user:1", "user:2", "user:3"}
-err = kvStore.DeleteKeys(ctx, userIDs...)
+err = kvRepository.DeleteKeys(ctx, userIDs...)
 ```
 
 ## Key Management
@@ -298,7 +298,7 @@ config:
   prefix: myapp
 
 // Your code
-kvStore.Set(ctx, "user:123", userData, 0)
+kvRepository.Set(ctx, "user:123", userData, 0)
 
 // Actual Redis key
 // myapp:user:123
@@ -315,11 +315,11 @@ kvStore.Set(ctx, "user:123", userData, 0)
 
 ```go
 // Find all user keys
-keys, err := kvStore.Keys(ctx, "user:*")
+keys, err := kvRepository.Keys(ctx, "user:*")
 // Returns: ["user:1", "user:2", "user:3", ...]
 
 // Find specific pattern
-keys, err = kvStore.Keys(ctx, "session:abc*")
+keys, err = kvRepository.Keys(ctx, "session:abc*")
 // Returns: ["session:abc123", "session:abc456", ...]
 ```
 
@@ -327,13 +327,13 @@ keys, err = kvStore.Keys(ctx, "session:abc*")
 
 ```go
 // All cache keys
-keys, err := kvStore.Keys(ctx, "cache:*")
+keys, err := kvRepository.Keys(ctx, "cache:*")
 
 // Keys matching pattern
-keys, err = kvStore.Keys(ctx, "user:*:profile")
+keys, err = kvRepository.Keys(ctx, "user:*:profile")
 
 // All keys (use with caution!)
-keys, err = kvStore.Keys(ctx, "*")
+keys, err = kvRepository.Keys(ctx, "*")
 ```
 
 **Returned Keys Have Prefix Removed:**
@@ -342,7 +342,7 @@ keys, err = kvStore.Keys(ctx, "*")
 // Config prefix: "myapp"
 // Redis has key: "myapp:user:123"
 
-keys, err := kvStore.Keys(ctx, "user:*")
+keys, err := kvRepository.Keys(ctx, "user:*")
 // Returns: ["user:123"]  (prefix removed)
 ```
 
@@ -350,13 +350,13 @@ keys, err := kvStore.Keys(ctx, "user:*")
 
 ```go
 // Find and delete all session keys
-sessionKeys, err := kvStore.Keys(ctx, "session:*")
+sessionKeys, err := kvRepository.Keys(ctx, "session:*")
 if err != nil {
     return err
 }
 
 if len(sessionKeys) > 0 {
-    err = kvStore.DeleteKeys(ctx, sessionKeys...)
+    err = kvRepository.DeleteKeys(ctx, sessionKeys...)
     if err != nil {
         return err
     }
@@ -371,16 +371,16 @@ if len(sessionKeys) > 0 {
 
 ```go
 // 5 minutes
-kvStore.Set(ctx, "otp:user123", otpCode, 5*time.Minute)
+kvRepository.Set(ctx, "otp:user123", otpCode, 5*time.Minute)
 
 // 1 hour
-kvStore.Set(ctx, "session:abc", sessionData, time.Hour)
+kvRepository.Set(ctx, "session:abc", sessionData, time.Hour)
 
 // 24 hours
-kvStore.Set(ctx, "cache:report", report, 24*time.Hour)
+kvRepository.Set(ctx, "cache:report", report, 24*time.Hour)
 
 // No expiration (permanent)
-kvStore.Set(ctx, "config:app", appConfig, 0)
+kvRepository.Set(ctx, "config:app", appConfig, 0)
 ```
 
 **Common TTL Patterns:**
@@ -393,9 +393,9 @@ const (
     TempDataTTL = 15 * time.Minute     // Temporary data
 )
 
-kvStore.Set(ctx, "otp:"+userID, code, OtpTTL)
-kvStore.Set(ctx, "session:"+token, session, SessionTTL)
-kvStore.Set(ctx, "cache:users", users, CacheTTL)
+kvRepository.Set(ctx, "otp:"+userID, code, OtpTTL)
+kvRepository.Set(ctx, "session:"+token, session, SessionTTL)
+kvRepository.Set(ctx, "cache:users", users, CacheTTL)
 ```
 
 ### JSON Serialization
@@ -426,11 +426,11 @@ profile := UserProfile{
 }
 
 // Automatically serialized to JSON
-kvStore.Set(ctx, "profile:123", profile, time.Hour)
+kvRepository.Set(ctx, "profile:123", profile, time.Hour)
 
 // Automatically deserialized from JSON
 var retrieved UserProfile
-kvStore.Get(ctx, "profile:123", &retrieved)
+kvRepository.Get(ctx, "profile:123", &retrieved)
 ```
 
 ### Cache Patterns
@@ -443,7 +443,7 @@ func GetUser(ctx context.Context, userID int) (*User, error) {
     
     // Try cache first
     var user User
-    err := kvStore.Get(ctx, cacheKey, &user)
+    err := kvRepository.Get(ctx, cacheKey, &user)
     if err == nil {
         return &user, nil // Cache hit
     }
@@ -454,8 +454,8 @@ func GetUser(ctx context.Context, userID int) (*User, error) {
         return nil, err
     }
     
-    // Store in cache
-    _ = kvStore.Set(ctx, cacheKey, user, time.Hour)
+    // Repository in cache
+    _ = kvRepository.Set(ctx, cacheKey, user, time.Hour)
     
     return &user, nil
 }
@@ -473,7 +473,7 @@ func UpdateUser(ctx context.Context, user *User) error {
     
     // Update cache
     cacheKey := fmt.Sprintf("user:%d", user.ID)
-    _ = kvStore.Set(ctx, cacheKey, user, time.Hour)
+    _ = kvRepository.Set(ctx, cacheKey, user, time.Hour)
     
     return nil
 }
@@ -491,7 +491,7 @@ func DeleteUser(ctx context.Context, userID int) error {
     
     // Invalidate cache
     cacheKey := fmt.Sprintf("user:%d", userID)
-    _ = kvStore.Delete(ctx, cacheKey)
+    _ = kvRepository.Delete(ctx, cacheKey)
     
     return nil
 }
@@ -525,12 +525,12 @@ func DeleteUser(ctx context.Context, userID int) error {
 
 ```go
 ✓ DO: Set appropriate TTLs
-kvStore.Set(ctx, "otp:"+id, code, 5*time.Minute)    // Short for OTP
-kvStore.Set(ctx, "session:"+id, data, time.Hour)    // Medium for session
-kvStore.Set(ctx, "config:app", cfg, 0)              // Permanent for config
+kvRepository.Set(ctx, "otp:"+id, code, 5*time.Minute)    // Short for OTP
+kvRepository.Set(ctx, "session:"+id, data, time.Hour)    // Medium for session
+kvRepository.Set(ctx, "config:app", cfg, 0)              // Permanent for config
 
 ✗ DON'T: Use same TTL for everything
-kvStore.Set(ctx, key, value, time.Hour)  // Same TTL for all
+kvRepository.Set(ctx, key, value, time.Hour)  // Same TTL for all
 
 ✓ DO: Use constants for TTLs
 const (
@@ -540,14 +540,14 @@ const (
 )
 
 ✗ DON'T: Use magic numbers
-kvStore.Set(ctx, key, value, 3600*time.Second)  // What does 3600 mean?
+kvRepository.Set(ctx, key, value, 3600*time.Second)  // What does 3600 mean?
 ```
 
 ### Error Handling
 
 ```go
 ✓ DO: Check for key not found
-err := kvStore.Get(ctx, key, &value)
+err := kvRepository.Get(ctx, key, &value)
 if err != nil {
     if errors.Is(err, redis.Nil) {
         return nil, ErrNotFound
@@ -556,14 +556,14 @@ if err != nil {
 }
 
 ✓ DO: Handle serialization errors gracefully
-err := kvStore.Set(ctx, key, value, ttl)
+err := kvRepository.Set(ctx, key, value, ttl)
 if err != nil {
     log.Printf("failed to cache: %v", err)
     // Continue without cache
 }
 
 ✗ DON'T: Panic on cache errors
-err := kvStore.Get(ctx, key, &value)
+err := kvRepository.Get(ctx, key, &value)
 if err != nil {
     panic(err)  // BAD: Cache shouldn't crash app
 }
@@ -574,11 +574,11 @@ if err != nil {
 ```go
 ✓ DO: Use batch operations
 keys := []string{"user:1", "user:2", "user:3"}
-kvStore.DeleteKeys(ctx, keys...)  // Single operation
+kvRepository.DeleteKeys(ctx, keys...)  // Single operation
 
 ✗ DON'T: Loop for multiple operations
 for _, key := range keys {
-    kvStore.Delete(ctx, key)  // BAD: Multiple round-trips
+    kvRepository.Delete(ctx, key)  // BAD: Multiple round-trips
 }
 
 ✓ DO: Use appropriate prefixes
@@ -590,10 +590,10 @@ config:
   prefix: my_super_long_application_name_v1_prod  // Too long
 
 ✓ DO: Be careful with Keys() on large datasets
-keys, err := kvStore.Keys(ctx, "user:*")  // OK for small sets
+keys, err := kvRepository.Keys(ctx, "user:*")  // OK for small sets
 
 ✗ DON'T: Use Keys("*") in production
-keys, err := kvStore.Keys(ctx, "*")  // BAD: Blocks Redis
+keys, err := kvRepository.Keys(ctx, "*")  // BAD: Blocks Redis
 ```
 
 ## Examples
@@ -612,13 +612,13 @@ import (
 )
 
 type CachedUserRepository struct {
-    cache  serviceapi.KvStore
+    cache  serviceapi.KvRepository
     db     *UserRepository  // Database repository
 }
 
 func NewCachedUserRepository(db *UserRepository) *CachedUserRepository {
     return &CachedUserRepository{
-        cache: lokstra_registry.GetService[serviceapi.KvStore]("cache"),
+        cache: lokstra_registry.GetService[serviceapi.KvRepository]("cache"),
         db:    db,
     }
 }
@@ -691,7 +691,7 @@ import (
 )
 
 type OTPService struct {
-    kvStore serviceapi.KvStore
+    kvRepository serviceapi.KvRepository
 }
 
 const (
@@ -701,11 +701,11 @@ const (
 
 func NewOTPService() *OTPService {
     return &OTPService{
-        kvStore: lokstra_registry.GetService[serviceapi.KvStore]("cache"),
+        kvRepository: lokstra_registry.GetService[serviceapi.KvRepository]("cache"),
     }
 }
 
-// Generate and store OTP
+// Generate and repository OTP
 func (s *OTPService) Generate(ctx context.Context, userID string) (string, error) {
     // Generate 6-digit OTP
     otp, err := generateOTP(OtpLength)
@@ -713,9 +713,9 @@ func (s *OTPService) Generate(ctx context.Context, userID string) (string, error
         return "", err
     }
     
-    // Store with TTL
+    // Repository with TTL
     key := fmt.Sprintf("otp:%s", userID)
-    err = s.kvStore.Set(ctx, key, otp, OtpTTL)
+    err = s.kvRepository.Set(ctx, key, otp, OtpTTL)
     if err != nil {
         return "", err
     }
@@ -727,20 +727,20 @@ func (s *OTPService) Generate(ctx context.Context, userID string) (string, error
 func (s *OTPService) Verify(ctx context.Context, userID, otp string) (bool, error) {
     key := fmt.Sprintf("otp:%s", userID)
     
-    // Get stored OTP
-    var storedOTP string
-    err := s.kvStore.Get(ctx, key, &storedOTP)
+    // Get repositoryd OTP
+    var repositorydOTP string
+    err := s.kvRepository.Get(ctx, key, &repositorydOTP)
     if err != nil {
         return false, nil  // OTP not found or expired
     }
     
     // Compare
-    if storedOTP != otp {
+    if repositorydOTP != otp {
         return false, nil
     }
     
     // Valid - delete OTP (single use)
-    _ = s.kvStore.Delete(ctx, key)
+    _ = s.kvRepository.Delete(ctx, key)
     
     return true, nil
 }
@@ -773,7 +773,7 @@ import (
 )
 
 type RateLimiter struct {
-    kvStore serviceapi.KvStore
+    kvRepository serviceapi.KvRepository
     limit   int
     window  time.Duration
 }
@@ -785,7 +785,7 @@ type RateLimitInfo struct {
 
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
     return &RateLimiter{
-        kvStore: lokstra_registry.GetService[serviceapi.KvStore]("ratelimit_cache"),
+        kvRepository: lokstra_registry.GetService[serviceapi.KvRepository]("ratelimit_cache"),
         limit:   limit,
         window:  window,
     }
@@ -797,14 +797,14 @@ func (r *RateLimiter) Check(ctx context.Context, identifier string) (bool, *Rate
     
     // Get current count
     var info RateLimitInfo
-    err := r.kvStore.Get(ctx, key, &info)
+    err := r.kvRepository.Get(ctx, key, &info)
     if err != nil {
         // First request - initialize
         info = RateLimitInfo{
             Count: 1,
             Limit: r.limit,
         }
-        _ = r.kvStore.Set(ctx, key, info, r.window)
+        _ = r.kvRepository.Set(ctx, key, info, r.window)
         return false, &info, nil  // Not exceeded
     }
     
@@ -817,7 +817,7 @@ func (r *RateLimiter) Check(ctx context.Context, identifier string) (bool, *Rate
     }
     
     // Update count
-    _ = r.kvStore.Set(ctx, key, info, r.window)
+    _ = r.kvRepository.Set(ctx, key, info, r.window)
     
     return false, &info, nil  // Not exceeded
 }
@@ -838,7 +838,7 @@ import (
 )
 
 type SessionManager struct {
-    kvStore serviceapi.KvStore
+    kvRepository serviceapi.KvRepository
     ttl     time.Duration
 }
 
@@ -850,7 +850,7 @@ type SessionData struct {
 
 func NewSessionManager(ttl time.Duration) *SessionManager {
     return &SessionManager{
-        kvStore: lokstra_registry.GetService[serviceapi.KvStore]("session_cache"),
+        kvRepository: lokstra_registry.GetService[serviceapi.KvRepository]("session_cache"),
         ttl:     ttl,
     }
 }
@@ -861,8 +861,8 @@ func (m *SessionManager) Create(ctx context.Context, data *SessionData) (string,
     sessionID := uuid.New().String()
     key := fmt.Sprintf("session:%s", sessionID)
     
-    // Store session
-    err := m.kvStore.Set(ctx, key, data, m.ttl)
+    // Repository session
+    err := m.kvRepository.Set(ctx, key, data, m.ttl)
     if err != nil {
         return "", err
     }
@@ -875,7 +875,7 @@ func (m *SessionManager) Get(ctx context.Context, sessionID string) (*SessionDat
     key := fmt.Sprintf("session:%s", sessionID)
     
     var data SessionData
-    err := m.kvStore.Get(ctx, key, &data)
+    err := m.kvRepository.Get(ctx, key, &data)
     if err != nil {
         return nil, err
     }
@@ -893,20 +893,20 @@ func (m *SessionManager) Refresh(ctx context.Context, sessionID string) error {
     
     // Re-set with new TTL
     key := fmt.Sprintf("session:%s", sessionID)
-    return m.kvStore.Set(ctx, key, data, m.ttl)
+    return m.kvRepository.Set(ctx, key, data, m.ttl)
 }
 
 // Delete session
 func (m *SessionManager) Delete(ctx context.Context, sessionID string) error {
     key := fmt.Sprintf("session:%s", sessionID)
-    return m.kvStore.Delete(ctx, key)
+    return m.kvRepository.Delete(ctx, key)
 }
 
 // Delete all user sessions
 func (m *SessionManager) DeleteUserSessions(ctx context.Context, userID string) error {
     // Find all sessions for user
     pattern := fmt.Sprintf("session:*")
-    keys, err := m.kvStore.Keys(ctx, pattern)
+    keys, err := m.kvRepository.Keys(ctx, pattern)
     if err != nil {
         return err
     }
@@ -915,7 +915,7 @@ func (m *SessionManager) DeleteUserSessions(ctx context.Context, userID string) 
     var userSessions []string
     for _, key := range keys {
         var data SessionData
-        err := m.kvStore.Get(ctx, key, &data)
+        err := m.kvRepository.Get(ctx, key, &data)
         if err == nil && data.UserID == userID {
             userSessions = append(userSessions, key)
         }
@@ -923,7 +923,7 @@ func (m *SessionManager) DeleteUserSessions(ctx context.Context, userID string) 
     
     // Delete user sessions
     if len(userSessions) > 0 {
-        return m.kvStore.DeleteKeys(ctx, userSessions...)
+        return m.kvRepository.DeleteKeys(ctx, userSessions...)
     }
     
     return nil

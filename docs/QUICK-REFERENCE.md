@@ -238,7 +238,7 @@ func (s *Service) DoWork(ctx context.Context) (err error) {
 ### Annotation-Based Service (Recommended)
 
 ```go
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository
@@ -266,7 +266,7 @@ func (s *UserService) Delete(p *DeleteUserParams) error {
 
 **Annotation with Variables** (resolves from config.yaml):
 ```go
-// @EndpointService name="user-service", prefix="${api-prefix}"
+// @Handler name="user-service", prefix="${api-prefix}"
 // @Route "GET ${api-version}/users/{id}"
 ```
 
@@ -333,7 +333,7 @@ configs:
 **@Service supports:**
 - `@Inject` - Service dependencies (required or optional)
 - `@Inject "cfg:..."` - Configuration injection (auto-typed)
-- No HTTP routes (use `@EndpointService` for that)
+- No HTTP routes (use `@Handler` for that)
 
 **Generated code:**
 ```go
@@ -354,7 +354,7 @@ func RegisterAuthService() {
 
 | Annotation | Purpose | Where |
 |------------|---------|-------|
-| `@EndpointService` | HTTP service with routes | Above struct |
+| `@Handler` | HTTP service with routes | Above struct |
 | `@Service` | Pure service (no HTTP) | Above struct |
 | `@Route` | HTTP endpoint | Above method (RouterService only) |
 | `@Inject` | Dependency/config injection | Above field |
@@ -549,7 +549,7 @@ deployments:
 ## Annotations
 
 ```go
-// @EndpointService name="user-service", prefix="/api", middlewares=["recovery"]
+// @Handler name="user-service", prefix="/api", middlewares=["recovery"]
 type UserService struct {
     // @Inject "user-repository"
     UserRepo UserRepository

@@ -76,10 +76,10 @@ func (s *MyService) SendWelcomeEmail(userEmail, userName string) error {
 }
 ```
 
-### With Annotation (@EndpointService)
+### With Annotation (@Handler)
 
 ```go
-// @EndpointService name="notification-service"
+// @Handler name="notification-service"
 type NotificationService struct {
     // @Inject "email-service"
     EmailSender serviceapi.EmailSender

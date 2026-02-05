@@ -10,7 +10,7 @@ Your app needs different JWT secrets, database timeouts, and API keys per enviro
 **Code (unchanged across environments):**
 
 ```go
-// @EndpointService name="auth-service", prefix="/api/auth"
+// @Handler name="auth-service", prefix="/api/auth"
 type AuthService struct {
     // @Inject "user-repo"
     UserRepo UserRepository
@@ -122,7 +122,7 @@ Different tenants use different database implementations (PostgreSQL, MySQL, Mon
 ### Solution: Service + Config Indirection
 
 ```go
-// @EndpointService name="tenant-service", prefix="/api/tenants"
+// @Handler name="tenant-service", prefix="/api/tenants"
 type TenantService struct {
     // @Inject "@tenant.db-provider"  // Service name from config
     DB database.Provider
@@ -163,7 +163,7 @@ Switch tenant by changing `tenant.db-provider` to `database.tenant-b.provider`!
 Different subscription plans have different rate limits.
 
 ```go
-// @EndpointService name="api-gateway", prefix="/api"
+// @Handler name="api-gateway", prefix="/api"
 type APIGateway struct {
     // @Inject "cfg:@rate-limit.requests-per-minute"
     RequestsPerMinute int
@@ -261,7 +261,7 @@ configs:
 ## Example 6: Cache Strategy Selection
 
 ```go
-// @EndpointService name="product-service", prefix="/api/products"
+// @Handler name="product-service", prefix="/api/products"
 type ProductService struct {
     // @Inject "@cache.provider"
     Cache cache.Provider

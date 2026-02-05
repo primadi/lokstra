@@ -17,6 +17,7 @@ type ProjectCreator struct {
 	TemplatePath string
 	Branch       string
 	TargetDir    string
+	UseLocal     bool // Use local framework files instead of downloading
 }
 
 // NewProjectCreator creates a new ProjectCreator instance
@@ -36,13 +37,26 @@ func (pc *ProjectCreator) Create() error {
 		return err
 	}
 
-	// Step 2: Download template from GitHub
-	fmt.Println("📥 Downloading template from GitHub...")
-	tempDir, err := pc.downloadTemplate()
-	if err != nil {
-		return fmt.Errorf("failed to download template: %w", err)
+	var tempDir string
+	var err error
+
+	// Step 2: Get template source (local or download)
+	if pc.UseLocal {
+		fmt.Println("📂 Using local framework files...")
+		// Assume we're running from within lokstra-dev2
+		// Find the root of lokstra framework
+		tempDir, err = pc.getLocalFrameworkPath()
+		if err != nil {
+			return fmt.Errorf("failed to find local framework: %w", err)
+		}
+	} else {
+		fmt.Println("📥 Downloading template from GitHub...")
+		tempDir, err = pc.downloadTemplate()
+		if err != nil {
+			return fmt.Errorf("failed to download template: %w", err)
+		}
+		defer os.RemoveAll(tempDir)
 	}
-	defer os.RemoveAll(tempDir)
 
 	// Step 3: Copy template files to target directory
 	fmt.Println("📋 Copying template files...")
@@ -51,19 +65,26 @@ func (pc *ProjectCreator) Create() error {
 		return fmt.Errorf("failed to copy template: %w", err)
 	}
 
-	// Step 4: Fix imports in all .go files
+	// Step 4: Copy AI agent skills and templates
+	fmt.Println("🤖 Copying AI agent skills and templates...")
+	if err := pc.copySkillsAndTemplates(tempDir); err != nil {
+		// Non-fatal error - just warn
+		fmt.Printf("⚠️  Warning: failed to copy skills and templates: %v\n", err)
+	}
+
+	// Step 5: Fix imports in all .go files
 	fmt.Println("🔧 Fixing imports...")
 	if err := pc.fixImports(); err != nil {
 		return fmt.Errorf("failed to fix imports: %w", err)
 	}
 
-	// Step 5: Initialize go module
+	// Step 6: Initialize go module
 	fmt.Println("📦 Initializing Go module...")
 	if err := pc.initGoModule(); err != nil {
 		return fmt.Errorf("failed to initialize go module: %w", err)
 	}
 
-	// Step 6: Run go mod tidy
+	// Step 7: Run go mod tidy
 	fmt.Println("🧹 Running go mod tidy...")
 	if err := pc.runGoModTidy(); err != nil {
 		return fmt.Errorf("failed to run go mod tidy: %w", err)
@@ -263,7 +284,9 @@ func (pc *ProjectCreator) fixImportsInFile(filePath string) error {
 	// Replace with: "{project_name}/..."
 
 	templateImportPrefix := fmt.Sprintf("github.com/primadi/lokstra/project_templates/%s", pc.TemplatePath)
-	newImportPrefix := pc.ProjectName
+	// Normalize module name (replace backslash with forward slash for Windows)
+	normalizedProjectName := strings.ReplaceAll(pc.ProjectName, "\\", "/")
+	newImportPrefix := normalizedProjectName
 
 	updatedContent := strings.ReplaceAll(originalContent, templateImportPrefix, newImportPrefix)
 
@@ -290,8 +313,11 @@ func (pc *ProjectCreator) initGoModule() error {
 		return err
 	}
 
+	// Normalize module name (replace backslash with forward slash for Windows)
+	moduleName := strings.ReplaceAll(pc.ProjectName, "\\", "/")
+
 	// Run go mod init
-	return runCommand("go", "mod", "init", pc.ProjectName)
+	return runCommand("go", "mod", "init", moduleName)
 }
 
 // runGoModTidy runs go mod tidy
@@ -309,4 +335,131 @@ func (pc *ProjectCreator) runGoModTidy() error {
 
 	// Run go mod tidy
 	return runCommand("go", "mod", "tidy")
+}
+
+// copySkillsAndTemplates copies .github/skills/ and docs/templates/ to the new project
+func (pc *ProjectCreator) copySkillsAndTemplates(tempDir string) error {
+	// Source paths in the downloaded repository
+	lokstraRoot := tempDir // tempDir is already "lokstra-{branch}"
+
+	// Copy .github/skills/
+	skillsSource := filepath.Join(lokstraRoot, ".github", "skills")
+	skillsTarget := filepath.Join(pc.TargetDir, ".github", "skills")
+
+	if _, err := os.Stat(skillsSource); err == nil {
+		if err := pc.copyDirectory(skillsSource, skillsTarget); err != nil {
+			return fmt.Errorf("failed to copy skills: %w", err)
+		}
+		fmt.Println("  ✓ Copied AI agent skills to .github/skills/")
+	} else {
+		fmt.Println("  ⚠️  Skills directory not found in framework")
+	}
+
+	// Copy .github/copilot-instructions.md
+	copilotSource := filepath.Join(lokstraRoot, ".github", "copilot-instructions.md")
+	copilotTarget := filepath.Join(pc.TargetDir, ".github", "copilot-instructions.md")
+
+	if _, err := os.Stat(copilotSource); err == nil {
+		// Create .github directory if not exists
+		if err := os.MkdirAll(filepath.Join(pc.TargetDir, ".github"), 0755); err != nil {
+			return fmt.Errorf("failed to create .github directory: %w", err)
+		}
+
+		if err := pc.copyFile(copilotSource, copilotTarget, 0644); err != nil {
+			return fmt.Errorf("failed to copy copilot-instructions.md: %w", err)
+		}
+		fmt.Println("  ✓ Copied .github/copilot-instructions.md")
+	}
+
+	// Copy docs/templates/
+	templatesSource := filepath.Join(lokstraRoot, "docs", "templates")
+	templatesTarget := filepath.Join(pc.TargetDir, "docs", "templates")
+
+	if _, err := os.Stat(templatesSource); err == nil {
+		if err := pc.copyDirectory(templatesSource, templatesTarget); err != nil {
+			return fmt.Errorf("failed to copy templates: %w", err)
+		}
+		fmt.Println("  ✓ Copied document templates to docs/templates/")
+	} else {
+		fmt.Println("  ⚠️  Templates directory not found in framework")
+	}
+
+	return nil
+}
+
+// copyDirectory recursively copies a directory
+func (pc *ProjectCreator) copyDirectory(src, dst string) error {
+	// Get source directory info
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	// Create destination directory
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+
+	// Read source directory
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	// Copy each entry
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			// Recursively copy subdirectory
+			if err := pc.copyDirectory(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			// Get file info for mode
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			// Copy file
+			if err := pc.copyFile(srcPath, dstPath, info.Mode()); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// getLocalFrameworkPath finds the local framework root directory
+func (pc *ProjectCreator) getLocalFrameworkPath() (string, error) {
+	// Try to find go.mod with module github.com/primadi/lokstra
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Search up the directory tree
+	dir := currentDir
+	for {
+		goModPath := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
+			// Read go.mod to check if it's lokstra framework
+			content, err := os.ReadFile(goModPath)
+			if err == nil && strings.Contains(string(content), "module github.com/primadi/lokstra") {
+				return dir, nil
+			}
+		}
+
+		// Move up one directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached root
+			break
+		}
+		dir = parent
+	}
+
+	return "", fmt.Errorf("lokstra framework root not found. Run with -local only from within lokstra-dev2 directory")
 }

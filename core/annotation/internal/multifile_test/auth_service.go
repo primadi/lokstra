@@ -5,7 +5,7 @@ import (
 	"github.com/primadi/lokstra/core/service"
 )
 
-// @EndpointService name="auth-service", prefix="/api/v1/auth"
+// @Handler name="auth-service", prefix="/api/v1/auth"
 type AuthService struct {
 	// @Inject "auth-repo"
 	AuthRepo *service.Cached[any]

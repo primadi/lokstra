@@ -2,7 +2,7 @@
 
 ## Problem
 
-The annotation parser was incorrectly detecting `@EndpointService` (and other annotations) in **documentation examples**, causing false positives and generating unwanted code.
+The annotation parser was incorrectly detecting `@Handler` (and other annotations) in **documentation examples**, causing false positives and generating unwanted code.
 
 ### Example of the Problem
 
@@ -11,9 +11,9 @@ package middleware
 
 // Register is a placeholder for middleware registration
 //
-// Example @EndpointService annotation:
+// Example @Handler annotation:
 //
-//	@EndpointService name="tenant-service", prefix="/api/tenants"
+//	@Handler name="tenant-service", prefix="/api/tenants"
 //
 // The above is just an EXAMPLE, not an actual annotation!
 func Register() {
@@ -30,22 +30,22 @@ Updated the annotation parser to follow **Go documentation conventions**:
 
 ### Rules for Valid Annotations
 
-1. **Valid annotation:** `// @EndpointService` (space or no space after `//`)
+1. **Valid annotation:** `// @Handler` (space or no space after `//`)
    ```go
-   // @EndpointService name="user-service"
+   // @Handler name="user-service"
    type UserService struct {}
    ```
 
-2. **Invalid annotation (TAB-indented):** `//	@EndpointService` (TAB after `//`)
+2. **Invalid annotation (TAB-indented):** `//	@Handler` (TAB after `//`)
    ```go
    // Example:
    //
-   //	@EndpointService name="example"  // ← IGNORED (code example)
+   //	@Handler name="example"  // ← IGNORED (code example)
    ```
 
-3. **Invalid annotation (multi-space indented):** `//   @EndpointService`
+3. **Invalid annotation (multi-space indented):** `//   @Handler`
    ```go
-   //   @EndpointService  // ← IGNORED (indented)
+   //   @Handler  // ← IGNORED (indented)
    ```
 
 ### Go Documentation Convention
@@ -83,7 +83,7 @@ The parser now respects this convention and **skips any annotation that is TAB-i
 
 2. **`TestParseFileAnnotations_ValidAnnotations`**
    - Ensures valid annotations are still detected
-   - Tests `@EndpointService`, `@Inject`, `@Route`
+   - Tests `@Handler`, `@Inject`, `@Route`
 
 3. **`TestParseFileAnnotations_MultipleEmptyLinesAfterAnnotation`**
    - Prevents matching annotations with too many gap lines
@@ -102,7 +102,7 @@ The parser now respects this convention and **skips any annotation that is TAB-i
 File with documentation example:
 ```go
 // Example:
-//	@EndpointService name="tenant-service", prefix="/api/tenants"
+//	@Handler name="tenant-service", prefix="/api/tenants"
 func Register() {}
 ```
 
@@ -114,7 +114,7 @@ Same file: **No code generated** (correctly ignored).
 
 Only actual annotations are processed:
 ```go
-// @EndpointService name="tenant-service", prefix="/api/tenants"
+// @Handler name="tenant-service", prefix="/api/tenants"
 type TenantService struct {}
 ```
 
@@ -147,18 +147,18 @@ When writing documentation with annotation examples:
    ```go
    // Example:
    //
-   //	@EndpointService name="example"  // ← Will be ignored
+   //	@Handler name="example"  // ← Will be ignored
    ```
 
 2. **Or use enough indentation** (2+ spaces):
    ```go
    // Example:
-   //   @EndpointService name="example"  // ← Will be ignored
+   //   @Handler name="example"  // ← Will be ignored
    ```
 
 3. **For actual annotations**, use no indentation or single space:
    ```go
-   // @EndpointService name="real-service"  // ← Will be processed
+   // @Handler name="real-service"  // ← Will be processed
    type RealService struct {}
    ```
 

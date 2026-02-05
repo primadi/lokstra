@@ -935,9 +935,9 @@ func (r *TenantUserRepository) GetUsers(ctx context.Context, tenantID string) ([
 
 - [Services Overview](index) - Service architecture and patterns
 - [DbPool Manager](dbpool-manager) - Centralized pool management with multi-tenancy
-- [KvStore Service](kvstore-redis) - Key-value caching
+- [KvRepository Service](kvrepository-redis) - Key-value caching
 - [Configuration](../03-configuration/config) - YAML configuration system
 
 ---
 
-**Next:** [KvStore Service](kvstore-redis) - Redis-based key-value store
+**Next:** [KvRepository Service](kvrepository-redis) - Redis-based key-value repository

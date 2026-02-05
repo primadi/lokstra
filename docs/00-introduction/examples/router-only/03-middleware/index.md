@@ -159,7 +159,7 @@ Then use them by name in code:
 
 // Step 1: Create router and register routes
 r := lokstra.NewRouter("api")
-r.Use("recovery-prod")  // ✓ OK! String stored, not resolved yet
+r.Use("recovery-prod")  // ✓ OK! String repositoryd, not resolved yet
 r.Use("cors-api")       // ✓ OK! Lazy resolution
 
 // Step 2: Load config (can be done AFTER router setup!)
@@ -221,7 +221,7 @@ func CustomAuthMiddleware(ctx *request.Context) error {
         return ctx.Api.Unauthorized("Missing API key")
     }
     
-    // Store data for later use
+    // Repository data for later use
     ctx.Set("api_key", apiKey)
     return nil // Continue to next middleware/handler
 }
@@ -301,7 +301,7 @@ Share data between middlewares and handlers:
 // In middleware
 func AuthMiddleware(ctx *request.Context) error {
     user := authenticate(ctx)
-    ctx.Set("user", user)      // Store in context
+    ctx.Set("user", user)      // Repository in context
     return nil
 }
 
@@ -414,7 +414,7 @@ Each middleware can:
 2. Execute code **after** the handler (after `ctx.Next()` returns)
 3. Short-circuit the chain by returning early
 4. Modify the request or response
-5. Store data in context
+5. Repository data in context
 
 ---
 

@@ -120,7 +120,7 @@ func (s *WeatherService) Create(p *GetWeatherReportParams) (*WeatherReport, erro
 		report.Forecast = &forecast
 	}
 
-	// Store report
+	// Repository report
 	reportsMu.Lock()
 	reports[id] = report
 	reportsMu.Unlock()

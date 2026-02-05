@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	// Auto-generate code from @EndpointService annotations
+	// Auto-generate code from @Handler annotations
 	lokstra_init.Bootstrap()
 
 	// STEP 1: Load Config

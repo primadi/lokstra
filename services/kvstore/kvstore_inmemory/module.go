@@ -11,7 +11,7 @@ import (
 	"github.com/primadi/lokstra/serviceapi"
 )
 
-const SERVICE_TYPE = "kvstore_inmemory"
+const SERVICE_TYPE = "kvrepository_inmemory"
 
 var ErrKeyNotFound = errors.New("key not found")
 
@@ -28,7 +28,7 @@ type kvEntry struct {
 	expiresAt *time.Time
 }
 
-type kvStoreInMemory struct {
+type kvRepositoryInMemory struct {
 	prefix string
 }
 
@@ -53,15 +53,15 @@ func checkCleanUp() {
 	}()
 }
 
-func (k *kvStoreInMemory) prefixKey(key string) string {
+func (k *kvRepositoryInMemory) prefixKey(key string) string {
 	if k.prefix != "" {
 		return k.prefix + ":" + key
 	}
 	return key
 }
 
-// Delete implements [serviceapi.KvStore].
-func (k *kvStoreInMemory) Delete(ctx context.Context, key string) error {
+// Delete implements [serviceapi.KvRepository].
+func (k *kvRepositoryInMemory) Delete(ctx context.Context, key string) error {
 	mu.Lock()
 	delete(data, k.prefixKey(key))
 	mu.Unlock()
@@ -70,8 +70,8 @@ func (k *kvStoreInMemory) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// DeleteKeys implements [serviceapi.KvStore].
-func (k *kvStoreInMemory) DeleteKeys(ctx context.Context, keys ...string) error {
+// DeleteKeys implements [serviceapi.KvRepository].
+func (k *kvRepositoryInMemory) DeleteKeys(ctx context.Context, keys ...string) error {
 	mu.Lock()
 	for _, key := range keys {
 		delete(data, k.prefixKey(key))
@@ -82,8 +82,8 @@ func (k *kvStoreInMemory) DeleteKeys(ctx context.Context, keys ...string) error 
 	return nil
 }
 
-// Get implements [serviceapi.KvStore].
-func (k *kvStoreInMemory) Get(ctx context.Context, key string, dest any) error {
+// Get implements [serviceapi.KvRepository].
+func (k *kvRepositoryInMemory) Get(ctx context.Context, key string, dest any) error {
 	mu.RLock()
 	defer mu.RUnlock()
 
@@ -98,13 +98,13 @@ func (k *kvStoreInMemory) Get(ctx context.Context, key string, dest any) error {
 	return nil
 }
 
-// GetPrefix implements [serviceapi.KvStore].
-func (k *kvStoreInMemory) GetPrefix() string {
+// GetPrefix implements [serviceapi.KvRepository].
+func (k *kvRepositoryInMemory) GetPrefix() string {
 	return k.prefix
 }
 
-// Keys implements [serviceapi.KvStore].
-func (k *kvStoreInMemory) Keys(ctx context.Context, pattern string) ([]string, error) {
+// Keys implements [serviceapi.KvRepository].
+func (k *kvRepositoryInMemory) Keys(ctx context.Context, pattern string) ([]string, error) {
 	pattern = k.prefixKey(pattern)
 	lenPattern := len(pattern)
 	wildcardPattern := lenPattern > 0 && pattern[lenPattern-1] == '*'
@@ -135,8 +135,8 @@ func (k *kvStoreInMemory) Keys(ctx context.Context, pattern string) ([]string, e
 	return keys, nil
 }
 
-// Set implements [serviceapi.KvStore].
-func (k *kvStoreInMemory) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+// Set implements [serviceapi.KvRepository].
+func (k *kvRepositoryInMemory) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	mu.Lock()
 	var expiresAt *time.Time
 	if ttl > 0 {
@@ -153,27 +153,27 @@ func (k *kvStoreInMemory) Set(ctx context.Context, key string, value any, ttl ti
 	return nil
 }
 
-// SetPrefix implements [serviceapi.KvStore].
-func (k *kvStoreInMemory) SetPrefix(prefix string) {
+// SetPrefix implements [serviceapi.KvRepository].
+func (k *kvRepositoryInMemory) SetPrefix(prefix string) {
 	k.prefix = prefix
 }
 
-var _ serviceapi.KvStore = (*kvStoreInMemory)(nil)
+var _ serviceapi.KvRepository = (*kvRepositoryInMemory)(nil)
 
-// creates a new instance of kvStoreInMemory service.
-func Service(prefix string) *kvStoreInMemory {
-	return &kvStoreInMemory{
+// creates a new instance of kvRepositoryInMemory service.
+func Service(prefix string) *kvRepositoryInMemory {
+	return &kvRepositoryInMemory{
 		prefix: prefix,
 	}
 }
 
-// the factory function for kvStoreInMemory service.
+// the factory function for kvRepositoryInMemory service.
 func ServiceFactory(config map[string]any) any {
 	prefix := utils.GetValueFromMap(config, "prefix", "")
 	return Service(prefix)
 }
 
-// registers the kvStoreInMemory service type.
+// registers the kvRepositoryInMemory service type.
 func Register() {
 	lokstra_registry.RegisterServiceType(SERVICE_TYPE, ServiceFactory)
 }

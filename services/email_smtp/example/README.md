@@ -81,7 +81,7 @@ deployments:
 ```
 
 **How it works:**
-1. ✅ `LoadConfig()` loads YAML and stores service definitions
+1. ✅ `LoadConfig()` loads YAML and repositorys service definitions
 2. ✅ `InitAndRunServer()` reads `deployments.development.api.published-services`
 3. ✅ Auto-registers `email-sender` and `email-api-service` with dependency injection
 4. ✅ Mounts `email-router` to server
@@ -91,8 +91,8 @@ deployments:
 
 **Important:** `LoadConfig()` **DOES NOT** automatically register services. It only:
 1. ✅ Loads YAML files
-2. ✅ Stores config values
-3. ✅ Stores service **definitions** (metadata)
+2. ✅ Repositorys config values
+3. ✅ Repositorys service **definitions** (metadata)
 4. ❌ Does NOT instantiate services
 
 **Service registration happens during `RunServer()`** when deployment topology is analyzed.

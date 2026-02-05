@@ -16,7 +16,7 @@ Dokumentasi lengkap dan terstruktur yang mencakup:
 - Router patterns (29+ handler signatures)
 - Service patterns (Factory, DI, Lazy loading)
 - Configuration YAML (schema lengkap)
-- Annotation system (@EndpointService, @Route, @Inject)
+- Annotation system (@Handler, @Route, @Inject)
 - Middleware usage (built-in dan custom)
 - Dependency injection (LazyLoad, Cached)
 - Project structure templates (3 levels)
@@ -145,7 +145,7 @@ File konteks minimal untuk AI assistants:
 - Multi-environment setup
 
 ### 4. **Annotations**
-- @EndpointService
+- @Handler
 - @Route (HTTP methods + paths)
 - @Inject
 - Code generation (`lokstra autogen`)

@@ -21,20 +21,20 @@ go run .
 ## Expected Output
 
 The parser should find **4 valid annotations**:
-1. `@EndpointService` on `UserService` struct
+1. `@Handler` on `UserService` struct
 2. `@Inject` on `UserRepo` field
 3. `@Route` on `GetByID` method
 4. `@Route` on `Create` method
 
 And should **IGNORE** these (indented in documentation):
-- Line 8: `@EndpointService` in RegisterMiddleware doc (TAB-indented)
+- Line 8: `@Handler` in RegisterMiddleware doc (TAB-indented)
 - Line 22: `@Route` in AnotherFunction doc (multi-space indented)
 
 ## Rules
 
 ### Valid Annotation Format
 ```go
-// @EndpointService name="service-name"
+// @Handler name="service-name"
 type MyService struct {}
 ```
 
@@ -44,7 +44,7 @@ type MyService struct {}
 ```go
 // Example:
 //
-//	@EndpointService name="example"
+//	@Handler name="example"
 //
 // The above is ignored
 ```
@@ -53,14 +53,14 @@ type MyService struct {}
 ```go
 // Example:
 //
-//    @EndpointService name="example"
+//    @Handler name="example"
 //
 // The above is ignored (3+ spaces)
 ```
 
 **Too many empty lines:**
 ```go
-// @EndpointService name="example"
+// @Handler name="example"
 //
 //
 //

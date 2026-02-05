@@ -56,7 +56,7 @@ High-level repository structure:
   - **`02_app_framework`** – Lokstra as an **Application Framework**:
     - `01_enterprise_router_service` – enterprise modular app with annotations, generated routers, and multiple topologies.
     - `02_sync_config` – configuration sync / infrastructure service example (db pools, migrations, sync map).
-    - `03_tenant_management` – tenant management service using a Postgres-backed store.
+    - `03_tenant_management` – tenant management service using a Postgres-backed repository.
 
 - **`serviceapi`** – Interfaces for built-in services (dbpool, redis, email, metrics, etc.) that you can implement or mock.
 

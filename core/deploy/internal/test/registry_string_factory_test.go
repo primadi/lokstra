@@ -51,7 +51,7 @@ func TestRegisterLazyService_StringFactoryType(t *testing.T) {
 		t.Fatal("user-service not registered")
 	}
 
-	// Verify definition is stored correctly
+	// Verify definition is repositoryd correctly
 	def := reg.GetDeferredServiceDef("user-service")
 	if def == nil {
 		t.Fatal("user-service definition not found")

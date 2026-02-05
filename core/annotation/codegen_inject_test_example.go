@@ -5,7 +5,7 @@ package annotation
 
 /* Example 1: @Inject with cfg: prefix for config values
 
-// @EndpointService name="auth-service", prefix="/api/auth"
+// @Handler name="auth-service", prefix="/api/auth"
 type AuthService struct {
 	// @Inject "cfg:app.timeout"
 	Timeout time.Duration
@@ -26,7 +26,7 @@ config.yaml:
 
 /* Example 2: @Inject with cfg:@ prefix (indirect config)
 
-// @EndpointService name="auth-service", prefix="/api/auth"
+// @Handler name="auth-service", prefix="/api/auth"
 type AuthService struct {
 	// @Inject "cfg:@jwt.key-path"
 	JWTSecret string
@@ -75,15 +75,15 @@ config.yaml:
 
 /* Example 4: Mixed injection patterns
 
-// @EndpointService name="user-service", prefix="/api/users"
+// @Handler name="user-service", prefix="/api/users"
 type UserService struct {
 	// Direct service injection
 	// @Inject "user-repository"
 	UserRepo UserRepository
 
 	// Service from config
-	// @Inject "@store.implementation"
-	Store Store
+	// @Inject "@repository.implementation"
+	Repository Repository
 
 	// Direct config value
 	// @Inject "cfg:app.page-size"
@@ -104,8 +104,8 @@ type UserService struct {
 
 config.yaml:
   configs:
-    store:
-      implementation: "postgres-store"
+    repository:
+      implementation: "postgres-repository"
 
     app:
       page-size: 20

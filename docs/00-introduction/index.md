@@ -48,7 +48,7 @@ Use Lokstra as a complete framework for:
 
 **With Lokstra Annotations (Recommended) - Zero boilerplate!**
 ```go
-// @EndpointService name="user-service", prefix="/api"
+// @Handler name="user-service", prefix="/api"
 type UserServiceImpl struct {
     // @Inject "user-repository"
     UserRepo domain.UserRepository
